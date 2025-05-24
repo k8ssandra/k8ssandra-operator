@@ -1577,228 +1577,228 @@ func removeLocalDcFromCluster(t *testing.T, ctx context.Context, namespace strin
 	f.AssertObjectDoesNotExist(ctx, t, dc2Key, &cassdcapi.CassandraDatacenter{}, 4*time.Minute, 5*time.Second)
 }
 
-func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
-	require := require.New(t)
-	require.NoError(f.CreateCassandraEncryptionStoresSecret(namespace), "Failed to create the encryption secrets")
+// func checkStargateApisWithMultiDcCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+// 	require := require.New(t)
+// 	require.NoError(f.CreateCassandraEncryptionStoresSecret(namespace), "Failed to create the encryption secrets")
 
-	t.Log("check that the K8ssandraCluster was created")
-	k8ssandra := &api.K8ssandraCluster{}
-	kcKey := client.ObjectKey{Namespace: namespace, Name: "test"}
-	err := f.Client.Get(ctx, kcKey, k8ssandra)
-	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
+// 	t.Log("check that the K8ssandraCluster was created")
+// 	k8ssandra := &api.K8ssandraCluster{}
+// 	kcKey := client.ObjectKey{Namespace: namespace, Name: "test"}
+// 	err := f.Client.Get(ctx, kcKey, k8ssandra)
+// 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
-	dc1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
-	checkDatacenterReady(t, ctx, dc1Key, f)
-	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name)
+// 	dc1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+// 	checkDatacenterReady(t, ctx, dc1Key, f)
+// 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name)
 
-	dc2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
-	checkDatacenterReady(t, ctx, dc2Key, f)
-	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name, dc2Key.Name)
+// 	dc2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
+// 	checkDatacenterReady(t, ctx, dc2Key, f)
+// 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name, dc2Key.Name)
 
-	dc1Prefix := DcPrefix(t, f, dc1Key)
-	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dc1Prefix + "-stargate"}}
-	checkStargateReady(t, f, ctx, stargateKey)
+// 	dc1Prefix := DcPrefix(t, f, dc1Key)
+// 	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dc1Prefix + "-stargate"}}
+// 	checkStargateReady(t, f, ctx, stargateKey)
 
-	t.Logf("check k8ssandra cluster status updated for Stargate %s-stargate", dc1Prefix)
-	require.Eventually(func() bool {
-		k8ssandra := &api.K8ssandraCluster{}
-		err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
-		if err != nil {
-			return false
-		}
+// 	t.Logf("check k8ssandra cluster status updated for Stargate %s-stargate", dc1Prefix)
+// 	require.Eventually(func() bool {
+// 		k8ssandra := &api.K8ssandraCluster{}
+// 		err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
+// 		if err != nil {
+// 			return false
+// 		}
 
-		kdcStatus, found := k8ssandra.Status.Datacenters[dc1Key.Name]
-		if !found {
-			return false
-		}
-		if kdcStatus.Cassandra == nil {
-			return false
-		}
+// 		kdcStatus, found := k8ssandra.Status.Datacenters[dc1Key.Name]
+// 		if !found {
+// 			return false
+// 		}
+// 		if kdcStatus.Cassandra == nil {
+// 			return false
+// 		}
 
-		if !cassandraDatacenterReady(kdcStatus.Cassandra) {
-			return false
-		}
+// 		if !cassandraDatacenterReady(kdcStatus.Cassandra) {
+// 			return false
+// 		}
 
-		if kdcStatus.Stargate == nil {
-			return false
-		}
-		return kdcStatus.Stargate.IsReady()
-	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval)
+// 		if kdcStatus.Stargate == nil {
+// 			return false
+// 		}
+// 		return kdcStatus.Stargate.IsReady()
+// 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval)
 
-	dc2Prefix := DcPrefixOverride(t, f, dc2Key)
-	dc2PodPrefix := DcPrefix(t, f, dc2Key)
-	stargateKey = framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dc2Prefix + "-stargate"}}
-	checkStargateReady(t, f, ctx, stargateKey)
+// 	dc2Prefix := DcPrefixOverride(t, f, dc2Key)
+// 	dc2PodPrefix := DcPrefix(t, f, dc2Key)
+// 	stargateKey = framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dc2Prefix + "-stargate"}}
+// 	checkStargateReady(t, f, ctx, stargateKey)
 
-	t.Logf("check k8ssandra cluster status updated for Stargate %s-stargate", dc2Prefix)
-	require.Eventually(func() bool {
-		k8ssandra := &api.K8ssandraCluster{}
-		err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
-		if err != nil {
-			return false
-		}
+// 	t.Logf("check k8ssandra cluster status updated for Stargate %s-stargate", dc2Prefix)
+// 	require.Eventually(func() bool {
+// 		k8ssandra := &api.K8ssandraCluster{}
+// 		err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
+// 		if err != nil {
+// 			return false
+// 		}
 
-		kdcStatus, found := k8ssandra.Status.Datacenters[dc2Key.Name]
-		if !found {
-			return false
-		}
-		if kdcStatus.Cassandra == nil {
-			return false
-		}
+// 		kdcStatus, found := k8ssandra.Status.Datacenters[dc2Key.Name]
+// 		if !found {
+// 			return false
+// 		}
+// 		if kdcStatus.Cassandra == nil {
+// 			return false
+// 		}
 
-		if !cassandraDatacenterReady(kdcStatus.Cassandra) {
-			return false
-		}
+// 		if !cassandraDatacenterReady(kdcStatus.Cassandra) {
+// 			return false
+// 		}
 
-		if kdcStatus.Stargate == nil {
-			return false
-		}
-		return kdcStatus.Stargate.IsReady()
-	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval)
+// 		if kdcStatus.Stargate == nil {
+// 			return false
+// 		}
+// 		return kdcStatus.Stargate.IsReady()
+// 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval)
 
-	t.Log("retrieve database credentials")
-	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.SanitizedName())
-	require.NoError(err, "failed to retrieve database credentials")
+// 	t.Log("retrieve database credentials")
+// 	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.SanitizedName())
+// 	require.NoError(err, "failed to retrieve database credentials")
 
-	t.Log("check that nodes in dc1 see nodes in dc2")
-	pod := dc1Prefix + "-rack1-sts-0"
-	count := 4
-	checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod, count, 0, "-u", username, "-pw", password)
+// 	t.Log("check that nodes in dc1 see nodes in dc2")
+// 	pod := dc1Prefix + "-rack1-sts-0"
+// 	count := 4
+// 	checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod, count, 0, "-u", username, "-pw", password)
 
-	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
+// 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
 
-	t.Log("check nodes in dc2 see nodes in dc1")
-	pod = dc2PodPrefix + "-rack1-sts-0"
-	checkNodeToolStatus(t, f, f.DataPlaneContexts[1], namespace, pod, count, 0, "-u", username, "-pw", password)
+// 	t.Log("check nodes in dc2 see nodes in dc1")
+// 	pod = dc2PodPrefix + "-rack1-sts-0"
+// 	checkNodeToolStatus(t, f, f.DataPlaneContexts[1], namespace, pod, count, 0, "-u", username, "-pw", password)
 
-	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
+// 	assert.NoError(t, err, "timed out waiting for nodetool status check against "+pod)
 
-	// t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
-	// stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
-	// stargateGrpcHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateGrpc
-	// stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateCql
-	// f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, dc1Prefix+"-stargate-service", stargateRestHostAndPort, stargateGrpcHostAndPort)
-	// defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
-	// checkStargateApisReachable(t, ctx, f.DataPlaneContexts[0], namespace, dc1Prefix, stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, username, password, false, f)
+// t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
+// stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
+// stargateGrpcHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateGrpc
+// stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateCql
+// f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, dc1Prefix+"-stargate-service", stargateRestHostAndPort, stargateGrpcHostAndPort)
+// defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
+// checkStargateApisReachable(t, ctx, f.DataPlaneContexts[0], namespace, dc1Prefix, stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, username, password, false, f)
 
-	// t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[1])
-	// stargateRestHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateRest
-	// stargateGrpcHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateGrpc
-	// stargateCqlHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateCql
-	// f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, dc2Prefix+"-stargate-service", stargateRestHostAndPort, stargateGrpcHostAndPort)
-	// defer f.UndeployAllIngresses(t, f.DataPlaneContexts[1], namespace)
-	// checkStargateApisReachable(t, ctx, f.DataPlaneContexts[1], namespace, dc2Prefix, stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, username, password, false, f)
+// t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[1])
+// stargateRestHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateRest
+// stargateGrpcHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateGrpc
+// stargateCqlHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateCql
+// f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, dc2Prefix+"-stargate-service", stargateRestHostAndPort, stargateGrpcHostAndPort)
+// defer f.UndeployAllIngresses(t, f.DataPlaneContexts[1], namespace)
+// checkStargateApisReachable(t, ctx, f.DataPlaneContexts[1], namespace, dc2Prefix, stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, username, password, false, f)
 
-	// replication := map[string]int{DcName(t, f, dc1Key): 1, DcName(t, f, dc2Key): 1}
+// replication := map[string]int{DcName(t, f, dc1Key): 1, DcName(t, f, dc2Key): 1}
 
-	// testStargateApis(t, f, ctx, f.DataPlaneContexts[0], namespace, dc1Prefix, username, password, false, replication)
-	// testStargateApis(t, f, ctx, f.DataPlaneContexts[1], namespace, dc2Prefix, username, password, false, replication)
-}
+// testStargateApis(t, f, ctx, f.DataPlaneContexts[0], namespace, dc1Prefix, username, password, false, replication)
+// testStargateApis(t, f, ctx, f.DataPlaneContexts[1], namespace, dc2Prefix, username, password, false, replication)
+// }
 
-func checkStargateApisWithMultiDcEncryptedCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
-	require := require.New(t)
-	require.NoError(f.CreateCassandraEncryptionStoresSecret(namespace), "Failed to create the encryption secrets")
+// func checkStargateApisWithMultiDcEncryptedCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+// 	require := require.New(t)
+// 	require.NoError(f.CreateCassandraEncryptionStoresSecret(namespace), "Failed to create the encryption secrets")
 
-	t.Log("check that the K8ssandraCluster was created")
-	k8ssandra := &api.K8ssandraCluster{}
-	kcKey := client.ObjectKey{Namespace: namespace, Name: "test"}
-	err := f.Client.Get(ctx, kcKey, k8ssandra)
-	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
+// 	t.Log("check that the K8ssandraCluster was created")
+// 	k8ssandra := &api.K8ssandraCluster{}
+// 	kcKey := client.ObjectKey{Namespace: namespace, Name: "test"}
+// 	err := f.Client.Get(ctx, kcKey, k8ssandra)
+// 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
-	dc1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
-	checkDatacenterReady(t, ctx, dc1Key, f)
-	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name)
+// 	dc1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+// 	checkDatacenterReady(t, ctx, dc1Key, f)
+// 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name)
 
-	dc2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
-	checkDatacenterReady(t, ctx, dc2Key, f)
-	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name, dc2Key.Name)
-	t.Log("check k8ssandra cluster status")
+// 	dc2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
+// 	checkDatacenterReady(t, ctx, dc2Key, f)
+// 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name, dc2Key.Name)
+// 	t.Log("check k8ssandra cluster status")
 
-	dc1Prefix := DcPrefix(t, f, dc1Key)
-	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dc1Prefix + "-stargate"}}
-	checkStargateReady(t, f, ctx, stargateKey)
+// 	dc1Prefix := DcPrefix(t, f, dc1Key)
+// 	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dc1Prefix + "-stargate"}}
+// 	checkStargateReady(t, f, ctx, stargateKey)
 
-	t.Logf("check k8ssandra cluster status updated for Stargate %s-stargate", dc1Prefix)
-	require.Eventually(func() bool {
-		k8ssandra := &api.K8ssandraCluster{}
-		err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
-		if err != nil {
-			return false
-		}
+// 	t.Logf("check k8ssandra cluster status updated for Stargate %s-stargate", dc1Prefix)
+// 	require.Eventually(func() bool {
+// 		k8ssandra := &api.K8ssandraCluster{}
+// 		err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
+// 		if err != nil {
+// 			return false
+// 		}
 
-		kdcStatus, found := k8ssandra.Status.Datacenters[dc1Key.Name]
-		if !found {
-			return false
-		}
-		if kdcStatus.Cassandra == nil {
-			return false
-		}
+// 		kdcStatus, found := k8ssandra.Status.Datacenters[dc1Key.Name]
+// 		if !found {
+// 			return false
+// 		}
+// 		if kdcStatus.Cassandra == nil {
+// 			return false
+// 		}
 
-		if !cassandraDatacenterReady(kdcStatus.Cassandra) {
-			return false
-		}
+// 		if !cassandraDatacenterReady(kdcStatus.Cassandra) {
+// 			return false
+// 		}
 
-		if kdcStatus.Stargate == nil {
-			return false
-		}
-		return kdcStatus.Stargate.IsReady()
-	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval)
+// 		if kdcStatus.Stargate == nil {
+// 			return false
+// 		}
+// 		return kdcStatus.Stargate.IsReady()
+// 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval)
 
-	dc2Prefix := DcPrefixOverride(t, f, dc2Key)
-	stargateKey = framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dc2Prefix + "-stargate"}}
-	checkStargateReady(t, f, ctx, stargateKey)
+// 	dc2Prefix := DcPrefixOverride(t, f, dc2Key)
+// 	stargateKey = framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dc2Prefix + "-stargate"}}
+// 	checkStargateReady(t, f, ctx, stargateKey)
 
-	t.Logf("check k8ssandra cluster status updated for Stargate %s-stargate", dc2Prefix)
-	require.Eventually(func() bool {
-		k8ssandra := &api.K8ssandraCluster{}
-		err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
-		if err != nil {
-			return false
-		}
+// 	t.Logf("check k8ssandra cluster status updated for Stargate %s-stargate", dc2Prefix)
+// 	require.Eventually(func() bool {
+// 		k8ssandra := &api.K8ssandraCluster{}
+// 		err := f.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: "test"}, k8ssandra)
+// 		if err != nil {
+// 			return false
+// 		}
 
-		kdcStatus, found := k8ssandra.Status.Datacenters[dc2Key.Name]
-		if !found {
-			return false
-		}
-		if kdcStatus.Cassandra == nil {
-			return false
-		}
+// 		kdcStatus, found := k8ssandra.Status.Datacenters[dc2Key.Name]
+// 		if !found {
+// 			return false
+// 		}
+// 		if kdcStatus.Cassandra == nil {
+// 			return false
+// 		}
 
-		if !cassandraDatacenterReady(kdcStatus.Cassandra) {
-			return false
-		}
+// 		if !cassandraDatacenterReady(kdcStatus.Cassandra) {
+// 			return false
+// 		}
 
-		if kdcStatus.Stargate == nil {
-			return false
-		}
-		return kdcStatus.Stargate.IsReady()
-	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval)
+// 		if kdcStatus.Stargate == nil {
+// 			return false
+// 		}
+// 		return kdcStatus.Stargate.IsReady()
+// 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval)
 
-	// t.Log("retrieve database credentials")
-	// username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.SanitizedName())
-	// require.NoError(err, "failed to retrieve database credentials")
+// 	// t.Log("retrieve database credentials")
+// 	// username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.SanitizedName())
+// 	// require.NoError(err, "failed to retrieve database credentials")
 
-	// t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
-	// stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
-	// stargateGrpcHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateGrpc
-	// stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateCql
-	// f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, dc1Prefix+"-stargate-service", stargateRestHostAndPort, stargateGrpcHostAndPort)
-	// defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
-	// checkStargateApisReachable(t, ctx, f.DataPlaneContexts[0], namespace, dc1Prefix, stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, username, password, true, f)
+// 	// t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[0])
+// 	// stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
+// 	// stargateGrpcHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateGrpc
+// 	// stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateCql
+// 	// f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, dc1Prefix+"-stargate-service", stargateRestHostAndPort, stargateGrpcHostAndPort)
+// 	// defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
+// 	// checkStargateApisReachable(t, ctx, f.DataPlaneContexts[0], namespace, dc1Prefix, stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, username, password, true, f)
 
-	// t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[1])
-	// stargateRestHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateRest
-	// stargateGrpcHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateGrpc
-	// stargateCqlHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateCql
-	// f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, dc2Prefix+"-stargate-service", stargateRestHostAndPort, stargateGrpcHostAndPort)
-	// defer f.UndeployAllIngresses(t, f.DataPlaneContexts[1], namespace)
-	// checkStargateApisReachable(t, ctx, f.DataPlaneContexts[1], namespace, dc2Prefix, stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, username, password, true, f)
+// 	// t.Log("deploying Stargate ingress routes in context", f.DataPlaneContexts[1])
+// 	// stargateRestHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateRest
+// 	// stargateGrpcHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateGrpc
+// 	// stargateCqlHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateCql
+// 	// f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, dc2Prefix+"-stargate-service", stargateRestHostAndPort, stargateGrpcHostAndPort)
+// 	// defer f.UndeployAllIngresses(t, f.DataPlaneContexts[1], namespace)
+// 	// checkStargateApisReachable(t, ctx, f.DataPlaneContexts[1], namespace, dc2Prefix, stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, username, password, true, f)
 
-	// replication := map[string]int{DcName(t, f, dc1Key): 1, DcName(t, f, dc2Key): 1}
+// 	// replication := map[string]int{DcName(t, f, dc1Key): 1, DcName(t, f, dc2Key): 1}
 
-	// testStargateApis(t, f, ctx, f.DataPlaneContexts[0], namespace, dc1Prefix, username, password, true, replication)
-	// testStargateApis(t, f, ctx, f.DataPlaneContexts[1], namespace, dc2Prefix, username, password, true, replication)
-}
+// 	// testStargateApis(t, f, ctx, f.DataPlaneContexts[0], namespace, dc1Prefix, username, password, true, replication)
+// 	// testStargateApis(t, f, ctx, f.DataPlaneContexts[1], namespace, dc2Prefix, username, password, true, replication)
+// }
 
 func checkDatacenterReady(t *testing.T, ctx context.Context, key framework.ClusterKey, f *framework.E2eFramework) {
 	t.Logf("check that datacenter %s in cluster %s is ready", key.Name, key.K8sContext)
@@ -2071,51 +2071,51 @@ func assertCassandraDatacenterK8cStatusReady(
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
 }
 
-func checkStargateApisReachable(
-	t *testing.T,
-	ctx context.Context,
-	k8sContext, namespace, clusterName string,
-	stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort framework.HostAndPort,
-	username, password string,
-	cqlSsl bool,
-	f *framework.E2eFramework,
-) {
-	// timeout := 2 * time.Minute
-	// interval := 1 * time.Second
-	// stargateHttp := fmt.Sprintf("http://%v/v1/auth", stargateRestHostAndPort)
-	// require.Eventually(t, func() bool {
-	// 	body := map[string]string{"username": username, "password": password}
-	// 	request := resty.NewRequest().
-	// 		SetHeader("Content-Type", "application/json").
-	// 		SetBody(body)
-	// 	response, err := request.Post(stargateHttp)
-	// 	if username != "" {
-	// 		return err == nil && response.StatusCode() == http.StatusCreated
-	// 	} else {
-	// 		return err == nil && response.StatusCode() == http.StatusBadRequest
-	// 	}
-	// }, timeout, interval, "Address is unreachable: %s", stargateHttp)
-	// // Stargate gRPC requires a token, we can't connect if we don't have credentials
-	// if username != "" {
-	// 	require.Eventually(t, func() bool {
-	// 		connection, err := f.GetStargateGrpcConnection(ctx, k8sContext, namespace, clusterName, username, password, stargateGrpcHostAndPort, stargateRestHostAndPort)
-	// 		if err != nil {
-	// 			t.Log(err)
-	// 			return false
-	// 		}
-	// 		_ = connection.Close()
-	// 		return true
-	// 	}, timeout, interval, "Address is unreachable: %s", stargateGrpcHostAndPort)
-	// }
-	// require.Eventually(t, func() bool {
-	// 	connection, err := f.GetCqlClientConnection(ctx, k8sContext, namespace, stargateCqlHostAndPort, username, password, cqlSsl)
-	// 	if err != nil {
-	// 		return false
-	// 	}
-	// 	_ = connection.Close()
-	// 	return true
-	// }, timeout, interval, "Address is unreachable: %s", stargateCqlHostAndPort)
-}
+// func checkStargateApisReachable(
+// 	t *testing.T,
+// 	ctx context.Context,
+// 	k8sContext, namespace, clusterName string,
+// 	stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort framework.HostAndPort,
+// 	username, password string,
+// 	cqlSsl bool,
+// 	f *framework.E2eFramework,
+// ) {
+// timeout := 2 * time.Minute
+// interval := 1 * time.Second
+// stargateHttp := fmt.Sprintf("http://%v/v1/auth", stargateRestHostAndPort)
+// require.Eventually(t, func() bool {
+// 	body := map[string]string{"username": username, "password": password}
+// 	request := resty.NewRequest().
+// 		SetHeader("Content-Type", "application/json").
+// 		SetBody(body)
+// 	response, err := request.Post(stargateHttp)
+// 	if username != "" {
+// 		return err == nil && response.StatusCode() == http.StatusCreated
+// 	} else {
+// 		return err == nil && response.StatusCode() == http.StatusBadRequest
+// 	}
+// }, timeout, interval, "Address is unreachable: %s", stargateHttp)
+// // Stargate gRPC requires a token, we can't connect if we don't have credentials
+// if username != "" {
+// 	require.Eventually(t, func() bool {
+// 		connection, err := f.GetStargateGrpcConnection(ctx, k8sContext, namespace, clusterName, username, password, stargateGrpcHostAndPort, stargateRestHostAndPort)
+// 		if err != nil {
+// 			t.Log(err)
+// 			return false
+// 		}
+// 		_ = connection.Close()
+// 		return true
+// 	}, timeout, interval, "Address is unreachable: %s", stargateGrpcHostAndPort)
+// }
+// require.Eventually(t, func() bool {
+// 	connection, err := f.GetCqlClientConnection(ctx, k8sContext, namespace, stargateCqlHostAndPort, username, password, cqlSsl)
+// 	if err != nil {
+// 		return false
+// 	}
+// 	_ = connection.Close()
+// 	return true
+// }, timeout, interval, "Address is unreachable: %s", stargateCqlHostAndPort)
+// }
 
 func checkReaperApiReachable(t *testing.T, ctx context.Context, reaperHostAndPort framework.HostAndPort) {
 	timeout := 2 * time.Minute
