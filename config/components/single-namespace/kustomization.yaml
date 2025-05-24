@@ -2,6 +2,13 @@
 apiVersion: kustomize.config.k8s.io/v1alpha1
 kind: Component
 
+# patchesStrategicMerge:
+# - |-
+#   apiVersion: v1
+#   kind: Namespace
+#   metadata:
+#     name: cass-operator
+#   $patch: delete
 replacements:
   - source: 
       kind: Namespace
@@ -37,11 +44,4 @@ replacements:
         kind: MutatingWebhookConfiguration
       fieldPaths:
       - webhooks.0.clientConfig.service.namespace
-patchesStrategicMerge:
-- |-
-  apiVersion: v1
-  kind: Namespace
-  metadata:
-    name: cass-operator
-  $patch: delete
     

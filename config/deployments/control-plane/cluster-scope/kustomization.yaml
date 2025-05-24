@@ -6,6 +6,10 @@ namespace: k8ssandra-operator
 resources:
   - ../../default
   - ../../../cass-operator/cluster-scoped
+
+patchesStrategicMerge:
+  - patch-cass-operator-clusterrolebinding.yaml
+
 components:
   - ../../../components/cluster-scope
   - ../../../components/single-namespace
