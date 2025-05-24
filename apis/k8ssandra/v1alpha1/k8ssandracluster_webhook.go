@@ -343,8 +343,16 @@ func (r *K8ssandraCluster) validateReaper() error {
 func ValidateDeprecatedFieldUsage(r *K8ssandraCluster) admission.Warnings {
 	warnings := admission.Warnings{}
 
-	if r.Spec.DeprecatedStargate != nil {
+	if r.Spec.Stargate != nil {
 		warnings = append(warnings, deprecatedWarning("stargate", "StargateConfiguration", ""))
+	}
+
+	if r.Spec.Cassandra != nil && len(r.Spec.Cassandra.Datacenters) > 0 {
+		for _, dc := range r.Spec.Cassandra.Datacenters {
+			if dc.Stargate != nil {
+				warnings = append(warnings, deprecatedWarning("cassandra.datacenters.stargate", "cassandra.datacenters.stargateConfiguration", ""))
+			}
+		}
 	}
 
 	return warnings
