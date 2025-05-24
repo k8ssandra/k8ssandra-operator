@@ -13,3 +13,32 @@ patchesStrategicMerge:
 components:
   - ../../../components/cluster-scope
   - ../../../components/single-namespace
+
+patches:
+- target:
+    kind: Certificate
+    name: cass-operator-serving-cert
+  patch: |
+    - op: replace
+      path: /spec/dnsNames/0
+      value: cass-operator-webhook-service.k8ssandra-operator.svc
+    - op: replace
+      path: /spec/dnsNames/1
+      value: cass-operator-webhook-service.k8ssandra-operator.svc.cluster.local
+    - op: replace
+      path: /metadata/annotations/cert-manager.io~1inject-ca-from
+      value: k8ssandra-operator/cass-operator-serving-cert
+- target:
+    name: cass-operator-mutating-webhook-configuration
+    kind: MutatingWebhookConfiguration
+  patch: |
+    - op: replace
+      path: /metadata/annotations/cert-manager.io~1inject-ca-from
+      value: k8ssandra-operator/cass-operator-serving-cert
+- target:
+    name: cass-operator-validating-webhook-configuration
+    kind: ValidatingWebhookConfiguration
+  patch: |
+    - op: replace
+      path: /metadata/annotations/cert-manager.io~1inject-ca-from
+      value: k8ssandra-operator/cass-operator-serving-cert
