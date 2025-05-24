@@ -20,7 +20,7 @@ spec:
       name: reaper-ui-secret
   cassandra:
     clusterName: "E2E Test Cluster"
-    serverVersion: 5.0.4
+    serverVersion: 4.1.8
     jmxInitContainerImage:
       repository: library
       name: busybox
