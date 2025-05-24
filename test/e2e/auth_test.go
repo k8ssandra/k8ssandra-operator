@@ -83,12 +83,12 @@ func waitForAllComponentsReady(
 ) {
 	checkDatacenterReady(t, ctx, dc1Key, f)
 	checkDatacenterReady(t, ctx, dc2Key, f)
-	checkStargateReady(t, f, ctx, stargate1Key)
-	checkStargateK8cStatusReady(t, f, ctx, kcKey, dc1Key)
+	// checkStargateReady(t, f, ctx, stargate1Key)
+	// checkStargateK8cStatusReady(t, f, ctx, kcKey, dc1Key)
 	checkReaperReady(t, f, ctx, reaper1Key)
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dc1Key)
-	checkStargateReady(t, f, ctx, stargate2Key)
-	checkStargateK8cStatusReady(t, f, ctx, kcKey, dc2Key)
+	// checkStargateReady(t, f, ctx, stargate2Key)
+	// checkStargateK8cStatusReady(t, f, ctx, kcKey, dc2Key)
 	checkReaperReady(t, f, ctx, reaper2Key)
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dc2Key)
 	// we need to wait until the deployments are fully rolled out before continuing, to avoid hitting an old

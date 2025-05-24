@@ -47,8 +47,8 @@ func createSingleDcClusterNoAuth(t *testing.T, ctx context.Context, f *framework
 					},
 				}},
 			},
-			Stargate: &stargateapi.StargateClusterTemplate{Size: 1},
-			Reaper:   &reaperapi.ReaperClusterTemplate{},
+			DeprecatedStargate: &stargateapi.StargateClusterTemplate{Size: 1},
+			Reaper:             &reaperapi.ReaperClusterTemplate{},
 		},
 	}
 
@@ -156,8 +156,8 @@ func createSingleDcClusterAuth(t *testing.T, ctx context.Context, f *framework.F
 					},
 				}},
 			},
-			Stargate: &stargateapi.StargateClusterTemplate{Size: 1},
-			Reaper:   &reaperapi.ReaperClusterTemplate{},
+			DeprecatedStargate: &stargateapi.StargateClusterTemplate{Size: 1},
+			Reaper:             &reaperapi.ReaperClusterTemplate{},
 		},
 	}
 
@@ -269,7 +269,7 @@ func createSingleDcClusterAuthExternalSecrets(t *testing.T, ctx context.Context,
 					},
 				}},
 			},
-			Stargate: &stargateapi.StargateClusterTemplate{
+			DeprecatedStargate: &stargateapi.StargateClusterTemplate{
 				StargateTemplate: stargateapi.StargateTemplate{},
 				Size:             1,
 			},

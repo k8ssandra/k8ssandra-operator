@@ -49,10 +49,10 @@ type K8ssandraClusterSpec struct {
 	// affinity (via racks), individual C* node settings, JVM settings, and more.
 	Cassandra *CassandraClusterTemplate `json:"cassandra,omitempty"`
 
-	// Stargate defines the desired deployment characteristics for Stargate in this K8ssandraCluster.
-	// If this is non-nil, Stargate will be deployed on every Cassandra datacenter in this K8ssandraCluster.
+	// DEPRECATED DeprecatedStargate defines the desired deployment characteristics for DeprecatedStargate in this K8ssandraCluster.
+	// If this is non-nil, DeprecatedStargate will be deployed on every Cassandra datacenter in this K8ssandraCluster.
 	// +optional
-	Stargate *stargateapi.StargateClusterTemplate `json:"stargate,omitempty"`
+	DeprecatedStargate *stargateapi.StargateClusterTemplate `json:"stargate,omitempty"`
 
 	// Reaper defines the desired deployment characteristics for Reaper in this K8ssandraCluster.
 	// If this is non-nil, Reaper might be deployed on every Cassandra datacenter in this K8ssandraCluster, unless
@@ -170,7 +170,7 @@ type K8ssandraCluster struct {
 func (in *K8ssandraCluster) HasStargates() bool {
 	if in == nil {
 		return false
-	} else if in.Spec.Stargate != nil {
+	} else if in.Spec.DeprecatedStargate != nil {
 		return true
 	} else if in.Spec.Cassandra == nil || len(in.Spec.Cassandra.Datacenters) == 0 {
 		return false
