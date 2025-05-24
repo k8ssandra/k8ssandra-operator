@@ -1134,14 +1134,14 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 	}
 	checkDatacenterReady(t, ctx, dc1Key, f)
 
-	sg1Key := framework.ClusterKey{
-		K8sContext: f.DataPlaneContexts[0],
-		NamespacedName: types.NamespacedName{
-			Namespace: namespace,
-			Name:      DcPrefix(t, f, dc1Key) + "-stargate",
-		},
-	}
-	checkStargateReady(t, f, ctx, sg1Key)
+	// sg1Key := framework.ClusterKey{
+	// 	K8sContext: f.DataPlaneContexts[0],
+	// 	NamespacedName: types.NamespacedName{
+	// 		Namespace: namespace,
+	// 		Name:      DcPrefix(t, f, dc1Key) + "-stargate",
+	// 	},
+	// }
+	// checkStargateReady(t, f, ctx, sg1Key)
 
 	reaper1Key := framework.ClusterKey{
 		K8sContext: f.DataPlaneContexts[0],
@@ -1238,14 +1238,14 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 		}, 5*time.Minute, 15*time.Second, "failed to veify replication updated for keyspace %s", ks)
 	}
 
-	sg2Key := framework.ClusterKey{
-		K8sContext: f.DataPlaneContexts[1],
-		NamespacedName: types.NamespacedName{
-			Namespace: namespace,
-			Name:      DcPrefixOverride(t, f, dc2Key) + "-stargate",
-		},
-	}
-	checkStargateReady(t, f, ctx, sg2Key)
+	// sg2Key := framework.ClusterKey{
+	// 	K8sContext: f.DataPlaneContexts[1],
+	// 	NamespacedName: types.NamespacedName{
+	// 		Namespace: namespace,
+	// 		Name:      DcPrefixOverride(t, f, dc2Key) + "-stargate",
+	// 	},
+	// }
+	// checkStargateReady(t, f, ctx, sg2Key)
 
 	reaper2Key := framework.ClusterKey{
 		K8sContext: f.DataPlaneContexts[1],
@@ -1435,14 +1435,14 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 
 	assert.NoError(err, "timed out waiting for nodetool status check against "+pod)
 
-	sg1Key := framework.ClusterKey{
-		K8sContext: f.DataPlaneContexts[0],
-		NamespacedName: types.NamespacedName{
-			Namespace: namespace,
-			Name:      DcPrefix(t, f, dc1Key) + "-stargate",
-		},
-	}
-	checkStargateReady(t, f, ctx, sg1Key)
+	// sg1Key := framework.ClusterKey{
+	// 	K8sContext: f.DataPlaneContexts[0],
+	// 	NamespacedName: types.NamespacedName{
+	// 		Namespace: namespace,
+	// 		Name:      DcPrefix(t, f, dc1Key) + "-stargate",
+	// 	},
+	// }
+	// checkStargateReady(t, f, ctx, sg1Key)
 
 	reaper1Key := framework.ClusterKey{
 		K8sContext: f.DataPlaneContexts[0],
@@ -1453,14 +1453,14 @@ func removeDcFromCluster(t *testing.T, ctx context.Context, namespace string, f 
 	}
 	checkReaperReady(t, f, ctx, reaper1Key)
 
-	sg2Key := framework.ClusterKey{
-		K8sContext: f.DataPlaneContexts[1],
-		NamespacedName: types.NamespacedName{
-			Namespace: namespace,
-			Name:      DcPrefixOverride(t, f, dc2Key) + "-stargate",
-		},
-	}
-	checkStargateReady(t, f, ctx, sg2Key)
+	// sg2Key := framework.ClusterKey{
+	// 	K8sContext: f.DataPlaneContexts[1],
+	// 	NamespacedName: types.NamespacedName{
+	// 		Namespace: namespace,
+	// 		Name:      DcPrefixOverride(t, f, dc2Key) + "-stargate",
+	// 	},
+	// }
+	// checkStargateReady(t, f, ctx, sg2Key)
 
 	reaper2Key := framework.ClusterKey{
 		K8sContext: f.DataPlaneContexts[1],
@@ -1854,35 +1854,35 @@ func cassandraDatacenterReady(status *cassdcapi.CassandraDatacenterStatus) bool 
 		status.CassandraOperatorProgress == cassdcapi.ProgressReady
 }
 
-func checkStargateReady(t *testing.T, f *framework.E2eFramework, ctx context.Context, stargateKey framework.ClusterKey) {
-	// t.Logf("check that Stargate %s in cluster %s is ready", stargateKey.Name, stargateKey.K8sContext)
-	// withStargate := f.NewWithStargate(ctx, stargateKey)
-	// require.Eventually(t, withStargate(func(stargate *stargateapi.Stargate) bool {
-	// 	return stargate.Status.IsReady()
-	// }), polling.stargateReady.timeout, polling.stargateReady.interval, "timed out waiting for Stargate %s to become ready", stargateKey.Name)
-}
+// func checkStargateReady(t *testing.T, f *framework.E2eFramework, ctx context.Context, stargateKey framework.ClusterKey) {
+// t.Logf("check that Stargate %s in cluster %s is ready", stargateKey.Name, stargateKey.K8sContext)
+// withStargate := f.NewWithStargate(ctx, stargateKey)
+// require.Eventually(t, withStargate(func(stargate *stargateapi.Stargate) bool {
+// 	return stargate.Status.IsReady()
+// }), polling.stargateReady.timeout, polling.stargateReady.interval, "timed out waiting for Stargate %s to become ready", stargateKey.Name)
+// }
 
-func checkStargateK8cStatusReady(
-	t *testing.T,
-	f *framework.E2eFramework,
-	ctx context.Context,
-	kcKey types.NamespacedName,
-	dcKey framework.ClusterKey,
-) {
-	// t.Log("check k8ssandra cluster status updated for Stargate")
-	// assert.Eventually(t, func() bool {
-	// 	k8ssandra := &api.K8ssandraCluster{}
-	// 	if err := f.Client.Get(ctx, kcKey, k8ssandra); err != nil {
-	// 		return false
-	// 	}
-	// 	kdcStatus, found := k8ssandra.Status.Datacenters[dcKey.Name]
-	// 	return found &&
-	// 		kdcStatus.Cassandra != nil &&
-	// 		cassandraDatacenterReady(kdcStatus.Cassandra) &&
-	// 		kdcStatus.Stargate != nil &&
-	// 		kdcStatus.Stargate.IsReady()
-	// }, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
-}
+// func checkStargateK8cStatusReady(
+// 	t *testing.T,
+// 	f *framework.E2eFramework,
+// 	ctx context.Context,
+// 	kcKey types.NamespacedName,
+// 	dcKey framework.ClusterKey,
+// ) {
+// t.Log("check k8ssandra cluster status updated for Stargate")
+// assert.Eventually(t, func() bool {
+// 	k8ssandra := &api.K8ssandraCluster{}
+// 	if err := f.Client.Get(ctx, kcKey, k8ssandra); err != nil {
+// 		return false
+// 	}
+// 	kdcStatus, found := k8ssandra.Status.Datacenters[dcKey.Name]
+// 	return found &&
+// 		kdcStatus.Cassandra != nil &&
+// 		cassandraDatacenterReady(kdcStatus.Cassandra) &&
+// 		kdcStatus.Stargate != nil &&
+// 		kdcStatus.Stargate.IsReady()
+// }, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
+// }
 
 // checkNodeToolStatus polls until nodetool status reports the expected number of Up/Normal and Down/Normal nodes.
 func checkNodeToolStatus(
