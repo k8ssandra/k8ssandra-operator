@@ -28,7 +28,7 @@ spec:
     - secretName: reaper-cql-secret
       superuser: true
   serverType: cassandra
-  serverVersion: 5.0.4
+  serverVersion: 4.1.8
   networking:
     hostNetwork: false
   size: 3
