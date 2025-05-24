@@ -78,7 +78,7 @@ var _ webhook.Validator = &K8ssandraCluster{}
 func (r *K8ssandraCluster) ValidateCreate() (admission.Warnings, error) {
 	webhookLog.Info("validate K8ssandraCluster create", "K8ssandraCluster", r.Name)
 
-	return nil, r.validateK8ssandraCluster()
+	return ValidateDeprecatedFieldUsage(r), r.validateK8ssandraCluster()
 }
 
 func (r *K8ssandraCluster) validateK8ssandraCluster() error {
@@ -211,7 +211,7 @@ func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) (admission.Warning
 		return nil, err
 	}
 
-	return nil, nil
+	return ValidateDeprecatedFieldUsage(r), nil
 }
 
 func validateUpdateNumTokens(
@@ -337,4 +337,26 @@ func (r *K8ssandraCluster) validateReaper() error {
 		return ErrNoReaperPerDcWithLocal
 	}
 	return nil
+}
+
+// ValidateDeprecatedFieldUsage adds warning about fields that are deprecated
+func ValidateDeprecatedFieldUsage(r *K8ssandraCluster) admission.Warnings {
+	warnings := admission.Warnings{}
+
+	if r.Spec.DeprecatedStargate != nil {
+		warnings = append(warnings, deprecatedWarning("stargate", "StargateConfiguration", ""))
+	}
+
+	return warnings
+}
+
+func deprecatedWarning(field, instead, extra string) string {
+	warning := "K8ssandraCluster is using deprecated field '%s'"
+	if instead != "" {
+		warning += fmt.Sprintf(", use '%s' instead", instead)
+	}
+	if extra != "" {
+		warning += ". %s"
+	}
+	return warning
 }

@@ -66,8 +66,8 @@ func stopDcTestSetup(t *testing.T, f *framework.Framework, ctx context.Context, 
 					{Meta: api.EmbeddedObjectMeta{Name: "dc2"}, K8sContext: f.DataPlaneContexts[1], Size: 3},
 				},
 			},
-			Stargate: &stargateapi.StargateClusterTemplate{Size: 3},
-			Reaper:   &reaperapi.ReaperClusterTemplate{},
+			DeprecatedStargate: &stargateapi.StargateClusterTemplate{Size: 3},
+			Reaper:             &reaperapi.ReaperClusterTemplate{},
 		},
 	}
 

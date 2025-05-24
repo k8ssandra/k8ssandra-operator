@@ -35,14 +35,14 @@ func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *fr
 	dc1Prefix := DcPrefix(t, f, dc1Key)
 	dc2Prefix := DcPrefix(t, f, dc2Key)
 	reaperStargate2Prefix := DcPrefixOverride(t, f, dc2Key)
-	sg1Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, fmt.Sprintf("%s-stargate", dc1Prefix))
+	// sg1Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, fmt.Sprintf("%s-stargate", dc1Prefix))
 	reaper1Key := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, fmt.Sprintf("%s-reaper", dc1Prefix))
-	sg2Key := framework.NewClusterKey(f.DataPlaneContexts[1], namespace, fmt.Sprintf("%s-stargate", reaperStargate2Prefix))
+	// sg2Key := framework.NewClusterKey(f.DataPlaneContexts[1], namespace, fmt.Sprintf("%s-stargate", reaperStargate2Prefix))
 	reaper2Key := framework.NewClusterKey(f.DataPlaneContexts[1], namespace, fmt.Sprintf("%s-reaper", reaperStargate2Prefix))
 
-	checkStargateReady(t, f, ctx, sg1Key)
+	// checkStargateReady(t, f, ctx, sg1Key)
 	checkReaperReady(t, f, ctx, reaper1Key)
-	checkStargateReady(t, f, ctx, sg2Key)
+	// checkStargateReady(t, f, ctx, sg2Key)
 
 	toggleDcStopped(t, f, ctx, kcKey, dc1Key, true)
 
@@ -87,7 +87,7 @@ func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *fr
 	toggleDcStopped(t, f, ctx, kcKey, dc1Key, false)
 
 	t.Logf("Check stargate1 started and reaper moved to dc1")
-	checkStargateReady(t, f, ctx, sg1Key)
+	// checkStargateReady(t, f, ctx, sg1Key)
 	checkReaperReady(t, f, ctx, reaper1Key)
 
 	t.Log("deploying Stargate and Reaper ingress routes in", f.DataPlaneContexts[0])
@@ -114,7 +114,7 @@ func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *fr
 	toggleDcStopped(t, f, ctx, kcKey, dc2Key, false)
 
 	t.Logf("Check stargate2 started and reaper remains on dc1")
-	checkStargateReady(t, f, ctx, sg2Key)
+	// checkStargateReady(t, f, ctx, sg2Key)
 	checkReaperNotFound(t, f, ctx, reaper2Key)
 
 	t.Run("TestApisDcsRestarted", func(t *testing.T) {

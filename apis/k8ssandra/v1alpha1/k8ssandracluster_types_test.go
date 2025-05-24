@@ -29,7 +29,7 @@ func testK8ssandraClusterHasStargates(t *testing.T) {
 	t.Run("cluster-level stargate", func(t *testing.T) {
 		kc := K8ssandraCluster{
 			Spec: K8ssandraClusterSpec{
-				Stargate: &stargateapi.StargateClusterTemplate{
+				DeprecatedStargate: &stargateapi.StargateClusterTemplate{
 					Size: 3,
 				},
 			},

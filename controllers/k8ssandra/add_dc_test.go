@@ -736,7 +736,7 @@ func addStargateAndReaperToCluster(ctx context.Context, t *testing.T, f *framewo
 	err := f.Client.Get(ctx, key, kc)
 	require.NoError(t, err, "failed to get K8ssandraCluster")
 
-	kc.Spec.Stargate = &stargateapi.StargateClusterTemplate{
+	kc.Spec.DeprecatedStargate = &stargateapi.StargateClusterTemplate{
 		Size: 1,
 	}
 	kc.Spec.Reaper = &reaperapi.ReaperClusterTemplate{}
