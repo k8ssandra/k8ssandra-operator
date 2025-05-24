@@ -20,11 +20,6 @@ patchesJson6902:
     - op: replace
       path: /webhooks/0/clientConfig/service/name
       value: k8ssandra-operator-webhook-service
-
-# The objectSelector will be added to the MutatingWebhookConfiguration
-# to restrict the webhook to pods created by cass-operator.
-# They're the only pods that should be mutated to inject secrets.
-patchesJson6902:
 - target:
     group: admissionregistration.k8s.io
     version: v1
