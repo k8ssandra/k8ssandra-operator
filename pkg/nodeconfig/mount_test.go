@@ -1,12 +1,14 @@
 package nodeconfig
 
 import (
+	"testing"
+
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	"testing"
 )
 
 func TestMountPerNodeConfig(t *testing.T) {
@@ -89,4 +91,18 @@ func TestMountPerNodeConfig(t *testing.T) {
 			assert.Equal(t, tt.wantConfig, tt.dcConfig)
 		})
 	}
+}
+
+func TestCorrectVolumes(t *testing.T) {
+	require := require.New(t)
+	initContainerConfig := newPerNodeConfigInitContainer("")
+	require.Equal(3, len(initContainerConfig.VolumeMounts))
+	require.Equal("server-config", initContainerConfig.VolumeMounts[0].Name)
+	require.Equal("/config", initContainerConfig.VolumeMounts[0].MountPath)
+
+	require.Equal(PerNodeConfigVolumeName, initContainerConfig.VolumeMounts[1].Name)
+	require.Equal("/per-node-config", initContainerConfig.VolumeMounts[1].MountPath)
+
+	require.Equal("tmp", initContainerConfig.VolumeMounts[2].Name)
+	require.Equal("/tmp", initContainerConfig.VolumeMounts[2].MountPath)
 }

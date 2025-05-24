@@ -4,9 +4,6 @@ metadata:
   name: test
 spec:
   auth: true
-  stargate:
-    size: 1
-    heapSize: 384Mi
   cassandra:
     serverVersion: 6.8.50
     serverType: dse

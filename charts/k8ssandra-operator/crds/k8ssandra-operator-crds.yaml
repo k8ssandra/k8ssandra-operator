@@ -11261,7 +11261,7 @@ spec:
                           type: boolean
                         stargate:
                           description: |-
-                            Stargate defines the desired deployment characteristics for Stargate in this datacenter. Leave nil to skip
+                            DEPRECATED Stargate defines the desired deployment characteristics for Stargate in this datacenter. Leave nil to skip
                             deploying Stargate in this datacenter.
                           properties:
                             affinity:
@@ -30584,7 +30584,7 @@ spec:
                 type: string
               stargate:
                 description: |-
-                  Stargate defines the desired deployment characteristics for Stargate in this K8ssandraCluster.
+                  DEPRECATED Stargate defines the desired deployment characteristics for Stargate in this K8ssandraCluster.
                   If this is non-nil, Stargate will be deployed on every Cassandra datacenter in this K8ssandraCluster.
                 properties:
                   affinity:

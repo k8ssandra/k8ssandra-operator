@@ -49,7 +49,7 @@ type K8ssandraClusterSpec struct {
 	// affinity (via racks), individual C* node settings, JVM settings, and more.
 	Cassandra *CassandraClusterTemplate `json:"cassandra,omitempty"`
 
-	// Stargate defines the desired deployment characteristics for Stargate in this K8ssandraCluster.
+	// DEPRECATED Stargate defines the desired deployment characteristics for Stargate in this K8ssandraCluster.
 	// If this is non-nil, Stargate will be deployed on every Cassandra datacenter in this K8ssandraCluster.
 	// +optional
 	Stargate *stargateapi.StargateClusterTemplate `json:"stargate,omitempty"`
@@ -296,7 +296,7 @@ type CassandraDatacenterTemplate struct {
 	// +kubebuilder:default=false
 	Stopped bool `json:"stopped,omitempty"`
 
-	// Stargate defines the desired deployment characteristics for Stargate in this datacenter. Leave nil to skip
+	// DEPRECATED Stargate defines the desired deployment characteristics for Stargate in this datacenter. Leave nil to skip
 	// deploying Stargate in this datacenter.
 	// +optional
 	Stargate *stargateapi.StargateDatacenterTemplate `json:"stargate,omitempty"`
