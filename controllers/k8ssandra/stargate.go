@@ -34,7 +34,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 	}
 	logger = logger.WithValues("Stargate", stargateKey)
 
-	stargateTemplate := dcTemplate.Stargate.MergeWith(kc.Spec.DeprecatedStargate)
+	stargateTemplate := dcTemplate.Stargate.MergeWith(kc.Spec.Stargate)
 
 	if actualDc.Spec.Stopped && stargateTemplate != nil {
 		logger.Info("DC is stopped: skipping Stargate deployment")

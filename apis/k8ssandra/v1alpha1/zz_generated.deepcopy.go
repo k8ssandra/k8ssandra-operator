@@ -869,8 +869,8 @@ func (in *K8ssandraClusterSpec) DeepCopyInto(out *K8ssandraClusterSpec) {
 		*out = new(CassandraClusterTemplate)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.DeprecatedStargate != nil {
-		in, out := &in.DeprecatedStargate, &out.DeprecatedStargate
+	if in.Stargate != nil {
+		in, out := &in.Stargate, &out.Stargate
 		*out = new(stargatev1alpha1.StargateClusterTemplate)
 		(*in).DeepCopyInto(*out)
 	}
