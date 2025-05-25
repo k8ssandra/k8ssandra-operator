@@ -3,7 +3,6 @@ package e2e
 import (
 	"context"
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -28,13 +27,13 @@ func multiDcAuthOnOff(t *testing.T, ctx context.Context, namespace string, f *fr
 	reaper1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-reaper"}}
 	reaper2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-real-dc2-reaper"}}
 
-	stargate1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-stargate"}}
-	stargate2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-real-dc2-stargate"}}
+	// stargate1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-stargate"}}
+	// stargate2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-real-dc2-stargate"}}
 
 	reaperUiSecretKey := types.NamespacedName{Namespace: namespace, Name: reaper.DefaultUiSecretName("cluster1")}
 
 	// cluster has auth turned off initially
-	waitForAllComponentsReady(t, f, ctx, kcKey, dc1Key, dc2Key, stargate1Key, stargate2Key, reaper1Key, reaper2Key)
+	waitForAllComponentsReady(t, f, ctx, kcKey, dc1Key, dc2Key, reaper1Key, reaper2Key)
 
 	t.Log("deploying Stargate and Reaper ingress routes in both clusters")
 
@@ -68,7 +67,7 @@ func multiDcAuthOnOff(t *testing.T, ctx context.Context, namespace string, f *fr
 
 	// turn auth on
 	toggleAuthentication(t, f, ctx, kcKey, true)
-	waitForAllComponentsReady(t, f, ctx, kcKey, dc1Key, dc2Key, stargate1Key, stargate2Key, reaper1Key, reaper2Key)
+	waitForAllComponentsReady(t, f, ctx, kcKey, dc1Key, dc2Key, reaper1Key, reaper2Key)
 	testAuthenticationEnabled(t, f, ctx, namespace, kcKey, reaperUiSecretKey, replication, pod1Name, pod2Name, DcPrefix(t, f, dc1Key), DcPrefixOverride(t, f, dc2Key))
 }
 
@@ -78,7 +77,6 @@ func waitForAllComponentsReady(
 	ctx context.Context,
 	kcKey types.NamespacedName,
 	dc1Key, dc2Key framework.ClusterKey,
-	stargate1Key, stargate2Key framework.ClusterKey,
 	reaper1Key, reaper2Key framework.ClusterKey,
 ) {
 	checkDatacenterReady(t, ctx, dc1Key, f)
@@ -96,16 +94,8 @@ func waitForAllComponentsReady(
 	options1 := kubectl.Options{Namespace: kcKey.Namespace, Context: f.DataPlaneContexts[0]}
 	options2 := kubectl.Options{Namespace: kcKey.Namespace, Context: f.DataPlaneContexts[1]}
 
-	stargate1Prefix, _ := strings.CutSuffix(stargate1Key.Name, "-stargate")
-	stargate2Prefix, _ := strings.CutSuffix(stargate2Key.Name, "-stargate")
-	err := kubectl.RolloutStatus(ctx, options1, "deployment", fmt.Sprintf("%s-default-stargate-deployment", stargate1Prefix))
-	assert.NoError(t, err)
-	err = kubectl.RolloutStatus(ctx, options1, "deployment", reaper1Key.Name)
-	assert.NoError(t, err)
-	err = kubectl.RolloutStatus(ctx, options2, "deployment", fmt.Sprintf("%s-default-stargate-deployment", stargate2Prefix))
-	assert.NoError(t, err)
-	err = kubectl.RolloutStatus(ctx, options2, "deployment", reaper2Key.Name)
-	assert.NoError(t, err)
+	assert.NoError(t, kubectl.RolloutStatus(ctx, options1, "deployment", reaper1Key.Name))
+	assert.NoError(t, kubectl.RolloutStatus(ctx, options2, "deployment", reaper2Key.Name))
 }
 
 func toggleAuthentication(t *testing.T, f *framework.E2eFramework, ctx context.Context, kcKey types.NamespacedName, on bool) {

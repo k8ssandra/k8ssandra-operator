@@ -33,6 +33,9 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
+    deprecated: true
+    deprecationWarning: Stargate support is deprecated and will be removed in a future
+      release.
     name: v1alpha1
     schema:
       openAPIV3Schema:
