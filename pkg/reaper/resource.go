@@ -1,6 +1,7 @@
 package reaper
 
 import (
+	"github.com/adutra/goalesce"
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -100,6 +101,11 @@ func NewReaper(
 	if kc.Status.GetConditionStatus(k8ssandraapi.CassandraInitialized) == corev1.ConditionTrue && kc.HasStoppedDatacenters() {
 		desiredReaper.Spec.SkipSchemaMigration = true
 	}
+
+	// forward common metadata from k8ssandra cluster to reaper
+	commonMeta := transformCassandraClusterMeta(kc)
+	desiredReaper.Spec.ResourceMeta = goalesce.MustDeepMerge(desiredReaper.Spec.ResourceMeta, commonMeta)
+
 	annotations.AddHashAnnotation(desiredReaper)
 	return desiredReaper, nil
 }
@@ -111,4 +117,39 @@ func computeReaperDcAvailability(kc *k8ssandraapi.K8ssandraCluster) string {
 		return DatacenterAvailabilityAll
 	}
 	return DatacenterAvailabilityEach
+}
+
+func transformCassandraClusterMeta(kc *k8ssandraapi.K8ssandraCluster) *meta.ResourceMeta {
+	cassMeta := kc.Spec.Cassandra.Meta
+	reaperMeta := &meta.ResourceMeta{}
+
+	if cassMeta.Tags.Labels != nil {
+		reaperMeta.Tags.Labels = cassMeta.Tags.Labels
+	}
+	if cassMeta.Tags.Annotations != nil {
+		reaperMeta.Tags.Annotations = cassMeta.Tags.Annotations
+	}
+
+	if cassMeta.CommonLabels != nil {
+		reaperMeta.CommonLabels = cassMeta.CommonLabels
+	}
+	// cassMeta.CommonAnnotation has nowhere to go
+
+	if cassMeta.Pods.Labels != nil {
+		reaperMeta.Pods.Labels = cassMeta.Pods.Labels
+	}
+	if cassMeta.Pods.Annotations != nil {
+		reaperMeta.Pods.Annotations = cassMeta.Pods.Annotations
+	}
+
+	// while the CassandraClusterMeta has ServiceConfig field, none of the services therein really fits reaper
+	// it seems more correct to forward the common L/A to the reaper service
+	if cassMeta.CommonLabels != nil {
+		reaperMeta.Service.Labels = cassMeta.CommonLabels
+	}
+	if cassMeta.CommonAnnotations != nil {
+		reaperMeta.Service.Annotations = cassMeta.CommonAnnotations
+	}
+
+	return reaperMeta
 }

@@ -30,6 +30,11 @@ spec:
   cassandra:
     serverVersion: 4.1.8
     clusterName: "My Cluster"
+    meta:
+      labels:
+        testLabel: testValue
+      annotations:
+        testAnnotation: testValue
     jmxInitContainerImage:
       repository: library
       name: busybox
