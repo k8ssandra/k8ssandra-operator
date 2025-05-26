@@ -157,7 +157,7 @@ type ReaperTemplate struct {
 	// +optional
 	ResourceMeta *meta.ResourceMeta `json:"metadata,omitempty"`
 
-	// +kubebuilder:default={enabled: false}
+	// +kubebuilder:default={enabled: true}
 	// +optional
 	HttpManagement HttpManagement `json:"httpManagement"`
 
