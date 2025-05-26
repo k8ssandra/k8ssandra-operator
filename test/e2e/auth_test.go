@@ -27,33 +27,19 @@ func multiDcAuthOnOff(t *testing.T, ctx context.Context, namespace string, f *fr
 	reaper1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-reaper"}}
 	reaper2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-real-dc2-reaper"}}
 
-	// stargate1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-stargate"}}
-	// stargate2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-real-dc2-stargate"}}
-
 	reaperUiSecretKey := types.NamespacedName{Namespace: namespace, Name: reaper.DefaultUiSecretName("cluster1")}
 
 	// cluster has auth turned off initially
 	waitForAllComponentsReady(t, f, ctx, kcKey, dc1Key, dc2Key, reaper1Key, reaper2Key)
 
-	t.Log("deploying Stargate and Reaper ingress routes in both clusters")
-
-	// stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
-	// stargateGrpcHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateGrpc
-	// stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateCql
+	t.Log("deploying Reaper ingress routes in both clusters")
 	reaperRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].ReaperRest
 
-	// f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, fmt.Sprintf("%s-service", stargate1Key.Name), stargateRestHostAndPort, stargateGrpcHostAndPort)
 	f.DeployReaperIngresses(t, f.DataPlaneContexts[0], namespace, fmt.Sprintf("%s-service", reaper1Key.Name), reaperRestHostAndPort)
-	// checkStargateApisReachable(t, ctx, f.DataPlaneContexts[0], namespace, stargate1Key.Name, stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, "", "", false, f)
 	checkReaperApiReachable(t, ctx, reaperRestHostAndPort)
 
-	// stargateRestHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateRest
-	// stargateGrpcHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateGrpc
-	// stargateCqlHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateCql
 	reaperRestHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].ReaperRest
-	// f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, fmt.Sprintf("%s-service", stargate2Key.Name), stargateRestHostAndPort, stargateGrpcHostAndPort)
 	f.DeployReaperIngresses(t, f.DataPlaneContexts[1], namespace, fmt.Sprintf("%s-service", reaper2Key.Name), reaperRestHostAndPort)
-	// checkStargateApisReachable(t, ctx, f.DataPlaneContexts[1], namespace, stargate2Key.Name, stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, "", "", false, f)
 	checkReaperApiReachable(t, ctx, reaperRestHostAndPort)
 
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
@@ -81,12 +67,8 @@ func waitForAllComponentsReady(
 ) {
 	checkDatacenterReady(t, ctx, dc1Key, f)
 	checkDatacenterReady(t, ctx, dc2Key, f)
-	// checkStargateReady(t, f, ctx, stargate1Key)
-	// checkStargateK8cStatusReady(t, f, ctx, kcKey, dc1Key)
 	checkReaperReady(t, f, ctx, reaper1Key)
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dc1Key)
-	// checkStargateReady(t, f, ctx, stargate2Key)
-	// checkStargateK8cStatusReady(t, f, ctx, kcKey, dc2Key)
 	checkReaperReady(t, f, ctx, reaper2Key)
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dc2Key)
 	// we need to wait until the deployments are fully rolled out before continuing, to avoid hitting an old
@@ -131,14 +113,6 @@ func testAuthenticationDisabled(
 		})
 	})
 	t.Run("TestApisAuthDisabled", func(t *testing.T) {
-		// t.Run("Stargate", func(t *testing.T) {
-		// 	// Stargate REST APIs are only accessible when PasswordAuthenticator is in use, because when obtaining a new
-		// 	// token, the username will be checked against the system_auth.roles table directly.
-		// 	// Therefore, we only test the CQL API here.
-		// 	// See https://github.com/stargate/stargate/issues/792
-		// 	testStargateNativeApi(t, f, ctx, f.DataPlaneContexts[0], namespace, "", "", false, replication)
-		// 	testStargateNativeApi(t, f, ctx, f.DataPlaneContexts[1], namespace, "", "", false, replication)
-		// })
 		t.Run("Reaper", func(t *testing.T) {
 			testReaperApi(t, ctx, f.DataPlaneContexts[0], "cluster1", reaperapi.DefaultKeyspace, "", "")
 			testReaperApi(t, ctx, f.DataPlaneContexts[1], "cluster1", reaperapi.DefaultKeyspace, "", "")
@@ -181,19 +155,6 @@ func testAuthenticationEnabled(
 		})
 	})
 	t.Run("TestApisAuthEnabled", func(t *testing.T) {
-		// t.Run("Stargate", func(t *testing.T) {
-		// 	// testStargateApis(t, f, ctx, f.DataPlaneContexts[0], namespace, dc1Prefix, username, password, false, replication)
-		// 	// testStargateApis(t, f, ctx, f.DataPlaneContexts[1], namespace, dc2Prefix, username, password, false, replication)
-		// 	checkStargateCqlConnectionFailsWithNoCredentials(t, ctx, f.DataPlaneContexts[0])
-		// 	checkStargateCqlConnectionFailsWithNoCredentials(t, ctx, f.DataPlaneContexts[1])
-		// 	checkStargateCqlConnectionFailsWithWrongCredentials(t, ctx, f.DataPlaneContexts[0])
-		// 	checkStargateCqlConnectionFailsWithWrongCredentials(t, ctx, f.DataPlaneContexts[1])
-		// 	restClient := resty.New()
-		// 	checkStargateTokenAuthFailsWithNoCredentials(t, restClient, f.DataPlaneContexts[0])
-		// 	checkStargateTokenAuthFailsWithNoCredentials(t, restClient, f.DataPlaneContexts[1])
-		// 	checkStargateTokenAuthFailsWithWrongCredentials(t, restClient, f.DataPlaneContexts[0])
-		// 	checkStargateTokenAuthFailsWithWrongCredentials(t, restClient, f.DataPlaneContexts[1])
-		// })
 		t.Run("Reaper", func(t *testing.T) {
 			username, password := retrieveCredentials(t, f, ctx, framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: reaperUiSecretKey})
 			testReaperApi(t, ctx, f.DataPlaneContexts[0], "cluster1", reaperapi.DefaultKeyspace, username, password)
@@ -229,43 +190,6 @@ func checkRemoteJmxFailsWithWrongCredentials(t *testing.T, f *framework.E2eFrame
 		assert.Contains(t, err.Error(), "Provided username nonexistent and/or password are incorrect")
 	}
 }
-
-// func checkStargateCqlConnectionFailsWithNoCredentials(t *testing.T, ctx context.Context, k8sContext string) {
-// 	contactPoint := ingressConfigs[k8sContext].StargateCql
-// 	cqlClient := cqlclient.NewCqlClient(string(contactPoint), nil)
-// 	cqlClient.ConnectTimeout = 30 * time.Second
-// 	cqlClient.ReadTimeout = 3 * time.Minute
-// 	_, err := cqlClient.ConnectAndInit(ctx, primitive.ProtocolVersion4, cqlclient.ManagedStreamId)
-// 	if assert.Error(t, err, "expected unauthenticated CQL connection to fail") {
-// 		assert.Contains(t, err.Error(), "expected READY, got AUTHENTICATE")
-// 	}
-// }
-
-// func checkStargateCqlConnectionFailsWithWrongCredentials(t *testing.T, ctx context.Context, k8sContext string) {
-// 	contactPoint := ingressConfigs[k8sContext].StargateCql
-// 	cqlClient := cqlclient.NewCqlClient(string(contactPoint), &cqlclient.AuthCredentials{Username: "nonexistent", Password: "irrelevant"})
-// 	cqlClient.ConnectTimeout = 30 * time.Second
-// 	cqlClient.ReadTimeout = 3 * time.Minute
-// 	_, err := cqlClient.ConnectAndInit(ctx, primitive.ProtocolVersion4, cqlclient.ManagedStreamId)
-// 	if assert.Error(t, err, "expected wrong credentials CQL connection to fail") {
-// 		assert.Contains(t, err.Error(), "expected AUTH_CHALLENGE or AUTH_SUCCESS, got ERROR AUTHENTICATION ERROR")
-// 	}
-// }
-
-// func checkStargateTokenAuthFailsWithNoCredentials(t *testing.T, restClient *resty.Client, k8sContext string) {
-// 	url := fmt.Sprintf("http://%v/v1/auth", ingressConfigs[k8sContext].StargateRest)
-// 	response, err := restClient.NewRequest().Post(url)
-// 	assert.NoError(t, err)
-// 	assert.Equal(t, http.StatusBadRequest, response.StatusCode(), "Expected auth request to return 400")
-// }
-
-// func checkStargateTokenAuthFailsWithWrongCredentials(t *testing.T, restClient *resty.Client, k8sContext string) {
-// 	url := fmt.Sprintf("http://%v/v1/auth", ingressConfigs[k8sContext].StargateRest)
-// 	body := map[string]string{"username": "nonexistent", "password": "irrelevant"}
-// 	response, err := restClient.NewRequest().SetHeader("Content-Type", "application/json").SetBody(body).Post(url)
-// 	assert.NoError(t, err)
-// 	assert.Equal(t, http.StatusUnauthorized, response.StatusCode(), "Expected auth request to return 401")
-// }
 
 func getPodIPs(t *testing.T, f *framework.E2eFramework, namespace, pod1Name, pod2Name string) (string, string) {
 	pod1IP, err := f.GetPodIP(f.DataPlaneContexts[0], namespace, pod1Name)

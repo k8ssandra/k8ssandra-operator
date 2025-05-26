@@ -29,23 +29,6 @@ type ingressKustomization struct {
 	Host        string
 }
 
-type cqlIngressKustomization struct {
-	ServiceNamespace string
-	ServiceName      string
-	Host             string
-}
-
-func (f *E2eFramework) DeployStargateIngresses(t *testing.T, k8sContext, namespace, stargateServiceName string, stargateRestHostAndPort, stargateGrpcHostAndPort HostAndPort) {
-	f.deployIngress(t, k8sContext, namespace, "stargate-ingress.yaml", "stargate", stargateTemplate,
-		&ingressKustomization{stargateServiceName, stargateRestHostAndPort.Host()})
-
-	f.deployIngress(t, k8sContext, namespace, "stargate-grpc-ingress.yaml", "stargate-grpc", stargateGrpcTemplate,
-		&ingressKustomization{stargateServiceName, stargateGrpcHostAndPort.Host()})
-
-	f.deployIngress(t, k8sContext, "ingress-nginx", "stargate-cql-ingress.yaml", "stargate-cql", stargateCqlTemplate,
-		&cqlIngressKustomization{namespace, stargateServiceName, stargateRestHostAndPort.Host()})
-}
-
 func (f *E2eFramework) DeployReaperIngresses(t *testing.T, k8sContext, namespace, reaperServiceName string, reaperHostAndPort HostAndPort) {
 	f.deployIngress(t, k8sContext, namespace, "reaper-ingress.yaml", "reaper", reaperTemplate,
 		&ingressKustomization{reaperServiceName, reaperHostAndPort.Host()})
@@ -79,78 +62,6 @@ func (f *E2eFramework) UndeployAllIngresses(t *testing.T, k8sContext, namespace 
 	err := kubectl.DeleteAllOf(options, "Ingress")
 	assert.NoError(t, err)
 }
-
-const stargateTemplate = `apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-resources:
-- stargate-ingress.yaml
-patches:
-- target:	
-    group: networking.k8s.io
-    version: v1
-    kind: Ingress
-    name: cluster1-dc1-stargate-service-http-ingress
-  patch: |-
-    - op: replace
-      path: /metadata/name
-      value: "{{ .ServiceName }}-http-ingress"
-    - op: replace
-      path: /spec/rules/0/host
-      value: "{{ .Host }}"
-    - op: replace
-      path: /spec/rules/0/http/paths/0/backend/service/name
-      value: "{{ .ServiceName }}"
-    - op: replace
-      path: /spec/rules/0/http/paths/1/backend/service/name
-      value: "{{ .ServiceName }}"
-    - op: replace
-      path: /spec/rules/0/http/paths/2/backend/service/name
-      value: "{{ .ServiceName }}"
-`
-
-const stargateGrpcTemplate = `apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-resources:
-- stargate-grpc-ingress.yaml
-patches:
-- target:
-    group: networking.k8s.io
-    version: v1
-    kind: Ingress
-    name: cluster1-dc1-stargate-service-grpc-ingress
-  patch: |-
-    - op: replace
-      path: /metadata/name
-      value: "{{ .ServiceName }}-grpc-ingress"
-    - op: replace
-      path: /spec/rules/0/host
-      value: "{{ .Host }}"
-    - op: replace
-      path: /spec/rules/0/http/paths/0/backend/service/name
-      value: "{{ .ServiceName }}"
-    - op: replace
-      path: /spec/tls/0/secretName
-      value: "{{ .ServiceName }}-grpc-tls-secret"
-    - op: replace
-      path: /spec/tls/0/hosts/0
-      value: "{{ .Host }}"
-`
-
-const stargateCqlTemplate = `apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-resources:
-- stargate-cql-ingress.yaml
-patches:
-- target:
-    group: ""
-    version: v1
-    kind: ConfigMap
-    name: ingress-nginx-tcp
-  patch: |-
-    - op: replace
-      path: /data/9042
-      value: "{{ .ServiceNamespace }}/{{ .ServiceName }}:9042"
-`
 
 const reaperTemplate = `apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
