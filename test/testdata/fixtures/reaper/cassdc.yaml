@@ -19,9 +19,6 @@ spec:
       additional-jvm-opts:
         - -Dcassandra.system_distributed_replication_dc_names=dc1
         - -Dcassandra.system_distributed_replication_per_dc=1
-        - -Dcassandra.jmx.remote.login.config=CassandraLogin
-        - -Djava.security.auth.login.config=/etc/cassandra/cassandra-jaas.config
-        - -Dcassandra.jmx.authorizer=org.apache.cassandra.auth.jmx.AuthorizationProxy
       initial_heap_size: 512m
       max_heap_size: 512m
   users:
@@ -50,6 +47,7 @@ spec:
         requests:
           storage: 5Gi
       storageClassName: standard
+  readOnlyRootFilesystem: false
   podTemplateSpec:
     spec:
       containers:

@@ -28768,11 +28768,11 @@ spec:
                       enabled: false
                     properties:
                       enabled:
-                        default: false
+                        default: true
                         description: |-
                           Enable/disable the HTTP management connection between Reaper and Cassandra.
                           When enabled, HTTP will be used instead of JMX for management connectivity between Cassandra
-                          and Reaper. In future, this will be true by default
+                          and Reaper.
                         type: boolean
                       keystores:
                         description: |-

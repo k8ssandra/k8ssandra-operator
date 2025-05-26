@@ -404,8 +404,8 @@ type Reaper struct {
 type HttpManagement struct {
 	// Enable/disable the HTTP management connection between Reaper and Cassandra.
 	// When enabled, HTTP will be used instead of JMX for management connectivity between Cassandra
-	// and Reaper. In future, this will be true by default
-	// +kubebuilder:default=false
+	// and Reaper.
+	// +kubebuilder:default=true
 	Enabled bool `json:"enabled,omitempty"`
 
 	Keystores *corev1.LocalObjectReference `json:"keystores,omitempty"`
