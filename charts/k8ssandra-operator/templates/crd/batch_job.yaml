@@ -9,7 +9,7 @@ metadata:
     "helm.sh/hook-delete-policy": before-hook-creation
     "helm.sh/hook-weight": "10"
     {{- with include "k8ssandra-common.annotations" . }}
-      {{- . | nindent 4 }}
+    {{- . | nindent 4 }}
     {{- end }}
 spec:
   backoffLimit: 3
