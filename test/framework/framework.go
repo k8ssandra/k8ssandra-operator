@@ -21,7 +21,6 @@ import (
 	casstaskapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
 	configapi "github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
 	controlapi "github.com/k8ssandra/k8ssandra-operator/apis/control/v1alpha1"
-	k8taskapi "github.com/k8ssandra/k8ssandra-operator/apis/control/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
@@ -389,36 +388,36 @@ func (f *Framework) PatchDatacenterStatus(ctx context.Context, key ClusterKey, u
 	return remoteClient.Status().Patch(ctx, dc, patch)
 }
 
-func (f *Framework) SetStargateStatusReady(ctx context.Context, key ClusterKey) error {
-	return f.PatchStargateStatus(ctx, key, func(sg *stargateapi.Stargate) {
-		now := metav1.Now()
-		sg.Status.Progress = stargateapi.StargateProgressRunning
-		sg.Status.AvailableReplicas = 1
-		sg.Status.Replicas = 1
-		sg.Status.ReadyReplicas = 1
-		sg.Status.UpdatedReplicas = 1
-		sg.Status.SetCondition(stargateapi.StargateCondition{
-			Type:               stargateapi.StargateReady,
-			Status:             corev1.ConditionTrue,
-			LastTransitionTime: &now,
-		})
-	})
-}
+// func (f *Framework) SetStargateStatusReady(ctx context.Context, key ClusterKey) error {
+// 	return f.PatchStargateStatus(ctx, key, func(sg *stargateapi.Stargate) {
+// 		now := metav1.Now()
+// 		sg.Status.Progress = stargateapi.StargateProgressRunning
+// 		sg.Status.AvailableReplicas = 1
+// 		sg.Status.Replicas = 1
+// 		sg.Status.ReadyReplicas = 1
+// 		sg.Status.UpdatedReplicas = 1
+// 		sg.Status.SetCondition(stargateapi.StargateCondition{
+// 			Type:               stargateapi.StargateReady,
+// 			Status:             corev1.ConditionTrue,
+// 			LastTransitionTime: &now,
+// 		})
+// 	})
+// }
 
-func (f *Framework) PatchStargateStatus(ctx context.Context, key ClusterKey, updateFn func(sg *stargateapi.Stargate)) error {
-	sg := &stargateapi.Stargate{}
-	err := f.Get(ctx, key, sg)
+// func (f *Framework) PatchStargateStatus(ctx context.Context, key ClusterKey, updateFn func(sg *stargateapi.Stargate)) error {
+// 	sg := &stargateapi.Stargate{}
+// 	err := f.Get(ctx, key, sg)
 
-	if err != nil {
-		return err
-	}
+// 	if err != nil {
+// 		return err
+// 	}
 
-	patch := client.MergeFromWithOptions(sg.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	updateFn(sg)
+// 	patch := client.MergeFromWithOptions(sg.DeepCopy(), client.MergeFromWithOptimisticLock{})
+// 	updateFn(sg)
 
-	remoteClient := f.remoteClients[key.K8sContext]
-	return remoteClient.Status().Patch(ctx, sg, patch)
-}
+// 	remoteClient := f.remoteClients[key.K8sContext]
+// 	return remoteClient.Status().Patch(ctx, sg, patch)
+// }
 
 func (f *Framework) SetReaperStatusReady(ctx context.Context, key ClusterKey) error {
 	return f.PatchReaperStatus(ctx, key, func(r *reaperapi.Reaper) {
@@ -643,14 +642,14 @@ func (f *Framework) CassTaskExists(ctx context.Context, key ClusterKey) func() b
 }
 
 // NewWithK8ssandraTask is a function generator for withCassandraTask that is bound to ctx, and key.
-func (f *Framework) NewWithK8ssandraTask(ctx context.Context, key ClusterKey) func(func(*k8taskapi.K8ssandraTask) bool) func() bool {
-	return func(condition func(dc *k8taskapi.K8ssandraTask) bool) func() bool {
+func (f *Framework) NewWithK8ssandraTask(ctx context.Context, key ClusterKey) func(func(*controlapi.K8ssandraTask) bool) func() bool {
+	return func(condition func(dc *controlapi.K8ssandraTask) bool) func() bool {
 		return f.withK8ssandraTask(ctx, key, condition)
 	}
 }
 
 // withK8ssandraTask Fetches the CassandraTask specified by key and then calls condition.
-func (f *Framework) withK8ssandraTask(ctx context.Context, key ClusterKey, condition func(task *k8taskapi.K8ssandraTask) bool) func() bool {
+func (f *Framework) withK8ssandraTask(ctx context.Context, key ClusterKey, condition func(task *controlapi.K8ssandraTask) bool) func() bool {
 	return func() bool {
 		remoteClient, found := f.remoteClients[key.K8sContext]
 		if !found {
@@ -658,7 +657,7 @@ func (f *Framework) withK8ssandraTask(ctx context.Context, key ClusterKey, condi
 			return false
 		}
 
-		dc := &k8taskapi.K8ssandraTask{}
+		dc := &controlapi.K8ssandraTask{}
 		if err := remoteClient.Get(ctx, key.NamespacedName, dc); err == nil {
 			return condition(dc)
 		} else {
@@ -672,42 +671,42 @@ func (f *Framework) withK8ssandraTask(ctx context.Context, key ClusterKey, condi
 
 func (f *Framework) K8ssandraTaskExists(ctx context.Context, key ClusterKey) func() bool {
 	withK8ssandraTask := f.NewWithK8ssandraTask(ctx, key)
-	return withK8ssandraTask(func(dc *k8taskapi.K8ssandraTask) bool {
+	return withK8ssandraTask(func(dc *controlapi.K8ssandraTask) bool {
 		return true
 	})
 }
 
-// NewWithStargate is a function generator for withStargate that is bound to ctx, and key.
-func (f *Framework) NewWithStargate(ctx context.Context, key ClusterKey) func(func(stargate *stargateapi.Stargate) bool) func() bool {
-	return func(condition func(*stargateapi.Stargate) bool) func() bool {
-		return f.withStargate(ctx, key, condition)
-	}
-}
+// // NewWithStargate is a function generator for withStargate that is bound to ctx, and key.
+// func (f *Framework) NewWithStargate(ctx context.Context, key ClusterKey) func(func(stargate *stargateapi.Stargate) bool) func() bool {
+// 	return func(condition func(*stargateapi.Stargate) bool) func() bool {
+// 		return f.withStargate(ctx, key, condition)
+// 	}
+// }
 
 // withStargate Fetches the stargate specified by key and then calls condition.
-func (f *Framework) withStargate(ctx context.Context, key ClusterKey, condition func(*stargateapi.Stargate) bool) func() bool {
-	return func() bool {
-		remoteClient, found := f.remoteClients[key.K8sContext]
-		if !found {
-			f.logger.Error(f.k8sContextNotFound(key.K8sContext), "cannot lookup Stargate", "key", key)
-			return false
-		}
-		stargate := &stargateapi.Stargate{}
-		if err := remoteClient.Get(ctx, key.NamespacedName, stargate); err == nil {
-			return condition(stargate)
-		} else {
-			f.logger.Error(err, "failed to get Stargate", "key", key)
-			return false
-		}
-	}
-}
+// func (f *Framework) withStargate(ctx context.Context, key ClusterKey, condition func(*stargateapi.Stargate) bool) func() bool {
+// 	return func() bool {
+// 		remoteClient, found := f.remoteClients[key.K8sContext]
+// 		if !found {
+// 			f.logger.Error(f.k8sContextNotFound(key.K8sContext), "cannot lookup Stargate", "key", key)
+// 			return false
+// 		}
+// 		stargate := &stargateapi.Stargate{}
+// 		if err := remoteClient.Get(ctx, key.NamespacedName, stargate); err == nil {
+// 			return condition(stargate)
+// 		} else {
+// 			f.logger.Error(err, "failed to get Stargate", "key", key)
+// 			return false
+// 		}
+// 	}
+// }
 
-func (f *Framework) StargateExists(ctx context.Context, key ClusterKey) func() bool {
-	withStargate := f.NewWithStargate(ctx, key)
-	return withStargate(func(s *stargateapi.Stargate) bool {
-		return true
-	})
-}
+// func (f *Framework) StargateExists(ctx context.Context, key ClusterKey) func() bool {
+// 	withStargate := f.NewWithStargate(ctx, key)
+// 	return withStargate(func(s *stargateapi.Stargate) bool {
+// 		return true
+// 	})
+// }
 
 // NewWithReaper is a function generator for withReaper that is bound to ctx, and key.
 func (f *Framework) NewWithReaper(ctx context.Context, key ClusterKey) func(func(reaper *reaperapi.Reaper) bool) func() bool {
