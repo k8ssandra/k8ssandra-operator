@@ -4,6 +4,10 @@ metadata:
   name: {{ include "k8ssandra-common.fullname" . }}
   labels: {{ include "k8ssandra-common.labels" . | indent 4 }}
     control-plane: k8ssandra-operator
+  {{- with include "k8ssandra-common.annotations" . }}
+  annotations:
+    {{- . | nindent 4 }}
+  {{- end }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
@@ -12,11 +16,12 @@ spec:
       control-plane: k8ssandra-operator
   template:
     metadata:
-      {{- with .Values.podAnnotations }}
+      {{- with include "k8ssandra-common.annotations" (dict "context" . "annotations" .Values.podAnnotations) }}
       annotations:
-        {{- toYaml . | nindent 8 }}
+        {{- . | nindent 8 }}
       {{- end }}
-      labels: {{- include "k8ssandra-common.labels" . | indent 8 }}
+      labels:
+        {{- include "k8ssandra-common.labels" . | indent 8 }}
         control-plane: k8ssandra-operator
     spec:
       {{- with .Values.imagePullSecrets }}

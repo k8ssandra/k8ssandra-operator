@@ -3,6 +3,10 @@ kind: Certificate
 metadata:
   name: {{ include "k8ssandra-common.fullname" . }}-serving-cert
   labels: {{ include "k8ssandra-common.labels" . | indent 4 }}
+  {{- with include "k8ssandra-common.annotations" . }}
+  annotations:
+    {{- . | nindent 4 }}
+  {{- end }}
 spec:
   dnsNames:
     -  {{ include "k8ssandra-common.fullname" . }}-webhook-service.{{ .Release.Namespace }}.svc

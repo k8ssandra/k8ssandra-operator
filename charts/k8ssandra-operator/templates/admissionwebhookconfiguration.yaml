@@ -3,6 +3,10 @@ kind: MutatingWebhookConfiguration
 metadata:
   annotations:
     cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "k8ssandra-common.fullname" . }}-serving-cert
+    {{- with include "k8ssandra-common.annotations" . }}
+      {{- . | nindent 4 }}
+    {{- end }}
+  labels: {{ include "k8ssandra-common.labels" . | indent 4 }}
   name: {{ include "k8ssandra-common.fullname" . }}-mutating-webhook-configuration
 webhooks:
 - admissionReviewVersions:
