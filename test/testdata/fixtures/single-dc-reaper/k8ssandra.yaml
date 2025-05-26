@@ -30,7 +30,7 @@ spec:
   cassandra:
     serverVersion: 4.1.8
     clusterName: "My Cluster"
-    meta:
+    metadata:
       labels:
         testLabel: testValue
       annotations:
