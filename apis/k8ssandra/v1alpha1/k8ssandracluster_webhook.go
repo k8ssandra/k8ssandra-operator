@@ -344,13 +344,13 @@ func ValidateDeprecatedFieldUsage(r *K8ssandraCluster) admission.Warnings {
 	warnings := admission.Warnings{}
 
 	if r.Spec.Stargate != nil {
-		warnings = append(warnings, deprecatedWarning("stargate", "StargateConfiguration", ""))
+		warnings = append(warnings, deprecatedWarning("stargate", "", ""))
 	}
 
 	if r.Spec.Cassandra != nil && len(r.Spec.Cassandra.Datacenters) > 0 {
 		for _, dc := range r.Spec.Cassandra.Datacenters {
 			if dc.Stargate != nil {
-				warnings = append(warnings, deprecatedWarning("cassandra.datacenters.stargate", "cassandra.datacenters.stargateConfiguration", ""))
+				warnings = append(warnings, deprecatedWarning("cassandra.datacenters.stargate", "", ""))
 			}
 		}
 	}
@@ -359,7 +359,7 @@ func ValidateDeprecatedFieldUsage(r *K8ssandraCluster) admission.Warnings {
 }
 
 func deprecatedWarning(field, instead, extra string) string {
-	warning := "K8ssandraCluster is using deprecated field '%s'"
+	warning := fmt.Sprintf("K8ssandraCluster is using deprecated field '%s'", field)
 	if instead != "" {
 		warning += fmt.Sprintf(", use '%s' instead", instead)
 	}
