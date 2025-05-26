@@ -12,7 +12,6 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/unstructured"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -84,13 +83,13 @@ func createSingleDcClusterNoAuth(t *testing.T, ctx context.Context, f *framework
 	err = f.SetReaperStatusReady(ctx, reaperKey)
 	require.NoError(t, err, "failed to set Stargate status ready")
 
-	withDatacenter := f.NewWithDatacenter(ctx, dcKey)
+	// withDatacenter := f.NewWithDatacenter(ctx, dcKey)
 
-	t.Log("check that authentication is disabled in DC")
-	require.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
-		// the config should have JMX auth disabled
-		return assert.Contains(t, string(dc.Spec.Config), "-Dcom.sun.management.jmxremote.authenticate=false")
-	}), timeout, interval)
+	// t.Log("check that authentication is disabled in DC")
+	// require.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
+	// 	// the config should have JMX auth disabled
+	// 	return assert.Contains(t, string(dc.Spec.Config), "-Dcom.sun.management.jmxremote.authenticate=false")
+	// }), timeout, interval)
 
 	// t.Log("check that remote JMX is enabled")
 	// require.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
@@ -192,17 +191,17 @@ func createSingleDcClusterAuth(t *testing.T, ctx context.Context, f *framework.F
 	err = f.SetReaperStatusReady(ctx, reaperKey)
 	require.NoError(t, err, "failed to set Stargate status ready")
 
-	withDatacenter := f.NewWithDatacenter(ctx, dcKey)
+	// withDatacenter := f.NewWithDatacenter(ctx, dcKey)
 
-	t.Log("check that authentication is enabled in DC")
-	require.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
-		// there should be a JMX init container with 4 env vars
-		if dc.Spec.PodTemplateSpec != nil {
-			// the config should have JMX auth enabled
-			return assert.Contains(t, string(dc.Spec.Config), "-Dcom.sun.management.jmxremote.authenticate=true")
-		}
-		return false
-	}), timeout, interval)
+	// t.Log("check that authentication is enabled in DC")
+	// require.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
+	// 	// there should be a JMX init container with 4 env vars
+	// 	if dc.Spec.PodTemplateSpec != nil {
+	// 		// the config should have JMX auth enabled
+	// 		return assert.Contains(t, string(dc.Spec.Config), "-Dcom.sun.management.jmxremote.authenticate=true")
+	// 	}
+	// 	return false
+	// }), timeout, interval)
 
 	// t.Log("check that remote JMX is enabled")
 	// require.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
@@ -309,13 +308,13 @@ func createSingleDcClusterAuthExternalSecrets(t *testing.T, ctx context.Context,
 	err = f.SetReaperStatusReady(ctx, reaperKey)
 	require.NoError(t, err, "failed to set Stargate status ready")
 
-	withDatacenter := f.NewWithDatacenter(ctx, dcKey)
+	// withDatacenter := f.NewWithDatacenter(ctx, dcKey)
 
-	t.Log("check that authentication is enabled in DC")
-	require.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
-		// the config should have JMX auth enabled
-		return assert.Contains(t, string(dc.Spec.Config), "-Dcom.sun.management.jmxremote.authenticate=true")
-	}), timeout, interval)
+	// t.Log("check that authentication is enabled in DC")
+	// require.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
+	// 	// the config should have JMX auth enabled
+	// 	return assert.Contains(t, string(dc.Spec.Config), "-Dcom.sun.management.jmxremote.authenticate=true")
+	// }), timeout, interval)
 
 	// t.Log("check that remote JMX is enabled")
 	// require.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {

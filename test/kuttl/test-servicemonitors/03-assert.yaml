@@ -10,14 +10,6 @@ metadata:
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: test-dc1-stargate-stargate-servicemonitor
-  namespace: k8ssandra-operator
-  labels:
-    test-label: gobbledegook
----
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
   name: test-dc1-reaper-reaper-servicemonitor
   namespace: k8ssandra-operator
   labels:

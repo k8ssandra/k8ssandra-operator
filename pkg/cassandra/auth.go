@@ -9,7 +9,7 @@ import (
 )
 
 // ApplyAuth modifies the dc config depending on whether auth is enabled in the cluster or not.
-func ApplyAuth(dcConfig *DatacenterConfig, authEnabled bool, useExternalSecrets bool, enableJmxAuth bool) {
+func ApplyAuth(dcConfig *DatacenterConfig, authEnabled bool, useExternalSecrets bool) {
 
 	dcConfig.CassandraConfig = ApplyAuthSettings(dcConfig.CassandraConfig, authEnabled, dcConfig.ServerType)
 
@@ -28,7 +28,7 @@ func ApplyAuth(dcConfig *DatacenterConfig, authEnabled bool, useExternalSecrets 
 
 	// Use Cassandra internals for JMX authentication and authorization. This allows JMX clients to connect with the
 	// superuser secret.
-	if authEnabled && !useExternalSecrets && enableJmxAuth {
+	if authEnabled && !useExternalSecrets {
 		addOptionIfMissing(dcConfig, "-Dcassandra.jmx.remote.login.config=CassandraLogin")
 		addOptionIfMissing(dcConfig, "-Djava.security.auth.login.config=$CASSANDRA_HOME/conf/cassandra-jaas.config")
 		addOptionIfMissing(dcConfig, "-Dcassandra.jmx.authorizer=org.apache.cassandra.auth.jmx.AuthorizationProxy")
