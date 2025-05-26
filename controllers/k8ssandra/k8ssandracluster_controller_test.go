@@ -777,6 +777,8 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 			Cassandra: newTwoDcCassandraClusterTemplate(f),
 		},
 	}
+	kc.Spec.Cassandra.Meta.CommonLabels = map[string]string{"testLabel": "testValue"}
+	kc.Spec.Cassandra.Meta.CommonAnnotations = map[string]string{"testAnnotation": "testValue"}
 
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
@@ -839,9 +841,15 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 
 	t.Log("check that the contact-points Service for dc1 was created in the control plane")
 	require.Eventually(func() bool {
-		_, endpoints, err := f.GetContactPointsService(ctx, kcKey, kc, dc1Key)
+		service, endpoints, err := f.GetContactPointsService(ctx, kcKey, kc, dc1Key)
 		if err != nil {
 			t.Logf("failed to get contact-points Service: %v", err)
+			return false
+		}
+		if service.ObjectMeta.Labels["testLabel"] != "testValue" {
+			return false
+		}
+		if service.ObjectMeta.Annotations["testAnnotation"] != "testValue" {
 			return false
 		}
 		return len(endpoints.Subsets) == 1 &&
