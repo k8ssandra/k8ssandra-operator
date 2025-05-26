@@ -4,6 +4,11 @@ kind: Kustomization
 resources:
 - github.com/k8ssandra/cass-operator/config/deployments/cluster?ref=v1.24.0
 
+images:
+- name: cr.k8ssandra.io/k8ssandra/cass-operator
+  newName: michaelburman290/cass-operator
+  newTag: v1.24.1-dev.b7b580d-20250526
+
 patchesStrategicMerge:
 - |-
   apiVersion: v1
