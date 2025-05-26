@@ -22,8 +22,6 @@ spec:
         config:
           jvmOptions:
             heapSize: 512Mi
-        networking:
-          hostNetwork: true
       - metadata:
           name: dc2
         k8sContext: kind-k8ssandra-1
@@ -40,8 +38,6 @@ spec:
         config:
           jvmOptions:
             heapSize: 512Mi
-        networking:
-          hostNetwork: true
     mgmtAPIHeap: 64Mi
   reaper:
     deploymentMode: PER_DC
