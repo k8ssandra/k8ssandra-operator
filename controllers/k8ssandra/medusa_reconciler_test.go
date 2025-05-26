@@ -13,6 +13,7 @@ import (
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	cassandra "github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+	k8ssandrameta "github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/assert"
@@ -539,8 +540,10 @@ func createMultiDcClusterWithReplicatedSecrets(t *testing.T, ctx context.Context
 	// the ReplicatedSecrets controller is not loaded in env tests, so we "mock" it by replicating the secrets manually
 	medusaSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      secretName,
-			Namespace: namespace,
+			Name:        secretName,
+			Namespace:   namespace,
+			Labels:      map[string]string{"existingLabel": "existingValue"},
+			Annotations: map[string]string{"overWrittenAnnotation": "valueFromSecret"},
 		},
 		StringData: map[string]string{
 			"credentials": "some-credentials",
@@ -579,6 +582,10 @@ func createMultiDcClusterWithReplicatedSecrets(t *testing.T, ctx context.Context
 					dcTemplate("dc1", f.DataPlaneContexts[1]),
 					dcTemplate("dc2", f.DataPlaneContexts[2]),
 				},
+				Meta: k8ssandrameta.CassandraClusterMeta{
+					CommonLabels:      map[string]string{"newLabel": "newLabelValue"},
+					CommonAnnotations: map[string]string{"overWrittenAnnotation": "valueFromCommonMeta"},
+				},
 			},
 			Medusa: &medusaapi.MedusaClusterTemplate{
 				MedusaConfigurationRef: corev1.ObjectReference{
@@ -596,6 +603,7 @@ func createMultiDcClusterWithReplicatedSecrets(t *testing.T, ctx context.Context
 	require.NoError(err, "failed to create K8ssandraCluster")
 
 	verifySuperuserSecretCreated(ctx, t, f, kc)
+	verifySuperuserSecretLabels(ctx, t, f, kc)
 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
 
 	// crate the first DC

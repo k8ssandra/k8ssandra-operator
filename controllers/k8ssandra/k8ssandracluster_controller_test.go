@@ -2036,6 +2036,45 @@ func verifySuperuserSecretCreated(ctx context.Context, t *testing.T, f *framewor
 	assert.Eventually(t, superuserSecretExists(f, ctx, kluster), timeout, interval, "failed to verify that the default superuser secret was created")
 }
 
+func verifySuperuserSecretLabels(ctx context.Context, t *testing.T, f *framework.Framework, kluster *api.K8ssandraCluster) {
+	t.Logf("check that the superuser secret labels are correct")
+	assert.True(t, superuserSecretLabels(f, ctx, kluster), "failed to verify that the default superuser secret labels are correct")
+}
+
+func superuserSecretLabels(f *framework.Framework, ctx context.Context, kluster *api.K8ssandraCluster) bool {
+	secretName := kluster.Spec.Cassandra.SuperuserSecretRef.Name
+	if secretName == "" {
+		secretName = secret.DefaultSuperuserSecretName(kluster.SanitizedName())
+	}
+	secret := &corev1.Secret{}
+	err := f.Client.Get(ctx, types.NamespacedName{Namespace: kluster.Namespace, Name: secretName}, secret)
+	if err != nil {
+		return false
+	}
+	if secret.Labels == nil || secret.Annotations == nil {
+		return false
+	}
+	if len(secret.Labels) != 4 || len(secret.Annotations) != 1 {
+		return false
+	}
+	if secret.Labels["k8ssandra.io/cluster-name"] != kluster.Name {
+		return false
+	}
+	if secret.Labels["k8ssandra.io/cluster-namespace"] != kluster.Namespace {
+		return false
+	}
+	if secret.Labels["k8ssandra.io/replicated-by"] != "k8ssandracluster-controller" {
+		return false
+	}
+	if secret.Labels["newLabel"] != "newLabelValue" {
+		return false
+	}
+	if secret.Annotations["overWrittenAnnotation"] != "valueFromCommonMeta" {
+		return false
+	}
+	return true
+}
+
 func verifySuperuserSecretNotCreated(ctx context.Context, t *testing.T, f *framework.Framework, kluster *api.K8ssandraCluster) {
 	t.Logf("check that the default superuser secret is not created")
 	assert.Never(t, superuserSecretExists(f, ctx, kluster), timeout, interval, "failed to verify that the default superuser secret was created")

@@ -3,6 +3,8 @@ package k8ssandra
 import (
 	"context"
 	"fmt"
+	"os"
+
 	"github.com/adutra/goalesce"
 	"github.com/go-logr/logr"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -17,7 +19,6 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -152,8 +153,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaSecrets(
 			"MedusaCassandraUserSecretRef",
 			cassandraUserSecretRef,
 		)
-		kcKey := utils.GetKey(kc)
-		if err := secret.ReconcileSecret(ctx, r.Client, cassandraUserSecretRef.Name, kcKey); err != nil {
+		if err := secret.ReconcileSecret(ctx, r.Client, cassandraUserSecretRef.Name, kc); err != nil {
 			logger.Error(err, "Failed to reconcile Medusa CQL user secret")
 			return result.Error(err)
 		}
