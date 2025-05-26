@@ -136,9 +136,6 @@ images:
   - name: k8ssandra/k8ssandra-operator
     newName: {{ .ImageName }}
     newTag: {{ .ImageTag }}
-  - name: cr.k8ssandra.io/k8ssandra/cass-operator
-    newName: michaelburman290/cass-operator
-    newTag: v1.24.1-dev.6c974e8-20250526
 
 patches:
 - target:
@@ -231,9 +228,6 @@ images:
   - name: k8ssandra/k8ssandra-operator
     newName: {{ .ImageName }}
     newTag: {{ .ImageTag }}
-  - name: cr.k8ssandra.io/k8ssandra/cass-operator
-    newName: michaelburman290/cass-operator
-    newTag: v1.24.1-dev.6c974e8-20250526
 
 patches:
 - target:
