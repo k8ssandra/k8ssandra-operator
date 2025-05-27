@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/adutra/goalesce"
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassctlapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
@@ -128,6 +129,10 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		if agentRes.IsError() {
 			return agentRes, actualDcs
 		}
+
+		// merge in common L&A from the k8ssandra spec
+		desiredDc.SetLabels(goalesce.MustDeepMerge(desiredDc.GetLabels(), kc.Spec.Cassandra.Meta.Tags.Labels))
+		desiredDc.SetAnnotations(goalesce.MustDeepMerge(desiredDc.GetAnnotations(), kc.Spec.Cassandra.Meta.Tags.Annotations))
 
 		// Note: desiredDc should not be modified from now on
 		annotations.AddHashAnnotation(desiredDc)
