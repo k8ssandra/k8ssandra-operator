@@ -477,13 +477,19 @@ func waitForOneSegmentToBeDone(t *testing.T, ctx context.Context, repairId uuid.
 }
 
 func checkReaperResourcesHaveCorrectMetadata(t *testing.T, f *framework.E2eFramework, ctx context.Context, kc *k8ssandraapi.K8ssandraCluster, reaperKey framework.ClusterKey) {
-
-	t.Log("Check that Reaper's Deployment has correct metadata")
-	dName := fmt.Sprintf("%s-reaper", kc.Name)
+	t.Log("Check that Reaper's Deployment/Sts has correct metadata")
+	dName := reaperKey.Name
 	deployment := &appsv1.Deployment{}
 	err := f.Client.Get(ctx, types.NamespacedName{Namespace: kc.Namespace, Name: dName}, deployment)
-	require.NoError(t, err, "failed to get Deployment %s in namespace %s", dName, kc.Namespace)
-
-	assert.True(t, deployment.ObjectMeta.Labels["testLabel"] == "testValue")
-	assert.True(t, deployment.ObjectMeta.Annotations["testAnnotation"] == "testValue")
+	// If we deployed Reaper as a statefulset, the deployment will not exist and we need to get the statefulset instead
+	if err != nil {
+		sts := &appsv1.StatefulSet{}
+		err = f.Client.Get(ctx, types.NamespacedName{Namespace: kc.Namespace, Name: dName}, sts)
+		require.NoError(t, err, "failed to get StatefulSet %s in namespace %s", dName, kc.Namespace)
+		assert.True(t, sts.ObjectMeta.Labels["testLabel"] == "testValue", "StatefulSet %s in namespace %s has incorrect labels", dName, kc.Namespace)
+		assert.True(t, sts.ObjectMeta.Annotations["testAnnotation"] == "testValue", "StatefulSet %s in namespace %s has incorrect annotations", dName, kc.Namespace)
+	} else {
+		assert.True(t, deployment.ObjectMeta.Labels["testLabel"] == "testValue", "Deployment %s in namespace %s has incorrect labels", dName, kc.Namespace)
+		assert.True(t, deployment.ObjectMeta.Annotations["testAnnotation"] == "testValue", "Deployment %s in namespace %s has incorrect annotations", dName, kc.Namespace)
+	}
 }
