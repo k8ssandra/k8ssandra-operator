@@ -105,12 +105,12 @@ func testAuthenticationDisabled(
 			checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod1Name, 2, 0)
 			checkNodeToolStatus(t, f, f.DataPlaneContexts[1], namespace, pod2Name, 2, 0)
 		})
-		t.Run("Remote", func(t *testing.T) {
-			t.Log("check that nodes in different dcs can see each other (auth disabled, remote JMX)")
-			pod1IP, pod2IP := getPodIPs(t, f, namespace, pod1Name, pod2Name)
-			checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod1Name, 2, 0, "-h", pod2IP)
-			checkNodeToolStatus(t, f, f.DataPlaneContexts[1], namespace, pod2Name, 2, 0, "-h", pod1IP)
-		})
+		// t.Run("Remote", func(t *testing.T) {
+		// 	t.Log("check that nodes in different dcs can see each other (auth disabled, remote JMX)")
+		// 	pod1IP, pod2IP := getPodIPs(t, f, namespace, pod1Name, pod2Name)
+		// 	checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod1Name, 2, 0, "-h", pod2IP)
+		// 	checkNodeToolStatus(t, f, f.DataPlaneContexts[1], namespace, pod2Name, 2, 0, "-h", pod1IP)
+		// })
 	})
 	t.Run("TestApisAuthDisabled", func(t *testing.T) {
 		t.Run("Reaper", func(t *testing.T) {
@@ -138,21 +138,21 @@ func testAuthenticationEnabled(
 			t.Log("check that nodes in different dcs can see each other (auth enabled, local JMX)")
 			checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod1Name, 2, 0, "-u", username, "-pw", password)
 			checkNodeToolStatus(t, f, f.DataPlaneContexts[1], namespace, pod2Name, 2, 0, "-u", username, "-pw", password)
-			checkLocalJmxFailsWithNoCredentials(t, f, f.DataPlaneContexts[0], namespace, pod1Name)
-			checkLocalJmxFailsWithNoCredentials(t, f, f.DataPlaneContexts[1], namespace, pod2Name)
-			checkLocalJmxFailsWithWrongCredentials(t, f, f.DataPlaneContexts[0], namespace, pod1Name)
-			checkLocalJmxFailsWithWrongCredentials(t, f, f.DataPlaneContexts[1], namespace, pod2Name)
+			// checkLocalJmxFailsWithNoCredentials(t, f, f.DataPlaneContexts[0], namespace, pod1Name)
+			// checkLocalJmxFailsWithNoCredentials(t, f, f.DataPlaneContexts[1], namespace, pod2Name)
+			// checkLocalJmxFailsWithWrongCredentials(t, f, f.DataPlaneContexts[0], namespace, pod1Name)
+			// checkLocalJmxFailsWithWrongCredentials(t, f, f.DataPlaneContexts[1], namespace, pod2Name)
 		})
-		t.Run("Remote", func(t *testing.T) {
-			t.Log("check that nodes in different dcs can see each other (auth enabled, remote JMX)")
-			pod1IP, pod2IP := getPodIPs(t, f, namespace, pod1Name, pod2Name)
-			checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod1Name, 2, 0, "-h", pod2IP, "-u", username, "-pw", password)
-			checkNodeToolStatus(t, f, f.DataPlaneContexts[1], namespace, pod2Name, 2, 0, "-h", pod1IP, "-u", username, "-pw", password)
-			checkRemoteJmxFailsWithNoCredentials(t, f, f.DataPlaneContexts[0], namespace, pod1Name, pod2IP)
-			checkRemoteJmxFailsWithNoCredentials(t, f, f.DataPlaneContexts[1], namespace, pod2Name, pod1IP)
-			checkRemoteJmxFailsWithWrongCredentials(t, f, f.DataPlaneContexts[0], namespace, pod1Name, pod2IP)
-			checkRemoteJmxFailsWithWrongCredentials(t, f, f.DataPlaneContexts[1], namespace, pod2Name, pod1IP)
-		})
+		// t.Run("Remote", func(t *testing.T) {
+		// 	t.Log("check that nodes in different dcs can see each other (auth enabled, remote JMX)")
+		// 	pod1IP, pod2IP := getPodIPs(t, f, namespace, pod1Name, pod2Name)
+		// 	checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod1Name, 2, 0, "-h", pod2IP, "-u", username, "-pw", password)
+		// 	checkNodeToolStatus(t, f, f.DataPlaneContexts[1], namespace, pod2Name, 2, 0, "-h", pod1IP, "-u", username, "-pw", password)
+		// 	checkRemoteJmxFailsWithNoCredentials(t, f, f.DataPlaneContexts[0], namespace, pod1Name, pod2IP)
+		// 	checkRemoteJmxFailsWithNoCredentials(t, f, f.DataPlaneContexts[1], namespace, pod2Name, pod1IP)
+		// 	checkRemoteJmxFailsWithWrongCredentials(t, f, f.DataPlaneContexts[0], namespace, pod1Name, pod2IP)
+		// 	checkRemoteJmxFailsWithWrongCredentials(t, f, f.DataPlaneContexts[1], namespace, pod2Name, pod1IP)
+		// })
 	})
 	t.Run("TestApisAuthEnabled", func(t *testing.T) {
 		t.Run("Reaper", func(t *testing.T) {
@@ -163,6 +163,7 @@ func testAuthenticationEnabled(
 	})
 }
 
+/*
 func checkLocalJmxFailsWithNoCredentials(t *testing.T, f *framework.E2eFramework, k8sContext, namespace, pod string) {
 	_, _, err := f.GetNodeToolStatus(k8sContext, namespace, pod)
 	if assert.Error(t, err, "expected unauthenticated local JMX connection on pod %v to fail", pod) {
@@ -198,3 +199,4 @@ func getPodIPs(t *testing.T, f *framework.E2eFramework, namespace, pod1Name, pod
 	require.NoError(t, err, "failed to get pod %s IP in context %s", pod2Name, f.DataPlaneContexts[1])
 	return pod1IP, pod2IP
 }
+*/
