@@ -31,9 +31,9 @@ spec:
     serverVersion: 4.1.8
     clusterName: "My Cluster"
     metadata:
-      labels:
+      commonLabels:
         testLabel: testValue
-      annotations:
+      commonAnnotations:
         testAnnotation: testValue
     jmxInitContainerImage:
       repository: library

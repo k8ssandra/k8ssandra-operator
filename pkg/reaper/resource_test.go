@@ -87,10 +87,15 @@ func Test_transformCassandraClusterMeta(t *testing.T) {
 
 	got := transformCassandraClusterMeta(kc)
 	expected := &k8ssandrameta.ResourceMeta{
-		CommonLabels: map[string]string{"testLabel": "testValue"},
+		CommonLabels:      map[string]string{"testLabel": "testValue"},
+		CommonAnnotations: map[string]string{"testAnnotation": "testValue"},
+		Tags: k8ssandrameta.Tags{
+			Labels:      map[string]string{"testLabel": "testValue"},
+			Annotations: map[string]string{"testAnnotation": "testValue"},
+		},
 		Pods: k8ssandrameta.Tags{
-			Labels:      nil,
-			Annotations: nil,
+			Labels:      map[string]string{"testLabel": "testValue"},
+			Annotations: map[string]string{"testAnnotation": "testValue"},
 		},
 		Service: k8ssandrameta.Tags{
 			Labels:      map[string]string{"testLabel": "testValue"},
