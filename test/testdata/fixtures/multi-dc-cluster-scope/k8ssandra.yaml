@@ -8,8 +8,6 @@ spec:
     medusaConfigurationRef:
       name: global-medusa-config
     storageProperties:
-      storageProvider: s3_compatible
-      bucketName: not-real
       prefix: test
   cassandra:
     serverVersion: 4.1.8
