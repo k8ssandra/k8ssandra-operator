@@ -1470,6 +1470,13 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
+                  commonAnnotations:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      annotations that will be applied to all components
+                      created by the CRD
+                    type: object
                   commonLabels:
                     additionalProperties:
                       type: string
@@ -2729,6 +2736,13 @@ spec:
                         annotations:
                           additionalProperties:
                             type: string
+                          type: object
+                        commonAnnotations:
+                          additionalProperties:
+                            type: string
+                          description: |-
+                            annotations that will be applied to all components
+                            created by the CRD
                           type: object
                         commonLabels:
                           additionalProperties:

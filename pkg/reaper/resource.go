@@ -1,6 +1,7 @@
 package reaper
 
 import (
+	"github.com/adutra/goalesce"
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -100,6 +101,11 @@ func NewReaper(
 	if kc.Status.GetConditionStatus(k8ssandraapi.CassandraInitialized) == corev1.ConditionTrue && kc.HasStoppedDatacenters() {
 		desiredReaper.Spec.SkipSchemaMigration = true
 	}
+
+	// forward common metadata from k8ssandra cluster to reaper
+	commonMeta := transformCassandraClusterMeta(kc)
+	desiredReaper.Spec.ResourceMeta = goalesce.MustDeepMerge(desiredReaper.Spec.ResourceMeta, commonMeta)
+
 	annotations.AddHashAnnotation(desiredReaper)
 	return desiredReaper, nil
 }
@@ -111,4 +117,25 @@ func computeReaperDcAvailability(kc *k8ssandraapi.K8ssandraCluster) string {
 		return DatacenterAvailabilityAll
 	}
 	return DatacenterAvailabilityEach
+}
+
+func transformCassandraClusterMeta(kc *k8ssandraapi.K8ssandraCluster) *meta.ResourceMeta {
+	cassMeta := kc.Spec.Cassandra.Meta
+	reaperMeta := &meta.ResourceMeta{}
+
+	// we use Cassandra's common labels for reaper's CRD labels
+	// we use the same labels for ALL resources reaper will create
+	if cassMeta.CommonLabels != nil {
+		reaperMeta.Tags.Labels = cassMeta.CommonLabels
+		reaperMeta.CommonLabels = cassMeta.CommonLabels
+		reaperMeta.Pods.Labels = cassMeta.CommonLabels
+		reaperMeta.Service.Labels = cassMeta.CommonLabels
+	}
+	if cassMeta.CommonAnnotations != nil {
+		reaperMeta.Tags.Annotations = cassMeta.CommonAnnotations
+		reaperMeta.CommonAnnotations = cassMeta.CommonAnnotations
+		reaperMeta.Pods.Annotations = cassMeta.CommonAnnotations
+		reaperMeta.Service.Annotations = cassMeta.CommonAnnotations
+	}
+	return reaperMeta
 }

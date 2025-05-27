@@ -2,13 +2,14 @@ package k8ssandra
 
 import (
 	"context"
+
 	"github.com/k8ssandra/k8ssandra-operator/pkg/shared"
 
 	"github.com/go-logr/logr"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	annotations "github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
-	k8ssandralabels "github.com/k8ssandra/k8ssandra-operator/pkg/labels"
+	labels "github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reconciliation"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
@@ -37,7 +38,9 @@ func (r *K8ssandraClusterReconciler) reconcileVector(
 		}
 
 		desiredVectorConfigMap := telemetry.BuildVectorAgentConfigMap(namespace, kc.SanitizedName(), dcConfig.CassDcName(), kc.Namespace, toml)
-		k8ssandralabels.SetWatchedByK8ssandraCluster(desiredVectorConfigMap, kcKey)
+		labels.AddCommonLabels(desiredVectorConfigMap, kc)
+		annotations.AddCommonAnnotations(desiredVectorConfigMap, kc)
+		labels.SetWatchedByK8ssandraCluster(desiredVectorConfigMap, kcKey)
 
 		// Check if the vector config map already exists
 		desiredVectorConfigMap.SetLabels(labels.CleanedUpByLabels(kcKey))

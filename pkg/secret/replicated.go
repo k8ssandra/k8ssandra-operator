@@ -10,6 +10,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -53,7 +54,8 @@ func DefaultSuperuserSecretName(clusterName string) string {
 
 // ReconcileSecret creates a new secret with proper "managed-by" annotations, or ensure the existing secret has such
 // annotations.
-func ReconcileSecret(ctx context.Context, c client.Client, secretName string, kcKey client.ObjectKey) error {
+func ReconcileSecret(ctx context.Context, c client.Client, secretName string, kc *api.K8ssandraCluster) error {
+	kcKey := utils.GetKey(kc)
 	if secretName == "" {
 		return fmt.Errorf("secretName is required")
 	}
@@ -80,6 +82,8 @@ func ReconcileSecret(ctx context.Context, c client.Client, secretName string, kc
 					"password": password,
 				},
 			}
+			labels.AddCommonLabels(sec, kc)
+			annotations.AddCommonAnnotations(sec, kc)
 
 			return c.Create(ctx, sec)
 		} else {

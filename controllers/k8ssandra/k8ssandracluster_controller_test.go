@@ -777,6 +777,8 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 			Cassandra: newTwoDcCassandraClusterTemplate(f),
 		},
 	}
+	kc.Spec.Cassandra.Meta.CommonLabels = map[string]string{"testLabel": "testValue"}
+	kc.Spec.Cassandra.Meta.CommonAnnotations = map[string]string{"testAnnotation": "testValue"}
 
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")
@@ -839,9 +841,15 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 
 	t.Log("check that the contact-points Service for dc1 was created in the control plane")
 	require.Eventually(func() bool {
-		_, endpoints, err := f.GetContactPointsService(ctx, kcKey, kc, dc1Key)
+		service, endpoints, err := f.GetContactPointsService(ctx, kcKey, kc, dc1Key)
 		if err != nil {
 			t.Logf("failed to get contact-points Service: %v", err)
+			return false
+		}
+		if service.ObjectMeta.Labels["testLabel"] != "testValue" {
+			return false
+		}
+		if service.ObjectMeta.Annotations["testAnnotation"] != "testValue" {
 			return false
 		}
 		return len(endpoints.Subsets) == 1 &&
@@ -2034,6 +2042,45 @@ func applyClusterWithEncryptionOptionsExternalSecrets(t *testing.T, ctx context.
 func verifySuperuserSecretCreated(ctx context.Context, t *testing.T, f *framework.Framework, kluster *api.K8ssandraCluster) {
 	t.Logf("check that the default superuser secret is created")
 	assert.Eventually(t, superuserSecretExists(f, ctx, kluster), timeout, interval, "failed to verify that the default superuser secret was created")
+}
+
+func verifySuperuserSecretLabels(ctx context.Context, t *testing.T, f *framework.Framework, kluster *api.K8ssandraCluster) {
+	t.Logf("check that the superuser secret labels are correct")
+	assert.True(t, superuserSecretLabels(f, ctx, kluster), "failed to verify that the default superuser secret labels are correct")
+}
+
+func superuserSecretLabels(f *framework.Framework, ctx context.Context, kluster *api.K8ssandraCluster) bool {
+	secretName := kluster.Spec.Cassandra.SuperuserSecretRef.Name
+	if secretName == "" {
+		secretName = secret.DefaultSuperuserSecretName(kluster.SanitizedName())
+	}
+	secret := &corev1.Secret{}
+	err := f.Client.Get(ctx, types.NamespacedName{Namespace: kluster.Namespace, Name: secretName}, secret)
+	if err != nil {
+		return false
+	}
+	if secret.Labels == nil || secret.Annotations == nil {
+		return false
+	}
+	if len(secret.Labels) != 4 || len(secret.Annotations) != 1 {
+		return false
+	}
+	if secret.Labels["k8ssandra.io/cluster-name"] != kluster.Name {
+		return false
+	}
+	if secret.Labels["k8ssandra.io/cluster-namespace"] != kluster.Namespace {
+		return false
+	}
+	if secret.Labels["k8ssandra.io/replicated-by"] != "k8ssandracluster-controller" {
+		return false
+	}
+	if secret.Labels["newLabel"] != "newLabelValue" {
+		return false
+	}
+	if secret.Annotations["overWrittenAnnotation"] != "valueFromCommonMeta" {
+		return false
+	}
+	return true
 }
 
 func verifySuperuserSecretNotCreated(ctx context.Context, t *testing.T, f *framework.Framework, kluster *api.K8ssandraCluster) {

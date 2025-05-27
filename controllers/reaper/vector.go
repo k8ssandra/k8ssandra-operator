@@ -3,13 +3,16 @@ package reaper
 import (
 	"bytes"
 	"context"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/shared"
 	"text/template"
+
+	"github.com/k8ssandra/k8ssandra-operator/pkg/shared"
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	reaperpkg "github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reconciliation"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
@@ -38,6 +41,8 @@ func (r *ReaperReconciler) reconcileVectorConfigMap(
 		}
 
 		desiredVectorConfigMap := reaperpkg.CreateVectorConfigMap(namespace, toml, *actualDc)
+		labels.AddCommonLabelsFromReaper(desiredVectorConfigMap, &reaper)
+		annotations.AddCommonAnnotationsFromReaper(desiredVectorConfigMap, &reaper)
 		if err := ctrl.SetControllerReference(&reaper, desiredVectorConfigMap, r.Scheme); err != nil {
 			dcLogger.Error(err, "Failed to set controller reference on new Reaper Vector ConfigMap", "ConfigMap", configMapKey)
 			return ctrl.Result{}, err

@@ -3,9 +3,10 @@ package k8ssandra
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"testing"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -38,6 +39,8 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 			},
 		},
 	}
+	kc.Spec.Cassandra.Meta.CommonLabels = map[string]string{"testLabel": "testValue"}
+	kc.Spec.Cassandra.Meta.CommonAnnotations = map[string]string{"testAnnotation": "testValue"}
 
 	err := f.Client.Create(ctx, kc)
 	require.NoError(err, "failed to create K8ssandraCluster")

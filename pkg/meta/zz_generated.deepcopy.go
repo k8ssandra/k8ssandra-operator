@@ -85,6 +85,13 @@ func (in *ResourceMeta) DeepCopyInto(out *ResourceMeta) {
 			(*out)[key] = val
 		}
 	}
+	if in.CommonAnnotations != nil {
+		in, out := &in.CommonAnnotations, &out.CommonAnnotations
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	in.Pods.DeepCopyInto(&out.Pods)
 	in.Service.DeepCopyInto(&out.Service)
 }

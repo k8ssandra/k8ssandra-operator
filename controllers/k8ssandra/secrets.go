@@ -2,12 +2,12 @@ package k8ssandra
 
 import (
 	"context"
+
 	"github.com/go-logr/logr"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -24,7 +24,7 @@ func (r *K8ssandraClusterReconciler) reconcileSuperuserSecret(ctx context.Contex
 	// to turn on authentication later on, since kc.Spec.Cassandra.SuperuserSecretRef is immutable.
 	// Finally, creating the superuser secret when auth is disabled does not do any harm: no credentials will be
 	// required to connect to Cassandra nodes by CQL nor JMX.
-	if err := secret.ReconcileSecret(ctx, r.Client, SuperuserSecretName(kc), utils.GetKey(kc)); err != nil {
+	if err := secret.ReconcileSecret(ctx, r.Client, SuperuserSecretName(kc), kc); err != nil {
 		logger.Error(err, "Failed to verify existence of superuserSecret")
 		return result.Error(err)
 	}
@@ -62,16 +62,15 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSecrets(ctx context.Context,
 			if kc.Spec.Reaper.UiUserSecretRef == nil {
 				uiUserSecretRef.Name = reaper.DefaultUiSecretName(kc.SanitizedName())
 			}
-			kcKey := utils.GetKey(kc)
 			if kc.Spec.Reaper != nil && kc.Spec.Reaper.ReaperRef.Name == "" {
 				// We reconcile the CQL user secret only if are reconciling k8ssandra-cluster-specific Reaper
-				if err := secret.ReconcileSecret(ctx, r.Client, cassandraUserSecretRef.Name, kcKey); err != nil {
+				if err := secret.ReconcileSecret(ctx, r.Client, cassandraUserSecretRef.Name, kc); err != nil {
 					logger.Error(err, "Failed to reconcile Reaper CQL user secret", "ReaperCassandraUserSecretRef", cassandraUserSecretRef)
 					return result.Error(err)
 				}
 			}
 			if kc.Spec.Reaper.UiUserSecretRef == nil || kc.Spec.Reaper.UiUserSecretRef.Name != "" {
-				if err := secret.ReconcileSecret(ctx, r.Client, uiUserSecretRef.Name, kcKey); err != nil {
+				if err := secret.ReconcileSecret(ctx, r.Client, uiUserSecretRef.Name, kc); err != nil {
 					logger.Error(err, "Failed to reconcile Reaper UI secret", "ReaperUiUserSecretRef", uiUserSecretRef)
 					return result.Error(err)
 				}

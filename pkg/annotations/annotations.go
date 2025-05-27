@@ -1,7 +1,9 @@
 package annotations
 
 import (
+	"github.com/adutra/goalesce"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 )
 
@@ -43,4 +45,16 @@ func AddHashAnnotation(obj Annotated) {
 
 func CompareHashAnnotations(r1, r2 Annotated) bool {
 	return CompareAnnotations(r1, r2, k8ssandraapi.ResourceHashAnnotation)
+}
+
+func AddCommonAnnotations(component Annotated, k8c *k8ssandraapi.K8ssandraCluster) {
+	if k8c.Spec.Cassandra != nil && k8c.Spec.Cassandra.Meta.CommonAnnotations != nil {
+		component.SetAnnotations(goalesce.MustDeepMerge(component.GetAnnotations(), k8c.Spec.Cassandra.Meta.CommonAnnotations))
+	}
+}
+
+func AddCommonAnnotationsFromReaper(component Annotated, reaper *reaperapi.Reaper) {
+	if reaper.Spec.ResourceMeta != nil && reaper.Spec.ResourceMeta.CommonAnnotations != nil {
+		component.SetAnnotations(goalesce.MustDeepMerge(component.GetAnnotations(), reaper.Spec.ResourceMeta.CommonAnnotations))
+	}
 }

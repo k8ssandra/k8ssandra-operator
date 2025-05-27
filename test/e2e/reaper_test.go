@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 
@@ -16,6 +17,7 @@ import (
 	reaperclient "github.com/k8ssandra/reaper-client-go/reaper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -37,6 +39,7 @@ func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *
 	reaperKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dcPrefix + "-reaper"}}
 	checkReaperReady(t, f, ctx, reaperKey)
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dcKey)
+	checkReaperResourcesHaveCorrectMetadata(t, f, ctx, kc, reaperKey)
 
 	// check that the Reaper Vector container and config map exist
 	checkContainerPresence(t, ctx, f, reaperKey, kc, getPodTemplateSpec, reaper.VectorContainerName)
@@ -471,4 +474,22 @@ func waitForOneSegmentToBeDone(t *testing.T, ctx context.Context, repairId uuid.
 		}
 		return false
 	}, polling.reaperReady.timeout, polling.reaperReady.interval, "No repair segment was fully processed within timeout")
+}
+
+func checkReaperResourcesHaveCorrectMetadata(t *testing.T, f *framework.E2eFramework, ctx context.Context, kc *k8ssandraapi.K8ssandraCluster, reaperKey framework.ClusterKey) {
+	t.Log("Check that Reaper's Deployment/Sts has correct metadata")
+	dName := reaperKey.Name
+	deployment := &appsv1.Deployment{}
+	err := f.Client.Get(ctx, types.NamespacedName{Namespace: kc.Namespace, Name: dName}, deployment)
+	// If we deployed Reaper as a statefulset, the deployment will not exist and we need to get the statefulset instead
+	if err != nil {
+		sts := &appsv1.StatefulSet{}
+		err = f.Client.Get(ctx, types.NamespacedName{Namespace: kc.Namespace, Name: dName}, sts)
+		require.NoError(t, err, "failed to get StatefulSet %s in namespace %s", dName, kc.Namespace)
+		assert.True(t, sts.ObjectMeta.Labels["testLabel"] == "testValue", "StatefulSet %s in namespace %s has incorrect labels", dName, kc.Namespace)
+		assert.True(t, sts.ObjectMeta.Annotations["testAnnotation"] == "testValue", "StatefulSet %s in namespace %s has incorrect annotations", dName, kc.Namespace)
+	} else {
+		assert.True(t, deployment.ObjectMeta.Labels["testLabel"] == "testValue", "Deployment %s in namespace %s has incorrect labels", dName, kc.Namespace)
+		assert.True(t, deployment.ObjectMeta.Annotations["testAnnotation"] == "testValue", "Deployment %s in namespace %s has incorrect annotations", dName, kc.Namespace)
+	}
 }
