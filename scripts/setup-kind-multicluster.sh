@@ -18,8 +18,6 @@ fi
 OPTS=$(getopt -o ho --long clusters:,cluster-prefix:,kind-node-version:,kind-worker-nodes:,output-file:,overwrite,help -n 'setup-kind-multicluster' -- "$@")
 eval set -- "$OPTS"
 
-default_kind_node_version=v1.27.1
-
 function help() {
 cat << EOF
 Syntax: setup-kind-multicluster.sh [options]
@@ -29,7 +27,6 @@ Options:
   --cluster-prefix <prefix>      The prefix to use to name clusters.
                                  Defaults to "k8ssandra-".
   --kind-node-version <version>  The image version of the kind nodes.
-                                 Defaults to "$default_kind_node_version".
   --kind-worker-nodes <nodes>    The number of worker nodes to deploy.
                                  Can be a single number or a comma-separated list of numbers, one per cluster.
                                  Defaults to 3.
@@ -45,7 +42,7 @@ registry_name='kind-registry'
 registry_port='5001'
 num_clusters=1
 cluster_prefix="k8ssandra-"
-kind_node_version="$default_kind_node_version"
+kind_node_version="v1.27.1"
 kind_worker_nodes=3
 overwrite_clusters="no"
 output_file="./build/kind-kubeconfig"
@@ -77,7 +74,14 @@ function create_cluster() {
   num_workers=$3
   node_version=$4
 
-cat <<EOF | kind create cluster --name $cluster_name --image kindest/node:$node_version --config=-
+if [ -n "$node_version" ]; then
+  echo "Using kind node version: $node_version"
+  image="--image=kindest/node:${node_version}"
+else
+  image=""
+fi
+
+cat <<EOF | kind create cluster --name $cluster_name $image --config=-
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 containerdConfigPatches:

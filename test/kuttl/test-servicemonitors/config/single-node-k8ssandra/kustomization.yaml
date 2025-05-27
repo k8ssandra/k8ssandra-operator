@@ -3,19 +3,12 @@ kind: Kustomization
 namespace: k8ssandra-operator
 resources:
   - ../../../config/fixtures/k8ssandra-base
-# take basic deployment, add stargate and reaper, and add telemetry for stargate, cassandra and reaper.
+# take basic deployment, add reaper and add telemetry for cassandra and reaper.
 patches:
   - patch: |-
-      - op: add
-        path: /spec/stargate
-        value:
-          size: 1
-          telemetry:
-            prometheus:
-              enabled: true
-              commonLabels:
-                test-label: gobbledegook
-          allowStargateOnDataNodes: true
+      - op: replace
+        path: /spec/cassandra/serverVersion
+        value: 4.1.8
       - op: add
         path: /spec/cassandra/telemetry
         value:

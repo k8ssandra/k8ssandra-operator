@@ -3,7 +3,7 @@ package nodeconfig
 import (
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -59,6 +59,10 @@ func newPerNodeConfigInitContainer(image string) v1.Container {
 			{
 				Name:      PerNodeConfigVolumeName,
 				MountPath: "/per-node-config",
+			},
+			{
+				Name:      "tmp",
+				MountPath: "/tmp",
 			},
 		},
 		Command: []string{

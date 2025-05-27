@@ -5,8 +5,7 @@ metadata:
   namespace: k8ssandra-operator
 spec:
   cassandra:
-    serverVersion: "4.0.3"
-    serverImage: k8ssandra/cass-management-api:4.0.3
+    serverVersion: "4.0.17"
     telemetry:
       prometheus:
         enabled: true

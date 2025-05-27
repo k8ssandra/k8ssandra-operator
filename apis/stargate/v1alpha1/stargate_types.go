@@ -344,6 +344,7 @@ type StargateCondition struct {
 // +kubebuilder:printcolumn:name="Up-to-date",type=integer,JSONPath=`.status.updatedReplicas`
 // +kubebuilder:printcolumn:name="Available",type=integer,JSONPath=`.status.availableReplicas`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
+// +kubebuilder:deprecatedversion:warning="Stargate support is deprecated and will be removed in a future release."
 
 // Stargate is the Schema for the stargates API
 type Stargate struct {

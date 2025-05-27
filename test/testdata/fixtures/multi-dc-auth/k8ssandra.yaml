@@ -5,8 +5,7 @@ metadata:
 spec:
   auth: false
   cassandra:
-    serverVersion: "3.11.14"
-    serverImage: "k8ssandra/cass-management-api:3.11.14"
+    serverVersion: 4.1.8
     datacenters:
       - metadata:
           name: dc1
@@ -44,23 +43,6 @@ spec:
         networking:
           hostNetwork: true
     mgmtAPIHeap: 64Mi
-  stargate:
-    size: 1
-    heapSize: 384Mi
-    cassandraConfigMapRef:
-      name: cassandra-config
-    livenessProbe:
-      initialDelaySeconds: 60
-      periodSeconds: 10
-      failureThreshold: 20
-      successThreshold: 1
-      timeoutSeconds: 20
-    readinessProbe:
-      initialDelaySeconds: 30
-      periodSeconds: 10
-      failureThreshold: 20
-      successThreshold: 1
-      timeoutSeconds: 20
   reaper:
     deploymentMode: PER_DC
     heapSize: 256Mi

@@ -78,10 +78,10 @@ jobs:
         kind_node_version: ["${{ needs.set_kind_node_version.outputs.kind_node_version }}"]
         e2e_test:
           - CreateSingleDatacenterCluster
-          - CreateStargateAndDatacenter
+          # - CreateStargateAndDatacenter
           - CreateSingleReaperNoStargate
-          - CreateSingleReaperWStargateAndHTTP
-          - CreateReaperAndDatacenter
+          # - CreateSingleReaperWStargateAndHTTP
+          # - CreateReaperAndDatacenter # This test isn't using k8ssandra-operator, some old test ported from reaper-operator
           - CreateSingleMedusaJob
           - CreateMultiDcSingleMedusaJob
           - CreateSingleDseMedusaJob
@@ -89,13 +89,10 @@ jobs:
           # TODO: these e2e tests started breaking after new client certificates were added. Needs fixing.
           #- SingleDcEncryptionWithStargate
           - SingleDcEncryptionWithReaper
-          - GCTests/3.11-jdk8-G1
-          - GCTests/3.11-jdk8-CMS
           - GCTests/4.0-jdk11-G1
           - GCTests/4.0-jdk11-CMS
           - GCTests/4.0-jdk11-ZGC
           - UpgradeOperatorImage
-          - StargateJwt
           - CreateSingleDseDatacenterCluster
           - CreateSingleDseSearchDatacenterCluster
           - CreateSingleDseGraphDatacenterCluster

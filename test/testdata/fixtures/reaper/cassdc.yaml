@@ -7,37 +7,25 @@ spec:
   config:
     cassandra-yaml:
       auto_snapshot: false
-      commitlog_segment_size_in_mb: 2
-      compaction_throughput_mb_per_sec: 0
       concurrent_compactors: 1
       concurrent_counter_writes: 2
       concurrent_reads: 2
       concurrent_writes: 2
-      counter_cache_size_in_mb: 0
-      key_cache_size_in_mb: 0
       memtable_flush_writers: 1
-      prepared_statements_cache_size_mb: 1
-      slow_query_log_timeout_in_ms: 0
-      sstable_preemptive_open_interval_in_mb: 0
-      thrift_prepared_statements_cache_size_mb: 1
       authenticator: PasswordAuthenticator
       authorizer: CassandraAuthorizer
       role_manager: CassandraRoleManager
-    jvm-options:
+    jvm-server-options:
       additional-jvm-opts:
         - -Dcassandra.system_distributed_replication_dc_names=dc1
         - -Dcassandra.system_distributed_replication_per_dc=1
-        - -Dcassandra.jmx.remote.login.config=CassandraLogin
-        - -Djava.security.auth.login.config=/etc/cassandra/cassandra-jaas.config
-        - -Dcassandra.jmx.authorizer=org.apache.cassandra.auth.jmx.AuthorizationProxy
       initial_heap_size: 512m
       max_heap_size: 512m
   users:
     - secretName: reaper-cql-secret
       superuser: true
   serverType: cassandra
-  serverVersion: 3.11.14
-  serverImage: "k8ssandra/cass-management-api:3.11.14"
+  serverVersion: 4.1.8
   networking:
     hostNetwork: false
   size: 3
@@ -59,6 +47,7 @@ spec:
         requests:
           storage: 5Gi
       storageClassName: standard
+  readOnlyRootFilesystem: false
   podTemplateSpec:
     spec:
       containers:

@@ -7,7 +7,9 @@ import (
 )
 
 func AddReaperSettingsToDcConfig(reaperTemplate *reaperapi.ReaperClusterTemplate, dcConfig *cassandra.DatacenterConfig, authEnabled bool) {
-	enableRemoteJmxAccess(dcConfig)
+	if reaperTemplate != nil && !reaperTemplate.HttpManagement.Enabled {
+		enableRemoteJmxAccess(dcConfig)
+	}
 	if authEnabled && !dcConfig.ExternalSecrets {
 		cassandra.AddCqlUser(reaperTemplate.CassandraUserSecretRef, dcConfig, DefaultUserSecretName(dcConfig.Cluster))
 	}

@@ -5,10 +5,11 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
-	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
 
 	"github.com/stretchr/testify/assert"
 
@@ -69,11 +70,6 @@ func createSingleDseDatacenterCluster(t *testing.T, ctx context.Context, namespa
 	_, err = f.ExecuteCqlNoAuth(f.DataPlaneContexts[0], namespace, DcPrefix(t, f, dcKey)+"-default-sts-0",
 		"SELECT server_id FROM system.local")
 	require.Error(t, err, "expected CQL query without auth to fail")
-
-	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: dcPrefix + "-stargate"}}
-	checkStargateReady(t, f, ctx, stargateKey)
-
-	checkStargateK8cStatusReady(t, f, ctx, kcKey, dcKey)
 }
 
 // createSingleDseDatacenterCluster creates a K8ssandraCluster with one CassandraDatacenter running

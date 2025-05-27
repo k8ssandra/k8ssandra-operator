@@ -22,8 +22,7 @@ metadata:
   name: cluster1
 spec:
   cassandra:
-    serverVersion: 4.0.13
-    serverImage: "k8ssandra/cass-management-api:4.0.13"
+    serverVersion: 4.0.17
     datacenters:
       - metadata:
           name: cluster1-dc1

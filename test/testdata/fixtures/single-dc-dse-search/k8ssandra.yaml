@@ -15,7 +15,7 @@ spec:
       secure: false
       concurrentTransfers: 8
   cassandra:
-    serverVersion: 6.8.26
+    serverVersion: 6.8.57
     serverType: dse
     dseWorkloads:
       graphEnabled: false

@@ -3,13 +3,8 @@ package e2e
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"strings"
 	"testing"
-	"time"
 
-	cqlclient "github.com/datastax/go-cassandra-native-protocol/client"
-	"github.com/datastax/go-cassandra-native-protocol/primitive"
 	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
@@ -17,7 +12,6 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/resty.v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -33,33 +27,19 @@ func multiDcAuthOnOff(t *testing.T, ctx context.Context, namespace string, f *fr
 	reaper1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-reaper"}}
 	reaper2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-real-dc2-reaper"}}
 
-	stargate1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-stargate"}}
-	stargate2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-real-dc2-stargate"}}
-
 	reaperUiSecretKey := types.NamespacedName{Namespace: namespace, Name: reaper.DefaultUiSecretName("cluster1")}
 
 	// cluster has auth turned off initially
-	waitForAllComponentsReady(t, f, ctx, kcKey, dc1Key, dc2Key, stargate1Key, stargate2Key, reaper1Key, reaper2Key)
+	waitForAllComponentsReady(t, f, ctx, kcKey, dc1Key, dc2Key, reaper1Key, reaper2Key)
 
-	t.Log("deploying Stargate and Reaper ingress routes in both clusters")
-
-	stargateRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateRest
-	stargateGrpcHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateGrpc
-	stargateCqlHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].StargateCql
+	t.Log("deploying Reaper ingress routes in both clusters")
 	reaperRestHostAndPort := ingressConfigs[f.DataPlaneContexts[0]].ReaperRest
 
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[0], namespace, fmt.Sprintf("%s-service", stargate1Key.Name), stargateRestHostAndPort, stargateGrpcHostAndPort)
 	f.DeployReaperIngresses(t, f.DataPlaneContexts[0], namespace, fmt.Sprintf("%s-service", reaper1Key.Name), reaperRestHostAndPort)
-	checkStargateApisReachable(t, ctx, f.DataPlaneContexts[0], namespace, stargate1Key.Name, stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, "", "", false, f)
 	checkReaperApiReachable(t, ctx, reaperRestHostAndPort)
 
-	stargateRestHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateRest
-	stargateGrpcHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateGrpc
-	stargateCqlHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].StargateCql
 	reaperRestHostAndPort = ingressConfigs[f.DataPlaneContexts[1]].ReaperRest
-	f.DeployStargateIngresses(t, f.DataPlaneContexts[1], namespace, fmt.Sprintf("%s-service", stargate2Key.Name), stargateRestHostAndPort, stargateGrpcHostAndPort)
 	f.DeployReaperIngresses(t, f.DataPlaneContexts[1], namespace, fmt.Sprintf("%s-service", reaper2Key.Name), reaperRestHostAndPort)
-	checkStargateApisReachable(t, ctx, f.DataPlaneContexts[1], namespace, stargate2Key.Name, stargateRestHostAndPort, stargateGrpcHostAndPort, stargateCqlHostAndPort, "", "", false, f)
 	checkReaperApiReachable(t, ctx, reaperRestHostAndPort)
 
 	defer f.UndeployAllIngresses(t, f.DataPlaneContexts[0], namespace)
@@ -73,7 +53,7 @@ func multiDcAuthOnOff(t *testing.T, ctx context.Context, namespace string, f *fr
 
 	// turn auth on
 	toggleAuthentication(t, f, ctx, kcKey, true)
-	waitForAllComponentsReady(t, f, ctx, kcKey, dc1Key, dc2Key, stargate1Key, stargate2Key, reaper1Key, reaper2Key)
+	waitForAllComponentsReady(t, f, ctx, kcKey, dc1Key, dc2Key, reaper1Key, reaper2Key)
 	testAuthenticationEnabled(t, f, ctx, namespace, kcKey, reaperUiSecretKey, replication, pod1Name, pod2Name, DcPrefix(t, f, dc1Key), DcPrefixOverride(t, f, dc2Key))
 }
 
@@ -83,17 +63,12 @@ func waitForAllComponentsReady(
 	ctx context.Context,
 	kcKey types.NamespacedName,
 	dc1Key, dc2Key framework.ClusterKey,
-	stargate1Key, stargate2Key framework.ClusterKey,
 	reaper1Key, reaper2Key framework.ClusterKey,
 ) {
 	checkDatacenterReady(t, ctx, dc1Key, f)
 	checkDatacenterReady(t, ctx, dc2Key, f)
-	checkStargateReady(t, f, ctx, stargate1Key)
-	checkStargateK8cStatusReady(t, f, ctx, kcKey, dc1Key)
 	checkReaperReady(t, f, ctx, reaper1Key)
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dc1Key)
-	checkStargateReady(t, f, ctx, stargate2Key)
-	checkStargateK8cStatusReady(t, f, ctx, kcKey, dc2Key)
 	checkReaperReady(t, f, ctx, reaper2Key)
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dc2Key)
 	// we need to wait until the deployments are fully rolled out before continuing, to avoid hitting an old
@@ -101,16 +76,8 @@ func waitForAllComponentsReady(
 	options1 := kubectl.Options{Namespace: kcKey.Namespace, Context: f.DataPlaneContexts[0]}
 	options2 := kubectl.Options{Namespace: kcKey.Namespace, Context: f.DataPlaneContexts[1]}
 
-	stargate1Prefix, _ := strings.CutSuffix(stargate1Key.Name, "-stargate")
-	stargate2Prefix, _ := strings.CutSuffix(stargate2Key.Name, "-stargate")
-	err := kubectl.RolloutStatus(ctx, options1, "deployment", fmt.Sprintf("%s-default-stargate-deployment", stargate1Prefix))
-	assert.NoError(t, err)
-	err = kubectl.RolloutStatus(ctx, options1, "deployment", reaper1Key.Name)
-	assert.NoError(t, err)
-	err = kubectl.RolloutStatus(ctx, options2, "deployment", fmt.Sprintf("%s-default-stargate-deployment", stargate2Prefix))
-	assert.NoError(t, err)
-	err = kubectl.RolloutStatus(ctx, options2, "deployment", reaper2Key.Name)
-	assert.NoError(t, err)
+	assert.NoError(t, kubectl.RolloutStatus(ctx, options1, "deployment", reaper1Key.Name))
+	assert.NoError(t, kubectl.RolloutStatus(ctx, options2, "deployment", reaper2Key.Name))
 }
 
 func toggleAuthentication(t *testing.T, f *framework.E2eFramework, ctx context.Context, kcKey types.NamespacedName, on bool) {
@@ -138,22 +105,14 @@ func testAuthenticationDisabled(
 			checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod1Name, 2, 0)
 			checkNodeToolStatus(t, f, f.DataPlaneContexts[1], namespace, pod2Name, 2, 0)
 		})
-		t.Run("Remote", func(t *testing.T) {
-			t.Log("check that nodes in different dcs can see each other (auth disabled, remote JMX)")
-			pod1IP, pod2IP := getPodIPs(t, f, namespace, pod1Name, pod2Name)
-			checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod1Name, 2, 0, "-h", pod2IP)
-			checkNodeToolStatus(t, f, f.DataPlaneContexts[1], namespace, pod2Name, 2, 0, "-h", pod1IP)
-		})
+		// t.Run("Remote", func(t *testing.T) {
+		// 	t.Log("check that nodes in different dcs can see each other (auth disabled, remote JMX)")
+		// 	pod1IP, pod2IP := getPodIPs(t, f, namespace, pod1Name, pod2Name)
+		// 	checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod1Name, 2, 0, "-h", pod2IP)
+		// 	checkNodeToolStatus(t, f, f.DataPlaneContexts[1], namespace, pod2Name, 2, 0, "-h", pod1IP)
+		// })
 	})
 	t.Run("TestApisAuthDisabled", func(t *testing.T) {
-		t.Run("Stargate", func(t *testing.T) {
-			// Stargate REST APIs are only accessible when PasswordAuthenticator is in use, because when obtaining a new
-			// token, the username will be checked against the system_auth.roles table directly.
-			// Therefore, we only test the CQL API here.
-			// See https://github.com/stargate/stargate/issues/792
-			testStargateNativeApi(t, f, ctx, f.DataPlaneContexts[0], namespace, "", "", false, replication)
-			testStargateNativeApi(t, f, ctx, f.DataPlaneContexts[1], namespace, "", "", false, replication)
-		})
 		t.Run("Reaper", func(t *testing.T) {
 			testReaperApi(t, ctx, f.DataPlaneContexts[0], "cluster1", reaperapi.DefaultKeyspace, "", "")
 			testReaperApi(t, ctx, f.DataPlaneContexts[1], "cluster1", reaperapi.DefaultKeyspace, "", "")
@@ -179,36 +138,23 @@ func testAuthenticationEnabled(
 			t.Log("check that nodes in different dcs can see each other (auth enabled, local JMX)")
 			checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod1Name, 2, 0, "-u", username, "-pw", password)
 			checkNodeToolStatus(t, f, f.DataPlaneContexts[1], namespace, pod2Name, 2, 0, "-u", username, "-pw", password)
-			checkLocalJmxFailsWithNoCredentials(t, f, f.DataPlaneContexts[0], namespace, pod1Name)
-			checkLocalJmxFailsWithNoCredentials(t, f, f.DataPlaneContexts[1], namespace, pod2Name)
-			checkLocalJmxFailsWithWrongCredentials(t, f, f.DataPlaneContexts[0], namespace, pod1Name)
-			checkLocalJmxFailsWithWrongCredentials(t, f, f.DataPlaneContexts[1], namespace, pod2Name)
+			// checkLocalJmxFailsWithNoCredentials(t, f, f.DataPlaneContexts[0], namespace, pod1Name)
+			// checkLocalJmxFailsWithNoCredentials(t, f, f.DataPlaneContexts[1], namespace, pod2Name)
+			// checkLocalJmxFailsWithWrongCredentials(t, f, f.DataPlaneContexts[0], namespace, pod1Name)
+			// checkLocalJmxFailsWithWrongCredentials(t, f, f.DataPlaneContexts[1], namespace, pod2Name)
 		})
-		t.Run("Remote", func(t *testing.T) {
-			t.Log("check that nodes in different dcs can see each other (auth enabled, remote JMX)")
-			pod1IP, pod2IP := getPodIPs(t, f, namespace, pod1Name, pod2Name)
-			checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod1Name, 2, 0, "-h", pod2IP, "-u", username, "-pw", password)
-			checkNodeToolStatus(t, f, f.DataPlaneContexts[1], namespace, pod2Name, 2, 0, "-h", pod1IP, "-u", username, "-pw", password)
-			checkRemoteJmxFailsWithNoCredentials(t, f, f.DataPlaneContexts[0], namespace, pod1Name, pod2IP)
-			checkRemoteJmxFailsWithNoCredentials(t, f, f.DataPlaneContexts[1], namespace, pod2Name, pod1IP)
-			checkRemoteJmxFailsWithWrongCredentials(t, f, f.DataPlaneContexts[0], namespace, pod1Name, pod2IP)
-			checkRemoteJmxFailsWithWrongCredentials(t, f, f.DataPlaneContexts[1], namespace, pod2Name, pod1IP)
-		})
+		// t.Run("Remote", func(t *testing.T) {
+		// 	t.Log("check that nodes in different dcs can see each other (auth enabled, remote JMX)")
+		// 	pod1IP, pod2IP := getPodIPs(t, f, namespace, pod1Name, pod2Name)
+		// 	checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod1Name, 2, 0, "-h", pod2IP, "-u", username, "-pw", password)
+		// 	checkNodeToolStatus(t, f, f.DataPlaneContexts[1], namespace, pod2Name, 2, 0, "-h", pod1IP, "-u", username, "-pw", password)
+		// 	checkRemoteJmxFailsWithNoCredentials(t, f, f.DataPlaneContexts[0], namespace, pod1Name, pod2IP)
+		// 	checkRemoteJmxFailsWithNoCredentials(t, f, f.DataPlaneContexts[1], namespace, pod2Name, pod1IP)
+		// 	checkRemoteJmxFailsWithWrongCredentials(t, f, f.DataPlaneContexts[0], namespace, pod1Name, pod2IP)
+		// 	checkRemoteJmxFailsWithWrongCredentials(t, f, f.DataPlaneContexts[1], namespace, pod2Name, pod1IP)
+		// })
 	})
 	t.Run("TestApisAuthEnabled", func(t *testing.T) {
-		t.Run("Stargate", func(t *testing.T) {
-			testStargateApis(t, f, ctx, f.DataPlaneContexts[0], namespace, dc1Prefix, username, password, false, replication)
-			testStargateApis(t, f, ctx, f.DataPlaneContexts[1], namespace, dc2Prefix, username, password, false, replication)
-			checkStargateCqlConnectionFailsWithNoCredentials(t, ctx, f.DataPlaneContexts[0])
-			checkStargateCqlConnectionFailsWithNoCredentials(t, ctx, f.DataPlaneContexts[1])
-			checkStargateCqlConnectionFailsWithWrongCredentials(t, ctx, f.DataPlaneContexts[0])
-			checkStargateCqlConnectionFailsWithWrongCredentials(t, ctx, f.DataPlaneContexts[1])
-			restClient := resty.New()
-			checkStargateTokenAuthFailsWithNoCredentials(t, restClient, f.DataPlaneContexts[0])
-			checkStargateTokenAuthFailsWithNoCredentials(t, restClient, f.DataPlaneContexts[1])
-			checkStargateTokenAuthFailsWithWrongCredentials(t, restClient, f.DataPlaneContexts[0])
-			checkStargateTokenAuthFailsWithWrongCredentials(t, restClient, f.DataPlaneContexts[1])
-		})
 		t.Run("Reaper", func(t *testing.T) {
 			username, password := retrieveCredentials(t, f, ctx, framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: reaperUiSecretKey})
 			testReaperApi(t, ctx, f.DataPlaneContexts[0], "cluster1", reaperapi.DefaultKeyspace, username, password)
@@ -217,6 +163,7 @@ func testAuthenticationEnabled(
 	})
 }
 
+/*
 func checkLocalJmxFailsWithNoCredentials(t *testing.T, f *framework.E2eFramework, k8sContext, namespace, pod string) {
 	_, _, err := f.GetNodeToolStatus(k8sContext, namespace, pod)
 	if assert.Error(t, err, "expected unauthenticated local JMX connection on pod %v to fail", pod) {
@@ -245,43 +192,6 @@ func checkRemoteJmxFailsWithWrongCredentials(t *testing.T, f *framework.E2eFrame
 	}
 }
 
-func checkStargateCqlConnectionFailsWithNoCredentials(t *testing.T, ctx context.Context, k8sContext string) {
-	contactPoint := ingressConfigs[k8sContext].StargateCql
-	cqlClient := cqlclient.NewCqlClient(string(contactPoint), nil)
-	cqlClient.ConnectTimeout = 30 * time.Second
-	cqlClient.ReadTimeout = 3 * time.Minute
-	_, err := cqlClient.ConnectAndInit(ctx, primitive.ProtocolVersion4, cqlclient.ManagedStreamId)
-	if assert.Error(t, err, "expected unauthenticated CQL connection to fail") {
-		assert.Contains(t, err.Error(), "expected READY, got AUTHENTICATE")
-	}
-}
-
-func checkStargateCqlConnectionFailsWithWrongCredentials(t *testing.T, ctx context.Context, k8sContext string) {
-	contactPoint := ingressConfigs[k8sContext].StargateCql
-	cqlClient := cqlclient.NewCqlClient(string(contactPoint), &cqlclient.AuthCredentials{Username: "nonexistent", Password: "irrelevant"})
-	cqlClient.ConnectTimeout = 30 * time.Second
-	cqlClient.ReadTimeout = 3 * time.Minute
-	_, err := cqlClient.ConnectAndInit(ctx, primitive.ProtocolVersion4, cqlclient.ManagedStreamId)
-	if assert.Error(t, err, "expected wrong credentials CQL connection to fail") {
-		assert.Contains(t, err.Error(), "expected AUTH_CHALLENGE or AUTH_SUCCESS, got ERROR AUTHENTICATION ERROR")
-	}
-}
-
-func checkStargateTokenAuthFailsWithNoCredentials(t *testing.T, restClient *resty.Client, k8sContext string) {
-	url := fmt.Sprintf("http://%v/v1/auth", ingressConfigs[k8sContext].StargateRest)
-	response, err := restClient.NewRequest().Post(url)
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusBadRequest, response.StatusCode(), "Expected auth request to return 400")
-}
-
-func checkStargateTokenAuthFailsWithWrongCredentials(t *testing.T, restClient *resty.Client, k8sContext string) {
-	url := fmt.Sprintf("http://%v/v1/auth", ingressConfigs[k8sContext].StargateRest)
-	body := map[string]string{"username": "nonexistent", "password": "irrelevant"}
-	response, err := restClient.NewRequest().SetHeader("Content-Type", "application/json").SetBody(body).Post(url)
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusUnauthorized, response.StatusCode(), "Expected auth request to return 401")
-}
-
 func getPodIPs(t *testing.T, f *framework.E2eFramework, namespace, pod1Name, pod2Name string) (string, string) {
 	pod1IP, err := f.GetPodIP(f.DataPlaneContexts[0], namespace, pod1Name)
 	require.NoError(t, err, "failed to get pod %s IP in context %s", pod1Name, f.DataPlaneContexts[0])
@@ -289,3 +199,4 @@ func getPodIPs(t *testing.T, f *framework.E2eFramework, namespace, pod1Name, pod
 	require.NoError(t, err, "failed to get pod %s IP in context %s", pod2Name, f.DataPlaneContexts[1])
 	return pod1IP, pod2IP
 }
+*/

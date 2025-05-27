@@ -51,7 +51,10 @@ func (r *K8ssandraClusterReconciler) createDatacenterConfigs(
 			return nil, err
 		}
 
-		cassandra.ApplyAuth(dcConfig, kc.Spec.IsAuthEnabled(), kc.Spec.UseExternalSecrets())
+		reaperRequiresJmx := kc.Spec.Reaper != nil && !kc.Spec.Reaper.HttpManagement.Enabled
+		if reaperRequiresJmx {
+			cassandra.ApplyAuth(dcConfig, kc.Spec.IsAuthEnabled(), kc.Spec.UseExternalSecrets())
+		}
 
 		// This is only really required when auth is enabled, but it doesn't hurt to apply system replication on
 		// unauthenticated clusters.

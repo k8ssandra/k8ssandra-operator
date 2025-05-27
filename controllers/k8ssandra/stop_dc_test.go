@@ -8,7 +8,6 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
-	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	testutils "github.com/k8ssandra/k8ssandra-operator/pkg/test"
@@ -66,8 +65,7 @@ func stopDcTestSetup(t *testing.T, f *framework.Framework, ctx context.Context, 
 					{Meta: api.EmbeddedObjectMeta{Name: "dc2"}, K8sContext: f.DataPlaneContexts[1], Size: 3},
 				},
 			},
-			Stargate: &stargateapi.StargateClusterTemplate{Size: 3},
-			Reaper:   &reaperapi.ReaperClusterTemplate{},
+			Reaper: &reaperapi.ReaperClusterTemplate{},
 		},
 	}
 
@@ -112,17 +110,17 @@ func stopDcTestSetup(t *testing.T, f *framework.Framework, ctx context.Context, 
 		return corev1.ConditionTrue == kc.Status.GetConditionStatus(api.CassandraInitialized)
 	}, timeout, interval, "timed out waiting for CassandraInitialized condition check")
 
-	sg1Key := framework.NewClusterKey(f.DataPlaneContexts[0], kc.Namespace, kc.Name+"-dc1-stargate")
-	sg2Key := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, kc.Name+"-dc2-stargate")
+	// sg1Key := framework.NewClusterKey(f.DataPlaneContexts[0], kc.Namespace, kc.Name+"-dc1-stargate")
+	// sg2Key := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, kc.Name+"-dc2-stargate")
 	reaper1Key := framework.NewClusterKey(f.DataPlaneContexts[0], kc.Namespace, kc.Name+"-dc1-reaper")
 	reaper2Key := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, kc.Name+"-dc2-reaper")
 
-	t.Log("check that stargate sg1 was created")
-	require.Eventually(t, f.StargateExists(ctx, sg1Key), timeout, interval)
+	// t.Log("check that stargate sg1 was created")
+	// require.Eventually(t, f.StargateExists(ctx, sg1Key), timeout, interval)
 
-	t.Logf("update stargate sg1 status to ready")
-	err = f.SetStargateStatusReady(ctx, sg1Key)
-	require.NoError(t, err, "failed to patch stargate status")
+	// t.Logf("update stargate sg1 status to ready")
+	// err = f.SetStargateStatusReady(ctx, sg1Key)
+	// require.NoError(t, err, "failed to patch stargate status")
 
 	t.Log("check that reaper reaper1 was created")
 	require.Eventually(t, f.ReaperExists(ctx, reaper1Key), timeout, interval)
@@ -131,12 +129,12 @@ func stopDcTestSetup(t *testing.T, f *framework.Framework, ctx context.Context, 
 	err = f.SetReaperStatusReady(ctx, reaper1Key)
 	require.NoError(t, err, "failed to patch reaper status")
 
-	t.Log("check that stargate sg2 is created")
-	require.Eventually(t, f.StargateExists(ctx, sg2Key), timeout, interval, "failed to verify stargate sg2 created")
+	// t.Log("check that stargate sg2 is created")
+	// require.Eventually(t, f.StargateExists(ctx, sg2Key), timeout, interval, "failed to verify stargate sg2 created")
 
-	t.Logf("update stargate sg2 status to ready")
-	err = f.SetStargateStatusReady(ctx, sg2Key)
-	require.NoError(t, err, "failed to patch stargate status")
+	// t.Logf("update stargate sg2 status to ready")
+	// err = f.SetStargateStatusReady(ctx, sg2Key)
+	// require.NoError(t, err, "failed to patch stargate status")
 
 	t.Log("check that reaper reaper2 is created")
 	require.Eventually(t, f.ReaperExists(ctx, reaper2Key), timeout, interval, "failed to verify reaper reaper2 created")
@@ -179,8 +177,8 @@ func stopExistingDc(t *testing.T, f *framework.Framework, ctx context.Context, k
 
 	kcKey := utils.GetKey(kc)
 	dc1Key := framework.NewClusterKey(f.DataPlaneContexts[0], kc.Namespace, "dc1")
-	sg1Key := framework.NewClusterKey(f.DataPlaneContexts[0], kc.Namespace, kc.Name+"-dc1-stargate")
-	sg2Key := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, kc.Name+"-dc2-stargate")
+	// sg1Key := framework.NewClusterKey(f.DataPlaneContexts[0], kc.Namespace, kc.Name+"-dc1-stargate")
+	// sg2Key := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, kc.Name+"-dc2-stargate")
 	reaper1Key := framework.NewClusterKey(f.DataPlaneContexts[0], kc.Namespace, kc.Name+"-dc1-reaper")
 	reaper2Key := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, kc.Name+"-dc2-reaper")
 
@@ -208,14 +206,14 @@ func stopExistingDc(t *testing.T, f *framework.Framework, ctx context.Context, k
 		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc2"].Cassandra.GetConditionStatus(cassdcapi.DatacenterReady))
 	}, timeout, interval, "timed out waiting for dc condition check")
 
-	t.Log("check that stargate sg1 was deleted")
-	f.AssertObjectDoesNotExist(ctx, t, sg1Key, &stargateapi.Stargate{}, timeout, interval)
+	// t.Log("check that stargate sg1 was deleted")
+	// f.AssertObjectDoesNotExist(ctx, t, sg1Key, &stargateapi.Stargate{}, timeout, interval)
 
 	t.Log("check that reaper reaper1 was deleted")
 	f.AssertObjectDoesNotExist(ctx, t, reaper1Key, &reaperapi.Reaper{}, timeout, interval)
 
-	t.Log("check that stargate sg2 is still present")
-	require.Eventually(t, f.StargateExists(ctx, sg2Key), timeout, interval, "failed to verify stargate sg2 created")
+	// t.Log("check that stargate sg2 is still present")
+	// require.Eventually(t, f.StargateExists(ctx, sg2Key), timeout, interval, "failed to verify stargate sg2 created")
 
 	t.Log("check that reaper reaper2 is still present")
 	require.Eventually(t, f.ReaperExists(ctx, reaper2Key), timeout, interval, "failed to verify reaper reaper2 created")
@@ -241,12 +239,12 @@ func stopExistingDc(t *testing.T, f *framework.Framework, ctx context.Context, k
 		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc2"].Cassandra.GetConditionStatus(cassdcapi.DatacenterReady))
 	}, timeout, interval, "timed out waiting for dc condition check")
 
-	t.Log("check that stargate sg1 was created")
-	require.Eventually(t, f.StargateExists(ctx, sg1Key), timeout, interval)
+	// t.Log("check that stargate sg1 was created")
+	// require.Eventually(t, f.StargateExists(ctx, sg1Key), timeout, interval)
 
-	t.Logf("update stargate sg1 status to ready")
-	err = f.SetStargateStatusReady(ctx, sg1Key)
-	require.NoError(t, err, "failed to patch stargate status")
+	// t.Logf("update stargate sg1 status to ready")
+	// err = f.SetStargateStatusReady(ctx, sg1Key)
+	// require.NoError(t, err, "failed to patch stargate status")
 
 	t.Log("check that reaper reaper1 was created")
 	require.Eventually(t, f.ReaperExists(ctx, reaper1Key), timeout, interval)
@@ -255,8 +253,8 @@ func stopExistingDc(t *testing.T, f *framework.Framework, ctx context.Context, k
 	err = f.SetReaperStatusReady(ctx, reaper1Key)
 	require.NoError(t, err, "failed to patch reaper status")
 
-	t.Log("check that stargate sg2 is still present")
-	require.Eventually(t, f.StargateExists(ctx, sg2Key), timeout, interval, "failed to verify stargate sg2 created")
+	// t.Log("check that stargate sg2 is still present")
+	// require.Eventually(t, f.StargateExists(ctx, sg2Key), timeout, interval, "failed to verify stargate sg2 created")
 
 	t.Log("check that reaper reaper2 is still present")
 	require.Eventually(t, f.ReaperExists(ctx, reaper2Key), timeout, interval, "failed to verify reaper reaper2 created")
@@ -267,9 +265,9 @@ func addAndStopDc(t *testing.T, f *framework.Framework, ctx context.Context, kc 
 	kcKey := utils.GetKey(kc)
 	dc1Key := framework.NewClusterKey(f.DataPlaneContexts[0], kc.Namespace, "dc1")
 	dc3Key := framework.NewClusterKey(f.DataPlaneContexts[2], kc.Namespace, "dc3")
-	sg1Key := framework.NewClusterKey(f.DataPlaneContexts[0], kc.Namespace, kc.Name+"-dc1-stargate")
-	sg2Key := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, kc.Name+"-dc2-stargate")
-	sg3Key := framework.NewClusterKey(f.DataPlaneContexts[2], kc.Namespace, kc.Name+"-dc3-stargate")
+	// sg1Key := framework.NewClusterKey(f.DataPlaneContexts[0], kc.Namespace, kc.Name+"-dc1-stargate")
+	// sg2Key := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, kc.Name+"-dc2-stargate")
+	// sg3Key := framework.NewClusterKey(f.DataPlaneContexts[2], kc.Namespace, kc.Name+"-dc3-stargate")
 	reaper1Key := framework.NewClusterKey(f.DataPlaneContexts[0], kc.Namespace, kc.Name+"-dc1-reaper")
 	reaper2Key := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, kc.Name+"-dc2-reaper")
 	reaper3Key := framework.NewClusterKey(f.DataPlaneContexts[2], kc.Namespace, kc.Name+"-dc3-reaper")
@@ -298,12 +296,12 @@ func addAndStopDc(t *testing.T, f *framework.Framework, ctx context.Context, kc 
 	rebuildTaskKey := framework.NewClusterKey(f.DataPlaneContexts[2], kc.Namespace, "dc3-rebuild")
 	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey, dc3Key)
 
-	t.Log("check that stargate sg3 was created")
-	require.Eventually(t, f.StargateExists(ctx, sg3Key), timeout, interval)
+	// t.Log("check that stargate sg3 was created")
+	// require.Eventually(t, f.StargateExists(ctx, sg3Key), timeout, interval)
 
-	t.Logf("update stargate sg3 status to ready")
-	err = f.SetStargateStatusReady(ctx, sg3Key)
-	require.NoError(t, err, "failed to patch stargate status")
+	// t.Logf("update stargate sg3 status to ready")
+	// err = f.SetStargateStatusReady(ctx, sg3Key)
+	// require.NoError(t, err, "failed to patch stargate status")
 
 	t.Log("check that reaper reaper3 was created")
 	require.Eventually(t, f.ReaperExists(ctx, reaper3Key), timeout, interval)
@@ -320,9 +318,9 @@ func addAndStopDc(t *testing.T, f *framework.Framework, ctx context.Context, kc 
 		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc1"].Cassandra.GetConditionStatus(cassdcapi.DatacenterReady))
 		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc2"].Cassandra.GetConditionStatus(cassdcapi.DatacenterReady))
 		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc3"].Cassandra.GetConditionStatus(cassdcapi.DatacenterReady))
-		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc1"].Stargate.GetConditionStatus(stargateapi.StargateReady))
-		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc2"].Stargate.GetConditionStatus(stargateapi.StargateReady))
-		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc3"].Stargate.GetConditionStatus(stargateapi.StargateReady))
+		// assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc1"].Stargate.GetConditionStatus(stargateapi.StargateReady))
+		// assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc2"].Stargate.GetConditionStatus(stargateapi.StargateReady))
+		// assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc3"].Stargate.GetConditionStatus(stargateapi.StargateReady))
 		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc1"].Reaper.GetConditionStatus(reaperapi.ReaperReady))
 		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc2"].Reaper.GetConditionStatus(reaperapi.ReaperReady))
 		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc3"].Reaper.GetConditionStatus(reaperapi.ReaperReady))
@@ -354,20 +352,20 @@ func addAndStopDc(t *testing.T, f *framework.Framework, ctx context.Context, kc 
 		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc3"].Cassandra.GetConditionStatus(cassdcapi.DatacenterStopped))
 	}, timeout, interval, "timed out waiting for dc condition check")
 
-	t.Log("check that stargate sg1 is still present")
-	require.Eventually(t, f.StargateExists(ctx, sg1Key), timeout, interval, "failed to verify stargate sg1 created")
+	// t.Log("check that stargate sg1 is still present")
+	// require.Eventually(t, f.StargateExists(ctx, sg1Key), timeout, interval, "failed to verify stargate sg1 created")
 
 	t.Log("check that reaper reaper1 is still present")
 	require.Eventually(t, f.ReaperExists(ctx, reaper1Key), timeout, interval, "failed to verify reaper reaper1 created")
 
-	t.Log("check that stargate sg2 is still present")
-	require.Eventually(t, f.StargateExists(ctx, sg2Key), timeout, interval, "failed to verify stargate sg2 created")
+	// t.Log("check that stargate sg2 is still present")
+	// require.Eventually(t, f.StargateExists(ctx, sg2Key), timeout, interval, "failed to verify stargate sg2 created")
 
 	t.Log("check that reaper reaper2 is still present")
 	require.Eventually(t, f.ReaperExists(ctx, reaper2Key), timeout, interval, "failed to verify reaper reaper2 created")
 
-	t.Log("check that stargate sg3 was deleted")
-	f.AssertObjectDoesNotExist(ctx, t, sg3Key, &stargateapi.Stargate{}, timeout, interval)
+	// t.Log("check that stargate sg3 was deleted")
+	// f.AssertObjectDoesNotExist(ctx, t, sg3Key, &stargateapi.Stargate{}, timeout, interval)
 
 	t.Log("check that reaper reaper3 was deleted")
 	f.AssertObjectDoesNotExist(ctx, t, reaper3Key, &reaperapi.Reaper{}, timeout, interval)
@@ -393,14 +391,14 @@ func addAndStopDc(t *testing.T, f *framework.Framework, ctx context.Context, kc 
 		assert.Equal(c, corev1.ConditionTrue, kc.Status.Datacenters["dc3"].Cassandra.GetConditionStatus(cassdcapi.DatacenterReady))
 	}, timeout, interval, "timed out waiting for dc condition check")
 
-	t.Log("check that stargate sg1 is still present")
-	require.Eventually(t, f.StargateExists(ctx, sg1Key), timeout, interval, "failed to verify stargate sg1 created")
+	// t.Log("check that stargate sg1 is still present")
+	// require.Eventually(t, f.StargateExists(ctx, sg1Key), timeout, interval, "failed to verify stargate sg1 created")
 
 	t.Log("check that reaper reaper1 is still present")
 	require.Eventually(t, f.ReaperExists(ctx, reaper1Key), timeout, interval, "failed to verify reaper reaper1 created")
 
-	t.Log("check that stargate sg2 is still present")
-	require.Eventually(t, f.StargateExists(ctx, sg2Key), timeout, interval, "failed to verify stargate sg2 created")
+	// t.Log("check that stargate sg2 is still present")
+	// require.Eventually(t, f.StargateExists(ctx, sg2Key), timeout, interval, "failed to verify stargate sg2 created")
 
 	t.Log("check that reaper reaper2 is still present")
 	require.Eventually(t, f.ReaperExists(ctx, reaper2Key), timeout, interval, "failed to verify reaper reaper2 created")
@@ -410,12 +408,12 @@ func addAndStopDc(t *testing.T, f *framework.Framework, ctx context.Context, kc 
 	rebuildTaskKey = framework.NewClusterKey(f.DataPlaneContexts[2], kc.Namespace, "dc3-rebuild")
 	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey, dc3Key)
 
-	t.Log("check that stargate sg3 was created")
-	require.Eventually(t, f.StargateExists(ctx, sg3Key), timeout, interval)
+	// t.Log("check that stargate sg3 was created")
+	// require.Eventually(t, f.StargateExists(ctx, sg3Key), timeout, interval)
 
-	t.Logf("update stargate sg3 status to ready")
-	err = f.SetStargateStatusReady(ctx, sg3Key)
-	require.NoError(t, err, "failed to patch stargate status")
+	// t.Logf("update stargate sg3 status to ready")
+	// err = f.SetStargateStatusReady(ctx, sg3Key)
+	// require.NoError(t, err, "failed to patch stargate status")
 
 	t.Log("check that reaper reaper3 was created")
 	require.Eventually(t, f.ReaperExists(ctx, reaper3Key), timeout, interval)

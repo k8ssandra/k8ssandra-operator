@@ -4,8 +4,7 @@ metadata:
   name: cluster1
 spec:
   cassandra:
-    serverVersion: "4.0.13"
-    serverImage: "k8ssandra/cass-management-api:4.0.13"
+    serverVersion: "4.0.17"
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard
@@ -18,14 +17,7 @@ spec:
       cassandraYaml:
         auto_snapshot: false
         memtable_flush_writers: 1
-        commitlog_segment_size_in_mb: 2
         concurrent_compactors: 1
-        compaction_throughput_mb_per_sec: 0
-        sstable_preemptive_open_interval_in_mb: 0
-        key_cache_size_in_mb: 0
-        prepared_statements_cache_size_mb: 1
-        slow_query_log_timeout_in_ms: 0
-        counter_cache_size_in_mb: 0
         concurrent_reads: 2
         concurrent_writes: 2
         concurrent_counter_writes: 2
@@ -46,20 +38,3 @@ spec:
   reaper:
     deploymentMode: SINGLE
     heapSize: 256Mi
-  stargate:
-    size: 1
-    heapSize: 384Mi
-    cassandraConfigMapRef:
-      name: cassandra-config
-    livenessProbe:
-      initialDelaySeconds: 60
-      periodSeconds: 10
-      failureThreshold: 20
-      successThreshold: 1
-      timeoutSeconds: 20
-    readinessProbe:
-      initialDelaySeconds: 30
-      periodSeconds: 10
-      failureThreshold: 20
-      successThreshold: 1
-      timeoutSeconds: 20

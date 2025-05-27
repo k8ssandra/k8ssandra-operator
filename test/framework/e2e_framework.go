@@ -127,6 +127,8 @@ func generateK8ssandraOperatorKustomization(config OperatorDeploymentConfig) err
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
+namespace: {{ .Namespace }}
+
 resources:
 - {{ .ControlPlaneComponent }}
 
@@ -145,6 +147,33 @@ patches:
     - op: replace
       path: /metadata/name
       value: {{ .Namespace }}
+- target:
+    kind: Certificate
+    name: cass-operator-serving-cert
+  patch: |
+    - op: replace
+      path: /spec/dnsNames/0
+      value: cass-operator-webhook-service.{{ .Namespace }}.svc
+    - op: replace
+      path: /spec/dnsNames/1
+      value: cass-operator-webhook-service.{{ .Namespace }}.svc.cluster.local
+    - op: replace
+      path: /metadata/annotations/cert-manager.io~1inject-ca-from
+      value: {{ .Namespace }}/cass-operator-serving-cert
+- target:
+    name: cass-operator-mutating-webhook-configuration
+    kind: MutatingWebhookConfiguration
+  patch: |
+    - op: replace
+      path: /metadata/annotations/cert-manager.io~1inject-ca-from
+      value: {{ .Namespace }}/cass-operator-serving-cert
+- target:
+    name: cass-operator-validating-webhook-configuration
+    kind: ValidatingWebhookConfiguration
+  patch: |
+    - op: replace
+      path: /metadata/annotations/cert-manager.io~1inject-ca-from
+      value: {{ .Namespace }}/cass-operator-serving-cert
 replacements:
 - source: 
     kind: Namespace
@@ -162,6 +191,11 @@ replacements:
   - select:
       name: cass-operator-validating-webhook-configuration
       kind: ValidatingWebhookConfiguration
+    fieldPaths:
+      - webhooks.0.clientConfig.service.namespace
+  - select:
+      name: cass-operator-mutating-webhook-configuration
+      kind: MutatingWebhookConfiguration
     fieldPaths:
       - webhooks.0.clientConfig.service.namespace
   - select:
@@ -185,6 +219,8 @@ replacements:
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
+namespace: {{ .Namespace }}
+
 resources:
 - {{ .DataPlaneComponent }}
 
@@ -203,6 +239,33 @@ patches:
     - op: replace
       path: /metadata/name
       value: {{ .Namespace }}
+- target:
+    kind: Certificate
+    name: cass-operator-serving-cert
+  patch: |
+    - op: replace
+      path: /spec/dnsNames/0
+      value: cass-operator-webhook-service.{{ .Namespace }}.svc
+    - op: replace
+      path: /spec/dnsNames/1
+      value: cass-operator-webhook-service.{{ .Namespace }}.svc.cluster.local
+    - op: replace
+      path: /metadata/annotations/cert-manager.io~1inject-ca-from
+      value: {{ .Namespace }}/cass-operator-serving-cert
+- target:
+    name: cass-operator-mutating-webhook-configuration
+    kind: MutatingWebhookConfiguration
+  patch: |
+    - op: replace
+      path: /metadata/annotations/cert-manager.io~1inject-ca-from
+      value: {{ .Namespace }}/cass-operator-serving-cert
+- target:
+    name: cass-operator-validating-webhook-configuration
+    kind: ValidatingWebhookConfiguration
+  patch: |
+    - op: replace
+      path: /metadata/annotations/cert-manager.io~1inject-ca-from
+      value: {{ .Namespace }}/cass-operator-serving-cert
 replacements:
 - source: 
     kind: Namespace
@@ -220,6 +283,11 @@ replacements:
   - select:
       name: cass-operator-validating-webhook-configuration
       kind: ValidatingWebhookConfiguration
+    fieldPaths:
+      - webhooks.0.clientConfig.service.namespace
+  - select:
+      name: cass-operator-mutating-webhook-configuration
+      kind: MutatingWebhookConfiguration
     fieldPaths:
       - webhooks.0.clientConfig.service.namespace
   - select:

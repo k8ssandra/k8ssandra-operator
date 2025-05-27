@@ -34,8 +34,7 @@ spec:
     heapSize: 256Mi
   cassandra:
     clusterName: "E2E Test Cluster"
-    serverVersion: "4.0.13"
-    serverImage: "k8ssandra/cass-management-api:4.0.13"
+    serverVersion: "4.0.17"
     datacenters:
       - metadata:
           name: dc1
@@ -77,20 +76,3 @@ spec:
         networking:
           hostNetwork: true
     mgmtAPIHeap: 64Mi
-  stargate:
-    size: 1
-    heapSize: 384Mi
-    cassandraConfigMapRef:
-      name: cassandra-config
-    livenessProbe:
-      initialDelaySeconds: 60
-      periodSeconds: 10
-      failureThreshold: 20
-      successThreshold: 1
-      timeoutSeconds: 20
-    readinessProbe:
-      initialDelaySeconds: 30
-      periodSeconds: 10
-      failureThreshold: 20
-      successThreshold: 1
-      timeoutSeconds: 20

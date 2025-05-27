@@ -11196,7 +11196,7 @@ spec:
                           type: boolean
                         stargate:
                           description: |-
-                            Stargate defines the desired deployment characteristics for Stargate in this datacenter. Leave nil to skip
+                            DEPRECATED Stargate defines the desired deployment characteristics for Stargate in this datacenter. Leave nil to skip
                             deploying Stargate in this datacenter.
                           properties:
                             affinity:
@@ -28765,14 +28765,14 @@ spec:
                     x-kubernetes-int-or-string: true
                   httpManagement:
                     default:
-                      enabled: false
+                      enabled: true
                     properties:
                       enabled:
-                        default: false
+                        default: true
                         description: |-
                           Enable/disable the HTTP management connection between Reaper and Cassandra.
                           When enabled, HTTP will be used instead of JMX for management connectivity between Cassandra
-                          and Reaper. In future, this will be true by default
+                          and Reaper.
                         type: boolean
                       keystores:
                         description: |-
@@ -30519,7 +30519,7 @@ spec:
                 type: string
               stargate:
                 description: |-
-                  Stargate defines the desired deployment characteristics for Stargate in this K8ssandraCluster.
+                  DEPRECATED Stargate defines the desired deployment characteristics for Stargate in this K8ssandraCluster.
                   If this is non-nil, Stargate will be deployed on every Cassandra datacenter in this K8ssandraCluster.
                 properties:
                   affinity:
