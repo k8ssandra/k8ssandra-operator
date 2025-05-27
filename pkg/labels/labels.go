@@ -3,6 +3,7 @@ package labels
 import (
 	"github.com/adutra/goalesce"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -115,5 +116,11 @@ func IsOwnedByK8ssandraController(component Labeled) bool {
 func AddCommonLabels(component Labeled, k8c *k8ssandraapi.K8ssandraCluster) {
 	if k8c.Spec.Cassandra != nil && k8c.Spec.Cassandra.Meta.CommonLabels != nil {
 		component.SetLabels(goalesce.MustDeepMerge(component.GetLabels(), k8c.Spec.Cassandra.Meta.CommonLabels))
+	}
+}
+
+func AddCommonLabelsFromReaper(component Labeled, reaper *reaperapi.Reaper) {
+	if reaper.Spec.ResourceMeta != nil && reaper.Spec.ResourceMeta.CommonLabels != nil {
+		component.SetLabels(goalesce.MustDeepMerge(component.GetLabels(), reaper.Spec.ResourceMeta.CommonLabels))
 	}
 }

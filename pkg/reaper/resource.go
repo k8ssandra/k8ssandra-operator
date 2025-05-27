@@ -123,33 +123,19 @@ func transformCassandraClusterMeta(kc *k8ssandraapi.K8ssandraCluster) *meta.Reso
 	cassMeta := kc.Spec.Cassandra.Meta
 	reaperMeta := &meta.ResourceMeta{}
 
-	if cassMeta.Tags.Labels != nil {
-		reaperMeta.Tags.Labels = cassMeta.Tags.Labels
-	}
-	if cassMeta.Tags.Annotations != nil {
-		reaperMeta.Tags.Annotations = cassMeta.Tags.Annotations
-	}
-
+	// we use Cassandra's common labels for reaper's CRD labels
+	// we use the same labels for ALL resources reaper will create
 	if cassMeta.CommonLabels != nil {
+		reaperMeta.Tags.Labels = cassMeta.CommonLabels
 		reaperMeta.CommonLabels = cassMeta.CommonLabels
-	}
-	// cassMeta.CommonAnnotation has nowhere to go
-
-	if cassMeta.Pods.Labels != nil {
-		reaperMeta.Pods.Labels = cassMeta.Pods.Labels
-	}
-	if cassMeta.Pods.Annotations != nil {
-		reaperMeta.Pods.Annotations = cassMeta.Pods.Annotations
-	}
-
-	// while the CassandraClusterMeta has ServiceConfig field, none of the services therein really fits reaper
-	// it seems more correct to forward the common L/A to the reaper service
-	if cassMeta.CommonLabels != nil {
+		reaperMeta.Pods.Labels = cassMeta.CommonLabels
 		reaperMeta.Service.Labels = cassMeta.CommonLabels
 	}
 	if cassMeta.CommonAnnotations != nil {
+		reaperMeta.Tags.Annotations = cassMeta.CommonAnnotations
+		reaperMeta.CommonAnnotations = cassMeta.CommonAnnotations
+		reaperMeta.Pods.Annotations = cassMeta.CommonAnnotations
 		reaperMeta.Service.Annotations = cassMeta.CommonAnnotations
 	}
-
 	return reaperMeta
 }
