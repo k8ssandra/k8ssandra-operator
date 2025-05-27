@@ -7,6 +7,7 @@ import (
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -422,6 +423,8 @@ func NewStatefulSet(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, logge
 	}
 	addAuthEnvVars(&statefulSet.Spec.Template, authVars)
 	configureVector(reaper, &statefulSet.Spec.Template, dc, logger)
+	labels.AddCommonLabelsFromReaper(statefulSet, reaper)
+	annotations.AddCommonAnnotationsFromReaper(statefulSet, reaper)
 	annotations.AddHashAnnotation(statefulSet)
 	return statefulSet
 }
@@ -447,6 +450,8 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 	}
 	addAuthEnvVars(&deployment.Spec.Template, authVars)
 	configureVector(reaper, &deployment.Spec.Template, dc, logger)
+	labels.AddCommonLabelsFromReaper(deployment, reaper)
+	annotations.AddCommonAnnotationsFromReaper(deployment, reaper)
 	annotations.AddHashAnnotation(deployment)
 	return deployment
 }
