@@ -19,9 +19,10 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [CHANGE] []() Update k8ssandra-client to v0.7.0 to align with cass-operator v1.24.1
 * [CHANGE] [#1519](https://github.com/k8ssandra/k8ssandra-operator/issues/1519) Update cass-operator to version 1.24.1, Kubernetes dependencies to 1.31.x series, controller-runtime dependencies
 * [CHANGE] [#1544](https://github.com/k8ssandra/k8ssandra-operator/issues/1544) Make Reaper use management-api for the connection by default
+* [ENHANCEMENT] Add support for watching multiple specific namespaces in cluster scope deployments
 * [ENHANCEMENT] Add support for common annotations and labels in the helm chart
 * [BUGFIX] [#1538](https://github.com/k8ssandra/k8ssandra-operator/issues/1538) Fix perNodeConfig init-container to mount Volume "tmp" for the readOnlyRootFilesystem clusters
+* [BUGFIX] [#1550](https://github.com/k8ssandra/k8ssandra-operator/issues/1550) Make storageProvider and bucketName optional to accomodate the use of the MedusaConfiguration API
+* [BUGFIX] [#2805](https://github.com/riptano/mission-control/issues/2085) Add missing propagation of common Labels and Annotations
 * [TESTING] [#1532](https://github.com/k8ssandra/k8ssandra-operator/issues/1532) Update the base Cassandra version to 5.0.4 in tests
 * [TESTING] [#955](https://github.com/k8ssandra/k8ssandra-operator/issues/955) Update to kustomize v5.6.0 and fix the tests to correctly render the templates
-* [BUGFIX] [#2805](https://github.com/riptano/mission-control/issues/2085) Add missing propagation of common Labels and Annotations
-* [ENHANCEMENT] Add support for watching multiple specific namespaces in cluster scope deployments

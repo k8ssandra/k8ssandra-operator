@@ -28,7 +28,7 @@ import (
 type Storage struct {
 	// The storage backend to use for the backups.
 	// +kubebuilder:validation:Enum=google_storage;azure_blobs;s3;s3_compatible;s3_rgw;ibm_storage
-	// +kubebuilder:validation:Required
+	// +optional
 	StorageProvider string `json:"storageProvider,omitempty"`
 
 	// Type of credentials to use for authentication.
@@ -43,7 +43,7 @@ type Storage struct {
 	StorageSecretRef corev1.LocalObjectReference `json:"storageSecretRef,omitempty"`
 
 	// The name of the bucket to use for the backups.
-	// +kubebuilder:validation:Required
+	// +optional
 	BucketName string `json:"bucketName,omitempty"`
 
 	// Name of the top level folder in the backup bucket.

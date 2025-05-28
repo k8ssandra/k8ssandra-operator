@@ -45,6 +45,8 @@ var (
 	ErrNoResourcesSet           = fmt.Errorf("softPodAntiAffinity requires Resources to be set")
 	ErrClusterName              = fmt.Errorf("cluster name can not be changed")
 	ErrNoStoragePrefix          = fmt.Errorf("medusa storage prefix must be set when a medusaConfigurationRef is used")
+	ErrNoStorageProvider        = fmt.Errorf("medusa storage provider must be set when no medusaConfigurationRef is used")
+	ErrNoBucketName             = fmt.Errorf("medusa bucket name must be set when no medusaConfigurationRef is used")
 	ErrNoReaperStorageConfig    = fmt.Errorf("reaper StorageConfig not set")
 	ErrNoReaperAccessMode       = fmt.Errorf("reaper StorageConfig.AccessModes not set")
 	ErrNoReaperResourceRequests = fmt.Errorf("reaper StorageConfig.Resources.Requests not set")
@@ -306,6 +308,13 @@ func (r *K8ssandraCluster) ValidateMedusa() error {
 			r.Spec.Medusa.MedusaConfigurationRef.ResourceVersion != "" ||
 			r.Spec.Medusa.MedusaConfigurationRef.UID != "" {
 			return errors.New("Medusa config invalid, invalid field used")
+		}
+	} else {
+		if r.Spec.Medusa.StorageProperties.StorageProvider == "" {
+			return ErrNoStorageProvider
+		}
+		if r.Spec.Medusa.StorageProperties.BucketName == "" {
+			return ErrNoBucketName
 		}
 	}
 

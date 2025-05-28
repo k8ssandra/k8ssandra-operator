@@ -164,9 +164,6 @@ spec:
                       Max upload bandwidth in MB/s.
                       Defaults to 50 MB/s.
                     type: string
-                required:
-                - bucketName
-                - storageProvider
                 type: object
             type: object
           status:

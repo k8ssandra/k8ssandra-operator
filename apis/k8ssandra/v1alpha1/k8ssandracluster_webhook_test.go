@@ -181,6 +181,7 @@ func TestWebhook(t *testing.T) {
 	t.Run("AutomatedUpdateAnnotation", testAutomatedUpdateAnnotation)
 	t.Run("ReaperStorage", testReaperStorage)
 	t.Run("NoDCRename", testNoDCRename)
+	t.Run("MedusaMandatoryFieldsMissing", testMedusaMandatoryFieldsMissing)
 }
 
 func testContextValidation(t *testing.T) {
@@ -493,6 +494,47 @@ func testMedusaPrefixMissing(t *testing.T) {
 	}
 	err = k8sClient.Create(ctx, clusterWithPrefix)
 	required.NoError(err)
+}
+
+func testMedusaMandatoryFieldsMissing(t *testing.T) {
+	required := require.New(t)
+	createNamespace(required, "short-namespace-2")
+
+	clusterWithoutMedusa := createMinimalClusterObj("without-medusa", "short-namespace-2")
+	err := k8sClient.Create(ctx, clusterWithoutMedusa)
+	required.NoError(err)
+
+	clusterWithMedusa := createMinimalClusterObj("with-medusa", "short-namespace-2")
+	clusterWithMedusa.Spec.Medusa = &medusaapi.MedusaClusterTemplate{
+		StorageProperties: medusaapi.Storage{
+			Prefix: "",
+		},
+	}
+	err = k8sClient.Create(ctx, clusterWithMedusa)
+	// We expect an error because the storage provider and bucket name are not set
+	required.Error(err)
+
+	clusterWithMedusa2 := createMinimalClusterObj("with-medusa", "short-namespace-2")
+	clusterWithMedusa2.Spec.Medusa = &medusaapi.MedusaClusterTemplate{
+		StorageProperties: medusaapi.Storage{
+			StorageProvider: "s3_compatible",
+			Prefix:          "test",
+		},
+	}
+	err = k8sClient.Create(ctx, clusterWithMedusa2)
+	// We expect an error because the bucket name is not set
+	required.Error(err)
+
+	clusterWithMedusa3 := createMinimalClusterObj("with-medusa", "short-namespace-2")
+	clusterWithMedusa3.Spec.Medusa = &medusaapi.MedusaClusterTemplate{
+		StorageProperties: medusaapi.Storage{
+			BucketName: "not-real",
+			Prefix:     "test",
+		},
+	}
+	err = k8sClient.Create(ctx, clusterWithMedusa3)
+	// We expect an error because the bucket name is not set
+	required.Error(err)
 }
 
 func testInvalidDcName(t *testing.T) {
