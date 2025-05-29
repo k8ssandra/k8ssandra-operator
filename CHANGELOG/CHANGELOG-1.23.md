@@ -13,6 +13,11 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 
 When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
 
+## unreleased
+
+## v1.23.1 - 2025-05-29
+* [BUGFIX] [#2121](https://github.com/riptano/mission-control/issues/2121) Add cluster's common L&A to replicated secrets and Vector's config map
+
 ## v1.23.0 - 2025-05-28
 
 * [CHANGE] [#1542](https://github.com/k8ssandra/k8ssandra-operator/issues/1542) Support for Stargate has been deprecated and will be removed in future release.
