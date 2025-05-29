@@ -34,6 +34,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
+	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
 
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
@@ -834,6 +835,12 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	dc2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
 	checkDatacenterReady(t, ctx, dc2Key, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name, dc2Key.Name)
+
+	t.Logf("check that ReplicatedSecret has been created in CP and has the correct labels and annotations")
+	checkReplicatedSecretLabelsAnnotations(t, ctx, f, dc1Key, k8ssandra.Name)
+	t.Logf("check that SuperuserSecret has been created in both contexts and has the correct labels and annotations")
+	checkSuperUserSecretHasLabelsAnnotations(t, ctx, f, dc1Key.K8sContext, namespace, k8ssandra.Name)
+	checkSuperUserSecretHasLabelsAnnotations(t, ctx, f, dc2Key.K8sContext, namespace, k8ssandra.Name)
 
 	checkVectorAgentConfigMapPresence(t, ctx, f, dc1Key, telemetry.VectorAgentConfigMapName)
 	checkVectorAgentConfigMapPresence(t, ctx, f, dc2Key, telemetry.VectorAgentConfigMapName)
@@ -1805,6 +1812,13 @@ func checkVectorAgentConfigMapPresence(t *testing.T, ctx context.Context, f *fra
 		return err == nil
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "Vector configmap was not found")
 
+	t.Logf("check that Vector agent config map %v has the correct labels and annotations", configMapName)
+	cm := &corev1.ConfigMap{}
+	err := f.Get(ctx, configMapKey, cm)
+	require.NoError(t, err)
+	require.Equal(t, "test-label-value", cm.Labels["test-label-name"])
+	require.Equal(t, "test-annotation-value", cm.Annotations["test-annotation-name"])
+
 }
 
 func CheckLabelsAnnotationsCreated(dcKey framework.ClusterKey, t *testing.T, ctx context.Context, f *framework.E2eFramework) error {
@@ -1819,4 +1833,27 @@ func CheckLabelsAnnotationsCreated(dcKey framework.ClusterKey, t *testing.T, ctx
 	assert.True(t, cassDC.Spec.AdditionalAnnotations["anAnnotationKeyDcLevel"] == "anAnnotationValueDCLevel")
 	assert.True(t, cassDC.Spec.AdditionalAnnotations["anAnnotationKeyClusterLevel"] == "anAnnotationValueClusterLevel")
 	return nil
+}
+
+func checkReplicatedSecretLabelsAnnotations(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey, kcName string) {
+	replicatedSecretName := types.NamespacedName{
+		Namespace: dcKey.Namespace,
+		Name:      kcName,
+	}
+	replicatedSecretKey := framework.ClusterKey{
+		NamespacedName: replicatedSecretName,
+		K8sContext:     dcKey.K8sContext,
+	}
+	repSec := &replicationapi.ReplicatedSecret{}
+	err := f.Get(ctx, replicatedSecretKey, repSec)
+	require.NoError(t, err)
+	require.Equal(t, "test-label-value", repSec.Labels["test-label-name"])
+	require.Equal(t, "test-annotation-value", repSec.Annotations["test-annotation-name"])
+}
+
+func checkSuperUserSecretHasLabelsAnnotations(t *testing.T, ctx context.Context, f *framework.E2eFramework, k8sContext, namespace, clusterName string) {
+	superUserSecret, err := f.RetrieveSuperuserSecret(ctx, k8sContext, namespace, clusterName)
+	require.NoError(t, err)
+	require.Equal(t, "test-label-value", superUserSecret.Labels["test-label-name"])
+	require.Equal(t, "test-annotation-value", superUserSecret.Annotations["test-annotation-name"])
 }

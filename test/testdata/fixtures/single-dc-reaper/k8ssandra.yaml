@@ -33,8 +33,10 @@ spec:
     metadata:
       commonLabels:
         testLabel: testValue
+        test-label-name: test-label-value
       commonAnnotations:
         testAnnotation: testValue
+        test-annotation-name: test-annotation-value
     jmxInitContainerImage:
       repository: library
       name: busybox
