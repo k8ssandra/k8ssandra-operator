@@ -8,8 +8,10 @@ spec:
     metadata:
       commonLabels: 
         aLabelKeyClusterLevel: aLabelValueClusterLevel
+        test-label-name: test-label-value
       commonAnnotations:
         anAnnotationKeyClusterLevel: anAnnotationValueClusterLevel
+        test-annotation-name: test-annotation-value
     telemetry:
       mcac:
         enabled: false

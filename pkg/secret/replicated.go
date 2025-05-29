@@ -116,6 +116,9 @@ func ReconcileReplicatedSecret(ctx context.Context, c client.Client, scheme *run
 	key := client.ObjectKey{Namespace: targetRepSec.Namespace, Name: targetRepSec.Name}
 	repSec := &replicationapi.ReplicatedSecret{}
 
+	labels.AddCommonLabels(targetRepSec, kc)
+	annotations.AddCommonAnnotations(targetRepSec, kc)
+
 	err := controllerutil.SetControllerReference(kc, targetRepSec, scheme)
 	if err != nil {
 		logger.Error(err, "Failed to set owner reference on ReplicatedSecret", "ReplicatedSecret", key)

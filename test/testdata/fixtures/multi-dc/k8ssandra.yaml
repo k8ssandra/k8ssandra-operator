@@ -4,6 +4,11 @@ metadata:
   name: test
 spec:
   cassandra:
+    metadata:
+      commonLabels:
+        "test-label-name": "test-label-value"
+      commonAnnotations:
+        "test-annotation-name": "test-annotation-value"
     serverVersion: 5.0.4
     storageConfig:
       cassandraDataVolumeClaimSpec:
