@@ -1014,7 +1014,7 @@ the secrets into the necessary resources<br/>
         <td><b><a href="#k8ssandraclusterspecstargate">stargate</a></b></td>
         <td>object</td>
         <td>
-          Stargate defines the desired deployment characteristics for Stargate in this K8ssandraCluster.
+          DEPRECATED Stargate defines the desired deployment characteristics for Stargate in this K8ssandraCluster.
 If this is non-nil, Stargate will be deployed on every Cassandra datacenter in this K8ssandraCluster.<br/>
         </td>
         <td>false</td>
@@ -5668,7 +5668,7 @@ the number of nodes required.<br/>
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstargate">stargate</a></b></td>
         <td>object</td>
         <td>
-          Stargate defines the desired deployment characteristics for Stargate in this datacenter. Leave nil to skip
+          DEPRECATED Stargate defines the desired deployment characteristics for Stargate in this datacenter. Leave nil to skip
 deploying Stargate in this datacenter.<br/>
         </td>
         <td>false</td>
@@ -23108,7 +23108,7 @@ only the result of this request.<br/>
 
 
 
-Stargate defines the desired deployment characteristics for Stargate in this datacenter. Leave nil to skip
+DEPRECATED Stargate defines the desired deployment characteristics for Stargate in this datacenter. Leave nil to skip
 deploying Stargate in this datacenter.
 
 <table>
@@ -25444,6 +25444,14 @@ labels and annotations for Stargate resources
         <td>map[string]string</td>
         <td>
           <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>commonAnnotations</b></td>
+        <td>map[string]string</td>
+        <td>
+          annotations that will be applied to all components
+created by the CRD<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -27879,6 +27887,14 @@ labels and annotations for Stargate resources
         <td>map[string]string</td>
         <td>
           <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>commonAnnotations</b></td>
+        <td>map[string]string</td>
+        <td>
+          annotations that will be applied to all components
+created by the CRD<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -56124,7 +56140,7 @@ The default is "thelastpickle/cassandra-reaper:3.8.0".<br/>
         <td>
           <br/>
           <br/>
-            <i>Default</i>: map[enabled:false]<br/>
+            <i>Default</i>: map[enabled:true]<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -58195,9 +58211,9 @@ More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/nam
         <td>
           Enable/disable the HTTP management connection between Reaper and Cassandra.
 When enabled, HTTP will be used instead of JMX for management connectivity between Cassandra
-and Reaper. In future, this will be true by default<br/>
+and Reaper.<br/>
           <br/>
-            <i>Default</i>: false<br/>
+            <i>Default</i>: true<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -59200,6 +59216,14 @@ labels and annotations for Reaper resources
         <td>map[string]string</td>
         <td>
           <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>commonAnnotations</b></td>
+        <td>map[string]string</td>
+        <td>
+          annotations that will be applied to all components
+created by the CRD<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -61661,7 +61685,7 @@ More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/nam
 
 
 
-Stargate defines the desired deployment characteristics for Stargate in this K8ssandraCluster.
+DEPRECATED Stargate defines the desired deployment characteristics for Stargate in this K8ssandraCluster.
 If this is non-nil, Stargate will be deployed on every Cassandra datacenter in this K8ssandraCluster.
 
 <table>
@@ -63990,6 +64014,14 @@ labels and annotations for Stargate resources
         <td>map[string]string</td>
         <td>
           <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>commonAnnotations</b></td>
+        <td>map[string]string</td>
+        <td>
+          annotations that will be applied to all components
+created by the CRD<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -86328,7 +86360,7 @@ default) and the CQL port (9042 by default) on this DC.<br/>
         <td>
           <br/>
           <br/>
-            <i>Default</i>: map[enabled:false]<br/>
+            <i>Default</i>: map[enabled:true]<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -88648,9 +88680,9 @@ instance.<br/>
         <td>
           Enable/disable the HTTP management connection between Reaper and Cassandra.
 When enabled, HTTP will be used instead of JMX for management connectivity between Cassandra
-and Reaper. In future, this will be true by default<br/>
+and Reaper.<br/>
           <br/>
-            <i>Default</i>: false<br/>
+            <i>Default</i>: true<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -89653,6 +89685,14 @@ labels and annotations for Reaper resources
         <td>map[string]string</td>
         <td>
           <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>commonAnnotations</b></td>
+        <td>map[string]string</td>
+        <td>
+          annotations that will be applied to all components
+created by the CRD<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -95362,6 +95402,14 @@ labels and annotations for Stargate resources
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>commonAnnotations</b></td>
+        <td>map[string]string</td>
+        <td>
+          annotations that will be applied to all components
+created by the CRD<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>commonLabels</b></td>
         <td>map[string]string</td>
         <td>
@@ -97794,6 +97842,14 @@ labels and annotations for Stargate resources
         <td>map[string]string</td>
         <td>
           <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>commonAnnotations</b></td>
+        <td>map[string]string</td>
+        <td>
+          annotations that will be applied to all components
+created by the CRD<br/>
         </td>
         <td>false</td>
       </tr><tr>
