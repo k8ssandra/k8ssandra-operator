@@ -947,3 +947,129 @@ func TestGetAdaptiveIncremental(t *testing.T) {
 	assert.False(t, adaptive)
 	assert.True(t, incremental)
 }
+
+func TestPodTemplateSpecEnvVarMerging(t *testing.T) {
+	logger := testlogr.NewTestLogger(t)
+	reaper := newTestReaper()
+
+	// Add custom environment variables through PodTemplateSpec
+	reaper.Spec.PodTemplateSpec = &corev1.PodTemplateSpec{
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				{
+					Name: "reaper", // This should merge with the existing reaper container
+					Env: []corev1.EnvVar{
+						{
+							Name:  "CUSTOM_ENV_VAR",
+							Value: "custom_value",
+						},
+						{
+							Name:  "ANOTHER_CUSTOM_VAR",
+							Value: "another_value",
+						},
+						{
+							Name:  "REAPER_CASS_LOCAL_DC", // Should be a no-op as it is overriden by default value.
+							Value: "custom_value",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
+	assert.NotNil(t, deployment)
+
+	// Verify that the main container has both the default environment variables and custom ones
+	mainContainer := deployment.Spec.Template.Spec.Containers[0]
+	assert.Equal(t, "reaper", mainContainer.Name)
+	assert.Len(t, mainContainer.Env, 8)
+	// Check for custom environment variables
+	assert.Contains(t, mainContainer.Env, corev1.EnvVar{
+		Name:  "CUSTOM_ENV_VAR",
+		Value: "custom_value",
+	})
+	assert.Contains(t, mainContainer.Env, corev1.EnvVar{
+		Name:  "ANOTHER_CUSTOM_VAR",
+		Value: "another_value",
+	})
+
+	// Check that default environment variables are still present
+	assert.Contains(t, mainContainer.Env, corev1.EnvVar{
+		Name:  "REAPER_STORAGE_TYPE",
+		Value: "cassandra",
+	})
+	assert.Contains(t, mainContainer.Env, corev1.EnvVar{
+		Name:  "REAPER_ENABLE_DYNAMIC_SEED_LIST",
+		Value: "false",
+	})
+	assert.Contains(t, mainContainer.Env, corev1.EnvVar{
+		Name:  "REAPER_DATACENTER_AVAILABILITY",
+		Value: "",
+	})
+	assert.Contains(t, mainContainer.Env, corev1.EnvVar{
+		Name:  "REAPER_CASS_LOCAL_DC",
+		Value: "dc1",
+	})
+	assert.Contains(t, mainContainer.Env, corev1.EnvVar{
+		Name:  "REAPER_CASS_KEYSPACE",
+		Value: "reaper_db",
+	})
+	assert.Contains(t, mainContainer.Env, corev1.EnvVar{
+		Name:  "REAPER_CASS_CONTACT_POINTS",
+		Value: "[cluster1-dc1-service]",
+	})
+}
+func TestPodTemplateSpecAdditionalContainers(t *testing.T) {
+	logger := testlogr.NewTestLogger(t)
+	reaper := newTestReaper()
+
+	// Add an additional sidecar container through PodTemplateSpec
+	reaper.Spec.PodTemplateSpec = &corev1.PodTemplateSpec{
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				{
+					Name:  "sidecar",
+					Image: "sidecar:latest",
+					Env: []corev1.EnvVar{
+						{
+							Name:  "SIDECAR_ENV",
+							Value: "sidecar_value",
+						},
+					},
+					Ports: []corev1.ContainerPort{
+						{
+							Name:          "sidecar-port",
+							ContainerPort: 9090,
+							Protocol:      "TCP",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
+	assert.NotNil(t, deployment)
+
+	// Verify that we now have two containers: the main reaper container and the sidecar
+	assert.Len(t, deployment.Spec.Template.Spec.Containers, 2)
+
+	// Check the main reaper container is still there
+	reaperContainer := deployment.Spec.Template.Spec.Containers[1]
+	assert.Equal(t, "reaper", reaperContainer.Name)
+
+	// Check the sidecar container was added
+	sidecarContainer := deployment.Spec.Template.Spec.Containers[0]
+	assert.Equal(t, "sidecar", sidecarContainer.Name)
+	assert.Equal(t, "sidecar:latest", sidecarContainer.Image)
+	assert.Contains(t, sidecarContainer.Env, corev1.EnvVar{
+		Name:  "SIDECAR_ENV",
+		Value: "sidecar_value",
+	})
+	assert.Contains(t, sidecarContainer.Ports, corev1.ContainerPort{
+		Name:          "sidecar-port",
+		ContainerPort: 9090,
+		Protocol:      "TCP",
+	})
+}
