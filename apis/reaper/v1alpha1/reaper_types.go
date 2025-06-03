@@ -168,6 +168,9 @@ type ReaperTemplate struct {
 	// +optional
 	// +kubebuilder:default=false
 	SkipSchemaMigration bool `json:"skipSchemaMigration,omitempty"`
+
+	// +optional
+	PodTemplateSpec *corev1.PodTemplateSpec `json:"podTemplateSpec,omitempty"`
 }
 
 // UseExternalSecrets defines whether the user has specified if credentials and

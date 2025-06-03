@@ -17,6 +17,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
+	goalesceutils "github.com/k8ssandra/k8ssandra-operator/pkg/goalesce"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	appsv1 "k8s.io/api/apps/v1"
@@ -425,6 +426,10 @@ func NewStatefulSet(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, logge
 	configureVector(reaper, &statefulSet.Spec.Template, dc, logger)
 	labels.AddCommonLabelsFromReaper(statefulSet, reaper)
 	annotations.AddCommonAnnotationsFromReaper(statefulSet, reaper)
+
+	// Merge the user-provided PodTemplateSpec as the last step
+	statefulSet.Spec.Template = *goalesceutils.MergeCRs(reaper.Spec.PodTemplateSpec, &statefulSet.Spec.Template)
+
 	annotations.AddHashAnnotation(statefulSet)
 	return statefulSet
 }
@@ -450,8 +455,13 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 	}
 	addAuthEnvVars(&deployment.Spec.Template, authVars)
 	configureVector(reaper, &deployment.Spec.Template, dc, logger)
+
 	labels.AddCommonLabelsFromReaper(deployment, reaper)
 	annotations.AddCommonAnnotationsFromReaper(deployment, reaper)
+
+	// Merge the user-provided PodTemplateSpec as the last step
+	deployment.Spec.Template = *goalesceutils.MergeCRs(reaper.Spec.PodTemplateSpec, &deployment.Spec.Template)
+
 	annotations.AddHashAnnotation(deployment)
 	return deployment
 }
