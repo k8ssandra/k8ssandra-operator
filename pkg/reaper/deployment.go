@@ -7,6 +7,7 @@ import (
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
+	goalesceutils "github.com/k8ssandra/k8ssandra-operator/pkg/goalesce"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -168,6 +169,8 @@ func computeEnvVars(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter) []cor
 			})
 		}
 	}
+
+	envVars = goalesceutils.MergeCRs(reaper.Spec.AdditionalEnvVars, envVars)
 
 	return envVars
 }

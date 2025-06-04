@@ -168,6 +168,10 @@ type ReaperTemplate struct {
 	// +optional
 	// +kubebuilder:default=false
 	SkipSchemaMigration bool `json:"skipSchemaMigration,omitempty"`
+
+	// AdditionalEnvVars is a list of additional environment variables to set in the Reaper container.
+	// +optional
+	AdditionalEnvVars []corev1.EnvVar `json:"additionalEnvVars,omitempty"`
 }
 
 // UseExternalSecrets defines whether the user has specified if credentials and

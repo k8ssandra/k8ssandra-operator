@@ -947,3 +947,34 @@ func TestGetAdaptiveIncremental(t *testing.T) {
 	assert.False(t, adaptive)
 	assert.True(t, incremental)
 }
+
+func TestComputeEnvVarsAdditionalEnvVars(t *testing.T) {
+	reaper := newTestReaper()
+	reaper.Spec.AdditionalEnvVars = []corev1.EnvVar{
+		{Name: "CUSTOM_VAR", Value: "custom_value"},
+		{Name: "REAPER_STORAGE_TYPE", Value: "should_be_overridden"},
+	}
+	dc := newTestDatacenter()
+
+	envVars := computeEnvVars(reaper, dc)
+
+	// Test 1: Additional env var can be added
+	found := false
+	for _, env := range envVars {
+		if env.Name == "CUSTOM_VAR" && env.Value == "custom_value" {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found)
+
+	// Test 2: Static env var takes precedence over additional one
+	found = false
+	for _, env := range envVars {
+		if env.Name == "REAPER_STORAGE_TYPE" && env.Value == "cassandra" {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found)
+}
