@@ -33,6 +33,13 @@ spec:
     serverVersion: "4.0.17"
     serverImage: "k8ssandra/cass-management-api:4.0.17"
     clusterName: "My Cluster"
+    metadata:
+      commonLabels:
+        aLabelKeyClusterLevel: aLabelValueClusterLevel
+        test-label-name: test-label-value
+      commonAnnotations:
+        anAnnotationKeyClusterLevel: anAnnotationValueClusterLevel
+        test-annotation-name: test-annotation-value
     jmxInitContainerImage:
       repository: library
       name: busybox
