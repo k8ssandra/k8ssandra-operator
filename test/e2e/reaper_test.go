@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -41,12 +42,30 @@ func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *
 	checkReaperK8cStatusReady(t, f, ctx, kcKey, dcKey)
 	checkReaperResourcesHaveCorrectMetadata(t, f, ctx, kc, reaperKey)
 
+	// Environment variables are now expected to be in the initial K8ssandraCluster spec.
+	// We proceed directly to verification.
+	t.Logf("Verifying Reaper environment variables (expected to be set in initial K8ssandraCluster spec)")
+	reaperWorkload := &appsv1.Deployment{}
+	err := f.Client.Get(ctx, reaperKey.NamespacedName, reaperWorkload)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			// If Deployment is not found, try StatefulSet
+			reaperSts := &appsv1.StatefulSet{}
+			require.NoError(f.Client.Get(ctx, reaperKey.NamespacedName, reaperSts), "Failed to get Reaper StatefulSet %s", reaperKey.Name)
+			verifyReaperEnvVarsInPodSpec(t, reaperSts.Spec.Template.Spec)
+		} else {
+			require.NoError(err, "Failed to get Reaper Deployment %s", reaperKey.Name)
+		}
+	} else {
+		verifyReaperEnvVarsInPodSpec(t, reaperWorkload.Spec.Template.Spec)
+	}
+
 	// check that the Reaper Vector container and config map exist
 	checkContainerPresence(t, ctx, f, reaperKey, kc, getPodTemplateSpec, reaper.VectorContainerName)
 	checkVectorAgentConfigMapPresence(t, ctx, f, dcKey, reaper.VectorAgentConfigMapName)
 
 	t.Logf("check that if Reaper Vector is disabled, the agent and configmap are deleted")
-	err := f.Client.Get(ctx, kcKey, kc)
+	err = f.Client.Get(ctx, kcKey, kc)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 	reaperVectorPatch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	kc.Spec.Reaper.Telemetry.Vector.Enabled = ptr.To(false)
@@ -492,4 +511,32 @@ func checkReaperResourcesHaveCorrectMetadata(t *testing.T, f *framework.E2eFrame
 		assert.True(t, deployment.ObjectMeta.Labels["testLabel"] == "testValue", "Deployment %s in namespace %s has incorrect labels", dName, kc.Namespace)
 		assert.True(t, deployment.ObjectMeta.Annotations["testAnnotation"] == "testValue", "Deployment %s in namespace %s has incorrect annotations", dName, kc.Namespace)
 	}
+}
+
+func verifyReaperEnvVarsInPodSpec(t *testing.T, podSpec corev1.PodSpec) {
+	var reaperContainer *corev1.Container
+	for i := range podSpec.Containers {
+		if podSpec.Containers[i].Name == "reaper" { // Use string literal for container name
+			reaperContainer = &podSpec.Containers[i]
+			break
+		}
+	}
+	require.NotNil(t, reaperContainer, "Reaper container not found in PodSpec")
+
+	envMap := make(map[string]string)
+	for _, envVar := range reaperContainer.Env {
+		envMap[envVar.Name] = envVar.Value
+	}
+
+	expectedCustomVar := "e2e-test-value"
+	actualCustomVar, found := envMap["CUSTOM_E2E_VAR"]
+	assert.True(t, found, "Expected env var CUSTOM_E2E_VAR not found")
+	assert.Equal(t, expectedCustomVar, actualCustomVar, "Value for CUSTOM_E2E_VAR mismatch")
+
+	expecteStaticVar := "[mycluster-dc1-service]"
+	actualOverrideVar, found := envMap["REAPER_CASS_CONTACT_POINTS"]
+	assert.True(t, found, "Expected overridden env var REAPER_CASS_CONTACT_POINTS not found")
+	assert.Equal(t, expecteStaticVar, actualOverrideVar, "Value for REAPER_CASS_CONTACT_POINTS mismatch")
+
+	t.Log("Successfully verified Reaper environment variables")
 }

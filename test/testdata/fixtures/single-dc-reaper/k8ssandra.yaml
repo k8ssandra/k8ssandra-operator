@@ -17,6 +17,11 @@ spec:
     heapSize: 256Mi
     autoScheduling:
       enabled: false
+    additionalEnvVars:
+      - name: CUSTOM_E2E_VAR
+        value: "e2e-test-value"
+      - name: REAPER_CASS_CONTACT_POINTS
+        value: "e2e-override-contact-points"
     telemetry:
       vector:
         enabled: true
