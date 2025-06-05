@@ -30,7 +30,7 @@ import (
 const (
 	DefaultImageRepository = "thelastpickle"
 	DefaultImageName       = "cassandra-reaper"
-	DefaultVersion         = "3.8.0"
+	DefaultVersion         = "4.0.0-beta1"
 	// When changing the default version above, please also change the kubebuilder markers in
 	// apis/reaper/v1alpha1/reaper_types.go accordingly.
 
@@ -705,9 +705,9 @@ func isReaperPostV4(reaper *api.Reaper) bool {
 		tag = reaper.Spec.ContainerImage.Tag
 	}
 
-	// TODO: remove this once we have a real release version. For now "latest" is still v3.
+	// Latest is always >= v4
 	if tag == "latest" {
-		return false
+		return true
 	}
 
 	v, err := semver.NewVersion(tag)
