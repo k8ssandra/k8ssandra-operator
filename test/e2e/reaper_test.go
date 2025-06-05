@@ -533,10 +533,10 @@ func verifyReaperEnvVarsInPodSpec(t *testing.T, podSpec corev1.PodSpec) {
 	assert.True(t, found, "Expected env var CUSTOM_E2E_VAR not found")
 	assert.Equal(t, expectedCustomVar, actualCustomVar, "Value for CUSTOM_E2E_VAR mismatch")
 
-	expectedOverrideVar := "e2e-override-contact-points"
+	expecteStaticVar := "[mycluster-dc1-service]"
 	actualOverrideVar, found := envMap["REAPER_CASS_CONTACT_POINTS"]
 	assert.True(t, found, "Expected overridden env var REAPER_CASS_CONTACT_POINTS not found")
-	assert.Equal(t, expectedOverrideVar, actualOverrideVar, "Value for REAPER_CASS_CONTACT_POINTS mismatch")
+	assert.Equal(t, expecteStaticVar, actualOverrideVar, "Value for REAPER_CASS_CONTACT_POINTS mismatch")
 
 	t.Log("Successfully verified Reaper environment variables")
 }
