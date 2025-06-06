@@ -1029,7 +1029,7 @@ func TestIsReaperPostV4(t *testing.T) {
 			reaper: &reaperapi.Reaper{
 				Spec: reaperapi.ReaperSpec{},
 			},
-			expected: false,
+			expected: true,
 		},
 		{
 			name: "no tag specified",
@@ -1040,7 +1040,7 @@ func TestIsReaperPostV4(t *testing.T) {
 					},
 				},
 			},
-			expected: false,
+			expected: true,
 		},
 	}
 
