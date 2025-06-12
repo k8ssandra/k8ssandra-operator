@@ -97,6 +97,8 @@ github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnr
 github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHmT4TnhNGBo=
 github.com/k8ssandra/cass-operator v1.24.1 h1:sLQfngSd08ImZOppNNs2XbgO2RUDyA07tiopKp2hvVU=
 github.com/k8ssandra/cass-operator v1.24.1/go.mod h1:sDLewVG0W4WYFE4CjdJVZ/aBIivVFERiu6a91xQjl4U=
+github.com/k8ssandra/cass-operator v1.25.0 h1:m1WblJ67LnJeCqk0kC4SMw12CVkes08SqE/YAsPfyvY=
+github.com/k8ssandra/cass-operator v1.25.0/go.mod h1:sDLewVG0W4WYFE4CjdJVZ/aBIivVFERiu6a91xQjl4U=
 github.com/k8ssandra/reaper-client-go v0.3.1-0.20220114183114-6923e077c4f5 h1:Dq0VdM960G3AbhYwFuaebmsE08IzOYHYhngUfDmWaAc=
 github.com/k8ssandra/reaper-client-go v0.3.1-0.20220114183114-6923e077c4f5/go.mod h1:WsQymIaVT39xbcstZhdqynUS13AGzP2p6U9Hsk1oy5M=
 github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=

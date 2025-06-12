@@ -10,6 +10,8 @@ global:
   # -- List of namespaces to watch for K8ssandraCluster resources.
   # If empty, the operator will watch all namespaces in cluster-scope installation.
   # watchNamespaces: []
+  # -- If true, the helm chart will generate ClusterRoles and ClusterRoleBindings.
+  clusterScopedResources: true
 
 # -- A name in place of the chart name which is used in the metadata.name of
 # objects created by this chart.
