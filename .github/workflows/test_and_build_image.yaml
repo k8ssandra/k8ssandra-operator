@@ -51,6 +51,13 @@ jobs:
       - name: Run Vector tests
         run: |
           make vector-install vector-test
+      - name: Ensure the helm chart allows not generating cluster scoped resources
+        run: |
+          helm template k8c charts/k8ssandra-operator  --set cass-operator.disableCertManagerCheck=true --set global.clusterScopedResources=false |grep ClusterRole
+          if [ $? -eq 0 ]; then
+            echo "ClusterRole found in the helm chart"
+            exit 1
+          fi
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
   build_image:
