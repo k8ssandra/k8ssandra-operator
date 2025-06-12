@@ -9,7 +9,7 @@ import (
 )
 
 // ApplyAuth modifies the dc config depending on whether auth is enabled in the cluster or not.
-func ApplyAuth(dcConfig *DatacenterConfig, authEnabled bool, useExternalSecrets bool) {
+func ApplyAuth(dcConfig *DatacenterConfig, authEnabled bool, useExternalSecrets bool, reaperRequiresJmx bool) {
 
 	dcConfig.CassandraConfig = ApplyAuthSettings(dcConfig.CassandraConfig, authEnabled, dcConfig.ServerType)
 
@@ -23,15 +23,17 @@ func ApplyAuth(dcConfig *DatacenterConfig, authEnabled bool, useExternalSecrets 
 	// (com.sun.management.jmxremote.authenticate=false), whereas with LOCAL_JMX=no it will infer that authentication is
 	// required (com.sun.management.jmxremote.authenticate=true). We need to change that here and enable/disable
 	// authentication based on what the user specified, not what the script infers.
-	jmxAuthenticateOpt := fmt.Sprintf("-Dcom.sun.management.jmxremote.authenticate=%v", authEnabled)
-	addOptionIfMissing(dcConfig, jmxAuthenticateOpt)
+	if reaperRequiresJmx {
+		jmxAuthenticateOpt := fmt.Sprintf("-Dcom.sun.management.jmxremote.authenticate=%v", authEnabled)
+		addOptionIfMissing(dcConfig, jmxAuthenticateOpt)
 
-	// Use Cassandra internals for JMX authentication and authorization. This allows JMX clients to connect with the
-	// superuser secret.
-	if authEnabled && !useExternalSecrets {
-		addOptionIfMissing(dcConfig, "-Dcassandra.jmx.remote.login.config=CassandraLogin")
-		addOptionIfMissing(dcConfig, "-Djava.security.auth.login.config=$CASSANDRA_HOME/conf/cassandra-jaas.config")
-		addOptionIfMissing(dcConfig, "-Dcassandra.jmx.authorizer=org.apache.cassandra.auth.jmx.AuthorizationProxy")
+		// Use Cassandra internals for JMX authentication and authorization. This allows JMX clients to connect with the
+		// superuser secret.
+		if authEnabled && !useExternalSecrets {
+			addOptionIfMissing(dcConfig, "-Dcassandra.jmx.remote.login.config=CassandraLogin")
+			addOptionIfMissing(dcConfig, "-Djava.security.auth.login.config=$CASSANDRA_HOME/conf/cassandra-jaas.config")
+			addOptionIfMissing(dcConfig, "-Dcassandra.jmx.authorizer=org.apache.cassandra.auth.jmx.AuthorizationProxy")
+		}
 	}
 }
 

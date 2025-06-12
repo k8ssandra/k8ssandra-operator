@@ -16,3 +16,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 ## unreleased
 
 * [BUGFIX] [#2121](https://github.com/riptano/mission-control/issues/2121) Add cluster's common L&A to replicated secrets and Vector's config map
+* [BUGFIX] [#1558](https://github.com/k8ssandra/k8ssandra-operator/issues/1558) Authentication settings aren't applied correctly to cassandra.yaml
