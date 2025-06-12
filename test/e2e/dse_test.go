@@ -40,6 +40,11 @@ func createSingleDseDatacenterCluster(t *testing.T, ctx context.Context, namespa
 		"SELECT * FROM system.local")
 	require.NoError(t, err, "failed to execute CQL query against DSE")
 
+	t.Log("Check that we cannot communicate through CQL without auth")
+	_, err = f.ExecuteCqlNoAuth(f.DataPlaneContexts[0], namespace, dcPrefix+"-default-sts-0",
+		"SELECT * FROM system.local")
+	require.Error(t, err, "expected CQL query without auth to fail")
+
 	// modify server_id in dse.yaml and verify that the modification was applied by querying the server_id from system.local
 
 	err = f.Client.Get(ctx, kcKey, kc)
@@ -89,6 +94,11 @@ func createSingleHcdDatacenterCluster(t *testing.T, ctx context.Context, namespa
 	_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dcPrefix+"-default-sts-0",
 		"SELECT * FROM system.local")
 	require.NoError(t, err, "failed to execute CQL query against HCD", err)
+	t.Log("Check that we cannot communicate through CQL without auth")
+	_, err = f.ExecuteCqlNoAuth(f.DataPlaneContexts[0], namespace, dcPrefix+"-default-sts-0",
+		"SELECT * FROM system.local")
+	require.Error(t, err, "expected CQL query without auth to fail")
+
 	opts := kubectl.Options{
 		Namespace: namespace,
 		Context:   f.DataPlaneContexts[0],
