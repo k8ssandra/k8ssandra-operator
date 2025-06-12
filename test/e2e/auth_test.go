@@ -104,6 +104,13 @@ func testAuthenticationDisabled(
 			t.Log("check that nodes in different dcs can see each other (auth disabled, local JMX)")
 			checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod1Name, 2, 0)
 			checkNodeToolStatus(t, f, f.DataPlaneContexts[1], namespace, pod2Name, 2, 0)
+			t.Log("check that we can communicate through CQL without auth")
+			_, err := f.ExecuteCqlNoAuth(f.DataPlaneContexts[0], namespace, pod1Name,
+				"SELECT * FROM system.local")
+			require.NoError(t, err, "expected CQL query without auth to succeed")
+			_, err = f.ExecuteCqlNoAuth(f.DataPlaneContexts[1], namespace, pod2Name,
+				"SELECT * FROM system.local")
+			require.NoError(t, err, "expected CQL query without auth to succeed")
 		})
 		// t.Run("Remote", func(t *testing.T) {
 		// 	t.Log("check that nodes in different dcs can see each other (auth disabled, remote JMX)")
@@ -138,6 +145,20 @@ func testAuthenticationEnabled(
 			t.Log("check that nodes in different dcs can see each other (auth enabled, local JMX)")
 			checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod1Name, 2, 0, "-u", username, "-pw", password)
 			checkNodeToolStatus(t, f, f.DataPlaneContexts[1], namespace, pod2Name, 2, 0, "-u", username, "-pw", password)
+			t.Log("check that we cannot communicate through CQL without auth")
+			_, err := f.ExecuteCqlNoAuth(f.DataPlaneContexts[0], namespace, pod1Name,
+				"SELECT * FROM system.local")
+			require.Error(t, err, "expected CQL query without auth to fail")
+			_, err = f.ExecuteCqlNoAuth(f.DataPlaneContexts[1], namespace, pod2Name,
+				"SELECT * FROM system.local")
+			require.Error(t, err, "expected CQL query without auth to fail")
+			t.Log("check that we can communicate through CQL with auth")
+			_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[0], namespace, kcKey.Name, pod1Name,
+				"SELECT * FROM system.local")
+			require.NoError(t, err, "expected CQL query with auth to succeed")
+			_, err = f.ExecuteCql(ctx, f.DataPlaneContexts[1], namespace, kcKey.Name, pod2Name,
+				"SELECT * FROM system.local")
+			require.NoError(t, err, "expected CQL query with auth to succeed")
 			// checkLocalJmxFailsWithNoCredentials(t, f, f.DataPlaneContexts[0], namespace, pod1Name)
 			// checkLocalJmxFailsWithNoCredentials(t, f, f.DataPlaneContexts[1], namespace, pod2Name)
 			// checkLocalJmxFailsWithWrongCredentials(t, f, f.DataPlaneContexts[0], namespace, pod1Name)
