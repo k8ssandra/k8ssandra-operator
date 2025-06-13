@@ -51,6 +51,22 @@ jobs:
       - name: Run Vector tests
         run: |
           make vector-install vector-test
+      - name: Ensure the helm chart allows not generating cluster scoped resources
+        run: |
+          cd charts/k8ssandra-operator
+          helm dependency update
+      - name: Check that the helm chart does not generate ClusterRole resources
+        run: |
+          if [ "$(helm template k8c charts/k8ssandra-operator  --set cass-operator.disableCertManagerCheck=true --set global.clusterScopedResources=false | grep -c ClusterRole)" != "0" ]; then
+            echo "ClusterRole found in the helm chart"
+            exit 1
+          else
+            echo "ClusterRole not found in the helm chart"
+          fi
+      - name: Setup tmate session
+        if: failure()
+        uses: mxschmitt/action-tmate@v3
+        timeout-minutes: 30
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
   build_image:

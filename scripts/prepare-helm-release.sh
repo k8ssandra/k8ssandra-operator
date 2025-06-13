@@ -23,6 +23,7 @@ echo "{{- end }}" >> build/helm/role.yaml
 cat charts/templates/clusterrole.tmpl.yaml | tee build/helm/clusterrole.yaml > /dev/null
 cat build/helm/k8ssandra-operator-rbac.yaml | yq 'select(di == 1).rules' | tee -a build/helm/clusterrole.yaml > /dev/null
 echo "{{- end }}" >> build/helm/clusterrole.yaml
+echo "{{- end }}" >> build/helm/clusterrole.yaml # yeah, we need to do this twice
 cp build/helm/role.yaml charts/k8ssandra-operator/templates/role.yaml
 cp build/helm/clusterrole.yaml charts/k8ssandra-operator/templates/clusterrole.yaml
 # Generate the leader election role from the RBAC generated manifests

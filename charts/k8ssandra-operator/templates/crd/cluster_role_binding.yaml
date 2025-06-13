@@ -1,4 +1,5 @@
 {{- if not .Values.disableCrdUpgraderJob }}
+{{- if .Values.global.clusterScopedResources }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -19,4 +20,5 @@ subjects:
   - kind: ServiceAccount
     name: {{ include "k8ssandra-common.fullname" . }}-crd-upgrader-k8ssandra
     namespace: {{ .Release.Namespace }}
+{{- end }}
 {{- end }}
