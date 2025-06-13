@@ -33,3 +33,5 @@ spec:
     mgmtAPIHeap: 64Mi
   reaper:
     heapSize: 256Mi
+    containerImage:
+      tag: 5751458

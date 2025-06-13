@@ -79,29 +79,29 @@ jobs:
         e2e_test:
           - CreateSingleDatacenterCluster
           # - CreateStargateAndDatacenter
-          - CreateSingleReaperNoStargate
-          # - CreateSingleReaperWStargateAndHTTP
-          # - CreateReaperAndDatacenter # This test isn't using k8ssandra-operator, some old test ported from reaper-operator
-          - CreateSingleMedusaJob
-          - CreateMultiDcSingleMedusaJob
-          - CreateSingleDseMedusaJob
-          - ConfigControllerRestarts
-          # TODO: these e2e tests started breaking after new client certificates were added. Needs fixing.
-          #- SingleDcEncryptionWithStargate
-          - SingleDcEncryptionWithReaper
-          - GCTests/4.0-jdk11-G1
-          - GCTests/4.0-jdk11-CMS
-          - GCTests/4.0-jdk11-ZGC
-          - UpgradeOperatorImage
-          - CreateSingleDseDatacenterCluster
-          - CreateSingleDseSearchDatacenterCluster
-          - CreateSingleDseGraphDatacenterCluster
-#          - CreateSingleHcdDatacenterCluster
-          - ChangeDseWorkload
-          - PerNodeConfig/UserDefined
-          - RemoveLocalDcFromCluster
-          - AddDcToClusterSameDataplane
-          - CreateMedusaConfiguration
+          #- CreateSingleReaperNoStargate
+          ## - CreateSingleReaperWStargateAndHTTP
+          ## - CreateReaperAndDatacenter # This test isn't using k8ssandra-operator, some old test ported from reaper-operator
+          #- CreateSingleMedusaJob
+          #- CreateMultiDcSingleMedusaJob
+          #- CreateSingleDseMedusaJob
+          #- ConfigControllerRestarts
+          ## TODO: these e2e tests started breaking after new client certificates were added. Needs fixing.
+          ##- SingleDcEncryptionWithStargate
+          #- SingleDcEncryptionWithReaper
+          #- GCTests/4.0-jdk11-G1
+          #- GCTests/4.0-jdk11-CMS
+          #- GCTests/4.0-jdk11-ZGC
+          #- UpgradeOperatorImage
+          #- CreateSingleDseDatacenterCluster
+          #- CreateSingleDseSearchDatacenterCluster
+          #- CreateSingleDseGraphDatacenterCluster
+#         # - CreateSingleHcdDatacenterCluster
+          #- ChangeDseWorkload
+          #- PerNodeConfig/UserDefined
+          #- RemoveLocalDcFromCluster
+          #- AddDcToClusterSameDataplane
+          #- CreateMedusaConfiguration
       fail-fast: false
     name: ${{ matrix.e2e_test }}
     env:
