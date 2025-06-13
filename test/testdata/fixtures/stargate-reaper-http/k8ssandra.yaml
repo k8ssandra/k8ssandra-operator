@@ -35,7 +35,7 @@ spec:
       successThreshold: 1
       timeoutSeconds: 20
   cassandra:
-    serverVersion: 4.0.18
+    serverVersion: 4.0.17
     clusterName: "My Cluster"
     jmxInitContainerImage:
       repository: library
