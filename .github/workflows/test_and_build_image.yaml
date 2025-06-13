@@ -53,6 +53,9 @@ jobs:
           make vector-install vector-test
       - name: Ensure the helm chart allows not generating cluster scoped resources
         run: |
+          cd charts/k8ssandra-operator
+          helm dependency update
+          cd ../..
           helm template k8c charts/k8ssandra-operator  --set cass-operator.disableCertManagerCheck=true --set global.clusterScopedResources=false |grep ClusterRole
           if [ $? -eq 0 ]; then
             echo "ClusterRole found in the helm chart"
