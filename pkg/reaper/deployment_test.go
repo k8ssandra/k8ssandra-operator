@@ -1078,7 +1078,7 @@ func TestReaperV4ContactPointsFormat(t *testing.T) {
 	}
 
 	assert.NotNil(t, contactPointsEnvVar, "REAPER_CASS_CONTACT_POINTS environment variable not found")
-	assert.Equal(t, "{\"host\": \"cluster1-dc1-service\", \"port\": 9042}", contactPointsEnvVar.Value,
+	assert.Equal(t, "[{\"host\": \"cluster1-dc1-service\", \"port\": 9042}]", contactPointsEnvVar.Value,
 		"REAPER_CASS_CONTACT_POINTS should be formatted as a JSON array with host and port for Reaper v4")
 }
 
