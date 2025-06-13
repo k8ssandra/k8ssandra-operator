@@ -30,7 +30,7 @@ import (
 const (
 	DefaultImageRepository = "thelastpickle"
 	DefaultImageName       = "cassandra-reaper"
-	DefaultVersion         = "4.0.0-beta1"
+	DefaultVersion         = "4.0.0-beta2"
 	// When changing the default version above, please also change the kubebuilder markers in
 	// apis/reaper/v1alpha1/reaper_types.go accordingly.
 

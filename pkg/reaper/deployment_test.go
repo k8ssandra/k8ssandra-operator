@@ -130,7 +130,11 @@ func TestNewDeployment(t *testing.T) {
 		},
 		{
 			Name:  "REAPER_CASS_CONTACT_POINTS",
-			Value: "[cluster1-dc1-service]",
+			Value: "[{\"host\": \"cluster1-dc1-service\", \"port\": 9042}]",
+		},
+		{
+			Name:  "REAPER_SKIP_SCHEMA_MIGRATION",
+			Value: "true",
 		},
 		{
 			Name:  "REAPER_DATACENTER_AVAILABILITY",
@@ -146,7 +150,7 @@ func TestNewDeployment(t *testing.T) {
 		},
 		{
 			Name:  "JAVA_OPTS",
-			Value: "-Djavax.net.ssl.keyStore=/mnt/client-keystore/keystore -Djavax.net.ssl.keyStorePassword=keystore-password -Djavax.net.ssl.trustStore=/mnt/client-truststore/truststore -Djavax.net.ssl.trustStorePassword=truststore-password -Dssl.enable=true",
+			Value: "-Djavax.net.ssl.keyStore=/mnt/client-keystore/keystore -Djavax.net.ssl.keyStorePassword=keystore-password -Djavax.net.ssl.trustStore=/mnt/client-truststore/truststore -Djavax.net.ssl.trustStorePassword=truststore-password -Dssl.enable=true -Ddatastax-java-driver.advanced.ssl-engine-factory.class=com.datastax.oss.driver.internal.core.ssl.DefaultSslEngineFactory -Ddatastax-java-driver.advanced.ssl-engine-factory.hostname-validation=false",
 		},
 		{
 			Name:  "REAPER_CASS_NATIVE_PROTOCOL_SSL_ENCRYPTION_ENABLED",
@@ -174,7 +178,7 @@ func TestNewDeployment(t *testing.T) {
 		},
 		{
 			Name:  "REAPER_CASS_CONTACT_POINTS",
-			Value: "[cluster1-dc1-service]",
+			Value: "[{\"host\": \"cluster1-dc1-service\", \"port\": 9042}]",
 		},
 		{
 			Name:  "REAPER_DATACENTER_AVAILABILITY",
@@ -190,7 +194,7 @@ func TestNewDeployment(t *testing.T) {
 		},
 		{
 			Name:  "JAVA_OPTS",
-			Value: "-Djavax.net.ssl.keyStore=/mnt/client-keystore/keystore -Djavax.net.ssl.keyStorePassword=keystore-password -Djavax.net.ssl.trustStore=/mnt/client-truststore/truststore -Djavax.net.ssl.trustStorePassword=truststore-password -Dssl.enable=true",
+			Value: "-Djavax.net.ssl.keyStore=/mnt/client-keystore/keystore -Djavax.net.ssl.keyStorePassword=keystore-password -Djavax.net.ssl.trustStore=/mnt/client-truststore/truststore -Djavax.net.ssl.trustStorePassword=truststore-password -Dssl.enable=true -Ddatastax-java-driver.advanced.ssl-engine-factory.class=com.datastax.oss.driver.internal.core.ssl.DefaultSslEngineFactory -Ddatastax-java-driver.advanced.ssl-engine-factory.hostname-validation=false",
 		},
 		{
 			Name:  "REAPER_CASS_NATIVE_PROTOCOL_SSL_ENCRYPTION_ENABLED",
@@ -221,7 +225,7 @@ func TestNewDeployment(t *testing.T) {
 	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
 	podSpec = deployment.Spec.Template.Spec
 	container = podSpec.Containers[0]
-	assert.Len(t, container.Env, 7)
+	assert.Len(t, container.Env, 8)
 
 	assert.Contains(t, container.Env, corev1.EnvVar{
 		Name:  "REAPER_CASS_KEYSPACE",
@@ -232,7 +236,7 @@ func TestNewDeployment(t *testing.T) {
 	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
 	podSpec = deployment.Spec.Template.Spec
 	container = podSpec.Containers[0]
-	assert.Len(t, container.Env, 17)
+	assert.Len(t, container.Env, 18)
 
 	assert.Contains(t, container.Env, corev1.EnvVar{
 		Name:  "REAPER_AUTO_SCHEDULING_ADAPTIVE",
@@ -313,11 +317,15 @@ func TestNewStatefulSet(t *testing.T) {
 		},
 		{
 			Name:  "REAPER_CASS_CONTACT_POINTS",
-			Value: "[cluster1-dc1-service]",
+			Value: "[{\"host\": \"cluster1-dc1-service\", \"port\": 9042}]",
 		},
 		{
 			Name:  "REAPER_DATACENTER_AVAILABILITY",
 			Value: "",
+		},
+		{
+			Name:  "REAPER_SKIP_SCHEMA_MIGRATION",
+			Value: "true",
 		},
 		{
 			Name:  "REAPER_CASS_LOCAL_DC",
@@ -349,6 +357,10 @@ func TestNewStatefulSetForControlPlane(t *testing.T) {
 		{
 			Name:  "REAPER_DATACENTER_AVAILABILITY",
 			Value: "",
+		},
+		{
+			Name:  "REAPER_SKIP_SCHEMA_MIGRATION",
+			Value: "true",
 		},
 	})
 
@@ -1100,6 +1112,6 @@ func TestDefaultReaperContactPointsFormat(t *testing.T) {
 	}
 
 	assert.NotNil(t, contactPointsEnvVar, "REAPER_CASS_CONTACT_POINTS environment variable not found")
-	assert.Equal(t, "[cluster1-dc1-service]", contactPointsEnvVar.Value,
+	assert.Equal(t, "[{\"host\": \"cluster1-dc1-service\", \"port\": 9042}]", contactPointsEnvVar.Value,
 		"REAPER_CASS_CONTACT_POINTS should be formatted as an array of hosts for Reaper v3 and below")
 }
