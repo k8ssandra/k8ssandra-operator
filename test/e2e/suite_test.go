@@ -331,7 +331,7 @@ func TestOperator(t *testing.T) {
 	t.Run("UpgradeOperatorImage", e2eTest(ctx, &e2eTestOpts{
 		testFunc:       createSingleDatacenterClusterWithUpgrade,
 		fixture:        framework.NewTestFixture("single-dc-upgrade", controlPlane),
-		initialVersion: ptr.To("v1.4.1"), // Has to be the Helm chart version, not the operator image tag
+		initialVersion: ptr.To("v1.23.1"), // Has to be the Helm chart version, not the operator image tag
 	}))
 	t.Run("PerNodeConfig", func(t *testing.T) {
 		t.Run("InitialTokens", e2eTest(ctx, &e2eTestOpts{

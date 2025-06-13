@@ -1,6 +1,6 @@
 module github.com/k8ssandra/k8ssandra-operator
 
-go 1.23.0
+go 1.23.9
 
 toolchain go1.24.2
 
@@ -18,7 +18,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gruntwork-io/terratest v0.48.2
 	github.com/k8ssandra/cass-operator v1.25.0
-	github.com/k8ssandra/reaper-client-go v0.3.1-0.20220114183114-6923e077c4f5
+	github.com/k8ssandra/reaper-client-go v0.4.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.52.1
 	github.com/robfig/cron/v3 v3.0.1

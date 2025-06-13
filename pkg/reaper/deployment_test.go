@@ -130,7 +130,11 @@ func TestNewDeployment(t *testing.T) {
 		},
 		{
 			Name:  "REAPER_CASS_CONTACT_POINTS",
-			Value: "[cluster1-dc1-service]",
+			Value: "[{\"host\": \"cluster1-dc1-service\", \"port\": 9042}]",
+		},
+		{
+			Name:  "REAPER_SKIP_SCHEMA_MIGRATION",
+			Value: "true",
 		},
 		{
 			Name:  "REAPER_DATACENTER_AVAILABILITY",
@@ -146,7 +150,7 @@ func TestNewDeployment(t *testing.T) {
 		},
 		{
 			Name:  "JAVA_OPTS",
-			Value: "-Djavax.net.ssl.keyStore=/mnt/client-keystore/keystore -Djavax.net.ssl.keyStorePassword=keystore-password -Djavax.net.ssl.trustStore=/mnt/client-truststore/truststore -Djavax.net.ssl.trustStorePassword=truststore-password -Dssl.enable=true",
+			Value: "-Djavax.net.ssl.keyStore=/mnt/client-keystore/keystore -Djavax.net.ssl.keyStorePassword=keystore-password -Djavax.net.ssl.trustStore=/mnt/client-truststore/truststore -Djavax.net.ssl.trustStorePassword=truststore-password -Dssl.enable=true -Ddatastax-java-driver.advanced.ssl-engine-factory.class=com.datastax.oss.driver.internal.core.ssl.DefaultSslEngineFactory -Ddatastax-java-driver.advanced.ssl-engine-factory.hostname-validation=false",
 		},
 		{
 			Name:  "REAPER_CASS_NATIVE_PROTOCOL_SSL_ENCRYPTION_ENABLED",
@@ -174,7 +178,7 @@ func TestNewDeployment(t *testing.T) {
 		},
 		{
 			Name:  "REAPER_CASS_CONTACT_POINTS",
-			Value: "[cluster1-dc1-service]",
+			Value: "[{\"host\": \"cluster1-dc1-service\", \"port\": 9042}]",
 		},
 		{
 			Name:  "REAPER_DATACENTER_AVAILABILITY",
@@ -190,7 +194,7 @@ func TestNewDeployment(t *testing.T) {
 		},
 		{
 			Name:  "JAVA_OPTS",
-			Value: "-Djavax.net.ssl.keyStore=/mnt/client-keystore/keystore -Djavax.net.ssl.keyStorePassword=keystore-password -Djavax.net.ssl.trustStore=/mnt/client-truststore/truststore -Djavax.net.ssl.trustStorePassword=truststore-password -Dssl.enable=true",
+			Value: "-Djavax.net.ssl.keyStore=/mnt/client-keystore/keystore -Djavax.net.ssl.keyStorePassword=keystore-password -Djavax.net.ssl.trustStore=/mnt/client-truststore/truststore -Djavax.net.ssl.trustStorePassword=truststore-password -Dssl.enable=true -Ddatastax-java-driver.advanced.ssl-engine-factory.class=com.datastax.oss.driver.internal.core.ssl.DefaultSslEngineFactory -Ddatastax-java-driver.advanced.ssl-engine-factory.hostname-validation=false",
 		},
 		{
 			Name:  "REAPER_CASS_NATIVE_PROTOCOL_SSL_ENCRYPTION_ENABLED",
@@ -221,7 +225,7 @@ func TestNewDeployment(t *testing.T) {
 	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
 	podSpec = deployment.Spec.Template.Spec
 	container = podSpec.Containers[0]
-	assert.Len(t, container.Env, 7)
+	assert.Len(t, container.Env, 8)
 
 	assert.Contains(t, container.Env, corev1.EnvVar{
 		Name:  "REAPER_CASS_KEYSPACE",
@@ -232,7 +236,7 @@ func TestNewDeployment(t *testing.T) {
 	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
 	podSpec = deployment.Spec.Template.Spec
 	container = podSpec.Containers[0]
-	assert.Len(t, container.Env, 17)
+	assert.Len(t, container.Env, 18)
 
 	assert.Contains(t, container.Env, corev1.EnvVar{
 		Name:  "REAPER_AUTO_SCHEDULING_ADAPTIVE",
@@ -313,11 +317,15 @@ func TestNewStatefulSet(t *testing.T) {
 		},
 		{
 			Name:  "REAPER_CASS_CONTACT_POINTS",
-			Value: "[cluster1-dc1-service]",
+			Value: "[{\"host\": \"cluster1-dc1-service\", \"port\": 9042}]",
 		},
 		{
 			Name:  "REAPER_DATACENTER_AVAILABILITY",
 			Value: "",
+		},
+		{
+			Name:  "REAPER_SKIP_SCHEMA_MIGRATION",
+			Value: "true",
 		},
 		{
 			Name:  "REAPER_CASS_LOCAL_DC",
@@ -349,6 +357,10 @@ func TestNewStatefulSetForControlPlane(t *testing.T) {
 		{
 			Name:  "REAPER_DATACENTER_AVAILABILITY",
 			Value: "",
+		},
+		{
+			Name:  "REAPER_SKIP_SCHEMA_MIGRATION",
+			Value: "true",
 		},
 	})
 
@@ -446,8 +458,8 @@ func TestImages(t *testing.T) {
 		reaper.Spec.ContainerImage = nil
 		logger := testlogr.NewTestLogger(t)
 		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
-		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:3.8.0", deployment.Spec.Template.Spec.InitContainers[0].Image)
-		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:3.8.0", deployment.Spec.Template.Spec.Containers[0].Image)
+		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:4.0.0-beta3", deployment.Spec.Template.Spec.InitContainers[0].Image)
+		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:4.0.0-beta3", deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.InitContainers[0].ImagePullPolicy)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Empty(t, deployment.Spec.Template.Spec.ImagePullSecrets)
@@ -457,8 +469,8 @@ func TestImages(t *testing.T) {
 		reaper.Spec.ContainerImage = nil
 		logger := testlogr.NewTestLogger(t)
 		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
-		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:3.8.0", deployment.Spec.Template.Spec.InitContainers[0].Image)
-		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:3.8.0", deployment.Spec.Template.Spec.Containers[0].Image)
+		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:4.0.0-beta3", deployment.Spec.Template.Spec.InitContainers[0].Image)
+		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:4.0.0-beta3", deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.InitContainers[0].ImagePullPolicy)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Empty(t, deployment.Spec.Template.Spec.ImagePullSecrets)
@@ -977,4 +989,129 @@ func TestComputeEnvVarsAdditionalEnvVars(t *testing.T) {
 		}
 	}
 	assert.True(t, found)
+}
+
+func TestIsReaperPostV4(t *testing.T) {
+	tests := []struct {
+		name     string
+		reaper   *reaperapi.Reaper
+		expected bool
+	}{
+		{
+			name: "v3 tag",
+			reaper: &reaperapi.Reaper{
+				Spec: reaperapi.ReaperSpec{
+					ReaperTemplate: reaperapi.ReaperTemplate{
+						ContainerImage: &images.Image{
+							Tag: "3.2.0",
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "v4 tag",
+			reaper: &reaperapi.Reaper{
+				Spec: reaperapi.ReaperSpec{
+					ReaperTemplate: reaperapi.ReaperTemplate{
+						ContainerImage: &images.Image{
+							Tag: "4.0.0",
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "v5 tag",
+			reaper: &reaperapi.Reaper{
+				Spec: reaperapi.ReaperSpec{
+					ReaperTemplate: reaperapi.ReaperTemplate{
+						ContainerImage: &images.Image{
+							Tag: "5.0.0",
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "no container image specified",
+			reaper: &reaperapi.Reaper{
+				Spec: reaperapi.ReaperSpec{},
+			},
+			expected: true,
+		},
+		{
+			name: "no tag specified",
+			reaper: &reaperapi.Reaper{
+				Spec: reaperapi.ReaperSpec{
+					ReaperTemplate: reaperapi.ReaperTemplate{
+						ContainerImage: &images.Image{},
+					},
+				},
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isReaperPostV4(tt.reaper)
+			if result != tt.expected {
+				t.Errorf("isReaperPostV4() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestReaperV4ContactPointsFormat(t *testing.T) {
+	reaper := newTestReaper()
+	reaper.Spec.ContainerImage = &images.Image{
+		Repository: "test",
+		Name:       "reaper",
+		Tag:        "4.0.0",
+		PullPolicy: corev1.PullAlways,
+	}
+	dc := newTestDatacenter()
+	logger := testlogr.NewTestLogger(t)
+
+	deployment := NewDeployment(reaper, dc, nil, nil, logger)
+	container := deployment.Spec.Template.Spec.Containers[0]
+
+	// Find the REAPER_CASS_CONTACT_POINTS env var
+	var contactPointsEnvVar *corev1.EnvVar
+	for _, env := range container.Env {
+		if env.Name == "REAPER_CASS_CONTACT_POINTS" {
+			contactPointsEnvVar = &env
+			break
+		}
+	}
+
+	assert.NotNil(t, contactPointsEnvVar, "REAPER_CASS_CONTACT_POINTS environment variable not found")
+	assert.Equal(t, "[{\"host\": \"cluster1-dc1-service\", \"port\": 9042}]", contactPointsEnvVar.Value,
+		"REAPER_CASS_CONTACT_POINTS should be formatted as a JSON array with host and port for Reaper v4")
+}
+
+func TestDefaultReaperContactPointsFormat(t *testing.T) {
+	reaper := newTestReaper()
+	dc := newTestDatacenter()
+	logger := testlogr.NewTestLogger(t)
+
+	deployment := NewDeployment(reaper, dc, nil, nil, logger)
+	container := deployment.Spec.Template.Spec.Containers[0]
+
+	// Find the REAPER_CASS_CONTACT_POINTS env var
+	var contactPointsEnvVar *corev1.EnvVar
+	for _, env := range container.Env {
+		if env.Name == "REAPER_CASS_CONTACT_POINTS" {
+			contactPointsEnvVar = &env
+			break
+		}
+	}
+
+	assert.NotNil(t, contactPointsEnvVar, "REAPER_CASS_CONTACT_POINTS environment variable not found")
+	assert.Equal(t, "[{\"host\": \"cluster1-dc1-service\", \"port\": 9042}]", contactPointsEnvVar.Value,
+		"REAPER_CASS_CONTACT_POINTS should be formatted as an array of hosts for Reaper v3 and below")
 }
