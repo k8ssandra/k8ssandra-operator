@@ -56,11 +56,17 @@ jobs:
           cd charts/k8ssandra-operator
           helm dependency update
           cd ../..
-          helm template k8c charts/k8ssandra-operator  --set cass-operator.disableCertManagerCheck=true --set global.clusterScopedResources=false |grep ClusterRole
+          helm template k8c charts/k8ssandra-operator  --set cass-operator.disableCertManagerCheck=true --set global.clusterScopedResources=false | grep -q ClusterRole
           if [ $? -eq 0 ]; then
             echo "ClusterRole found in the helm chart"
             exit 1
+          else
+            echo "ClusterRole not found in the helm chart"
           fi
+      - name: Setup tmate session
+        if: failure()
+        uses: mxschmitt/action-tmate@v3
+        timeout-minutes: 30
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
   build_image:
