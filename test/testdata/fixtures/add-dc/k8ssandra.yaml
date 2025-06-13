@@ -4,7 +4,7 @@ metadata:
   name: test
 spec:
   cassandra:
-    serverVersion: "3.11.14"
+    serverVersion: "4.0.18"
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard
@@ -33,5 +33,3 @@ spec:
     mgmtAPIHeap: 64Mi
   reaper:
     heapSize: 256Mi
-    containerImage:
-      tag: "5751458"
