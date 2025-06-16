@@ -60,9 +60,10 @@ func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *fr
 	checkKeyspaceReplicationsUnaltered(t, f, ctx, f.DataPlaneContexts[1], namespace, pod2Name, DcName(t, f, dc1Key), DcName(t, f, dc2Key))
 
 	t.Run("TestApisDc1Stopped", func(t *testing.T) {
-		uiKey := framework.NewClusterKey(f.DataPlaneContexts[1], namespace, reaper.DefaultUiSecretName("cluster1"))
-		uiUsername, uiPassword := retrieveCredentials(t, f, ctx, uiKey)
-		connectReaperApi(t, ctx, f.DataPlaneContexts[1], "cluster1", uiUsername, uiPassword)
+		// Reaper v4 won't downgrade the consistency level on retries and cannot be used to test this scenario.
+		// uiKey := framework.NewClusterKey(f.DataPlaneContexts[1], namespace, reaper.DefaultUiSecretName("cluster1"))
+		// uiUsername, uiPassword := retrieveCredentials(t, f, ctx, uiKey)
+		// connectReaperApi(t, ctx, f.DataPlaneContexts[1], "cluster1", uiUsername, uiPassword)
 		checkNodeToolStatus(t, f, f.DataPlaneContexts[1], namespace, pod2Name, 1, 1, "-u", username, "-pw", password)
 	})
 
@@ -85,9 +86,10 @@ func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *fr
 	checkKeyspaceReplicationsUnaltered(t, f, ctx, f.DataPlaneContexts[0], namespace, pod1Name, DcName(t, f, dc1Key), DcName(t, f, dc2Key))
 
 	t.Run("TestApisDc2Stopped", func(t *testing.T) {
-		uiKey := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, reaper.DefaultUiSecretName("cluster1"))
-		uiUsername, uiPassword := retrieveCredentials(t, f, ctx, uiKey)
-		connectReaperApi(t, ctx, f.DataPlaneContexts[0], "cluster1", uiUsername, uiPassword)
+		// Reaper v4 won't downgrade the consistency level on retries and cannot be used to test this scenario.
+		// uiKey := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, reaper.DefaultUiSecretName("cluster1"))
+		// uiUsername, uiPassword := retrieveCredentials(t, f, ctx, uiKey)
+		// connectReaperApi(t, ctx, f.DataPlaneContexts[0], "cluster1", uiUsername, uiPassword)
 		checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod1Name, 1, 1, "-u", username, "-pw", password)
 	})
 
