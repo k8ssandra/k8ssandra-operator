@@ -30,7 +30,7 @@ import (
 const (
 	DefaultImageRepository = "thelastpickle"
 	DefaultImageName       = "cassandra-reaper"
-	DefaultVersion         = "3.8.0"
+	DefaultVersion         = "4.0.0-beta3"
 	// When changing the default version above, please also change the kubebuilder markers in
 	// apis/reaper/v1alpha1/reaper_types.go accordingly.
 
@@ -81,10 +81,19 @@ func computeEnvVars(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter) []cor
 			Name:  "REAPER_CASS_KEYSPACE",
 			Value: reaper.Spec.Keyspace,
 		})
-		envVars = append(envVars, corev1.EnvVar{
-			Name:  "REAPER_CASS_CONTACT_POINTS",
-			Value: fmt.Sprintf("[%s]", dc.GetDatacenterServiceName()),
-		})
+		if isReaperPostV4(reaper) {
+			// For Reaper v4 and above, we need to specify the contact points as a JSON array of objects, with the host and port
+			envVars = append(envVars, corev1.EnvVar{
+				Name:  "REAPER_CASS_CONTACT_POINTS",
+				Value: fmt.Sprintf("[{\"host\": \"%s\", \"port\": 9042}]", dc.GetDatacenterServiceName()),
+			})
+		} else {
+			// For Reaper v3 and below, we can use the old format
+			envVars = append(envVars, corev1.EnvVar{
+				Name:  "REAPER_CASS_CONTACT_POINTS",
+				Value: fmt.Sprintf("[%s]", dc.GetDatacenterServiceName()),
+			})
+		}
 	}
 
 	if reaper.Spec.AutoScheduling.Enabled {
@@ -288,7 +297,7 @@ func configureClientEncryption(reaper *api.Reaper, envVars []corev1.EnvVar, volu
 			MountPath: cassandra.StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameTruststore),
 		})
 
-		javaOpts := fmt.Sprintf("-Djavax.net.ssl.keyStore=/mnt/client-keystore/keystore -Djavax.net.ssl.keyStorePassword=%s -Djavax.net.ssl.trustStore=/mnt/client-truststore/truststore -Djavax.net.ssl.trustStorePassword=%s -Dssl.enable=true", *keystorePassword, *truststorePassword)
+		javaOpts := fmt.Sprintf("-Djavax.net.ssl.keyStore=/mnt/client-keystore/keystore -Djavax.net.ssl.keyStorePassword=%s -Djavax.net.ssl.trustStore=/mnt/client-truststore/truststore -Djavax.net.ssl.trustStorePassword=%s -Dssl.enable=true -Ddatastax-java-driver.advanced.ssl-engine-factory.class=com.datastax.oss.driver.internal.core.ssl.DefaultSslEngineFactory -Ddatastax-java-driver.advanced.ssl-engine-factory.hostname-validation=false", *keystorePassword, *truststorePassword)
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  "JAVA_OPTS",
 			Value: javaOpts,
@@ -369,9 +378,12 @@ func computePodSpec(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, initC
 				},
 				ReadinessProbe: computeProbe(reaper.Spec.ReadinessProbe),
 				LivenessProbe:  computeProbe(reaper.Spec.LivenessProbe),
-				Env:            envVars,
-				VolumeMounts:   volumeMounts,
-				Resources:      *mainContainerResources,
+				Env: append(envVars, corev1.EnvVar{
+					Name:  "REAPER_SKIP_SCHEMA_MIGRATION",
+					Value: "true",
+				}), // We need to skip schema migration entirely in the main container because the init container will run schema migration
+				VolumeMounts: volumeMounts,
+				Resources:    *mainContainerResources,
 			},
 		},
 		ServiceAccountName: reaper.Spec.ServiceAccountName,
@@ -688,4 +700,23 @@ func setDeploymentReplicas(desiredDeployment *client.Object, numberOfReplicas *i
 		return err
 	}
 	return nil
+}
+
+func isReaperPostV4(reaper *api.Reaper) bool {
+	tag := DefaultVersion
+	if reaper.Spec.ContainerImage != nil && reaper.Spec.ContainerImage.Tag != "" {
+		tag = reaper.Spec.ContainerImage.Tag
+	}
+
+	// Latest is always >= v4
+	if tag == "latest" {
+		return true
+	}
+
+	v, err := semver.NewVersion(tag)
+	if err != nil {
+		return true // Default to true if version parsing fails
+	}
+
+	return v.Major() >= 4
 }

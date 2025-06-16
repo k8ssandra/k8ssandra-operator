@@ -19,6 +19,8 @@ package reaper
 import (
 	"context"
 	"fmt"
+	"math"
+
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
@@ -33,7 +35,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
-	"math"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -398,6 +399,7 @@ func (r *ReaperReconciler) configureReaper(ctx context.Context, actualReaper *re
 		return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
 	} else {
 		if err := manager.Connect(ctx, actualReaper, username, password); err != nil {
+			logger.Error(err, "failed to connect to reaper")
 			logger.Info("Reaper doesn't seem to be running yet")
 			return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 		} else if found, err := manager.VerifyClusterIsConfigured(ctx, actualDc); err != nil {
