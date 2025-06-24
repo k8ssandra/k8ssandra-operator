@@ -193,7 +193,7 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 	cfgs := make([]*rest.Config, clustersToCreate)
 	clusters := make([]cluster.Cluster, 0, clustersToCreate)
 
-	for i := 0; i < clustersToCreate; i++ {
+	for i := range clustersToCreate {
 		clusterName := fmt.Sprintf(clusterProtoName, i, rand.String(6))
 		if i == 0 {
 			e.controlPlane = clusterName
