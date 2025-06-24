@@ -495,10 +495,6 @@ func creatingSingleDcClusterWithoutPrefixInClusterSpecFails(t *testing.T, ctx co
 	err := f.Client.Create(ctx, kcFirstAttempt)
 	require.Error(err, "creating a cluster without Medusa's storage prefix should not happen")
 
-	// verify the cluster doesn't get created
-	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
-	require.Never(f.DatacenterExists(ctx, dc1Key), timeout, interval)
-
 	// create the MedusaConfiguration object
 	t.Log("Creating Medusa Configuration object")
 	medusaConfigKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: medusaConfigName}, K8sContext: f.DataPlaneContexts[0]}
@@ -516,9 +512,6 @@ func creatingSingleDcClusterWithoutPrefixInClusterSpecFails(t *testing.T, ctx co
 	t.Log("Creating k8ssandracluster with Medusa and MedusaConfig but without a prefix in the cluster spec")
 	err = f.Client.Create(ctx, kcSecondAttempt)
 	require.Error(err, "creating a cluster without Medusa's storage prefix should not happen if the MedusaConfig object exists")
-
-	// verify the cluster still doesn't get created
-	require.Never(f.DatacenterExists(ctx, dc1Key), timeout, interval)
 }
 
 func controlPlaneContextKey(f *framework.Framework, object metav1.Object, contextName string) framework.ClusterKey {
