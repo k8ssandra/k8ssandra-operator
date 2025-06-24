@@ -25,7 +25,7 @@ import (
 
 const (
 	timeout  = time.Second * 5
-	interval = time.Millisecond * 10
+	interval = time.Millisecond * 20
 )
 
 var (
@@ -47,8 +47,8 @@ func TestK8ssandraTask(t *testing.T) {
 
 	reconcilerConfig := config.InitConfig()
 
-	reconcilerConfig.DefaultDelay = 1 * time.Millisecond
-	reconcilerConfig.LongDelay = 10 * time.Millisecond
+	reconcilerConfig.DefaultDelay = 10 * time.Millisecond
+	reconcilerConfig.LongDelay = 30 * time.Millisecond
 
 	err := testEnv.Start(ctx, t, func(mgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error {
 		err := (&K8ssandraTaskReconciler{

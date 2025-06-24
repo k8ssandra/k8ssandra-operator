@@ -69,13 +69,6 @@ func createSingleDcClusterNoAuth(t *testing.T, ctx context.Context, f *framework
 	err = f.SetDatacenterStatusReady(ctx, dcKey)
 	require.NoError(t, err, "failed to set dc status ready")
 
-	// t.Log("check that stargate is created")
-	// require.Eventually(t, f.StargateExists(ctx, stargateKey), timeout, interval)
-
-	// t.Log("update stargate status to ready")
-	// err = f.SetStargateStatusReady(ctx, stargateKey)
-	// require.NoError(t, err, "failed to set stargate status ready")
-
 	t.Log("check that reaper is created")
 	require.Eventually(t, f.ReaperExists(ctx, reaperKey), timeout, interval)
 
@@ -83,37 +76,7 @@ func createSingleDcClusterNoAuth(t *testing.T, ctx context.Context, f *framework
 	err = f.SetReaperStatusReady(ctx, reaperKey)
 	require.NoError(t, err, "failed to set Stargate status ready")
 
-	// withDatacenter := f.NewWithDatacenter(ctx, dcKey)
-
-	// t.Log("check that authentication is disabled in DC")
-	// require.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
-	// 	// the config should have JMX auth disabled
-	// 	return assert.Contains(t, string(dc.Spec.Config), "-Dcom.sun.management.jmxremote.authenticate=false")
-	// }), timeout, interval)
-
-	// t.Log("check that remote JMX is enabled")
-	// require.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
-	// 	if dc.Spec.PodTemplateSpec != nil {
-	// 		for _, container := range dc.Spec.PodTemplateSpec.Spec.Containers {
-	// 			if container.Name == reconciliation.CassandraContainerName {
-	// 				for _, envVar := range container.Env {
-	// 					if envVar.Name == "LOCAL_JMX" {
-	// 						return envVar.Value == "no"
-	// 					}
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-	// 	return false
-	// }), timeout, interval)
-
-	// withStargate := f.NewWithStargate(ctx, stargateKey)
 	withReaper := f.NewWithReaper(ctx, reaperKey)
-
-	// t.Log("check that authentication is disabled in Stargate CRD")
-	// require.Eventually(t, withStargate(func(sg *stargateapi.Stargate) bool {
-	// 	return !sg.Spec.IsAuthEnabled()
-	// }), timeout, interval)
 
 	t.Log("check that authentication is disabled in Reaper CRD")
 	require.Eventually(t, withReaper(func(r *reaperapi.Reaper) bool {
@@ -177,13 +140,6 @@ func createSingleDcClusterAuth(t *testing.T, ctx context.Context, f *framework.F
 	err = f.SetDatacenterStatusReady(ctx, dcKey)
 	require.NoError(t, err, "failed to set dc status ready")
 
-	// t.Log("check that stargate is created")
-	// require.Eventually(t, f.StargateExists(ctx, stargateKey), timeout, interval)
-
-	// t.Log("update stargate status to ready")
-	// err = f.SetStargateStatusReady(ctx, stargateKey)
-	// require.NoError(t, err, "failed to set stargate status ready")
-
 	t.Log("check that reaper is created")
 	require.Eventually(t, f.ReaperExists(ctx, reaperKey), timeout, interval)
 
@@ -191,41 +147,7 @@ func createSingleDcClusterAuth(t *testing.T, ctx context.Context, f *framework.F
 	err = f.SetReaperStatusReady(ctx, reaperKey)
 	require.NoError(t, err, "failed to set Stargate status ready")
 
-	// withDatacenter := f.NewWithDatacenter(ctx, dcKey)
-
-	// t.Log("check that authentication is enabled in DC")
-	// require.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
-	// 	// there should be a JMX init container with 4 env vars
-	// 	if dc.Spec.PodTemplateSpec != nil {
-	// 		// the config should have JMX auth enabled
-	// 		return assert.Contains(t, string(dc.Spec.Config), "-Dcom.sun.management.jmxremote.authenticate=true")
-	// 	}
-	// 	return false
-	// }), timeout, interval)
-
-	// t.Log("check that remote JMX is enabled")
-	// require.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
-	// 	if dc.Spec.PodTemplateSpec != nil {
-	// 		for _, container := range dc.Spec.PodTemplateSpec.Spec.Containers {
-	// 			if container.Name == reconciliation.CassandraContainerName {
-	// 				for _, envVar := range container.Env {
-	// 					if envVar.Name == "LOCAL_JMX" {
-	// 						return envVar.Value == "no"
-	// 					}
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-	// 	return false
-	// }), timeout, interval)
-
-	// withStargate := f.NewWithStargate(ctx, stargateKey)
 	withReaper := f.NewWithReaper(ctx, reaperKey)
-
-	// t.Log("check that authentication is enabled in Stargate CRD")
-	// require.Eventually(t, withStargate(func(sg *stargateapi.Stargate) bool {
-	// 	return sg.Spec.IsAuthEnabled()
-	// }), timeout, interval)
 
 	t.Log("check that authentication is enabled in Reaper CRD")
 	require.Eventually(t, withReaper(func(r *reaperapi.Reaper) bool {
@@ -294,13 +216,6 @@ func createSingleDcClusterAuthExternalSecrets(t *testing.T, ctx context.Context,
 	err = f.SetDatacenterStatusReady(ctx, dcKey)
 	require.NoError(t, err, "failed to set dc status ready")
 
-	// t.Log("check that stargate is created")
-	// require.Eventually(t, f.StargateExists(ctx, stargateKey), timeout, interval)
-
-	// t.Log("update stargate status to ready")
-	// err = f.SetStargateStatusReady(ctx, stargateKey)
-	// require.NoError(t, err, "failed to set stargate status ready")
-
 	t.Log("check that reaper is created")
 	require.Eventually(t, f.ReaperExists(ctx, reaperKey), timeout, interval)
 
@@ -308,47 +223,12 @@ func createSingleDcClusterAuthExternalSecrets(t *testing.T, ctx context.Context,
 	err = f.SetReaperStatusReady(ctx, reaperKey)
 	require.NoError(t, err, "failed to set Stargate status ready")
 
-	// withDatacenter := f.NewWithDatacenter(ctx, dcKey)
-
-	// t.Log("check that authentication is enabled in DC")
-	// require.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
-	// 	// the config should have JMX auth enabled
-	// 	return assert.Contains(t, string(dc.Spec.Config), "-Dcom.sun.management.jmxremote.authenticate=true")
-	// }), timeout, interval)
-
-	// t.Log("check that remote JMX is enabled")
-	// require.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
-	// 	if dc.Spec.PodTemplateSpec != nil {
-	// 		for _, container := range dc.Spec.PodTemplateSpec.Spec.Containers {
-	// 			if container.Name == reconciliation.CassandraContainerName {
-	// 				for _, envVar := range container.Env {
-	// 					if envVar.Name == "LOCAL_JMX" {
-	// 						return envVar.Value == "no"
-	// 					}
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-	// 	return false
-	// }), timeout, interval)
-
-	// withStargate := f.NewWithStargate(ctx, stargateKey)
 	withReaper := f.NewWithReaper(ctx, reaperKey)
 
 	t.Log("check that secrets are external in Reaper CRD")
 	require.Eventually(t, withReaper(func(r *reaperapi.Reaper) bool {
 		return r.Spec.UseExternalSecrets()
 	}), timeout, interval)
-
-	// t.Log("check that authentication is enabled in Stargate CRD")
-	// require.Eventually(t, withStargate(func(sg *stargateapi.Stargate) bool {
-	// 	return sg.Spec.IsAuthEnabled()
-	// }), timeout, interval)
-
-	// t.Log("check that external secrets option specified")
-	// require.Eventually(t, withStargate(func(sg *stargateapi.Stargate) bool {
-	// 	return sg.Spec.UseExternalSecrets()
-	// }), timeout, interval)
 
 	t.Log("check that authentication is enabled in Reaper CRD")
 	require.Never(t, withReaper(func(r *reaperapi.Reaper) bool {
