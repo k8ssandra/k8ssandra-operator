@@ -575,13 +575,6 @@ func (f *Framework) MedusaConfigExists(ctx context.Context, k8sContext string, m
 	}
 }
 
-// // NewWithCassTask is a function generator for withCassandraTask that is bound to ctx, and key.
-// func (f *Framework) NewWithCassTask(ctx context.Context, key ClusterKey) func(func(*casstaskapi.CassandraTask) bool) func() bool {
-// 	return func(condition func(dc *casstaskapi.CassandraTask) bool) func() bool {
-// 		return f.withCassTask(ctx, key, condition)
-// 	}
-// }
-
 // withCassTask Fetches the CassandraTask specified by key and then calls condition.
 // func (f *Framework) CassTaskExists(ctx context.Context, key ClusterKey, condition func(task *casstaskapi.CassandraTask) bool) func() bool {
 func (f *Framework) CassTaskExists(ctx context.Context, key ClusterKey) func() bool {
