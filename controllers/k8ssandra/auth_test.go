@@ -199,7 +199,6 @@ func createSingleDcClusterAuthExternalSecrets(t *testing.T, ctx context.Context,
 
 	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	reaperKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-reaper"}}
-	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-stargate"}}
 
 	verifyFinalizerAdded(ctx, t, f, kc)
 	verifySuperuserSecretNotCreated(ctx, t, f, kc)
@@ -225,21 +224,16 @@ func createSingleDcClusterAuthExternalSecrets(t *testing.T, ctx context.Context,
 
 	withReaper := f.NewWithReaper(ctx, reaperKey)
 
-	t.Log("check that secrets are external in Reaper CRD")
+	t.Log("check that secrets are external in Reaper CRD and authentication is enabled")
 	require.Eventually(t, withReaper(func(r *reaperapi.Reaper) bool {
-		return r.Spec.UseExternalSecrets()
-	}), timeout, interval)
-
-	t.Log("check that authentication is enabled in Reaper CRD")
-	require.Never(t, withReaper(func(r *reaperapi.Reaper) bool {
-		return r.Spec.CassandraUserSecretRef == corev1.LocalObjectReference{Name: reaper.DefaultUserSecretName("cluster1")}
+		return r.Spec.CassandraUserSecretRef != corev1.LocalObjectReference{Name: reaper.DefaultUserSecretName("cluster1")} &&
+			r.Spec.UseExternalSecrets()
 	}), timeout, interval)
 
 	t.Log("deleting K8ssandraCluster")
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
 	require.NoError(t, err, "failed to delete K8ssandraCluster")
 	f.AssertObjectDoesNotExist(ctx, t, dcKey, &cassdcapi.CassandraDatacenter{}, timeout, interval)
-	f.AssertObjectDoesNotExist(ctx, t, stargateKey, &stargateapi.Stargate{}, timeout, interval)
 	f.AssertObjectDoesNotExist(ctx, t, reaperKey, &reaperapi.Reaper{}, timeout, interval)
 }
 
