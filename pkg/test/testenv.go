@@ -73,6 +73,11 @@ func (e *TestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(
 		},
 	}
 
+	e.Environment.ControlPlane.APIServer.Configure().Append("max-requests-inflight", "2000").
+		Append("max-mutating-requests-inflight", "1000")
+	e.Environment.Config.QPS = 2000
+	e.Environment.Config.Burst = 10000
+
 	cfg, err := e.Environment.Start()
 	if err != nil {
 		return err
@@ -211,6 +216,11 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 				Paths: []string{filepath.Join("..", "..", "config", "webhook")},
 			},
 		}
+		if testEnv.ControlPlane.APIServer == nil {
+			testEnv.ControlPlane.APIServer = &envtest.APIServer{}
+		}
+		testEnv.ControlPlane.APIServer.Configure().Append("max-requests-inflight", "2000").
+			Append("max-mutating-requests-inflight", "1000")
 
 		e.testEnvs = append(e.testEnvs, testEnv)
 
@@ -218,8 +228,12 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 		if err != nil {
 			return err
 		}
+		cfg.QPS = 2000
+		cfg.Burst = 10000
 
-		testClient, err := client.New(cfg, client.Options{Scheme: scheme.Scheme})
+		testClient, err := client.New(cfg, client.Options{
+			Scheme: scheme.Scheme,
+		})
 		if err != nil {
 			return err
 		}
