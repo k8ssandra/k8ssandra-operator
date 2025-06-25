@@ -73,15 +73,20 @@ func (e *TestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(
 		},
 	}
 
+	if e.Environment.ControlPlane.APIServer == nil {
+		e.Environment.ControlPlane.APIServer = &envtest.APIServer{}
+	}
+
 	e.Environment.ControlPlane.APIServer.Configure().Append("max-requests-inflight", "2000").
 		Append("max-mutating-requests-inflight", "1000")
-	e.Environment.Config.QPS = 2000
-	e.Environment.Config.Burst = 10000
 
 	cfg, err := e.Environment.Start()
 	if err != nil {
 		return err
 	}
+
+	cfg.QPS = 2000
+	cfg.Burst = 10000
 
 	webhookInstallOptions := &e.Environment.WebhookInstallOptions
 	whServer := webhook.NewServer(webhook.Options{

@@ -23,8 +23,9 @@ import (
 )
 
 const (
-	timeout  = time.Second * 5
-	interval = time.Millisecond * 100
+	timeout      = time.Second * 3
+	neverTimeout = time.Second * 1
+	interval     = time.Millisecond * 20
 )
 
 var (
@@ -67,8 +68,8 @@ func setupMedusaBackupTestEnv(t *testing.T, ctx context.Context) *testutils.Mult
 
 	reconcilerConfig := config.InitConfig()
 
-	reconcilerConfig.DefaultDelay = 50 * time.Millisecond
-	reconcilerConfig.LongDelay = 150 * time.Millisecond
+	reconcilerConfig.DefaultDelay = 20 * time.Millisecond
+	reconcilerConfig.LongDelay = 50 * time.Millisecond
 
 	medusaClientFactory = NewMedusaClientFactory()
 	medusaRestoreClientFactory := NewMedusaClientRestoreFactory()
