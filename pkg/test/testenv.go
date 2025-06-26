@@ -73,10 +73,20 @@ func (e *TestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(
 		},
 	}
 
+	if e.Environment.ControlPlane.APIServer == nil {
+		e.Environment.ControlPlane.APIServer = &envtest.APIServer{}
+	}
+
+	e.Environment.ControlPlane.APIServer.Configure().Append("max-requests-inflight", "2000").
+		Append("max-mutating-requests-inflight", "1000")
+
 	cfg, err := e.Environment.Start()
 	if err != nil {
 		return err
 	}
+
+	cfg.QPS = 2000
+	cfg.Burst = 10000
 
 	webhookInstallOptions := &e.Environment.WebhookInstallOptions
 	whServer := webhook.NewServer(webhook.Options{
@@ -193,7 +203,7 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 	cfgs := make([]*rest.Config, clustersToCreate)
 	clusters := make([]cluster.Cluster, 0, clustersToCreate)
 
-	for i := 0; i < clustersToCreate; i++ {
+	for i := range clustersToCreate {
 		clusterName := fmt.Sprintf(clusterProtoName, i, rand.String(6))
 		if i == 0 {
 			e.controlPlane = clusterName
@@ -211,6 +221,11 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 				Paths: []string{filepath.Join("..", "..", "config", "webhook")},
 			},
 		}
+		if testEnv.ControlPlane.APIServer == nil {
+			testEnv.ControlPlane.APIServer = &envtest.APIServer{}
+		}
+		testEnv.ControlPlane.APIServer.Configure().Append("max-requests-inflight", "2000").
+			Append("max-mutating-requests-inflight", "1000")
 
 		e.testEnvs = append(e.testEnvs, testEnv)
 
@@ -218,8 +233,12 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 		if err != nil {
 			return err
 		}
+		cfg.QPS = 2000
+		cfg.Burst = 10000
 
-		testClient, err := client.New(cfg, client.Options{Scheme: scheme.Scheme})
+		testClient, err := client.New(cfg, client.Options{
+			Scheme: scheme.Scheme,
+		})
 		if err != nil {
 			return err
 		}
