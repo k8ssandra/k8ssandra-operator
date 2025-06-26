@@ -1,8 +1,6 @@
 module github.com/k8ssandra/k8ssandra-operator
 
-go 1.23.9
-
-toolchain go1.24.2
+go 1.24.4
 
 require (
 	github.com/Jeffail/gabs v1.4.0
@@ -28,6 +26,7 @@ require (
 	github.com/stargate/stargate-grpc-go-client v0.0.0-20220822130422-9a1c6261d4fa
 	github.com/stretchr/testify v1.10.0
 	go.uber.org/zap v1.27.0
+	golang.org/x/time v0.8.0
 	google.golang.org/grpc v1.67.1
 	google.golang.org/protobuf v1.36.5
 	gopkg.in/yaml.v2 v2.4.0
@@ -85,7 +84,6 @@ require (
 	golang.org/x/sys v0.32.0 // indirect
 	golang.org/x/term v0.31.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
-	golang.org/x/time v0.8.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241104194629-dd2ea8efbc28 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
