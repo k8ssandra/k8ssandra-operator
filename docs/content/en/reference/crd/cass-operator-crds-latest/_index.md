@@ -923,6 +923,8 @@ VolumeSource to mount the volume from (such as ConfigMap / Secret). This or PVCS
         <td>
           awsElasticBlockStore represents an AWS Disk resource that is attached to a
 kubelet's host machine and then exposed to the pod.
+Deprecated: AWSElasticBlockStore is deprecated. All operations for the in-tree
+awsElasticBlockStore type are redirected to the ebs.csi.aws.com CSI driver.
 More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore<br/>
         </td>
         <td>false</td>
@@ -930,21 +932,26 @@ More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockst
         <td><b><a href="#cassandradatacenterspecstorageconfigadditionalvolumesindexvolumesourceazuredisk">azureDisk</a></b></td>
         <td>object</td>
         <td>
-          azureDisk represents an Azure Data Disk mount on the host and bind mount to the pod.<br/>
+          azureDisk represents an Azure Data Disk mount on the host and bind mount to the pod.
+Deprecated: AzureDisk is deprecated. All operations for the in-tree azureDisk type
+are redirected to the disk.csi.azure.com CSI driver.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b><a href="#cassandradatacenterspecstorageconfigadditionalvolumesindexvolumesourceazurefile">azureFile</a></b></td>
         <td>object</td>
         <td>
-          azureFile represents an Azure File Service mount on the host and bind mount to the pod.<br/>
+          azureFile represents an Azure File Service mount on the host and bind mount to the pod.
+Deprecated: AzureFile is deprecated. All operations for the in-tree azureFile type
+are redirected to the file.csi.azure.com CSI driver.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b><a href="#cassandradatacenterspecstorageconfigadditionalvolumesindexvolumesourcecephfs">cephfs</a></b></td>
         <td>object</td>
         <td>
-          cephFS represents a Ceph FS mount on the host that shares a pod's lifetime<br/>
+          cephFS represents a Ceph FS mount on the host that shares a pod's lifetime.
+Deprecated: CephFS is deprecated and the in-tree cephfs type is no longer supported.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -952,6 +959,8 @@ More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockst
         <td>object</td>
         <td>
           cinder represents a cinder volume attached and mounted on kubelets host machine.
+Deprecated: Cinder is deprecated. All operations for the in-tree cinder type
+are redirected to the cinder.csi.openstack.org CSI driver.
 More info: https://examples.k8s.io/mysql-cinder-pd/README.md<br/>
         </td>
         <td>false</td>
@@ -966,7 +975,7 @@ More info: https://examples.k8s.io/mysql-cinder-pd/README.md<br/>
         <td><b><a href="#cassandradatacenterspecstorageconfigadditionalvolumesindexvolumesourcecsi">csi</a></b></td>
         <td>object</td>
         <td>
-          csi (Container Storage Interface) represents ephemeral storage that is handled by certain external CSI drivers (Beta feature).<br/>
+          csi (Container Storage Interface) represents ephemeral storage that is handled by certain external CSI drivers.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -1026,14 +1035,16 @@ persistent volumes at the same time.<br/>
         <td>object</td>
         <td>
           flexVolume represents a generic volume resource that is
-provisioned/attached using an exec based plugin.<br/>
+provisioned/attached using an exec based plugin.
+Deprecated: FlexVolume is deprecated. Consider using a CSIDriver instead.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b><a href="#cassandradatacenterspecstorageconfigadditionalvolumesindexvolumesourceflocker">flocker</a></b></td>
         <td>object</td>
         <td>
-          flocker represents a Flocker volume attached to a kubelet's host machine. This depends on the Flocker control service being running<br/>
+          flocker represents a Flocker volume attached to a kubelet's host machine. This depends on the Flocker control service being running.
+Deprecated: Flocker is deprecated and the in-tree flocker type is no longer supported.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -1042,6 +1053,8 @@ provisioned/attached using an exec based plugin.<br/>
         <td>
           gcePersistentDisk represents a GCE Disk resource that is attached to a
 kubelet's host machine and then exposed to the pod.
+Deprecated: GCEPersistentDisk is deprecated. All operations for the in-tree
+gcePersistentDisk type are redirected to the pd.csi.storage.gke.io CSI driver.
 More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk<br/>
         </td>
         <td>false</td>
@@ -1050,7 +1063,7 @@ More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
         <td>object</td>
         <td>
           gitRepo represents a git repository at a particular revision.
-DEPRECATED: GitRepo is deprecated. To provision a container with a git repo, mount an
+Deprecated: GitRepo is deprecated. To provision a container with a git repo, mount an
 EmptyDir into an InitContainer that clones the repo using git, then mount the EmptyDir
 into the Pod's container.<br/>
         </td>
@@ -1060,6 +1073,7 @@ into the Pod's container.<br/>
         <td>object</td>
         <td>
           glusterfs represents a Glusterfs mount on the host that shares a pod's lifetime.
+Deprecated: Glusterfs is deprecated and the in-tree glusterfs type is no longer supported.
 More info: https://examples.k8s.io/volumes/glusterfs/README.md<br/>
         </td>
         <td>false</td>
@@ -1090,7 +1104,7 @@ A failure to resolve or pull the image during pod startup will block containers 
 The types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.
 The OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.
 The volume will be mounted read-only (ro) and non-executable files (noexec).
-Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath).
+Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.
 The field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.<br/>
         </td>
         <td>false</td>
@@ -1124,14 +1138,18 @@ More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persis
         <td><b><a href="#cassandradatacenterspecstorageconfigadditionalvolumesindexvolumesourcephotonpersistentdisk">photonPersistentDisk</a></b></td>
         <td>object</td>
         <td>
-          photonPersistentDisk represents a PhotonController persistent disk attached and mounted on kubelets host machine<br/>
+          photonPersistentDisk represents a PhotonController persistent disk attached and mounted on kubelets host machine.
+Deprecated: PhotonPersistentDisk is deprecated and the in-tree photonPersistentDisk type is no longer supported.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b><a href="#cassandradatacenterspecstorageconfigadditionalvolumesindexvolumesourceportworxvolume">portworxVolume</a></b></td>
         <td>object</td>
         <td>
-          portworxVolume represents a portworx volume attached and mounted on kubelets host machine<br/>
+          portworxVolume represents a portworx volume attached and mounted on kubelets host machine.
+Deprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type
+are redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate
+is on.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -1145,7 +1163,8 @@ More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persis
         <td><b><a href="#cassandradatacenterspecstorageconfigadditionalvolumesindexvolumesourcequobyte">quobyte</a></b></td>
         <td>object</td>
         <td>
-          quobyte represents a Quobyte mount on the host that shares a pod's lifetime<br/>
+          quobyte represents a Quobyte mount on the host that shares a pod's lifetime.
+Deprecated: Quobyte is deprecated and the in-tree quobyte type is no longer supported.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -1153,6 +1172,7 @@ More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persis
         <td>object</td>
         <td>
           rbd represents a Rados Block Device mount on the host that shares a pod's lifetime.
+Deprecated: RBD is deprecated and the in-tree rbd type is no longer supported.
 More info: https://examples.k8s.io/volumes/rbd/README.md<br/>
         </td>
         <td>false</td>
@@ -1160,7 +1180,8 @@ More info: https://examples.k8s.io/volumes/rbd/README.md<br/>
         <td><b><a href="#cassandradatacenterspecstorageconfigadditionalvolumesindexvolumesourcescaleio">scaleIO</a></b></td>
         <td>object</td>
         <td>
-          scaleIO represents a ScaleIO persistent volume attached and mounted on Kubernetes nodes.<br/>
+          scaleIO represents a ScaleIO persistent volume attached and mounted on Kubernetes nodes.
+Deprecated: ScaleIO is deprecated and the in-tree scaleIO type is no longer supported.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -1175,14 +1196,17 @@ More info: https://kubernetes.io/docs/concepts/storage/volumes#secret<br/>
         <td><b><a href="#cassandradatacenterspecstorageconfigadditionalvolumesindexvolumesourcestorageos">storageos</a></b></td>
         <td>object</td>
         <td>
-          storageOS represents a StorageOS volume attached and mounted on Kubernetes nodes.<br/>
+          storageOS represents a StorageOS volume attached and mounted on Kubernetes nodes.
+Deprecated: StorageOS is deprecated and the in-tree storageos type is no longer supported.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b><a href="#cassandradatacenterspecstorageconfigadditionalvolumesindexvolumesourcevspherevolume">vsphereVolume</a></b></td>
         <td>object</td>
         <td>
-          vsphereVolume represents a vSphere volume attached and mounted on kubelets host machine<br/>
+          vsphereVolume represents a vSphere volume attached and mounted on kubelets host machine.
+Deprecated: VsphereVolume is deprecated. All operations for the in-tree vsphereVolume type
+are redirected to the csi.vsphere.vmware.com CSI driver.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -1196,6 +1220,8 @@ More info: https://kubernetes.io/docs/concepts/storage/volumes#secret<br/>
 
 awsElasticBlockStore represents an AWS Disk resource that is attached to a
 kubelet's host machine and then exposed to the pod.
+Deprecated: AWSElasticBlockStore is deprecated. All operations for the in-tree
+awsElasticBlockStore type are redirected to the ebs.csi.aws.com CSI driver.
 More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
 
 <table>
@@ -1255,6 +1281,8 @@ More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockst
 
 
 azureDisk represents an Azure Data Disk mount on the host and bind mount to the pod.
+Deprecated: AzureDisk is deprecated. All operations for the in-tree azureDisk type
+are redirected to the disk.csi.azure.com CSI driver.
 
 <table>
     <thead>
@@ -1324,6 +1352,8 @@ the ReadOnly setting in VolumeMounts.<br/>
 
 
 azureFile represents an Azure File Service mount on the host and bind mount to the pod.
+Deprecated: AzureFile is deprecated. All operations for the in-tree azureFile type
+are redirected to the file.csi.azure.com CSI driver.
 
 <table>
     <thead>
@@ -1365,7 +1395,8 @@ the ReadOnly setting in VolumeMounts.<br/>
 
 
 
-cephFS represents a Ceph FS mount on the host that shares a pod's lifetime
+cephFS represents a Ceph FS mount on the host that shares a pod's lifetime.
+Deprecated: CephFS is deprecated and the in-tree cephfs type is no longer supported.
 
 <table>
     <thead>
@@ -1468,6 +1499,8 @@ More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/nam
 
 
 cinder represents a cinder volume attached and mounted on kubelets host machine.
+Deprecated: Cinder is deprecated. All operations for the in-tree cinder type
+are redirected to the cinder.csi.openstack.org CSI driver.
 More info: https://examples.k8s.io/mysql-cinder-pd/README.md
 
 <table>
@@ -1676,7 +1709,7 @@ mode, like fsGroup, and the result can be other mode bits set.<br/>
 
 
 
-csi (Container Storage Interface) represents ephemeral storage that is handled by certain external CSI drivers (Beta feature).
+csi (Container Storage Interface) represents ephemeral storage that is handled by certain external CSI drivers.
 
 <table>
     <thead>
@@ -2625,6 +2658,7 @@ Either wwids or combination of targetWWNs and lun must be set, but not both simu
 
 flexVolume represents a generic volume resource that is
 provisioned/attached using an exec based plugin.
+Deprecated: FlexVolume is deprecated. Consider using a CSIDriver instead.
 
 <table>
     <thead>
@@ -2723,7 +2757,8 @@ More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/nam
 
 
 
-flocker represents a Flocker volume attached to a kubelet's host machine. This depends on the Flocker control service being running
+flocker represents a Flocker volume attached to a kubelet's host machine. This depends on the Flocker control service being running.
+Deprecated: Flocker is deprecated and the in-tree flocker type is no longer supported.
 
 <table>
     <thead>
@@ -2760,6 +2795,8 @@ should be considered as deprecated<br/>
 
 gcePersistentDisk represents a GCE Disk resource that is attached to a
 kubelet's host machine and then exposed to the pod.
+Deprecated: GCEPersistentDisk is deprecated. All operations for the in-tree
+gcePersistentDisk type are redirected to the pd.csi.storage.gke.io CSI driver.
 More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
 
 <table>
@@ -2821,7 +2858,7 @@ More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
 
 
 gitRepo represents a git repository at a particular revision.
-DEPRECATED: GitRepo is deprecated. To provision a container with a git repo, mount an
+Deprecated: GitRepo is deprecated. To provision a container with a git repo, mount an
 EmptyDir into an InitContainer that clones the repo using git, then mount the EmptyDir
 into the Pod's container.
 
@@ -2868,6 +2905,7 @@ the subdirectory with the given name.<br/>
 
 
 glusterfs represents a Glusterfs mount on the host that shares a pod's lifetime.
+Deprecated: Glusterfs is deprecated and the in-tree glusterfs type is no longer supported.
 More info: https://examples.k8s.io/volumes/glusterfs/README.md
 
 <table>
@@ -2967,7 +3005,7 @@ A failure to resolve or pull the image during pod startup will block containers 
 The types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.
 The OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.
 The volume will be mounted read-only (ro) and non-executable files (noexec).
-Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath).
+Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.
 The field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.
 
 <table>
@@ -3240,7 +3278,8 @@ Default false.<br/>
 
 
 
-photonPersistentDisk represents a PhotonController persistent disk attached and mounted on kubelets host machine
+photonPersistentDisk represents a PhotonController persistent disk attached and mounted on kubelets host machine.
+Deprecated: PhotonPersistentDisk is deprecated and the in-tree photonPersistentDisk type is no longer supported.
 
 <table>
     <thead>
@@ -3276,7 +3315,10 @@ Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.<br/>
 
 
 
-portworxVolume represents a portworx volume attached and mounted on kubelets host machine
+portworxVolume represents a portworx volume attached and mounted on kubelets host machine.
+Deprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type
+are redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate
+is on.
 
 <table>
     <thead>
@@ -4011,7 +4053,8 @@ and must be at least 10 minutes.<br/>
 
 
 
-quobyte represents a Quobyte mount on the host that shares a pod's lifetime
+quobyte represents a Quobyte mount on the host that shares a pod's lifetime.
+Deprecated: Quobyte is deprecated and the in-tree quobyte type is no longer supported.
 
 <table>
     <thead>
@@ -4080,6 +4123,7 @@ Defaults to serivceaccount user<br/>
 
 
 rbd represents a Rados Block Device mount on the host that shares a pod's lifetime.
+Deprecated: RBD is deprecated and the in-tree rbd type is no longer supported.
 More info: https://examples.k8s.io/volumes/rbd/README.md
 
 <table>
@@ -4215,6 +4259,7 @@ More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/nam
 
 
 scaleIO represents a ScaleIO persistent volume attached and mounted on Kubernetes nodes.
+Deprecated: ScaleIO is deprecated and the in-tree scaleIO type is no longer supported.
 
 <table>
     <thead>
@@ -4465,6 +4510,7 @@ mode, like fsGroup, and the result can be other mode bits set.<br/>
 
 
 storageOS represents a StorageOS volume attached and mounted on Kubernetes nodes.
+Deprecated: StorageOS is deprecated and the in-tree storageos type is no longer supported.
 
 <table>
     <thead>
@@ -4563,7 +4609,9 @@ More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/nam
 
 
 
-vsphereVolume represents a vSphere volume attached and mounted on kubelets host machine
+vsphereVolume represents a vSphere volume attached and mounted on kubelets host machine.
+Deprecated: VsphereVolume is deprecated. All operations for the in-tree vsphereVolume type
+are redirected to the csi.vsphere.vmware.com CSI driver.
 
 <table>
     <thead>
@@ -5935,7 +5983,7 @@ unique among all containers.
 Init containers may not have Lifecycle actions, Readiness probes, Liveness probes, or Startup probes.
 The resourceRequirements of an init container are taken into account during scheduling
 by finding the highest request/limit for each resource type, and then using the max of
-of that value or the sum of the normal containers. Limits are applied to init containers
+that value or the sum of the normal containers. Limits are applied to init containers
 in a similar fashion.
 Init containers cannot currently be added or removed.
 Cannot be updated.
@@ -6069,6 +6117,21 @@ This is an alpha field and requires enabling the
 DynamicResourceAllocation feature gate.
 
 This field is immutable.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b><a href="#cassandradatacenterspecpodtemplatespecspecresources">resources</a></b></td>
+        <td>object</td>
+        <td>
+          Resources is the total amount of CPU and Memory resources required by all
+containers in the pod. It supports specifying Requests and Limits for
+"cpu" and "memory" resource names only. ResourceClaims are not supported.
+
+This field enables fine-grained control over resource allocation for the
+entire pod, allowing resource sharing among containers in a pod.
+
+This is an alpha field and requires enabling the PodLevelResources feature
+gate.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -6763,7 +6826,7 @@ More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/nam
 
 
 
-EnvFromSource represents the source of a set of ConfigMaps
+EnvFromSource represents the source of a set of ConfigMaps or Secrets
 
 <table>
     <thead>
@@ -6785,7 +6848,7 @@ EnvFromSource represents the source of a set of ConfigMaps
         <td><b>prefix</b></td>
         <td>string</td>
         <td>
-          An optional identifier to prepend to each key in the ConfigMap. Must be a C_IDENTIFIER.<br/>
+          Optional text to prepend to the name of each environment variable. Must be a C_IDENTIFIER.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -6921,6 +6984,15 @@ or until the termination grace period is reached.
 More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks<br/>
         </td>
         <td>false</td>
+      </tr><tr>
+        <td><b>stopSignal</b></td>
+        <td>string</td>
+        <td>
+          StopSignal defines which signal will be sent to a container when it is being stopped.
+If not specified, the default is defined by the container runtime in use.
+StopSignal can only be set for Pods with a non-empty .spec.os.name<br/>
+        </td>
+        <td>false</td>
       </tr></tbody>
 </table>
 
@@ -6948,21 +7020,21 @@ More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-ho
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspeccontainersindexlifecyclepoststartexec">exec</a></b></td>
         <td>object</td>
         <td>
-          Exec specifies the action to take.<br/>
+          Exec specifies a command to execute in the container.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspeccontainersindexlifecyclepoststarthttpget">httpGet</a></b></td>
         <td>object</td>
         <td>
-          HTTPGet specifies the http request to perform.<br/>
+          HTTPGet specifies an HTTP GET request to perform.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspeccontainersindexlifecyclepoststartsleep">sleep</a></b></td>
         <td>object</td>
         <td>
-          Sleep represents the duration that the container should sleep before being terminated.<br/>
+          Sleep represents a duration that the container should sleep.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -6970,8 +7042,8 @@ More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-ho
         <td>object</td>
         <td>
           Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept
-for the backward compatibility. There are no validation of this field and
-lifecycle hooks will fail in runtime when tcp handler is specified.<br/>
+for backward compatibility. There is no validation of this field and
+lifecycle hooks will fail at runtime when it is specified.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -6983,7 +7055,7 @@ lifecycle hooks will fail in runtime when tcp handler is specified.<br/>
 
 
 
-Exec specifies the action to take.
+Exec specifies a command to execute in the container.
 
 <table>
     <thead>
@@ -7014,7 +7086,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 
-HTTPGet specifies the http request to perform.
+HTTPGet specifies an HTTP GET request to perform.
 
 <table>
     <thead>
@@ -7108,7 +7180,7 @@ This will be canonicalized upon output, so case-variant names will be understood
 
 
 
-Sleep represents the duration that the container should sleep before being terminated.
+Sleep represents a duration that the container should sleep.
 
 <table>
     <thead>
@@ -7138,8 +7210,8 @@ Sleep represents the duration that the container should sleep before being termi
 
 
 Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept
-for the backward compatibility. There are no validation of this field and
-lifecycle hooks will fail in runtime when tcp handler is specified.
+for backward compatibility. There is no validation of this field and
+lifecycle hooks will fail at runtime when it is specified.
 
 <table>
     <thead>
@@ -7198,21 +7270,21 @@ More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-ho
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspeccontainersindexlifecycleprestopexec">exec</a></b></td>
         <td>object</td>
         <td>
-          Exec specifies the action to take.<br/>
+          Exec specifies a command to execute in the container.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspeccontainersindexlifecycleprestophttpget">httpGet</a></b></td>
         <td>object</td>
         <td>
-          HTTPGet specifies the http request to perform.<br/>
+          HTTPGet specifies an HTTP GET request to perform.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspeccontainersindexlifecycleprestopsleep">sleep</a></b></td>
         <td>object</td>
         <td>
-          Sleep represents the duration that the container should sleep before being terminated.<br/>
+          Sleep represents a duration that the container should sleep.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -7220,8 +7292,8 @@ More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-ho
         <td>object</td>
         <td>
           Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept
-for the backward compatibility. There are no validation of this field and
-lifecycle hooks will fail in runtime when tcp handler is specified.<br/>
+for backward compatibility. There is no validation of this field and
+lifecycle hooks will fail at runtime when it is specified.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -7233,7 +7305,7 @@ lifecycle hooks will fail in runtime when tcp handler is specified.<br/>
 
 
 
-Exec specifies the action to take.
+Exec specifies a command to execute in the container.
 
 <table>
     <thead>
@@ -7264,7 +7336,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 
-HTTPGet specifies the http request to perform.
+HTTPGet specifies an HTTP GET request to perform.
 
 <table>
     <thead>
@@ -7358,7 +7430,7 @@ This will be canonicalized upon output, so case-variant names will be understood
 
 
 
-Sleep represents the duration that the container should sleep before being terminated.
+Sleep represents a duration that the container should sleep.
 
 <table>
     <thead>
@@ -7388,8 +7460,8 @@ Sleep represents the duration that the container should sleep before being termi
 
 
 Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept
-for the backward compatibility. There are no validation of this field and
-lifecycle hooks will fail in runtime when tcp handler is specified.
+for backward compatibility. There is no validation of this field and
+lifecycle hooks will fail at runtime when it is specified.
 
 <table>
     <thead>
@@ -7443,7 +7515,7 @@ More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#cont
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspeccontainersindexlivenessprobeexec">exec</a></b></td>
         <td>object</td>
         <td>
-          Exec specifies the action to take.<br/>
+          Exec specifies a command to execute in the container.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -7460,14 +7532,14 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspeccontainersindexlivenessprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies a GRPC HealthCheckRequest.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspeccontainersindexlivenessprobehttpget">httpGet</a></b></td>
         <td>object</td>
         <td>
-          HTTPGet specifies the http request to perform.<br/>
+          HTTPGet specifies an HTTP GET request to perform.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -7504,7 +7576,7 @@ Defaults to 1. Must be 1 for liveness and startup. Minimum value is 1.<br/>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspeccontainersindexlivenessprobetcpsocket">tcpSocket</a></b></td>
         <td>object</td>
         <td>
-          TCPSocket specifies an action involving a TCP port.<br/>
+          TCPSocket specifies a connection to a TCP port.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -7545,7 +7617,7 @@ More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#cont
 
 
 
-Exec specifies the action to take.
+Exec specifies a command to execute in the container.
 
 <table>
     <thead>
@@ -7576,7 +7648,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 
-GRPC specifies an action involving a GRPC port.
+GRPC specifies a GRPC HealthCheckRequest.
 
 <table>
     <thead>
@@ -7617,7 +7689,7 @@ If this is not specified, the default behavior is defined by gRPC.<br/>
 
 
 
-HTTPGet specifies the http request to perform.
+HTTPGet specifies an HTTP GET request to perform.
 
 <table>
     <thead>
@@ -7711,7 +7783,7 @@ This will be canonicalized upon output, so case-variant names will be understood
 
 
 
-TCPSocket specifies an action involving a TCP port.
+TCPSocket specifies a connection to a TCP port.
 
 <table>
     <thead>
@@ -7833,7 +7905,7 @@ More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#cont
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspeccontainersindexreadinessprobeexec">exec</a></b></td>
         <td>object</td>
         <td>
-          Exec specifies the action to take.<br/>
+          Exec specifies a command to execute in the container.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -7850,14 +7922,14 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspeccontainersindexreadinessprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies a GRPC HealthCheckRequest.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspeccontainersindexreadinessprobehttpget">httpGet</a></b></td>
         <td>object</td>
         <td>
-          HTTPGet specifies the http request to perform.<br/>
+          HTTPGet specifies an HTTP GET request to perform.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -7894,7 +7966,7 @@ Defaults to 1. Must be 1 for liveness and startup. Minimum value is 1.<br/>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspeccontainersindexreadinessprobetcpsocket">tcpSocket</a></b></td>
         <td>object</td>
         <td>
-          TCPSocket specifies an action involving a TCP port.<br/>
+          TCPSocket specifies a connection to a TCP port.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -7935,7 +8007,7 @@ More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#cont
 
 
 
-Exec specifies the action to take.
+Exec specifies a command to execute in the container.
 
 <table>
     <thead>
@@ -7966,7 +8038,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 
-GRPC specifies an action involving a GRPC port.
+GRPC specifies a GRPC HealthCheckRequest.
 
 <table>
     <thead>
@@ -8007,7 +8079,7 @@ If this is not specified, the default behavior is defined by gRPC.<br/>
 
 
 
-HTTPGet specifies the http request to perform.
+HTTPGet specifies an HTTP GET request to perform.
 
 <table>
     <thead>
@@ -8101,7 +8173,7 @@ This will be canonicalized upon output, so case-variant names will be understood
 
 
 
-TCPSocket specifies an action involving a TCP port.
+TCPSocket specifies a connection to a TCP port.
 
 <table>
     <thead>
@@ -8672,7 +8744,7 @@ More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#cont
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspeccontainersindexstartupprobeexec">exec</a></b></td>
         <td>object</td>
         <td>
-          Exec specifies the action to take.<br/>
+          Exec specifies a command to execute in the container.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -8689,14 +8761,14 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspeccontainersindexstartupprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies a GRPC HealthCheckRequest.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspeccontainersindexstartupprobehttpget">httpGet</a></b></td>
         <td>object</td>
         <td>
-          HTTPGet specifies the http request to perform.<br/>
+          HTTPGet specifies an HTTP GET request to perform.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -8733,7 +8805,7 @@ Defaults to 1. Must be 1 for liveness and startup. Minimum value is 1.<br/>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspeccontainersindexstartupprobetcpsocket">tcpSocket</a></b></td>
         <td>object</td>
         <td>
-          TCPSocket specifies an action involving a TCP port.<br/>
+          TCPSocket specifies a connection to a TCP port.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -8774,7 +8846,7 @@ More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#cont
 
 
 
-Exec specifies the action to take.
+Exec specifies a command to execute in the container.
 
 <table>
     <thead>
@@ -8805,7 +8877,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 
-GRPC specifies an action involving a GRPC port.
+GRPC specifies a GRPC HealthCheckRequest.
 
 <table>
     <thead>
@@ -8846,7 +8918,7 @@ If this is not specified, the default behavior is defined by gRPC.<br/>
 
 
 
-HTTPGet specifies the http request to perform.
+HTTPGet specifies an HTTP GET request to perform.
 
 <table>
     <thead>
@@ -8940,7 +9012,7 @@ This will be canonicalized upon output, so case-variant names will be understood
 
 
 
-TCPSocket specifies an action involving a TCP port.
+TCPSocket specifies a connection to a TCP port.
 
 <table>
     <thead>
@@ -9644,8 +9716,7 @@ to select the group of existing pods which pods will be taken into consideration
 for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
 pod labels will be ignored. The default value is empty.
 The same key is forbidden to exist in both matchLabelKeys and labelSelector.
-Also, matchLabelKeys cannot be set when labelSelector isn't set.
-This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).<br/>
+Also, matchLabelKeys cannot be set when labelSelector isn't set.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -9659,8 +9730,7 @@ to select the group of existing pods which pods will be taken into consideration
 for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
 pod labels will be ignored. The default value is empty.
 The same key is forbidden to exist in both mismatchLabelKeys and labelSelector.
-Also, mismatchLabelKeys cannot be set when labelSelector isn't set.
-This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).<br/>
+Also, mismatchLabelKeys cannot be set when labelSelector isn't set.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -9908,8 +9978,7 @@ to select the group of existing pods which pods will be taken into consideration
 for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
 pod labels will be ignored. The default value is empty.
 The same key is forbidden to exist in both matchLabelKeys and labelSelector.
-Also, matchLabelKeys cannot be set when labelSelector isn't set.
-This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).<br/>
+Also, matchLabelKeys cannot be set when labelSelector isn't set.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -9923,8 +9992,7 @@ to select the group of existing pods which pods will be taken into consideration
 for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
 pod labels will be ignored. The default value is empty.
 The same key is forbidden to exist in both mismatchLabelKeys and labelSelector.
-Also, mismatchLabelKeys cannot be set when labelSelector isn't set.
-This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).<br/>
+Also, mismatchLabelKeys cannot be set when labelSelector isn't set.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -10252,8 +10320,7 @@ to select the group of existing pods which pods will be taken into consideration
 for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
 pod labels will be ignored. The default value is empty.
 The same key is forbidden to exist in both matchLabelKeys and labelSelector.
-Also, matchLabelKeys cannot be set when labelSelector isn't set.
-This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).<br/>
+Also, matchLabelKeys cannot be set when labelSelector isn't set.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -10267,8 +10334,7 @@ to select the group of existing pods which pods will be taken into consideration
 for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
 pod labels will be ignored. The default value is empty.
 The same key is forbidden to exist in both mismatchLabelKeys and labelSelector.
-Also, mismatchLabelKeys cannot be set when labelSelector isn't set.
-This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).<br/>
+Also, mismatchLabelKeys cannot be set when labelSelector isn't set.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -10516,8 +10582,7 @@ to select the group of existing pods which pods will be taken into consideration
 for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
 pod labels will be ignored. The default value is empty.
 The same key is forbidden to exist in both matchLabelKeys and labelSelector.
-Also, matchLabelKeys cannot be set when labelSelector isn't set.
-This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).<br/>
+Also, matchLabelKeys cannot be set when labelSelector isn't set.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -10531,8 +10596,7 @@ to select the group of existing pods which pods will be taken into consideration
 for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
 pod labels will be ignored. The default value is empty.
 The same key is forbidden to exist in both mismatchLabelKeys and labelSelector.
-Also, mismatchLabelKeys cannot be set when labelSelector isn't set.
-This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).<br/>
+Also, mismatchLabelKeys cannot be set when labelSelector isn't set.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -10799,14 +10863,15 @@ PodDNSConfigOption defines DNS resolver options of a pod.
         <td><b>name</b></td>
         <td>string</td>
         <td>
-          Required.<br/>
+          Name is this DNS resolver option's name.
+Required.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b>value</b></td>
         <td>string</td>
         <td>
-          <br/>
+          Value is this DNS resolver option's value.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -11351,7 +11416,7 @@ More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/nam
 
 
 
-EnvFromSource represents the source of a set of ConfigMaps
+EnvFromSource represents the source of a set of ConfigMaps or Secrets
 
 <table>
     <thead>
@@ -11373,7 +11438,7 @@ EnvFromSource represents the source of a set of ConfigMaps
         <td><b>prefix</b></td>
         <td>string</td>
         <td>
-          An optional identifier to prepend to each key in the ConfigMap. Must be a C_IDENTIFIER.<br/>
+          Optional text to prepend to the name of each environment variable. Must be a C_IDENTIFIER.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -11508,6 +11573,15 @@ or until the termination grace period is reached.
 More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks<br/>
         </td>
         <td>false</td>
+      </tr><tr>
+        <td><b>stopSignal</b></td>
+        <td>string</td>
+        <td>
+          StopSignal defines which signal will be sent to a container when it is being stopped.
+If not specified, the default is defined by the container runtime in use.
+StopSignal can only be set for Pods with a non-empty .spec.os.name<br/>
+        </td>
+        <td>false</td>
       </tr></tbody>
 </table>
 
@@ -11535,21 +11609,21 @@ More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-ho
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecephemeralcontainersindexlifecyclepoststartexec">exec</a></b></td>
         <td>object</td>
         <td>
-          Exec specifies the action to take.<br/>
+          Exec specifies a command to execute in the container.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecephemeralcontainersindexlifecyclepoststarthttpget">httpGet</a></b></td>
         <td>object</td>
         <td>
-          HTTPGet specifies the http request to perform.<br/>
+          HTTPGet specifies an HTTP GET request to perform.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecephemeralcontainersindexlifecyclepoststartsleep">sleep</a></b></td>
         <td>object</td>
         <td>
-          Sleep represents the duration that the container should sleep before being terminated.<br/>
+          Sleep represents a duration that the container should sleep.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -11557,8 +11631,8 @@ More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-ho
         <td>object</td>
         <td>
           Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept
-for the backward compatibility. There are no validation of this field and
-lifecycle hooks will fail in runtime when tcp handler is specified.<br/>
+for backward compatibility. There is no validation of this field and
+lifecycle hooks will fail at runtime when it is specified.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -11570,7 +11644,7 @@ lifecycle hooks will fail in runtime when tcp handler is specified.<br/>
 
 
 
-Exec specifies the action to take.
+Exec specifies a command to execute in the container.
 
 <table>
     <thead>
@@ -11601,7 +11675,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 
-HTTPGet specifies the http request to perform.
+HTTPGet specifies an HTTP GET request to perform.
 
 <table>
     <thead>
@@ -11695,7 +11769,7 @@ This will be canonicalized upon output, so case-variant names will be understood
 
 
 
-Sleep represents the duration that the container should sleep before being terminated.
+Sleep represents a duration that the container should sleep.
 
 <table>
     <thead>
@@ -11725,8 +11799,8 @@ Sleep represents the duration that the container should sleep before being termi
 
 
 Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept
-for the backward compatibility. There are no validation of this field and
-lifecycle hooks will fail in runtime when tcp handler is specified.
+for backward compatibility. There is no validation of this field and
+lifecycle hooks will fail at runtime when it is specified.
 
 <table>
     <thead>
@@ -11785,21 +11859,21 @@ More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-ho
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecephemeralcontainersindexlifecycleprestopexec">exec</a></b></td>
         <td>object</td>
         <td>
-          Exec specifies the action to take.<br/>
+          Exec specifies a command to execute in the container.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecephemeralcontainersindexlifecycleprestophttpget">httpGet</a></b></td>
         <td>object</td>
         <td>
-          HTTPGet specifies the http request to perform.<br/>
+          HTTPGet specifies an HTTP GET request to perform.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecephemeralcontainersindexlifecycleprestopsleep">sleep</a></b></td>
         <td>object</td>
         <td>
-          Sleep represents the duration that the container should sleep before being terminated.<br/>
+          Sleep represents a duration that the container should sleep.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -11807,8 +11881,8 @@ More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-ho
         <td>object</td>
         <td>
           Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept
-for the backward compatibility. There are no validation of this field and
-lifecycle hooks will fail in runtime when tcp handler is specified.<br/>
+for backward compatibility. There is no validation of this field and
+lifecycle hooks will fail at runtime when it is specified.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -11820,7 +11894,7 @@ lifecycle hooks will fail in runtime when tcp handler is specified.<br/>
 
 
 
-Exec specifies the action to take.
+Exec specifies a command to execute in the container.
 
 <table>
     <thead>
@@ -11851,7 +11925,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 
-HTTPGet specifies the http request to perform.
+HTTPGet specifies an HTTP GET request to perform.
 
 <table>
     <thead>
@@ -11945,7 +12019,7 @@ This will be canonicalized upon output, so case-variant names will be understood
 
 
 
-Sleep represents the duration that the container should sleep before being terminated.
+Sleep represents a duration that the container should sleep.
 
 <table>
     <thead>
@@ -11975,8 +12049,8 @@ Sleep represents the duration that the container should sleep before being termi
 
 
 Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept
-for the backward compatibility. There are no validation of this field and
-lifecycle hooks will fail in runtime when tcp handler is specified.
+for backward compatibility. There is no validation of this field and
+lifecycle hooks will fail at runtime when it is specified.
 
 <table>
     <thead>
@@ -12027,7 +12101,7 @@ Probes are not allowed for ephemeral containers.
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecephemeralcontainersindexlivenessprobeexec">exec</a></b></td>
         <td>object</td>
         <td>
-          Exec specifies the action to take.<br/>
+          Exec specifies a command to execute in the container.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -12044,14 +12118,14 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecephemeralcontainersindexlivenessprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies a GRPC HealthCheckRequest.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecephemeralcontainersindexlivenessprobehttpget">httpGet</a></b></td>
         <td>object</td>
         <td>
-          HTTPGet specifies the http request to perform.<br/>
+          HTTPGet specifies an HTTP GET request to perform.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -12088,7 +12162,7 @@ Defaults to 1. Must be 1 for liveness and startup. Minimum value is 1.<br/>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecephemeralcontainersindexlivenessprobetcpsocket">tcpSocket</a></b></td>
         <td>object</td>
         <td>
-          TCPSocket specifies an action involving a TCP port.<br/>
+          TCPSocket specifies a connection to a TCP port.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -12129,7 +12203,7 @@ More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#cont
 
 
 
-Exec specifies the action to take.
+Exec specifies a command to execute in the container.
 
 <table>
     <thead>
@@ -12160,7 +12234,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 
-GRPC specifies an action involving a GRPC port.
+GRPC specifies a GRPC HealthCheckRequest.
 
 <table>
     <thead>
@@ -12201,7 +12275,7 @@ If this is not specified, the default behavior is defined by gRPC.<br/>
 
 
 
-HTTPGet specifies the http request to perform.
+HTTPGet specifies an HTTP GET request to perform.
 
 <table>
     <thead>
@@ -12295,7 +12369,7 @@ This will be canonicalized upon output, so case-variant names will be understood
 
 
 
-TCPSocket specifies an action involving a TCP port.
+TCPSocket specifies a connection to a TCP port.
 
 <table>
     <thead>
@@ -12414,7 +12488,7 @@ Probes are not allowed for ephemeral containers.
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecephemeralcontainersindexreadinessprobeexec">exec</a></b></td>
         <td>object</td>
         <td>
-          Exec specifies the action to take.<br/>
+          Exec specifies a command to execute in the container.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -12431,14 +12505,14 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecephemeralcontainersindexreadinessprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies a GRPC HealthCheckRequest.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecephemeralcontainersindexreadinessprobehttpget">httpGet</a></b></td>
         <td>object</td>
         <td>
-          HTTPGet specifies the http request to perform.<br/>
+          HTTPGet specifies an HTTP GET request to perform.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -12475,7 +12549,7 @@ Defaults to 1. Must be 1 for liveness and startup. Minimum value is 1.<br/>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecephemeralcontainersindexreadinessprobetcpsocket">tcpSocket</a></b></td>
         <td>object</td>
         <td>
-          TCPSocket specifies an action involving a TCP port.<br/>
+          TCPSocket specifies a connection to a TCP port.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -12516,7 +12590,7 @@ More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#cont
 
 
 
-Exec specifies the action to take.
+Exec specifies a command to execute in the container.
 
 <table>
     <thead>
@@ -12547,7 +12621,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 
-GRPC specifies an action involving a GRPC port.
+GRPC specifies a GRPC HealthCheckRequest.
 
 <table>
     <thead>
@@ -12588,7 +12662,7 @@ If this is not specified, the default behavior is defined by gRPC.<br/>
 
 
 
-HTTPGet specifies the http request to perform.
+HTTPGet specifies an HTTP GET request to perform.
 
 <table>
     <thead>
@@ -12682,7 +12756,7 @@ This will be canonicalized upon output, so case-variant names will be understood
 
 
 
-TCPSocket specifies an action involving a TCP port.
+TCPSocket specifies a connection to a TCP port.
 
 <table>
     <thead>
@@ -13245,7 +13319,7 @@ Probes are not allowed for ephemeral containers.
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecephemeralcontainersindexstartupprobeexec">exec</a></b></td>
         <td>object</td>
         <td>
-          Exec specifies the action to take.<br/>
+          Exec specifies a command to execute in the container.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -13262,14 +13336,14 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecephemeralcontainersindexstartupprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies a GRPC HealthCheckRequest.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecephemeralcontainersindexstartupprobehttpget">httpGet</a></b></td>
         <td>object</td>
         <td>
-          HTTPGet specifies the http request to perform.<br/>
+          HTTPGet specifies an HTTP GET request to perform.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -13306,7 +13380,7 @@ Defaults to 1. Must be 1 for liveness and startup. Minimum value is 1.<br/>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecephemeralcontainersindexstartupprobetcpsocket">tcpSocket</a></b></td>
         <td>object</td>
         <td>
-          TCPSocket specifies an action involving a TCP port.<br/>
+          TCPSocket specifies a connection to a TCP port.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -13347,7 +13421,7 @@ More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#cont
 
 
 
-Exec specifies the action to take.
+Exec specifies a command to execute in the container.
 
 <table>
     <thead>
@@ -13378,7 +13452,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 
-GRPC specifies an action involving a GRPC port.
+GRPC specifies a GRPC HealthCheckRequest.
 
 <table>
     <thead>
@@ -13419,7 +13493,7 @@ If this is not specified, the default behavior is defined by gRPC.<br/>
 
 
 
-HTTPGet specifies the http request to perform.
+HTTPGet specifies an HTTP GET request to perform.
 
 <table>
     <thead>
@@ -13513,7 +13587,7 @@ This will be canonicalized upon output, so case-variant names will be understood
 
 
 
-TCPSocket specifies an action involving a TCP port.
+TCPSocket specifies a connection to a TCP port.
 
 <table>
     <thead>
@@ -14296,7 +14370,7 @@ More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/nam
 
 
 
-EnvFromSource represents the source of a set of ConfigMaps
+EnvFromSource represents the source of a set of ConfigMaps or Secrets
 
 <table>
     <thead>
@@ -14318,7 +14392,7 @@ EnvFromSource represents the source of a set of ConfigMaps
         <td><b>prefix</b></td>
         <td>string</td>
         <td>
-          An optional identifier to prepend to each key in the ConfigMap. Must be a C_IDENTIFIER.<br/>
+          Optional text to prepend to the name of each environment variable. Must be a C_IDENTIFIER.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -14454,6 +14528,15 @@ or until the termination grace period is reached.
 More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks<br/>
         </td>
         <td>false</td>
+      </tr><tr>
+        <td><b>stopSignal</b></td>
+        <td>string</td>
+        <td>
+          StopSignal defines which signal will be sent to a container when it is being stopped.
+If not specified, the default is defined by the container runtime in use.
+StopSignal can only be set for Pods with a non-empty .spec.os.name<br/>
+        </td>
+        <td>false</td>
       </tr></tbody>
 </table>
 
@@ -14481,21 +14564,21 @@ More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-ho
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecinitcontainersindexlifecyclepoststartexec">exec</a></b></td>
         <td>object</td>
         <td>
-          Exec specifies the action to take.<br/>
+          Exec specifies a command to execute in the container.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecinitcontainersindexlifecyclepoststarthttpget">httpGet</a></b></td>
         <td>object</td>
         <td>
-          HTTPGet specifies the http request to perform.<br/>
+          HTTPGet specifies an HTTP GET request to perform.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecinitcontainersindexlifecyclepoststartsleep">sleep</a></b></td>
         <td>object</td>
         <td>
-          Sleep represents the duration that the container should sleep before being terminated.<br/>
+          Sleep represents a duration that the container should sleep.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -14503,8 +14586,8 @@ More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-ho
         <td>object</td>
         <td>
           Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept
-for the backward compatibility. There are no validation of this field and
-lifecycle hooks will fail in runtime when tcp handler is specified.<br/>
+for backward compatibility. There is no validation of this field and
+lifecycle hooks will fail at runtime when it is specified.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -14516,7 +14599,7 @@ lifecycle hooks will fail in runtime when tcp handler is specified.<br/>
 
 
 
-Exec specifies the action to take.
+Exec specifies a command to execute in the container.
 
 <table>
     <thead>
@@ -14547,7 +14630,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 
-HTTPGet specifies the http request to perform.
+HTTPGet specifies an HTTP GET request to perform.
 
 <table>
     <thead>
@@ -14641,7 +14724,7 @@ This will be canonicalized upon output, so case-variant names will be understood
 
 
 
-Sleep represents the duration that the container should sleep before being terminated.
+Sleep represents a duration that the container should sleep.
 
 <table>
     <thead>
@@ -14671,8 +14754,8 @@ Sleep represents the duration that the container should sleep before being termi
 
 
 Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept
-for the backward compatibility. There are no validation of this field and
-lifecycle hooks will fail in runtime when tcp handler is specified.
+for backward compatibility. There is no validation of this field and
+lifecycle hooks will fail at runtime when it is specified.
 
 <table>
     <thead>
@@ -14731,21 +14814,21 @@ More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-ho
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecinitcontainersindexlifecycleprestopexec">exec</a></b></td>
         <td>object</td>
         <td>
-          Exec specifies the action to take.<br/>
+          Exec specifies a command to execute in the container.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecinitcontainersindexlifecycleprestophttpget">httpGet</a></b></td>
         <td>object</td>
         <td>
-          HTTPGet specifies the http request to perform.<br/>
+          HTTPGet specifies an HTTP GET request to perform.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecinitcontainersindexlifecycleprestopsleep">sleep</a></b></td>
         <td>object</td>
         <td>
-          Sleep represents the duration that the container should sleep before being terminated.<br/>
+          Sleep represents a duration that the container should sleep.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -14753,8 +14836,8 @@ More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-ho
         <td>object</td>
         <td>
           Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept
-for the backward compatibility. There are no validation of this field and
-lifecycle hooks will fail in runtime when tcp handler is specified.<br/>
+for backward compatibility. There is no validation of this field and
+lifecycle hooks will fail at runtime when it is specified.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -14766,7 +14849,7 @@ lifecycle hooks will fail in runtime when tcp handler is specified.<br/>
 
 
 
-Exec specifies the action to take.
+Exec specifies a command to execute in the container.
 
 <table>
     <thead>
@@ -14797,7 +14880,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 
-HTTPGet specifies the http request to perform.
+HTTPGet specifies an HTTP GET request to perform.
 
 <table>
     <thead>
@@ -14891,7 +14974,7 @@ This will be canonicalized upon output, so case-variant names will be understood
 
 
 
-Sleep represents the duration that the container should sleep before being terminated.
+Sleep represents a duration that the container should sleep.
 
 <table>
     <thead>
@@ -14921,8 +15004,8 @@ Sleep represents the duration that the container should sleep before being termi
 
 
 Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept
-for the backward compatibility. There are no validation of this field and
-lifecycle hooks will fail in runtime when tcp handler is specified.
+for backward compatibility. There is no validation of this field and
+lifecycle hooks will fail at runtime when it is specified.
 
 <table>
     <thead>
@@ -14976,7 +15059,7 @@ More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#cont
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecinitcontainersindexlivenessprobeexec">exec</a></b></td>
         <td>object</td>
         <td>
-          Exec specifies the action to take.<br/>
+          Exec specifies a command to execute in the container.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -14993,14 +15076,14 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecinitcontainersindexlivenessprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies a GRPC HealthCheckRequest.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecinitcontainersindexlivenessprobehttpget">httpGet</a></b></td>
         <td>object</td>
         <td>
-          HTTPGet specifies the http request to perform.<br/>
+          HTTPGet specifies an HTTP GET request to perform.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -15037,7 +15120,7 @@ Defaults to 1. Must be 1 for liveness and startup. Minimum value is 1.<br/>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecinitcontainersindexlivenessprobetcpsocket">tcpSocket</a></b></td>
         <td>object</td>
         <td>
-          TCPSocket specifies an action involving a TCP port.<br/>
+          TCPSocket specifies a connection to a TCP port.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -15078,7 +15161,7 @@ More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#cont
 
 
 
-Exec specifies the action to take.
+Exec specifies a command to execute in the container.
 
 <table>
     <thead>
@@ -15109,7 +15192,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 
-GRPC specifies an action involving a GRPC port.
+GRPC specifies a GRPC HealthCheckRequest.
 
 <table>
     <thead>
@@ -15150,7 +15233,7 @@ If this is not specified, the default behavior is defined by gRPC.<br/>
 
 
 
-HTTPGet specifies the http request to perform.
+HTTPGet specifies an HTTP GET request to perform.
 
 <table>
     <thead>
@@ -15244,7 +15327,7 @@ This will be canonicalized upon output, so case-variant names will be understood
 
 
 
-TCPSocket specifies an action involving a TCP port.
+TCPSocket specifies a connection to a TCP port.
 
 <table>
     <thead>
@@ -15366,7 +15449,7 @@ More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#cont
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecinitcontainersindexreadinessprobeexec">exec</a></b></td>
         <td>object</td>
         <td>
-          Exec specifies the action to take.<br/>
+          Exec specifies a command to execute in the container.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -15383,14 +15466,14 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecinitcontainersindexreadinessprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies a GRPC HealthCheckRequest.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecinitcontainersindexreadinessprobehttpget">httpGet</a></b></td>
         <td>object</td>
         <td>
-          HTTPGet specifies the http request to perform.<br/>
+          HTTPGet specifies an HTTP GET request to perform.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -15427,7 +15510,7 @@ Defaults to 1. Must be 1 for liveness and startup. Minimum value is 1.<br/>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecinitcontainersindexreadinessprobetcpsocket">tcpSocket</a></b></td>
         <td>object</td>
         <td>
-          TCPSocket specifies an action involving a TCP port.<br/>
+          TCPSocket specifies a connection to a TCP port.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -15468,7 +15551,7 @@ More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#cont
 
 
 
-Exec specifies the action to take.
+Exec specifies a command to execute in the container.
 
 <table>
     <thead>
@@ -15499,7 +15582,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 
-GRPC specifies an action involving a GRPC port.
+GRPC specifies a GRPC HealthCheckRequest.
 
 <table>
     <thead>
@@ -15540,7 +15623,7 @@ If this is not specified, the default behavior is defined by gRPC.<br/>
 
 
 
-HTTPGet specifies the http request to perform.
+HTTPGet specifies an HTTP GET request to perform.
 
 <table>
     <thead>
@@ -15634,7 +15717,7 @@ This will be canonicalized upon output, so case-variant names will be understood
 
 
 
-TCPSocket specifies an action involving a TCP port.
+TCPSocket specifies a connection to a TCP port.
 
 <table>
     <thead>
@@ -16205,7 +16288,7 @@ More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#cont
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecinitcontainersindexstartupprobeexec">exec</a></b></td>
         <td>object</td>
         <td>
-          Exec specifies the action to take.<br/>
+          Exec specifies a command to execute in the container.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -16222,14 +16305,14 @@ Defaults to 3. Minimum value is 1.<br/>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecinitcontainersindexstartupprobegrpc">grpc</a></b></td>
         <td>object</td>
         <td>
-          GRPC specifies an action involving a GRPC port.<br/>
+          GRPC specifies a GRPC HealthCheckRequest.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecinitcontainersindexstartupprobehttpget">httpGet</a></b></td>
         <td>object</td>
         <td>
-          HTTPGet specifies the http request to perform.<br/>
+          HTTPGet specifies an HTTP GET request to perform.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -16266,7 +16349,7 @@ Defaults to 1. Must be 1 for liveness and startup. Minimum value is 1.<br/>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecinitcontainersindexstartupprobetcpsocket">tcpSocket</a></b></td>
         <td>object</td>
         <td>
-          TCPSocket specifies an action involving a TCP port.<br/>
+          TCPSocket specifies a connection to a TCP port.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -16307,7 +16390,7 @@ More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#cont
 
 
 
-Exec specifies the action to take.
+Exec specifies a command to execute in the container.
 
 <table>
     <thead>
@@ -16338,7 +16421,7 @@ Exit status of 0 is treated as live/healthy and non-zero is unhealthy.<br/>
 
 
 
-GRPC specifies an action involving a GRPC port.
+GRPC specifies a GRPC HealthCheckRequest.
 
 <table>
     <thead>
@@ -16379,7 +16462,7 @@ If this is not specified, the default behavior is defined by gRPC.<br/>
 
 
 
-HTTPGet specifies the http request to perform.
+HTTPGet specifies an HTTP GET request to perform.
 
 <table>
     <thead>
@@ -16473,7 +16556,7 @@ This will be canonicalized upon output, so case-variant names will be understood
 
 
 
-TCPSocket specifies an action involving a TCP port.
+TCPSocket specifies a connection to a TCP port.
 
 <table>
     <thead>
@@ -16785,6 +16868,103 @@ be set.<br/>
 </table>
 
 
+#### CassandraDatacenter.spec.podTemplateSpec.spec.resources
+<sup><sup>[↩ Parent](#cassandradatacenterspecpodtemplatespecspec)</sup></sup>
+
+
+
+Resources is the total amount of CPU and Memory resources required by all
+containers in the pod. It supports specifying Requests and Limits for
+"cpu" and "memory" resource names only. ResourceClaims are not supported.
+
+This field enables fine-grained control over resource allocation for the
+entire pod, allowing resource sharing among containers in a pod.
+
+This is an alpha field and requires enabling the PodLevelResources feature
+gate.
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b><a href="#cassandradatacenterspecpodtemplatespecspecresourcesclaimsindex">claims</a></b></td>
+        <td>[]object</td>
+        <td>
+          Claims lists the names of resources, defined in spec.resourceClaims,
+that are used by this container.
+
+This is an alpha field and requires enabling the
+DynamicResourceAllocation feature gate.
+
+This field is immutable. It can only be set for containers.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>limits</b></td>
+        <td>map[string]int or string</td>
+        <td>
+          Limits describes the maximum amount of compute resources allowed.
+More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>requests</b></td>
+        <td>map[string]int or string</td>
+        <td>
+          Requests describes the minimum amount of compute resources required.
+If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+otherwise to an implementation-defined value. Requests cannot exceed Limits.
+More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/<br/>
+        </td>
+        <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### CassandraDatacenter.spec.podTemplateSpec.spec.resources.claims[index]
+<sup><sup>[↩ Parent](#cassandradatacenterspecpodtemplatespecspecresources)</sup></sup>
+
+
+
+ResourceClaim references one entry in PodSpec.ResourceClaims.
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>name</b></td>
+        <td>string</td>
+        <td>
+          Name must match the name of one entry in pod.spec.resourceClaims of
+the Pod where this field is used. It makes that resource available
+inside a container.<br/>
+        </td>
+        <td>true</td>
+      </tr><tr>
+        <td><b>request</b></td>
+        <td>string</td>
+        <td>
+          Request is the name chosen for a request in the referenced claim.
+If empty, everything from the claim is made available, otherwise
+only the result of this request.<br/>
+        </td>
+        <td>false</td>
+      </tr></tbody>
+</table>
+
+
 #### CassandraDatacenter.spec.podTemplateSpec.spec.schedulingGates[index]
 <sup><sup>[↩ Parent](#cassandradatacenterspecpodtemplatespecspec)</sup></sup>
 
@@ -16907,6 +17087,35 @@ for that container.
 Note that this field cannot be set when spec.os.name is windows.<br/>
           <br/>
             <i>Format</i>: int64<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>seLinuxChangePolicy</b></td>
+        <td>string</td>
+        <td>
+          seLinuxChangePolicy defines how the container's SELinux label is applied to all volumes used by the Pod.
+It has no effect on nodes that do not support SELinux or to volumes does not support SELinux.
+Valid values are "MountOption" and "Recursive".
+
+"Recursive" means relabeling of all files on all Pod volumes by the container runtime.
+This may be slow for large volumes, but allows mixing privileged and unprivileged Pods sharing the same volume on the same node.
+
+"MountOption" mounts all eligible Pod volumes with `-o context` mount option.
+This requires all Pods that share the same volume to use the same SELinux label.
+It is not possible to share the same volume among privileged and unprivileged Pods.
+Eligible volumes are in-tree FibreChannel and iSCSI volumes, and all CSI volumes
+whose CSI driver announces SELinux support by setting spec.seLinuxMount: true in their
+CSIDriver instance. Other volumes are always re-labelled recursively.
+"MountOption" value is allowed only when SELinuxMount feature gate is enabled.
+
+If not specified and SELinuxMount feature gate is enabled, "MountOption" is used.
+If not specified and SELinuxMount feature gate is disabled, "MountOption" is used for ReadWriteOncePod volumes
+and "Recursive" for all other volumes.
+
+This field affects only Pods that have SELinux label set, either in PodSecurityContext or in SecurityContext of all containers.
+
+All Pods that use the same volume should use the same seLinuxChangePolicy, otherwise some pods can get stuck in ContainerCreating state.
+Note that this field cannot be set when spec.os.name is windows.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -17418,8 +17627,7 @@ when calculating pod topology spread skew. Options are:
 - Honor: only nodes matching nodeAffinity/nodeSelector are included in the calculations.
 - Ignore: nodeAffinity/nodeSelector are ignored. All nodes are included in the calculations.
 
-If this value is nil, the behavior is equivalent to the Honor policy.
-This is a beta-level feature default enabled by the NodeInclusionPolicyInPodTopologySpread feature flag.<br/>
+If this value is nil, the behavior is equivalent to the Honor policy.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -17432,8 +17640,7 @@ pod topology spread skew. Options are:
 has a toleration, are included.
 - Ignore: node taints are ignored. All nodes are included.
 
-If this value is nil, the behavior is equivalent to the Ignore policy.
-This is a beta-level feature default enabled by the NodeInclusionPolicyInPodTopologySpread feature flag.<br/>
+If this value is nil, the behavior is equivalent to the Ignore policy.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -17555,6 +17762,8 @@ More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/nam
         <td>
           awsElasticBlockStore represents an AWS Disk resource that is attached to a
 kubelet's host machine and then exposed to the pod.
+Deprecated: AWSElasticBlockStore is deprecated. All operations for the in-tree
+awsElasticBlockStore type are redirected to the ebs.csi.aws.com CSI driver.
 More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore<br/>
         </td>
         <td>false</td>
@@ -17562,21 +17771,26 @@ More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockst
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecvolumesindexazuredisk">azureDisk</a></b></td>
         <td>object</td>
         <td>
-          azureDisk represents an Azure Data Disk mount on the host and bind mount to the pod.<br/>
+          azureDisk represents an Azure Data Disk mount on the host and bind mount to the pod.
+Deprecated: AzureDisk is deprecated. All operations for the in-tree azureDisk type
+are redirected to the disk.csi.azure.com CSI driver.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecvolumesindexazurefile">azureFile</a></b></td>
         <td>object</td>
         <td>
-          azureFile represents an Azure File Service mount on the host and bind mount to the pod.<br/>
+          azureFile represents an Azure File Service mount on the host and bind mount to the pod.
+Deprecated: AzureFile is deprecated. All operations for the in-tree azureFile type
+are redirected to the file.csi.azure.com CSI driver.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecvolumesindexcephfs">cephfs</a></b></td>
         <td>object</td>
         <td>
-          cephFS represents a Ceph FS mount on the host that shares a pod's lifetime<br/>
+          cephFS represents a Ceph FS mount on the host that shares a pod's lifetime.
+Deprecated: CephFS is deprecated and the in-tree cephfs type is no longer supported.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -17584,6 +17798,8 @@ More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockst
         <td>object</td>
         <td>
           cinder represents a cinder volume attached and mounted on kubelets host machine.
+Deprecated: Cinder is deprecated. All operations for the in-tree cinder type
+are redirected to the cinder.csi.openstack.org CSI driver.
 More info: https://examples.k8s.io/mysql-cinder-pd/README.md<br/>
         </td>
         <td>false</td>
@@ -17598,7 +17814,7 @@ More info: https://examples.k8s.io/mysql-cinder-pd/README.md<br/>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecvolumesindexcsi">csi</a></b></td>
         <td>object</td>
         <td>
-          csi (Container Storage Interface) represents ephemeral storage that is handled by certain external CSI drivers (Beta feature).<br/>
+          csi (Container Storage Interface) represents ephemeral storage that is handled by certain external CSI drivers.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -17658,14 +17874,16 @@ persistent volumes at the same time.<br/>
         <td>object</td>
         <td>
           flexVolume represents a generic volume resource that is
-provisioned/attached using an exec based plugin.<br/>
+provisioned/attached using an exec based plugin.
+Deprecated: FlexVolume is deprecated. Consider using a CSIDriver instead.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecvolumesindexflocker">flocker</a></b></td>
         <td>object</td>
         <td>
-          flocker represents a Flocker volume attached to a kubelet's host machine. This depends on the Flocker control service being running<br/>
+          flocker represents a Flocker volume attached to a kubelet's host machine. This depends on the Flocker control service being running.
+Deprecated: Flocker is deprecated and the in-tree flocker type is no longer supported.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -17674,6 +17892,8 @@ provisioned/attached using an exec based plugin.<br/>
         <td>
           gcePersistentDisk represents a GCE Disk resource that is attached to a
 kubelet's host machine and then exposed to the pod.
+Deprecated: GCEPersistentDisk is deprecated. All operations for the in-tree
+gcePersistentDisk type are redirected to the pd.csi.storage.gke.io CSI driver.
 More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk<br/>
         </td>
         <td>false</td>
@@ -17682,7 +17902,7 @@ More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
         <td>object</td>
         <td>
           gitRepo represents a git repository at a particular revision.
-DEPRECATED: GitRepo is deprecated. To provision a container with a git repo, mount an
+Deprecated: GitRepo is deprecated. To provision a container with a git repo, mount an
 EmptyDir into an InitContainer that clones the repo using git, then mount the EmptyDir
 into the Pod's container.<br/>
         </td>
@@ -17692,6 +17912,7 @@ into the Pod's container.<br/>
         <td>object</td>
         <td>
           glusterfs represents a Glusterfs mount on the host that shares a pod's lifetime.
+Deprecated: Glusterfs is deprecated and the in-tree glusterfs type is no longer supported.
 More info: https://examples.k8s.io/volumes/glusterfs/README.md<br/>
         </td>
         <td>false</td>
@@ -17722,7 +17943,7 @@ A failure to resolve or pull the image during pod startup will block containers 
 The types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.
 The OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.
 The volume will be mounted read-only (ro) and non-executable files (noexec).
-Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath).
+Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.
 The field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.<br/>
         </td>
         <td>false</td>
@@ -17756,14 +17977,18 @@ More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persis
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecvolumesindexphotonpersistentdisk">photonPersistentDisk</a></b></td>
         <td>object</td>
         <td>
-          photonPersistentDisk represents a PhotonController persistent disk attached and mounted on kubelets host machine<br/>
+          photonPersistentDisk represents a PhotonController persistent disk attached and mounted on kubelets host machine.
+Deprecated: PhotonPersistentDisk is deprecated and the in-tree photonPersistentDisk type is no longer supported.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecvolumesindexportworxvolume">portworxVolume</a></b></td>
         <td>object</td>
         <td>
-          portworxVolume represents a portworx volume attached and mounted on kubelets host machine<br/>
+          portworxVolume represents a portworx volume attached and mounted on kubelets host machine.
+Deprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type
+are redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate
+is on.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -17777,7 +18002,8 @@ More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persis
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecvolumesindexquobyte">quobyte</a></b></td>
         <td>object</td>
         <td>
-          quobyte represents a Quobyte mount on the host that shares a pod's lifetime<br/>
+          quobyte represents a Quobyte mount on the host that shares a pod's lifetime.
+Deprecated: Quobyte is deprecated and the in-tree quobyte type is no longer supported.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -17785,6 +18011,7 @@ More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persis
         <td>object</td>
         <td>
           rbd represents a Rados Block Device mount on the host that shares a pod's lifetime.
+Deprecated: RBD is deprecated and the in-tree rbd type is no longer supported.
 More info: https://examples.k8s.io/volumes/rbd/README.md<br/>
         </td>
         <td>false</td>
@@ -17792,7 +18019,8 @@ More info: https://examples.k8s.io/volumes/rbd/README.md<br/>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecvolumesindexscaleio">scaleIO</a></b></td>
         <td>object</td>
         <td>
-          scaleIO represents a ScaleIO persistent volume attached and mounted on Kubernetes nodes.<br/>
+          scaleIO represents a ScaleIO persistent volume attached and mounted on Kubernetes nodes.
+Deprecated: ScaleIO is deprecated and the in-tree scaleIO type is no longer supported.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -17807,14 +18035,17 @@ More info: https://kubernetes.io/docs/concepts/storage/volumes#secret<br/>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecvolumesindexstorageos">storageos</a></b></td>
         <td>object</td>
         <td>
-          storageOS represents a StorageOS volume attached and mounted on Kubernetes nodes.<br/>
+          storageOS represents a StorageOS volume attached and mounted on Kubernetes nodes.
+Deprecated: StorageOS is deprecated and the in-tree storageos type is no longer supported.<br/>
         </td>
         <td>false</td>
       </tr><tr>
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecvolumesindexvspherevolume">vsphereVolume</a></b></td>
         <td>object</td>
         <td>
-          vsphereVolume represents a vSphere volume attached and mounted on kubelets host machine<br/>
+          vsphereVolume represents a vSphere volume attached and mounted on kubelets host machine.
+Deprecated: VsphereVolume is deprecated. All operations for the in-tree vsphereVolume type
+are redirected to the csi.vsphere.vmware.com CSI driver.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -17828,6 +18059,8 @@ More info: https://kubernetes.io/docs/concepts/storage/volumes#secret<br/>
 
 awsElasticBlockStore represents an AWS Disk resource that is attached to a
 kubelet's host machine and then exposed to the pod.
+Deprecated: AWSElasticBlockStore is deprecated. All operations for the in-tree
+awsElasticBlockStore type are redirected to the ebs.csi.aws.com CSI driver.
 More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
 
 <table>
@@ -17887,6 +18120,8 @@ More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockst
 
 
 azureDisk represents an Azure Data Disk mount on the host and bind mount to the pod.
+Deprecated: AzureDisk is deprecated. All operations for the in-tree azureDisk type
+are redirected to the disk.csi.azure.com CSI driver.
 
 <table>
     <thead>
@@ -17956,6 +18191,8 @@ the ReadOnly setting in VolumeMounts.<br/>
 
 
 azureFile represents an Azure File Service mount on the host and bind mount to the pod.
+Deprecated: AzureFile is deprecated. All operations for the in-tree azureFile type
+are redirected to the file.csi.azure.com CSI driver.
 
 <table>
     <thead>
@@ -17997,7 +18234,8 @@ the ReadOnly setting in VolumeMounts.<br/>
 
 
 
-cephFS represents a Ceph FS mount on the host that shares a pod's lifetime
+cephFS represents a Ceph FS mount on the host that shares a pod's lifetime.
+Deprecated: CephFS is deprecated and the in-tree cephfs type is no longer supported.
 
 <table>
     <thead>
@@ -18100,6 +18338,8 @@ More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/nam
 
 
 cinder represents a cinder volume attached and mounted on kubelets host machine.
+Deprecated: Cinder is deprecated. All operations for the in-tree cinder type
+are redirected to the cinder.csi.openstack.org CSI driver.
 More info: https://examples.k8s.io/mysql-cinder-pd/README.md
 
 <table>
@@ -18308,7 +18548,7 @@ mode, like fsGroup, and the result can be other mode bits set.<br/>
 
 
 
-csi (Container Storage Interface) represents ephemeral storage that is handled by certain external CSI drivers (Beta feature).
+csi (Container Storage Interface) represents ephemeral storage that is handled by certain external CSI drivers.
 
 <table>
     <thead>
@@ -19257,6 +19497,7 @@ Either wwids or combination of targetWWNs and lun must be set, but not both simu
 
 flexVolume represents a generic volume resource that is
 provisioned/attached using an exec based plugin.
+Deprecated: FlexVolume is deprecated. Consider using a CSIDriver instead.
 
 <table>
     <thead>
@@ -19355,7 +19596,8 @@ More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/nam
 
 
 
-flocker represents a Flocker volume attached to a kubelet's host machine. This depends on the Flocker control service being running
+flocker represents a Flocker volume attached to a kubelet's host machine. This depends on the Flocker control service being running.
+Deprecated: Flocker is deprecated and the in-tree flocker type is no longer supported.
 
 <table>
     <thead>
@@ -19392,6 +19634,8 @@ should be considered as deprecated<br/>
 
 gcePersistentDisk represents a GCE Disk resource that is attached to a
 kubelet's host machine and then exposed to the pod.
+Deprecated: GCEPersistentDisk is deprecated. All operations for the in-tree
+gcePersistentDisk type are redirected to the pd.csi.storage.gke.io CSI driver.
 More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
 
 <table>
@@ -19453,7 +19697,7 @@ More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
 
 
 gitRepo represents a git repository at a particular revision.
-DEPRECATED: GitRepo is deprecated. To provision a container with a git repo, mount an
+Deprecated: GitRepo is deprecated. To provision a container with a git repo, mount an
 EmptyDir into an InitContainer that clones the repo using git, then mount the EmptyDir
 into the Pod's container.
 
@@ -19500,6 +19744,7 @@ the subdirectory with the given name.<br/>
 
 
 glusterfs represents a Glusterfs mount on the host that shares a pod's lifetime.
+Deprecated: Glusterfs is deprecated and the in-tree glusterfs type is no longer supported.
 More info: https://examples.k8s.io/volumes/glusterfs/README.md
 
 <table>
@@ -19599,7 +19844,7 @@ A failure to resolve or pull the image during pod startup will block containers 
 The types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.
 The OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.
 The volume will be mounted read-only (ro) and non-executable files (noexec).
-Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath).
+Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.
 The field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.
 
 <table>
@@ -19872,7 +20117,8 @@ Default false.<br/>
 
 
 
-photonPersistentDisk represents a PhotonController persistent disk attached and mounted on kubelets host machine
+photonPersistentDisk represents a PhotonController persistent disk attached and mounted on kubelets host machine.
+Deprecated: PhotonPersistentDisk is deprecated and the in-tree photonPersistentDisk type is no longer supported.
 
 <table>
     <thead>
@@ -19908,7 +20154,10 @@ Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.<br/>
 
 
 
-portworxVolume represents a portworx volume attached and mounted on kubelets host machine
+portworxVolume represents a portworx volume attached and mounted on kubelets host machine.
+Deprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type
+are redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate
+is on.
 
 <table>
     <thead>
@@ -20643,7 +20892,8 @@ and must be at least 10 minutes.<br/>
 
 
 
-quobyte represents a Quobyte mount on the host that shares a pod's lifetime
+quobyte represents a Quobyte mount on the host that shares a pod's lifetime.
+Deprecated: Quobyte is deprecated and the in-tree quobyte type is no longer supported.
 
 <table>
     <thead>
@@ -20712,6 +20962,7 @@ Defaults to serivceaccount user<br/>
 
 
 rbd represents a Rados Block Device mount on the host that shares a pod's lifetime.
+Deprecated: RBD is deprecated and the in-tree rbd type is no longer supported.
 More info: https://examples.k8s.io/volumes/rbd/README.md
 
 <table>
@@ -20847,6 +21098,7 @@ More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/nam
 
 
 scaleIO represents a ScaleIO persistent volume attached and mounted on Kubernetes nodes.
+Deprecated: ScaleIO is deprecated and the in-tree scaleIO type is no longer supported.
 
 <table>
     <thead>
@@ -21097,6 +21349,7 @@ mode, like fsGroup, and the result can be other mode bits set.<br/>
 
 
 storageOS represents a StorageOS volume attached and mounted on Kubernetes nodes.
+Deprecated: StorageOS is deprecated and the in-tree storageos type is no longer supported.
 
 <table>
     <thead>
@@ -21195,7 +21448,9 @@ More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/nam
 
 
 
-vsphereVolume represents a vSphere volume attached and mounted on kubelets host machine
+vsphereVolume represents a vSphere volume attached and mounted on kubelets host machine.
+Deprecated: VsphereVolume is deprecated. All operations for the in-tree vsphereVolume type
+are redirected to the csi.vsphere.vmware.com CSI driver.
 
 <table>
     <thead>
@@ -21834,8 +22089,7 @@ to select the group of existing pods which pods will be taken into consideration
 for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
 pod labels will be ignored. The default value is empty.
 The same key is forbidden to exist in both matchLabelKeys and labelSelector.
-Also, matchLabelKeys cannot be set when labelSelector isn't set.
-This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).<br/>
+Also, matchLabelKeys cannot be set when labelSelector isn't set.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -21849,8 +22103,7 @@ to select the group of existing pods which pods will be taken into consideration
 for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
 pod labels will be ignored. The default value is empty.
 The same key is forbidden to exist in both mismatchLabelKeys and labelSelector.
-Also, mismatchLabelKeys cannot be set when labelSelector isn't set.
-This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).<br/>
+Also, mismatchLabelKeys cannot be set when labelSelector isn't set.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -22098,8 +22351,7 @@ to select the group of existing pods which pods will be taken into consideration
 for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
 pod labels will be ignored. The default value is empty.
 The same key is forbidden to exist in both matchLabelKeys and labelSelector.
-Also, matchLabelKeys cannot be set when labelSelector isn't set.
-This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).<br/>
+Also, matchLabelKeys cannot be set when labelSelector isn't set.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -22113,8 +22365,7 @@ to select the group of existing pods which pods will be taken into consideration
 for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
 pod labels will be ignored. The default value is empty.
 The same key is forbidden to exist in both mismatchLabelKeys and labelSelector.
-Also, mismatchLabelKeys cannot be set when labelSelector isn't set.
-This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).<br/>
+Also, mismatchLabelKeys cannot be set when labelSelector isn't set.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -22442,8 +22693,7 @@ to select the group of existing pods which pods will be taken into consideration
 for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
 pod labels will be ignored. The default value is empty.
 The same key is forbidden to exist in both matchLabelKeys and labelSelector.
-Also, matchLabelKeys cannot be set when labelSelector isn't set.
-This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).<br/>
+Also, matchLabelKeys cannot be set when labelSelector isn't set.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -22457,8 +22707,7 @@ to select the group of existing pods which pods will be taken into consideration
 for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
 pod labels will be ignored. The default value is empty.
 The same key is forbidden to exist in both mismatchLabelKeys and labelSelector.
-Also, mismatchLabelKeys cannot be set when labelSelector isn't set.
-This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).<br/>
+Also, mismatchLabelKeys cannot be set when labelSelector isn't set.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -22706,8 +22955,7 @@ to select the group of existing pods which pods will be taken into consideration
 for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
 pod labels will be ignored. The default value is empty.
 The same key is forbidden to exist in both matchLabelKeys and labelSelector.
-Also, matchLabelKeys cannot be set when labelSelector isn't set.
-This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).<br/>
+Also, matchLabelKeys cannot be set when labelSelector isn't set.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -22721,8 +22969,7 @@ to select the group of existing pods which pods will be taken into consideration
 for the incoming pod's pod (anti) affinity. Keys that don't exist in the incoming
 pod labels will be ignored. The default value is empty.
 The same key is forbidden to exist in both mismatchLabelKeys and labelSelector.
-Also, mismatchLabelKeys cannot be set when labelSelector isn't set.
-This is a beta field and requires enabling MatchLabelKeysInPodAffinity feature gate (enabled by default).<br/>
+Also, mismatchLabelKeys cannot be set when labelSelector isn't set.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -23607,7 +23854,7 @@ The "Allow" property is only valid if all the other active Tasks have "Allow" as
         <td><b><a href="#cassandrataskspecdatacenter">datacenter</a></b></td>
         <td>object</td>
         <td>
-          Which datacenter this task is targetting. Note, this must be a datacenter which the current cass-operator
+          Which datacenter this task is targeting. Note, this must be a datacenter which the current cass-operator
 can access<br/>
         </td>
         <td>false</td>
@@ -23655,7 +23902,7 @@ the task will not be cleaned up by the cass-operator. If unset, the default time
 
 
 
-Which datacenter this task is targetting. Note, this must be a datacenter which the current cass-operator
+Which datacenter this task is targeting. Note, this must be a datacenter which the current cass-operator
 can access
 
 <table>
@@ -24157,7 +24404,7 @@ The "Allow" property is only valid if all the other active Tasks have "Allow" as
         <td><b><a href="#scheduledtaskspectaskdetailsdatacenter">datacenter</a></b></td>
         <td>object</td>
         <td>
-          Which datacenter this task is targetting. Note, this must be a datacenter which the current cass-operator
+          Which datacenter this task is targeting. Note, this must be a datacenter which the current cass-operator
 can access<br/>
         </td>
         <td>false</td>
@@ -24212,7 +24459,7 @@ the task will not be cleaned up by the cass-operator. If unset, the default time
 
 
 
-Which datacenter this task is targetting. Note, this must be a datacenter which the current cass-operator
+Which datacenter this task is targeting. Note, this must be a datacenter which the current cass-operator
 can access
 
 <table>
