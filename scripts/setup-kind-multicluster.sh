@@ -9,6 +9,8 @@
 
 set -e
 
+alias docker=podman
+
 getopt_version=$(getopt -V)
 if [[ "$getopt_version" == " --" ]]; then
   echo "gnu-getopt doesn't seem to be installed. Install it using: brew install gnu-getopt"

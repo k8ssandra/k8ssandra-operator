@@ -1628,6 +1628,16 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 
 	assert.NotEqual("none", serverEncryptionOptions["internode_encryption"].(string), "server_encryption_options is not enabled")
 
+	medusaContainerIdx, foundMedusa := cassandra.FindContainer(dc1.Spec.PodTemplateSpec, "medusa")
+	require.True(foundMedusa, "failed to find medusa container in dc1")
+	medusaContainer := dc1.Spec.PodTemplateSpec.Spec.Containers[medusaContainerIdx]
+
+	for _, mount := range medusaContainer.VolumeMounts {
+		if mount.Name == "certfile" {
+			assert.Equal("/etc/certificates/certfile", mount.MountPath, "certfile isn't mounted correctly")
+		}
+	}
+
 	t.Log("update dc1 status to ready")
 	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {
 		dc.Status.CassandraOperatorProgress = cassdcapi.ProgressReady
@@ -1863,20 +1873,28 @@ func applyClusterWithEncryptionOptionsExternalSecrets(t *testing.T, ctx context.
 	}
 
 	// Create the client keystore and truststore secrets
-	clientCertificates := &corev1.Secret{
+	certfileSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "client-certificates",
+			Name:      "client-certificates-certfile",
 			Namespace: namespace,
 		},
 		Data: map[string][]byte{
-			"rootca.crt": []byte("Root CA content"),
-			"client.crt": []byte("Client certificate content"),
-			"client.key": []byte("Client key content"),
+			"certfile": []byte("Root CA content"),
+		},
+	}
+	usercertSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "client-certificates-usercert",
+			Namespace: namespace,
+		},
+		Data: map[string][]byte{
+			"usercert":     []byte("Client certificate content"),
+			"usercert-key": []byte("Client key content"),
 		},
 	}
 
 	// Loop over the secrets and create them
-	for _, secret := range []*corev1.Secret{clientKeystore, clientTruststore, serverKeystore, serverTruststore, clientCertificates} {
+	for _, secret := range []*corev1.Secret{clientKeystore, clientTruststore, serverKeystore, serverTruststore, certfileSecret, usercertSecret} {
 		secretKey := utils.GetKey(secret)
 		secretClusterKey0 := framework.ClusterKey{NamespacedName: secretKey, K8sContext: f.DataPlaneContexts[0]}
 		require.NoError(f.Create(ctx, secretClusterKey0, secret))
@@ -1929,6 +1947,20 @@ func applyClusterWithEncryptionOptionsExternalSecrets(t *testing.T, ctx context.
 			Medusa: &medusaapi.MedusaClusterTemplate{
 				ContainerImage: &images.Image{
 					Repository: medusaImageRepo,
+				},
+				ClientEncryptionStores: &encryption.Stores{
+					KeystoreSecretRef: &encryption.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "client-certificates-certfile"},
+						Key:                  "certfile",
+					},
+					TruststoreSecretRef: &encryption.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "client-certificates-usercert"},
+						Key:                  "usercert-someSuffix",
+					},
+					TruststorePasswordSecretRef: &encryption.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "client-certificates-usercert"},
+						Key:                  "usercert-key",
+					},
 				},
 				StorageProperties: medusaapi.Storage{
 					StorageProvider: "s3_compatible",
@@ -2001,6 +2033,19 @@ func applyClusterWithEncryptionOptionsExternalSecrets(t *testing.T, ctx context.
 	serverEncryptionOptions := cassYaml["server_encryption_options"].(map[string]interface{})
 
 	assert.NotEqual("none", serverEncryptionOptions["internode_encryption"].(string), "server_encryption_options is not enabled")
+
+	medusaContainerIdx, foundMedusa := cassandra.FindContainer(dc1.Spec.PodTemplateSpec, "medusa")
+	require.True(foundMedusa, "failed to find medusa container in dc1")
+	medusaContainer := dc1.Spec.PodTemplateSpec.Spec.Containers[medusaContainerIdx]
+
+	for _, mount := range medusaContainer.VolumeMounts {
+		if mount.Name == "certfile" {
+			assert.Equal("/etc/certificates/certfile", mount.MountPath, "certfile isn't mounted correctly")
+		}
+		if mount.Name == "usercert" {
+			assert.Equal("/etc/certificates/usercert", mount.MountPath, "usercert isn't mounted correctly")
+		}
+	}
 
 	t.Log("update dc1 status to ready")
 	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {

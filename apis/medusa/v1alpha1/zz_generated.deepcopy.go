@@ -21,6 +21,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -385,6 +386,11 @@ func (in *MedusaClusterTemplate) DeepCopyInto(out *MedusaClusterTemplate) {
 	in.StorageProperties.DeepCopyInto(&out.StorageProperties)
 	out.ServiceProperties = in.ServiceProperties
 	out.CertificatesSecretRef = in.CertificatesSecretRef
+	if in.ClientEncryptionStores != nil {
+		in, out := &in.ClientEncryptionStores, &out.ClientEncryptionStores
+		*out = new(encryption.Stores)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.InitContainerResources != nil {
 		in, out := &in.InitContainerResources, &out.InitContainerResources
 		*out = new(v1.ResourceRequirements)

@@ -231,7 +231,10 @@ spec:
 
 ## Medusa encryption
 
-In order to work with a cluster with client to node encryption, Medusa will require an additional client certificate to be created as previously instructed.
+In order to work with a cluster that has client-to-node encryption enabled, Medusa needs to use a matching certificate (consisting of client certificate and key, as well as the root CA certificate) that the Python Driver can use.
+
+This certificate can be generated with the command mentioned above. Result will be a single `Secret` holding all the various components under hard-coded keys.
+
 After having created the `client-certificates` secret, you will need to reference it in the `medusa` section of the `K8ssandraCluster` manifest:
 
 ```yaml
@@ -243,7 +246,28 @@ spec:
       name: client-certificates
 ```
 
-This will provide Medusa with the client certificate and key, as well as the root CA certificate, which will be used to connect to the Cassandra cluster through the Python Driver.
+However, this aproach is too prescriptive and we decided to deprecate it. As a replacement, we added `clientEncryptionStores` field to `medusa`'s spec. It allows more flexible control of where do Medusa's certificates come from.
+
+To achieve the same behaviour as `certificatesSecretRef` (to use a certificate generated with the command earlier), the spec should look like this:
+
+```yaml
+...
+spec:
+  ...
+  medusa:
+    clientEncryptionStores:
+      keystoreSecretRef:
+        name: client-certificates
+        key: rootca.crt
+      truststoreSecretRef:
+        name: client-certificates
+        key: client.crt_signed
+      truststorePasswordSecretRef:
+        name: client-certificates
+        key: client.key
+```
+
+The `clientEncryptionStores` also feature `KeystorePasswordRef`, which is ignored in this case. When both `certificatesSecretRef` and `clientEncryptionStores` are set, the operator will use `certificatesSecretRef` and log a line about doing so.
 
 ## Next steps
 
