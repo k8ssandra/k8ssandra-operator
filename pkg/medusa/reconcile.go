@@ -63,6 +63,16 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster, dcConfig *cassandra.DatacenterCo
     certfile = /etc/certificates/rootca.crt
     usercert = /etc/certificates/client.crt_signed
     userkey = /etc/certificates/client.key
+	{{- else if .Spec.Medusa.ClientEncryptionStores }}
+	  {{- if .Spec.Medusa.ClientEncryptionStores.KeystoreSecretRef }}
+    certfile = /etc/certificates/certfile/{{ .Spec.Medusa.ClientEncryptionStores.KeystoreSecretRef.Key }}
+	  {{- end}}
+	  {{- if .Spec.Medusa.ClientEncryptionStores.TruststoreSecretRef }}
+    usercert = /etc/certificates/usercert/{{ .Spec.Medusa.ClientEncryptionStores.TruststoreSecretRef.Key }}
+	  {{- end}}
+	  {{- if .Spec.Medusa.ClientEncryptionStores.TruststorePasswordSecretRef }}
+    userkey = /etc/certificates/userkey/{{ .Spec.Medusa.ClientEncryptionStores.TruststorePasswordSecretRef.Key }}
+	  {{- end}}
     {{- end}}
 
     [storage]
@@ -318,6 +328,19 @@ func medusaVolumeMounts(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.Me
 			Name:      "certificates",
 			MountPath: "/etc/certificates",
 		})
+	} else if medusaSpec.ClientEncryptionStores != nil {
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "certfile",
+			MountPath: "/etc/certificates/certfile",
+		})
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "usercert",
+			MountPath: "/etc/certificates/usercert",
+		})
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "userkey",
+			MountPath: "/etc/certificates/userkey",
+		})
 	}
 
 	// Mount secret with Medusa storage backend credentials if the secret ref is provided.
@@ -463,22 +486,8 @@ func GenerateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *api
 	})
 
 	// Encryption client certificates
-	if medusaSpec.CertificatesSecretRef.Name != "" {
-		encryptionClientVolumeIndex, found := cassandra.FindVolume(&dcConfig.PodTemplateSpec, "certificates")
-		encryptionClientVolume := &corev1.Volume{
-			Name: "certificates",
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: medusaSpec.CertificatesSecretRef.Name,
-				},
-			},
-		}
-
-		newVolumes = append(newVolumes, medusaVolume{
-			Volume:      encryptionClientVolume,
-			VolumeIndex: encryptionClientVolumeIndex,
-			Exists:      found,
-		})
+	if volumes := calculateClientEncryptionVolumes(dcConfig, medusaSpec); len(volumes) > 0 {
+		newVolumes = append(newVolumes, volumes...)
 	}
 
 	// Management-api client certificates
@@ -515,6 +524,54 @@ func GenerateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *api
 	})
 
 	return newVolumes
+}
+
+func calculateClientEncryptionVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate) []medusaVolume {
+	volumes := []medusaVolume{}
+	if medusaSpec.CertificatesSecretRef.Name != "" {
+		// default but deprecated, has priority to ensure backwards compatibility
+		volumes = append(volumes, newVolumeFromCertificateSecret(dcConfig, medusaSpec))
+	} else if medusaSpec.ClientEncryptionStores != nil {
+		volumes = append(volumes, newVolumesFromClientEncryptionStores(dcConfig, medusaSpec)...)
+	}
+	return volumes
+}
+
+func newVolumeFromCertificateSecret(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate) medusaVolume {
+	// the CertificateSecretRef only allows one secret reference, the individual field keys are assumed
+	return newMedusaVolume(dcConfig, "certificates", medusaSpec.CertificatesSecretRef.Name)
+}
+
+func newVolumesFromClientEncryptionStores(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate) []medusaVolume {
+	// with ClientEncryptionStores we can have each component reside in a different secret (and use a configurable key inside that secret)
+	volumes := []medusaVolume{}
+	if medusaSpec.ClientEncryptionStores.KeystoreSecretRef != nil {
+		volumes = append(volumes, newMedusaVolume(dcConfig, "certfile", medusaSpec.ClientEncryptionStores.KeystoreSecretRef.Name))
+	}
+	if medusaSpec.ClientEncryptionStores.TruststoreSecretRef != nil {
+		volumes = append(volumes, newMedusaVolume(dcConfig, "usercert", medusaSpec.ClientEncryptionStores.TruststoreSecretRef.Name))
+	}
+	if medusaSpec.ClientEncryptionStores.TruststorePasswordSecretRef != nil {
+		volumes = append(volumes, newMedusaVolume(dcConfig, "userkey", medusaSpec.ClientEncryptionStores.TruststorePasswordSecretRef.Name))
+	}
+	return volumes
+}
+
+func newMedusaVolume(dcConfig *cassandra.DatacenterConfig, volumeName, secretName string) medusaVolume {
+	encryptionClientVolumeIndex, found := cassandra.FindVolume(&dcConfig.PodTemplateSpec, volumeName)
+	encryptionClientVolume := &corev1.Volume{
+		Name: volumeName,
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: secretName,
+			},
+		},
+	}
+	return medusaVolume{
+		Volume:      encryptionClientVolume,
+		VolumeIndex: encryptionClientVolumeIndex,
+		Exists:      found,
+	}
 }
 
 func MedusaPurgeCronJobName(clusterName string, dcName string) string {

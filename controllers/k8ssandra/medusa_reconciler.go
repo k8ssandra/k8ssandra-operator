@@ -48,10 +48,18 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 
 		// Check that certificates are provided if client encryption is enabled
 		if cassandra.ClientEncryptionEnabled(dcConfig) {
+			// check if we need to worry about client encryption stores ourselves
 			if kc.Spec.UseExternalSecrets() {
 				medusaSpec.CertificatesSecretRef.Name = ""
-			} else if medusaSpec.CertificatesSecretRef.Name == "" {
+			} else if medusaSpec.CertificatesSecretRef.Name == "" && medusaSpec.ClientEncryptionStores == nil {
 				return result.Error(fmt.Errorf("medusa encryption certificates were not provided despite client encryption being enabled"))
+			}
+			// possibly issue warnings about using the deprecated way of setting medusa's client certs
+			if medusaSpec.CertificatesSecretRef.Name != "" {
+				logger.Info("medusa.Spec.CertificatesSecretRef has been deprecated, please use medusa.Spec.ClientEncryptionStores instead")
+			}
+			if medusaSpec.CertificatesSecretRef.Name != "" && medusaSpec.ClientEncryptionStores != nil {
+				logger.Info("medusa has both certificatesSecretRef and clientEncryptionStores set, will still use the certificatesSecretRef for backwards compatibility")
 			}
 		}
 

@@ -20,3 +20,5 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [CHANGE] [#1561](https://github.com/k8ssandra/k8ssandra-operator/issues/1561) Bump Medusa to 0.24.1
 * [BUGFIX] [#1553](https://github.com/k8ssandra/k8ssandra-operator/pull/1553) Add cluster's common labels and annotations to replicated secrets and Vector's config map
 * [BUGFIX] [#1558](https://github.com/k8ssandra/k8ssandra-operator/issues/1558) Authentication settings aren't applied correctly to cassandra.yaml
+* [CHANGE] [#1561](https://github.com/k8ssandra/k8ssandra-operator/issues/1561) Bump Medusa to 0.24.1
+* [ENHANCEMENT] [#1575](https://github.com/k8ssandra/k8ssandra-operator/issues/1575) Make Medusa's encryption materials fully configurable

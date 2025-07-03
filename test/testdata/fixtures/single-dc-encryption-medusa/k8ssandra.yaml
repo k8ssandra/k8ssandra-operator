@@ -25,8 +25,18 @@ spec:
       host: minio-service.minio.svc.cluster.local
       port: 9000
       secure: false 
-    certificatesSecretRef:
-      name: client-certificates
+    clientEncryptionStores:
+      # keystore has its own secret
+      keystoreSecretRef:
+        name: secrets-with-rootca
+        key: rootca-with-custom-key
+      # trustore items reside in the same secret
+      truststoreSecretRef:
+        name: secret-with-userkey
+        key: my-usercert
+      truststorePasswordSecretRef:
+        name: secret-with-userkey
+        key: my-userkey
     securityContext:
       allowPrivilegeEscalation: false
       capabilities:
