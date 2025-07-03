@@ -45,26 +45,11 @@ func (r *K8ssandraClusterReconciler) checkDeletion(ctx context.Context, kc *api.
 	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
 		namespace := utils.FirstNonEmptyString(dcTemplate.Meta.Namespace, kc.Namespace)
 
-		dcKey := client.ObjectKey{Namespace: namespace, Name: dcTemplate.Meta.Name}
-
 		remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext)
 		if err != nil {
 			logger.Error(err, "Failed to get remote client", "Context", dcTemplate.K8sContext)
 			hasErrors = true
 			continue
-		}
-
-		dc := &cassdcapi.CassandraDatacenter{}
-		err = remoteClient.Get(ctx, dcKey, dc)
-		if err != nil {
-			if !errors.IsNotFound(err) {
-				logger.Error(err, "Failed to get CassandraDatacenter for deletion",
-					"CassandraDatacenter", dcKey, "Context", dcTemplate.K8sContext)
-				hasErrors = true
-			}
-		} else if err = remoteClient.Delete(ctx, dc); err != nil {
-			logger.Error(err, "Failed to delete CassandraDatacenter", "CassandraDatacenter", dcKey, "Context", dcTemplate.K8sContext)
-			hasErrors = true
 		}
 
 		selector := k8ssandralabels.CleanedUpByLabels(kcKey)
@@ -110,6 +95,26 @@ func (r *K8ssandraClusterReconciler) checkDeletion(ctx context.Context, kc *api.
 
 		if r.deleteCronJobs(ctx, kc, dcTemplate, namespace, remoteClient, logger) {
 			hasErrors = true
+		}
+
+		dcKey := client.ObjectKey{Namespace: namespace, Name: dcTemplate.Meta.Name}
+		dc := &cassdcapi.CassandraDatacenter{}
+		err = remoteClient.Get(ctx, dcKey, dc)
+		if err != nil {
+			// If the DC is not found, it means it has already been deleted.
+			if !errors.IsNotFound(err) {
+				logger.Error(err, "Failed to get CassandraDatacenter for deletion",
+					"CassandraDatacenter", dcKey, "Context", dcTemplate.K8sContext)
+				hasErrors = true
+			}
+		} else if err = remoteClient.Delete(ctx, dc); err != nil {
+			logger.Error(err, "Failed to delete CassandraDatacenter", "CassandraDatacenter", dcKey, "Context", dcTemplate.K8sContext)
+			hasErrors = true
+		} else {
+			// If the DC is found, it means it has not been deleted yet.
+			// We need to requeue to wait for the deletion to complete.
+			logger.Info("Waiting for actual deletion of CassandraDatacenter", "CassandraDatacenter", utils.GetKey(dc))
+			return result.RequeueSoon(r.DefaultDelay)
 		}
 	}
 
