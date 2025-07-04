@@ -19,6 +19,7 @@ import (
 	reaperclient "github.com/k8ssandra/reaper-client-go/reaper"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/k8ssandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 
@@ -30,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -1336,6 +1338,10 @@ func checkDatacenterReady(t *testing.T, ctx context.Context, key framework.Clust
 		status := dc.GetConditionStatus(cassdcapi.DatacenterReady)
 		return status == corev1.ConditionTrue && dc.Status.CassandraOperatorProgress == cassdcapi.ProgressReady
 	}), polling.datacenterReady.timeout, polling.datacenterReady.interval, fmt.Sprintf("timed out waiting for datacenter %s to become ready", key.Name))
+	t.Logf("check that datacenter %s in cluster %s has the finalizer", key.Name, key.K8sContext)
+	require.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
+		return controllerutil.ContainsFinalizer(dc, k8ssandra.K8ssandraClusterFinalizer)
+	}), polling.datacenterReady.timeout, polling.datacenterReady.interval, fmt.Sprintf("timed out waiting for datacenter %s to have the finalizer", key.Name))
 }
 
 func checkDatacenterHasHeapSizeSet(t *testing.T, ctx context.Context, key framework.ClusterKey, f *framework.E2eFramework) {

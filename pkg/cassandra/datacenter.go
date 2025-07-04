@@ -12,6 +12,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	goalesceutils "github.com/k8ssandra/k8ssandra-operator/pkg/goalesce"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/k8ssandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -164,6 +165,7 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 				api.PartOfLabel:    api.PartOfLabelValue,
 				api.ComponentLabel: api.ComponentLabelValueCassandra,
 			}, labels.CleanedUpByLabels(klusterKey)),
+			Finalizers: []string{k8ssandra.K8ssandraClusterFinalizer},
 		},
 		Spec: cassdcapi.CassandraDatacenterSpec{
 			Size:                   template.Size,
