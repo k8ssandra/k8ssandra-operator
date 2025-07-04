@@ -26,6 +26,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/k8ssandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/unstructured"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
@@ -2184,7 +2185,7 @@ func verifyFinalizerAdded(ctx context.Context, t *testing.T, f *framework.Framew
 			t.Logf("failed to get K8ssandraCluster: %v", err)
 			return false
 		}
-		return controllerutil.ContainsFinalizer(kc, k8ssandraClusterFinalizer)
+		return controllerutil.ContainsFinalizer(kc, k8ssandra.K8ssandraClusterFinalizer)
 	}, timeout, interval, "failed to verify that finalizer was added")
 }
 

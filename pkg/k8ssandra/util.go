@@ -5,6 +5,10 @@ import (
 	"k8s.io/utils/strings/slices"
 )
 
+const (
+	K8ssandraClusterFinalizer = "k8ssandracluster.k8ssandra.io/finalizer"
+)
+
 func GetDatacenterForDecommission(kc *api.K8ssandraCluster) string {
 	dcNames := make([]string, 0)
 	for _, dc := range kc.Spec.Cassandra.Datacenters {

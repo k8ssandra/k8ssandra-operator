@@ -49,10 +49,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-const (
-	k8ssandraClusterFinalizer = "k8ssandracluster.k8ssandra.io/finalizer"
-)
-
 // K8ssandraClusterReconciler reconciles a K8ssandraCluster object
 type K8ssandraClusterReconciler struct {
 	*config.ReconcilerConfig
