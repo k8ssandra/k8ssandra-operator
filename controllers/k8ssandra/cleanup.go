@@ -97,13 +97,9 @@ func (r *K8ssandraClusterReconciler) checkDeletion(ctx context.Context, kc *api.
 			hasErrors = true
 		}
 
-		res := r.deleteDc(ctx, kc, dcTemplate.Meta.Name, logger)
-		if res.IsDone() {
-			// DC deletion was initiated but the deletion is not complete yet.
-			// cass-operator will trigger a reconciliation when the deletion is complete.
-			return res
-		}
-		if res.IsError() {
+		if dcHasErrors, earlyReturn := r.deleteCassandraDatacenter(ctx, dcTemplate, namespace, remoteClient, logger); earlyReturn != nil {
+			return *earlyReturn
+		} else if dcHasErrors {
 			hasErrors = true
 		}
 	}
@@ -115,10 +111,6 @@ func (r *K8ssandraClusterReconciler) checkDeletion(ctx context.Context, kc *api.
 	patch := client.MergeFrom(kc.DeepCopy())
 	controllerutil.RemoveFinalizer(kc, k8ssandra.K8ssandraClusterFinalizer)
 	if err := r.Client.Patch(ctx, kc, patch); err != nil {
-		if errors.IsNotFound(err) {
-			logger.Info("K8ssandraCluster not found, finalizer already removed")
-			return result.Done()
-		}
 		logger.Error(err, "Failed to remove finalizer")
 		return result.Error(err)
 	}
@@ -483,6 +475,50 @@ func (r *K8ssandraClusterReconciler) deleteCronJobs(
 				kcLogger.Error(err, "Failed to delete CronJob", "CronJob", key, "Context", dcTemplate.K8sContext)
 			}
 		}
+	}
+	return
+}
+
+func (r *K8ssandraClusterReconciler) deleteCassandraDatacenter(
+	ctx context.Context,
+	dcTemplate k8ssandraapi.CassandraDatacenterTemplate,
+	namespace string,
+	remoteClient client.Client,
+	logger logr.Logger,
+) (hasErrors bool, earlyReturn *result.ReconcileResult) {
+	dcKey := client.ObjectKey{Namespace: namespace, Name: dcTemplate.Meta.Name}
+	dc := &cassdcapi.CassandraDatacenter{}
+	err := remoteClient.Get(ctx, dcKey, dc)
+	if err != nil {
+		// If the DC is not found, it means it has already been deleted.
+		if !errors.IsNotFound(err) {
+			logger.Error(err, "Failed to get CassandraDatacenter for deletion",
+				"CassandraDatacenter", dcKey, "Context", dcTemplate.K8sContext)
+			hasErrors = true
+		}
+		return
+	}
+
+	// Remove finalizer before deletion
+	if controllerutil.ContainsFinalizer(dc, k8ssandra.K8ssandraClusterFinalizer) {
+		patch := client.MergeFrom(dc.DeepCopy())
+		controllerutil.RemoveFinalizer(dc, k8ssandra.K8ssandraClusterFinalizer)
+		if err := remoteClient.Patch(ctx, dc, patch); err != nil {
+			logger.Error(err, "Failed to remove finalizer from CassandraDatacenter", "CassandraDatacenter", dcKey, "Context", dcTemplate.K8sContext)
+			hasErrors = true
+			return
+		}
+	}
+
+	if err = remoteClient.Delete(ctx, dc); err != nil {
+		logger.Error(err, "Failed to delete CassandraDatacenter", "CassandraDatacenter", dcKey, "Context", dcTemplate.K8sContext)
+		hasErrors = true
+	} else {
+		// If the DC is found, it means it has not been deleted yet.
+		// We need to requeue to wait for the deletion to complete.
+		logger.Info("Waiting for actual deletion of CassandraDatacenter", "CassandraDatacenter", utils.GetKey(dc))
+		result := result.RequeueSoon(r.DefaultDelay)
+		earlyReturn = &result
 	}
 	return
 }
