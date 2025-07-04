@@ -135,7 +135,7 @@ func testMedusaConfigurationKo(t *testing.T, ctx context.Context, f *framework.F
 		}
 		t.Logf("medusa configuration not ready yet")
 		return false
-	}, timeout, interval)
+	}, neverTimeout, interval)
 }
 
 // Testing that the medusa configuration is ready even if no secret is provided.
