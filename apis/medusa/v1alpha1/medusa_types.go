@@ -179,7 +179,7 @@ type MedusaClusterTemplate struct {
 	CertificatesSecretRef corev1.LocalObjectReference `json:"certificatesSecretRef,omitempty"`
 
 	// Certificates for Medusa to use if Cassandra has client encryption enabled. Replaces CertificatesSecretRef.
-	// The secret still must reside in the same namespace as Cassandra, but we now allow configuring which keys contain which certificate component.
+	// The secret still must reside in the same namespace as the CassandraDatacenter, but we now allow configuring which keys contain which certificate component.
 	// +optional
 	ClientEncryptionStores *encryption.Stores `json:"clientEncryptionStores,omitempty"`
 
