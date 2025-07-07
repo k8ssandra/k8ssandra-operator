@@ -66,6 +66,14 @@ spec:
             volumeMounts:
               - name: busybox-vol
                 mountPath: /var/lib/busybox
+            lifecycle:
+              preStop:
+                exec:
+                  command:
+                    - sh
+                    - '-c'
+                    - sleep 180
+            
         extraVolumes:
           volumes:
             - name: busybox-vol
