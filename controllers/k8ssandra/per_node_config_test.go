@@ -229,37 +229,40 @@ func defaultPerNodeConfiguration(t *testing.T, ctx context.Context, f *framework
 	dc2Key := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, "dc2")
 
 	perNodeConfig1 := &corev1.ConfigMap{}
-	assert.Eventually(t, func() bool {
+	assert.EventuallyWithT(t, func(c *assert.CollectT) {
 		perNodeConfigKey := framework.NewClusterKey(f.DataPlaneContexts[0], kc.Namespace, "test1-dc1-per-node-config")
 		err := f.Get(ctx, perNodeConfigKey, perNodeConfig1)
-		return assert.NoError(t, err, "failed to create ConfigMap") &&
-			assert.Contains(t, perNodeConfig1.Data, "test1-dc1-default-sts-0_cassandra.yaml") &&
-			assert.Contains(t, perNodeConfig1.Data, "test1-dc1-default-sts-1_cassandra.yaml") &&
-			assert.Contains(t, perNodeConfig1.Data, "test1-dc1-default-sts-2_cassandra.yaml") &&
-			assert.NotContains(t, perNodeConfig1.Data, "test1-dc1-default-sts-3_cassandra.yaml") &&
-			assert.NotContains(t, perNodeConfig1.Data, "test1-dc1-default-sts-4_cassandra.yaml")
+		assert.NoError(c, err, "failed to create ConfigMap")
+		assert.Contains(c, perNodeConfig1.Data, "test1-dc1-default-sts-0_cassandra.yaml")
+		assert.Contains(c, perNodeConfig1.Data, "test1-dc1-default-sts-1_cassandra.yaml")
+		assert.Contains(c, perNodeConfig1.Data, "test1-dc1-default-sts-2_cassandra.yaml")
+		assert.NotContains(c, perNodeConfig1.Data, "test1-dc1-default-sts-3_cassandra.yaml")
+		assert.NotContains(c, perNodeConfig1.Data, "test1-dc1-default-sts-4_cassandra.yaml")
 	}, timeout, interval)
+
+	require.Eventually(t, f.DatacenterExists(ctx, dc1Key), timeout, interval, "CassandraDatacenter %s did not appear", dc2Key)
 
 	err = f.SetDatacenterStatusReady(ctx, dc1Key)
 	require.NoError(t, err, "failed to set CassandraDatacenter status to ready")
 
 	perNodeConfig2 := &corev1.ConfigMap{}
-	assert.Eventually(t, func() bool {
+	assert.EventuallyWithT(t, func(c *assert.CollectT) {
 		perNodeConfigKey := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, "test1-dc2-per-node-config")
 		err := f.Get(ctx, perNodeConfigKey, perNodeConfig2)
-		return assert.NoError(t, err, "failed to create ConfigMap") &&
-			assert.Contains(t, perNodeConfig2.Data, "test1-dc2-rack1-sts-0_cassandra.yaml") &&
-			assert.Contains(t, perNodeConfig2.Data, "test1-dc2-rack2-sts-0_cassandra.yaml") &&
-			assert.Contains(t, perNodeConfig2.Data, "test1-dc2-rack3-sts-0_cassandra.yaml") &&
-			assert.Contains(t, perNodeConfig2.Data, "test1-dc2-rack1-sts-1_cassandra.yaml") &&
-			assert.Contains(t, perNodeConfig2.Data, "test1-dc2-rack2-sts-1_cassandra.yaml") &&
-			assert.NotContains(t, perNodeConfig2.Data, "test1-dc2-rack3-sts-1_cassandra.yaml") &&
-			assert.NotContains(t, perNodeConfig2.Data, "test1-dc2-rack1-sts-2_cassandra.yaml") &&
-			assert.NotContains(t, perNodeConfig2.Data, "test1-dc2-rack2-sts-2_cassandra.yaml") &&
-			assert.NotContains(t, perNodeConfig2.Data, "test1-dc2-rack3-sts-2_cassandra.yaml") &&
-			assert.NotContains(t, perNodeConfig2.Data, "test1-dc2-rack1-sts-3_cassandra.yaml")
+		assert.NoError(c, err, "failed to create ConfigMap")
+		assert.Contains(c, perNodeConfig2.Data, "test1-dc2-rack1-sts-0_cassandra.yaml")
+		assert.Contains(c, perNodeConfig2.Data, "test1-dc2-rack2-sts-0_cassandra.yaml")
+		assert.Contains(c, perNodeConfig2.Data, "test1-dc2-rack3-sts-0_cassandra.yaml")
+		assert.Contains(c, perNodeConfig2.Data, "test1-dc2-rack1-sts-1_cassandra.yaml")
+		assert.Contains(c, perNodeConfig2.Data, "test1-dc2-rack2-sts-1_cassandra.yaml")
+		assert.NotContains(c, perNodeConfig2.Data, "test1-dc2-rack3-sts-1_cassandra.yaml")
+		assert.NotContains(c, perNodeConfig2.Data, "test1-dc2-rack1-sts-2_cassandra.yaml")
+		assert.NotContains(c, perNodeConfig2.Data, "test1-dc2-rack2-sts-2_cassandra.yaml")
+		assert.NotContains(c, perNodeConfig2.Data, "test1-dc2-rack3-sts-2_cassandra.yaml")
+		assert.NotContains(c, perNodeConfig2.Data, "test1-dc2-rack1-sts-3_cassandra.yaml")
 	}, timeout, interval)
 
+	require.Eventually(t, f.DatacenterExists(ctx, dc2Key), timeout, interval, "CassandraDatacenter %s did not appear", dc2Key)
 	err = f.SetDatacenterStatusReady(ctx, dc2Key)
 	require.NoError(t, err, "failed to set CassandraDatacenter status to ready")
 

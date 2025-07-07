@@ -46,8 +46,8 @@ import (
 )
 
 const (
-	timeout  = time.Second * 5
-	interval = time.Millisecond * 100
+	timeout  = time.Second * 2
+	interval = time.Millisecond * 20
 )
 
 var (
@@ -69,8 +69,8 @@ func TestK8ssandraCluster(t *testing.T) {
 
 	reconcilerConfig := config.InitConfig()
 
-	reconcilerConfig.DefaultDelay = 100 * time.Millisecond
-	reconcilerConfig.LongDelay = 300 * time.Millisecond
+	reconcilerConfig.DefaultDelay = 20 * time.Millisecond
+	reconcilerConfig.LongDelay = 50 * time.Millisecond
 
 	err := testEnv.Start(ctx, t, func(mgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error {
 		err := (&K8ssandraClusterReconciler{
@@ -97,7 +97,6 @@ func TestK8ssandraCluster(t *testing.T) {
 	t.Run("ApplyDatacenterTemplateConfigs", testEnv.ControllerTest(ctx, applyDatacenterTemplateConfigs))
 	t.Run("ApplyClusterTemplateAndDatacenterTemplateConfigs", testEnv.ControllerTest(ctx, applyClusterTemplateAndDatacenterTemplateConfigs))
 	t.Run("CreateSingleDcCassandra4ClusterWithStargate", testEnv.ControllerTest(ctx, createSingleDcCassandra4ClusterWithStargate))
-	// t.Run("CreateMultiDcClusterWithStargate", testEnv.ControllerTest(ctx, createMultiDcClusterWithStargate))
 	t.Run("CreateMultiDcClusterWithReaper", testEnv.ControllerTest(ctx, createMultiDcClusterWithReaper))
 	t.Run("createMultiDcClusterWithControlPlaneReaper", testEnv.ControllerTest(ctx, createMultiDcClusterWithControlPlaneReaper))
 	t.Run("CreateMultiDcClusterWithMedusa", testEnv.ControllerTest(ctx, createMultiDcClusterWithMedusa))
@@ -832,7 +831,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 		}
 
 		condition := FindDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
-		return !(condition == nil && condition.Status == corev1.ConditionFalse)
+		return condition != nil && condition.Status == corev1.ConditionTrue
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 
 	t.Log("simulate the creation of the all-pods Endpoints for dc1")
@@ -1114,7 +1113,7 @@ func createSingleDcCassandra4ClusterWithStargate(t *testing.T, ctx context.Conte
 		}
 
 		condition := FindDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
-		return !(condition == nil && condition.Status == corev1.ConditionFalse)
+		return condition != nil && condition.Status == corev1.ConditionTrue
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 
 	t.Log("update dc1 status to ready")
@@ -1137,18 +1136,6 @@ func createSingleDcCassandra4ClusterWithStargate(t *testing.T, ctx context.Conte
 	require.NoError(err, "failed to get K8ssandraCluster")
 	dcGeneration := kc.Status.Datacenters["dc1"].Cassandra.ObservedGeneration
 
-	// t.Log("remove stargate sg1 from kc spec")
-	// patch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
-	// kc.Spec.Cassandra.Datacenters[0].Stargate = nil
-	// err = f.Client.Patch(ctx, kc, patch)
-	// require.NoError(err, "failed to update K8ssandraCluster")
-
-	// t.Log("check that stargate sg1 is deleted")
-	// require.Eventually(func() bool {
-	// 	err = f.Get(ctx, sg1Key, &stargateapi.Stargate{})
-	// 	return errors.IsNotFound(err)
-	// }, timeout, interval)
-
 	t.Log("check that DC generation hasn't changed")
 	err = f.Get(ctx, kcKey, kc)
 	require.NoError(err, "failed to get K8ssandraCluster")
@@ -1169,240 +1156,6 @@ func createSingleDcCassandra4ClusterWithStargate(t *testing.T, ctx context.Conte
 	f.AssertObjectDoesNotExist(ctx, t, dc1Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
 	f.AssertObjectDoesNotExist(ctx, t, sg1Key, &stargateapi.Stargate{}, timeout, interval)
 }
-
-// func createMultiDcClusterWithStargate(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
-// 	require := require.New(t)
-
-// 	// stargate := &stargateapi.StargateDatacenterTemplate{
-// 	// 	StargateClusterTemplate: stargateapi.StargateClusterTemplate{
-// 	// 		Size: 1,
-// 	// 	},
-// 	// }
-// 	cct := newTwoDcCassandraClusterTemplate(f)
-// 	// cct.Datacenters[0].Stargate = stargate.DeepCopy()
-// 	// cct.Datacenters[1].Stargate = stargate.DeepCopy()
-
-// 	clusterName := "cluster-multi-stargate"
-// 	kc := &api.K8ssandraCluster{
-// 		ObjectMeta: metav1.ObjectMeta{
-// 			Namespace: namespace,
-// 			Name:      clusterName,
-// 		},
-// 		Spec: api.K8ssandraClusterSpec{
-// 			Cassandra: cct,
-// 		},
-// 	}
-
-// 	err := f.Client.Create(ctx, kc)
-// 	require.NoError(err, "failed to create K8ssandraCluster")
-
-// 	verifyFinalizerAdded(ctx, t, f, kc)
-
-// 	verifySuperuserSecretCreated(ctx, t, f, kc)
-
-// 	verifyReplicatedSecretReconciled(ctx, t, f, kc)
-
-// 	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
-
-// 	t.Log("check that dc1 was created")
-// 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
-// 	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
-
-// 	t.Log("update datacenter status to scaling up")
-// 	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {
-// 		dc.SetCondition(cassdcapi.DatacenterCondition{
-// 			Type:               cassdcapi.DatacenterScalingUp,
-// 			Status:             corev1.ConditionTrue,
-// 			LastTransitionTime: metav1.Now(),
-// 		})
-// 	})
-// 	require.NoError(err, "failed to patch datacenter status")
-
-// 	kcKey := framework.ClusterKey{K8sContext: f.ControlPlaneContext, NamespacedName: types.NamespacedName{Namespace: namespace, Name: clusterName}}
-
-// 	t.Log("check that the K8ssandraCluster status is updated")
-// 	require.Eventually(func() bool {
-// 		kc := &api.K8ssandraCluster{}
-// 		err = f.Get(ctx, kcKey, kc)
-// 		if err != nil {
-// 			t.Logf("failed to get K8ssandraCluster: %v", err)
-// 			return false
-// 		}
-
-// 		if (&kc.Status).GetConditionStatus(api.CassandraInitialized) == corev1.ConditionTrue {
-// 			t.Logf("Did not expect status condition %s to be true", api.CassandraInitialized)
-// 			return false
-// 		}
-
-// 		if len(kc.Status.Datacenters) == 0 {
-// 			return false
-// 		}
-
-// 		k8ssandraStatus, found := kc.Status.Datacenters[dc1Key.Name]
-// 		if !found {
-// 			t.Logf("status for datacenter %s not found", dc1Key)
-// 			return false
-// 		}
-
-// 		condition := FindDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
-// 		return !(condition == nil && condition.Status == corev1.ConditionFalse)
-// 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
-
-// 	sg1Key := framework.ClusterKey{
-// 		K8sContext: f.DataPlaneContexts[0],
-// 		NamespacedName: types.NamespacedName{
-// 			Namespace: namespace,
-// 			Name:      kc.Name + "-" + dc1Key.Name + "-stargate"},
-// 	}
-
-// 	// t.Logf("check that stargate %s has not been created", sg1Key)
-// 	// sg1 := &stargateapi.Stargate{}
-// 	// err = f.Get(ctx, sg1Key, sg1)
-// 	// require.True(err != nil && errors.IsNotFound(err), fmt.Sprintf("stargate %s should not be created until dc1 is ready", sg1Key))
-
-// 	t.Log("check that dc2 has not been created yet")
-// 	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: f.DataPlaneContexts[1]}
-// 	dc2 := &cassdcapi.CassandraDatacenter{}
-// 	err = f.Get(ctx, dc2Key, dc2)
-// 	require.True(err != nil && errors.IsNotFound(err), "dc2 should not be created until dc1 is ready")
-
-// 	t.Log("update dc1 status to ready")
-// 	err = f.SetDatacenterStatusReady(ctx, dc1Key)
-// 	require.NoError(err, "failed to update dc1 status to ready")
-
-// 	t.Log("check that dc2 was created")
-// 	require.Eventually(f.DatacenterExists(ctx, dc2Key), timeout, interval)
-
-// 	sg2Key := framework.ClusterKey{
-// 		K8sContext: f.DataPlaneContexts[1],
-// 		NamespacedName: types.NamespacedName{
-// 			Namespace: namespace,
-// 			Name:      kc.Name + "-" + dc2Key.Name + "-stargate"},
-// 	}
-
-// 	t.Log("update dc2 status to ready")
-// 	err = f.SetDatacenterStatusReady(ctx, dc2Key)
-// 	require.NoError(err, "failed to update dc2 status to ready")
-
-// 	t.Log("check that dc2 was rebuilt")
-// 	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key)
-// 	rebuildTaskKey := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, "dc2-rebuild")
-// 	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey, dc2Key)
-
-// 	// t.Log("check that stargate sg1 is created")
-// 	// require.Eventually(f.StargateExists(ctx, sg1Key), timeout, interval)
-
-// 	// t.Logf("update stargate sg1 status to ready")
-// 	// err = f.SetStargateStatusReady(ctx, sg1Key)
-// 	// require.NoError(err, "failed to patch stargate status")
-
-// 	k := &api.K8ssandraCluster{}
-// 	err = f.Get(ctx, kcKey, k)
-// 	require.NoError(err)
-// 	require.NotNil(k.Spec.Cassandra.Datacenters[1].Stargate)
-
-// 	t.Logf("check that stargate %s has not been created", sg2Key)
-// 	sg2 := &stargateapi.Stargate{}
-// 	err = f.Get(ctx, sg2Key, sg2)
-// 	require.True(err != nil && errors.IsNotFound(err), fmt.Sprintf("stargate %s should not be created until dc2 is ready", sg2Key))
-
-// 	// t.Log("check that stargate sg2 is created")
-// 	// require.Eventually(f.StargateExists(ctx, sg2Key), timeout, interval)
-
-// 	// t.Logf("update stargate sg2 status to ready")
-// 	// err = f.SetStargateStatusReady(ctx, sg2Key)
-// 	// require.NoError(err, "failed to patch stargate status")
-
-// 	t.Log("check that the K8ssandraCluster status is updated")
-// 	require.Eventually(func() bool {
-// 		kc := &api.K8ssandraCluster{}
-// 		err = f.Get(ctx, kcKey, kc)
-// 		if err != nil {
-// 			t.Logf("failed to get K8ssandraCluster: %v", err)
-// 			return false
-// 		}
-
-// 		if (&kc.Status).GetConditionStatus(api.CassandraInitialized) != corev1.ConditionTrue {
-// 			t.Logf("Expected status condition %s to be true", api.CassandraInitialized)
-// 			return false
-// 		}
-
-// 		if len(kc.Status.Datacenters) != 2 {
-// 			return false
-// 		}
-
-// 		k8ssandraStatus, found := kc.Status.Datacenters[dc1Key.Name]
-// 		if !found {
-// 			t.Logf("status for datacenter %s not found", dc1Key)
-// 			return false
-// 		}
-
-// 		condition := FindDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
-// 		if condition == nil || condition.Status == corev1.ConditionFalse {
-// 			t.Logf("k8ssandracluster status check failed: cassandra in %s is not ready", dc1Key.Name)
-// 			return false
-// 		}
-
-// 		if k8ssandraStatus.Stargate == nil || !k8ssandraStatus.Stargate.IsReady() {
-// 			t.Logf("k8ssandracluster status check failed: stargate in %s is not ready", dc1Key.Name)
-// 		}
-
-// 		k8ssandraStatus, found = kc.Status.Datacenters[dc2Key.Name]
-// 		if !found {
-// 			t.Logf("status for datacenter %s not found", dc2Key)
-// 			return false
-// 		}
-
-// 		condition = FindDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterReady)
-// 		if condition == nil || condition.Status == corev1.ConditionFalse {
-// 			t.Logf("k8ssandracluster status check failed: cassandra in %s is not ready", dc2Key.Name)
-// 			return false
-// 		}
-
-// 		if k8ssandraStatus.Stargate == nil || !k8ssandraStatus.Stargate.IsReady() {
-// 			t.Logf("k8ssandracluster status check failed: stargate in %s is not ready", dc2Key.Name)
-// 			return false
-// 		}
-
-// 		return true
-// 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
-
-// 	t.Log("remove both stargates from kc spec")
-// 	err = f.Get(ctx, kcKey, kc)
-// 	patch := client.MergeFromWithOptions(kc.DeepCopy(), client.MergeFromWithOptimisticLock{})
-// 	kc.Spec.Cassandra.Datacenters[0].Stargate = nil
-// 	kc.Spec.Cassandra.Datacenters[1].Stargate = nil
-// 	err = f.Client.Patch(ctx, kc, patch)
-// 	require.NoError(err, "failed to update K8ssandraCluster")
-
-// 	t.Log("check that stargate sg1 is deleted")
-// 	require.Eventually(func() bool {
-// 		err = f.Get(ctx, sg1Key, &stargateapi.Stargate{})
-// 		return errors.IsNotFound(err)
-// 	}, timeout, interval)
-
-// 	t.Log("check that stargate sg2 is deleted")
-// 	require.Eventually(func() bool {
-// 		err = f.Get(ctx, sg2Key, &stargateapi.Stargate{})
-// 		return errors.IsNotFound(err)
-// 	}, timeout, interval)
-
-// 	t.Log("check that kc status is updated")
-// 	require.Eventually(func() bool {
-// 		err = f.Get(ctx, kcKey, kc)
-// 		require.NoError(err, "failed to get K8ssandraCluster")
-// 		return kc.Status.Datacenters[dc1Key.Name].Stargate == nil &&
-// 			kc.Status.Datacenters[dc2Key.Name].Stargate == nil
-// 	}, timeout, interval)
-
-// 	t.Log("deleting K8ssandraCluster")
-// 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
-// 	require.NoError(err, "failed to delete K8ssandraCluster")
-// 	f.AssertObjectDoesNotExist(ctx, t, dc1Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
-// 	f.AssertObjectDoesNotExist(ctx, t, dc2Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
-// 	f.AssertObjectDoesNotExist(ctx, t, sg1Key, &stargateapi.Stargate{}, timeout, interval)
-// 	f.AssertObjectDoesNotExist(ctx, t, sg2Key, &stargateapi.Stargate{}, timeout, interval)
-// }
 
 // Create a cluster with encryption options and Stargate.
 // Verify that volumes, mounts and config maps are correctly created.
@@ -1641,23 +1394,6 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 
 	err = f.SetDatacenterStatusReady(ctx, dc1Key)
 	require.NoError(err, "failed to set dc1 status ready")
-
-	// sg1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: fmt.Sprintf("%s-dc1-stargate", dc1.Spec.ClusterName)}, K8sContext: f.DataPlaneContexts[0]}
-	// t.Log("check that stargate sg1 is created")
-	// require.Eventually(f.StargateExists(ctx, sg1Key), timeout, interval)
-
-	// t.Logf("update stargate sg1 status to ready")
-	// err = f.SetStargateStatusReady(ctx, sg1Key)
-	// require.NoError(err, "failed to patch stargate status")
-
-	// t.Log("verify configuration of stargate in dc1")
-	// sg1 := &stargateapi.Stargate{}
-	// err = f.Get(ctx, sg1Key, sg1)
-	// require.NoError(err, "failed to get stargate in dc1")
-
-	// stargateEncryptionSettings := sg1.Spec.CassandraEncryption
-	// require.NotNil(stargateEncryptionSettings, "stargate encryption settings are not set")
-	// t.Logf("stargate encryption settings: %+v", stargateEncryptionSettings)
 
 	t.Log("deleting K8ssandraCluster")
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
@@ -2016,23 +1752,6 @@ func applyClusterWithEncryptionOptionsExternalSecrets(t *testing.T, ctx context.
 	err = f.SetDatacenterStatusReady(ctx, dc1Key)
 	require.NoError(err, "failed to set dc1 status ready")
 
-	// sg1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: fmt.Sprintf("%s-dc1-stargate", dc1.Spec.ClusterName)}, K8sContext: f.DataPlaneContexts[0]}
-	// t.Log("check that stargate sg1 is created")
-	// require.Eventually(f.StargateExists(ctx, sg1Key), timeout, interval)
-
-	// t.Logf("update stargate sg1 status to ready")
-	// err = f.SetStargateStatusReady(ctx, sg1Key)
-	// require.NoError(err, "failed to patch stargate status")
-
-	// t.Log("verify configuration of stargate in dc1")
-	// sg1 := &stargateapi.Stargate{}
-	// err = f.Get(ctx, sg1Key, sg1)
-	// require.NoError(err, "failed to get stargate in dc1")
-
-	// stargateEncryptionSettings := sg1.Spec.CassandraEncryption
-	// require.NotNil(stargateEncryptionSettings, "stargate encryption settings are not set")
-	// t.Logf("stargate encryption settings: %+v", stargateEncryptionSettings)
-
 	t.Log("deleting K8ssandraCluster")
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
 	require.NoError(err, "failed to delete K8ssandraCluster")
@@ -2233,7 +1952,9 @@ func verifyReplicatedSecretReconciled(ctx context.Context, t *testing.T, f *fram
 	assert.True(t, exists)
 	assert.Equal(t, kc.Namespace, val)
 
-	assert.Equal(t, len(kc.Spec.Cassandra.Datacenters), len(rsec.Spec.ReplicationTargets))
+	assert.Eventually(t, func() bool {
+		return len(kc.Spec.Cassandra.Datacenters) == len(rsec.Spec.ReplicationTargets)
+	}, timeout, interval, "ReplicatedSecret does not have the expected number of replication targets")
 
 	conditions := make([]replicationapi.ReplicationCondition, 0)
 	now := metav1.Now()

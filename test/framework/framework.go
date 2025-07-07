@@ -388,37 +388,6 @@ func (f *Framework) PatchDatacenterStatus(ctx context.Context, key ClusterKey, u
 	return remoteClient.Status().Patch(ctx, dc, patch)
 }
 
-// func (f *Framework) SetStargateStatusReady(ctx context.Context, key ClusterKey) error {
-// 	return f.PatchStargateStatus(ctx, key, func(sg *stargateapi.Stargate) {
-// 		now := metav1.Now()
-// 		sg.Status.Progress = stargateapi.StargateProgressRunning
-// 		sg.Status.AvailableReplicas = 1
-// 		sg.Status.Replicas = 1
-// 		sg.Status.ReadyReplicas = 1
-// 		sg.Status.UpdatedReplicas = 1
-// 		sg.Status.SetCondition(stargateapi.StargateCondition{
-// 			Type:               stargateapi.StargateReady,
-// 			Status:             corev1.ConditionTrue,
-// 			LastTransitionTime: &now,
-// 		})
-// 	})
-// }
-
-// func (f *Framework) PatchStargateStatus(ctx context.Context, key ClusterKey, updateFn func(sg *stargateapi.Stargate)) error {
-// 	sg := &stargateapi.Stargate{}
-// 	err := f.Get(ctx, key, sg)
-
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	patch := client.MergeFromWithOptions(sg.DeepCopy(), client.MergeFromWithOptimisticLock{})
-// 	updateFn(sg)
-
-// 	remoteClient := f.remoteClients[key.K8sContext]
-// 	return remoteClient.Status().Patch(ctx, sg, patch)
-// }
-
 func (f *Framework) SetReaperStatusReady(ctx context.Context, key ClusterKey) error {
 	return f.PatchReaperStatus(ctx, key, func(r *reaperapi.Reaper) {
 		r.Status.Progress = reaperapi.ReaperProgressRunning
@@ -606,15 +575,9 @@ func (f *Framework) MedusaConfigExists(ctx context.Context, k8sContext string, m
 	}
 }
 
-// NewWithCassTask is a function generator for withCassandraTask that is bound to ctx, and key.
-func (f *Framework) NewWithCassTask(ctx context.Context, key ClusterKey) func(func(*casstaskapi.CassandraTask) bool) func() bool {
-	return func(condition func(dc *casstaskapi.CassandraTask) bool) func() bool {
-		return f.withCassTask(ctx, key, condition)
-	}
-}
-
 // withCassTask Fetches the CassandraTask specified by key and then calls condition.
-func (f *Framework) withCassTask(ctx context.Context, key ClusterKey, condition func(task *casstaskapi.CassandraTask) bool) func() bool {
+// func (f *Framework) CassTaskExists(ctx context.Context, key ClusterKey, condition func(task *casstaskapi.CassandraTask) bool) func() bool {
+func (f *Framework) CassTaskExists(ctx context.Context, key ClusterKey) func() bool {
 	return func() bool {
 		remoteClient, found := f.remoteClients[key.K8sContext]
 		if !found {
@@ -624,22 +587,24 @@ func (f *Framework) withCassTask(ctx context.Context, key ClusterKey, condition 
 
 		dc := &casstaskapi.CassandraTask{}
 		if err := remoteClient.Get(ctx, key.NamespacedName, dc); err == nil {
-			return condition(dc)
+			f.logger.Info("CassandraTask was found", "key", key)
+			return true
 		} else {
 			if !errors.IsNotFound(err) {
 				f.logger.Error(err, "failed to get CassandraTask", "key", key)
 			}
+			f.logger.Info("CassandraTask not found", "key", key)
 			return false
 		}
 	}
 }
 
-func (f *Framework) CassTaskExists(ctx context.Context, key ClusterKey) func() bool {
-	withCassTask := f.NewWithCassTask(ctx, key)
-	return withCassTask(func(dc *casstaskapi.CassandraTask) bool {
-		return true
-	})
-}
+// func (f *Framework) CassTaskExists(ctx context.Context, key ClusterKey) func() bool {
+// 	withCassTask := f.NewWithCassTask(ctx, key)
+// 	return withCassTask(func(dc *casstaskapi.CassandraTask) bool {
+// 		return true
+// 	})
+// }
 
 // NewWithK8ssandraTask is a function generator for withCassandraTask that is bound to ctx, and key.
 func (f *Framework) NewWithK8ssandraTask(ctx context.Context, key ClusterKey) func(func(*controlapi.K8ssandraTask) bool) func() bool {
