@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // SystemReplication represents the replication factor of the system_auth, system_traces,
@@ -165,7 +166,6 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 				api.PartOfLabel:    api.PartOfLabelValue,
 				api.ComponentLabel: api.ComponentLabelValueCassandra,
 			}, labels.CleanedUpByLabels(klusterKey)),
-			Finalizers: []string{k8ssandra.K8ssandraClusterFinalizer},
 		},
 		Spec: cassdcapi.CassandraDatacenterSpec{
 			Size:                   template.Size,
@@ -187,6 +187,8 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 			ReadOnlyRootFilesystem: template.ReadOnlyRootFilesystem,
 		},
 	}
+
+	controllerutil.AddFinalizer(dc, k8ssandra.K8ssandraClusterFinalizer)
 
 	if template.Resources != nil {
 		dc.Spec.Resources = *template.Resources

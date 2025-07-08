@@ -22,7 +22,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -110,13 +109,11 @@ func TestK8ssandraClusterReconciler_DeleteDeployments(t *testing.T) {
 }
 
 func TestK8ssandraClusterReconciler_CheckDeletion(t *testing.T) {
-	// Setup scheme with all required types
-	s := runtime.NewScheme()
-	require.NoError(t, scheme.AddToScheme(s))
-	require.NoError(t, k8ssandraapi.AddToScheme(s))
-	require.NoError(t, cassdcapi.AddToScheme(s))
-	require.NoError(t, reaperapi.AddToScheme(s))
-	require.NoError(t, stargateapi.AddToScheme(s))
+	require.NoError(t, scheme.AddToScheme(scheme.Scheme))
+	require.NoError(t, k8ssandraapi.AddToScheme(scheme.Scheme))
+	require.NoError(t, cassdcapi.AddToScheme(scheme.Scheme))
+	require.NoError(t, reaperapi.AddToScheme(scheme.Scheme))
+	require.NoError(t, stargateapi.AddToScheme(scheme.Scheme))
 
 	ctx := context.Background()
 	logger := testlogr.NewTestLogger(t)
@@ -206,21 +203,21 @@ func TestK8ssandraClusterReconciler_CheckDeletion(t *testing.T) {
 		},
 	}
 
-	// Create mock client with all resources
+	// Create fake client with all resources
 	fakeClient := fake.NewClientBuilder().
-		WithScheme(s).
+		WithScheme(scheme.Scheme).
 		WithObjects(kc, dc, service, deployment, configMap, cronJob).
 		Build()
 
 	// Create client cache
-	clientCache := clientcache.New(fakeClient, fakeClient, s)
+	clientCache := clientcache.New(fakeClient, fakeClient, scheme.Scheme)
 	clientCache.AddClient("default", fakeClient)
 
 	// Create reconciler
 	reconciler := &K8ssandraClusterReconciler{
 		ReconcilerConfig: &config.ReconcilerConfig{DefaultDelay: time.Second},
 		Client:           fakeClient,
-		Scheme:           s,
+		Scheme:           scheme.Scheme,
 		ClientCache:      clientCache,
 	}
 
