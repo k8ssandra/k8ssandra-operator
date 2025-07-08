@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -170,11 +171,17 @@ type MedusaClusterTemplate struct {
 	// Provides all service related properties for Medusa.
 	ServiceProperties Service `json:"serviceProperties,omitempty"`
 
+	// DEPRECATED: Please use ClientEncryptionStores instead.
 	// Certificates for Medusa if client encryption is enabled in Cassandra.
 	// The secret must be in the same namespace as Cassandra and must contain three keys: "rootca.crt", "client.crt_signed" and "client.key".
 	// See https://docs.datastax.com/en/developer/python-driver/latest/security/ for more information on the required files.
 	// +optional
 	CertificatesSecretRef corev1.LocalObjectReference `json:"certificatesSecretRef,omitempty"`
+
+	// Certificates for Medusa to use if Cassandra has client encryption enabled. Replaces CertificatesSecretRef.
+	// The secret still must reside in the same namespace as the CassandraDatacenter, but we now allow configuring which keys contain which certificate component.
+	// +optional
+	ClientEncryptionStores *encryption.Stores `json:"clientEncryptionStores,omitempty"`
 
 	// medusa-restore init container resources.
 	// +optional
