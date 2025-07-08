@@ -19,6 +19,8 @@ import (
 	reaperclient "github.com/k8ssandra/reaper-client-go/reaper"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/k8ssandra"
+	k8ssandrapkg "github.com/k8ssandra/k8ssandra-operator/pkg/k8ssandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 
@@ -30,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -768,6 +771,38 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
 	// Check that Cassandra Vector's configmap is deleted
 	checkVectorConfigMapDeleted(t, ctx, f, dcKey, telemetry.VectorAgentConfigMapName)
+
+	// Delete the K8ssandraCluster
+	t.Log("Delete the K8ssandraCluster and check that the finalizer is removed on the cassdc")
+	require.NoError(f.Client.Delete(ctx, k8ssandra))
+
+	// Check that the finalizer is removed on the cassdc
+	require.EventuallyWithT(func(c *assert.CollectT) {
+		dc := &cassdcapi.CassandraDatacenter{}
+		err := f.Get(ctx, dcKey, dc)
+		assert.NoError(c, err)
+		assert.False(c, controllerutil.ContainsFinalizer(dc, k8ssandrapkg.K8ssandraClusterFinalizer), "finalizer should be removed from cassdc")
+	}, polling.datacenterUpdating.timeout, polling.datacenterUpdating.interval, "finalizer should be removed from cassdc")
+
+	// Check that the K8ssandraCluster still exists despite the finalizer being removed on the cassdc
+	err = f.Client.Get(ctx, kcKey, k8ssandra)
+	require.NoError(err, "failed to get K8ssandraCluster in namespace %s. It has been prematurely deleted", namespace)
+
+	// Check that the cassdc is deleted
+	t.Log("Check that the cassdc is deleted")
+	require.EventuallyWithT(func(c *assert.CollectT) {
+		dc := &cassdcapi.CassandraDatacenter{}
+		err := f.Get(ctx, dcKey, dc)
+		assert.True(c, errors.IsNotFound(err), "CassandraDatacenter should be deleted")
+	}, 3*time.Minute, 15*time.Second, "CassandraDatacenter should be deleted")
+
+	// Check that the K8ssandraCluster is deleted
+	t.Log("Check that the K8ssandraCluster is deleted")
+	require.EventuallyWithT(func(c *assert.CollectT) {
+		err := f.Client.Get(ctx, kcKey, k8ssandra)
+		assert.True(c, errors.IsNotFound(err), "K8ssandraCluster should be deleted")
+	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "K8ssandraCluster should be deleted")
+
 }
 
 func checkDatacenterReadOnlyRootFS(t *testing.T, ctx context.Context, key framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
@@ -1336,6 +1371,10 @@ func checkDatacenterReady(t *testing.T, ctx context.Context, key framework.Clust
 		status := dc.GetConditionStatus(cassdcapi.DatacenterReady)
 		return status == corev1.ConditionTrue && dc.Status.CassandraOperatorProgress == cassdcapi.ProgressReady
 	}), polling.datacenterReady.timeout, polling.datacenterReady.interval, fmt.Sprintf("timed out waiting for datacenter %s to become ready", key.Name))
+	t.Logf("check that datacenter %s in cluster %s has the finalizer", key.Name, key.K8sContext)
+	require.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
+		return controllerutil.ContainsFinalizer(dc, k8ssandra.K8ssandraClusterFinalizer)
+	}), polling.datacenterReady.timeout, polling.datacenterReady.interval, fmt.Sprintf("timed out waiting for datacenter %s to have the finalizer", key.Name))
 }
 
 func checkDatacenterHasHeapSizeSet(t *testing.T, ctx context.Context, key framework.ClusterKey, f *framework.E2eFramework) {

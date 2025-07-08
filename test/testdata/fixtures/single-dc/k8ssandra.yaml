@@ -52,7 +52,7 @@ spec:
         initContainers:
           - name: "server-config-init"
           - name: init-busybox
-            image: busybox
+            image: busybox:stable
             command: ["sleep", "10"]
             volumeMounts:
               - name: busybox-vol
@@ -61,11 +61,19 @@ spec:
           - name: "cassandra"
           - name: "server-system-logger"
           - name: busybox
-            image: busybox
+            image: busybox:stable
             command: ["sleep", "3600"]
             volumeMounts:
               - name: busybox-vol
                 mountPath: /var/lib/busybox
+            lifecycle:
+              preStop:
+                exec:
+                  command:
+                    - sh
+                    - '-c'
+                    - sleep 180
+            
         extraVolumes:
           volumes:
             - name: busybox-vol

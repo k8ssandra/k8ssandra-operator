@@ -12,12 +12,14 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	goalesceutils "github.com/k8ssandra/k8ssandra-operator/pkg/goalesce"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/k8ssandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // SystemReplication represents the replication factor of the system_auth, system_traces,
@@ -185,6 +187,8 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 			ReadOnlyRootFilesystem: template.ReadOnlyRootFilesystem,
 		},
 	}
+
+	controllerutil.AddFinalizer(dc, k8ssandra.K8ssandraClusterFinalizer)
 
 	if template.Resources != nil {
 		dc.Spec.Resources = *template.Resources
