@@ -26835,7 +26835,7 @@ spec:
                   clientEncryptionStores:
                     description: |-
                       Certificates for Medusa to use if Cassandra has client encryption enabled. Replaces CertificatesSecretRef.
-                      The secret still must reside in the same namespace as Cassandra, but we now allow configuring which keys contain which certificate component.
+                      The secret still must reside in the same namespace as the CassandraDatacenter, but we now allow configuring which keys contain which certificate component.
                     properties:
                       keystorePasswordSecretRef:
                         description: |-
