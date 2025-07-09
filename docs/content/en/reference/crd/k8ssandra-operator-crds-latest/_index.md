@@ -54228,9 +54228,18 @@ The secret must be in the same namespace as Cassandra and must contain two keys:
         <td><b><a href="#k8ssandraclusterspecmedusacertificatessecretref">certificatesSecretRef</a></b></td>
         <td>object</td>
         <td>
-          Certificates for Medusa if client encryption is enabled in Cassandra.
+          DEPRECATED: Please use ClientEncryptionStores instead.
+Certificates for Medusa if client encryption is enabled in Cassandra.
 The secret must be in the same namespace as Cassandra and must contain three keys: "rootca.crt", "client.crt_signed" and "client.key".
 See https://docs.datastax.com/en/developer/python-driver/latest/security/ for more information on the required files.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b><a href="#k8ssandraclusterspecmedusaclientencryptionstores">clientEncryptionStores</a></b></td>
+        <td>object</td>
+        <td>
+          Certificates for Medusa to use if Cassandra has client encryption enabled. Replaces CertificatesSecretRef.
+The secret still must reside in the same namespace as the CassandraDatacenter, but we now allow configuring which keys contain which certificate component.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -54354,6 +54363,7 @@ More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/nam
 
 
 
+DEPRECATED: Please use ClientEncryptionStores instead.
 Certificates for Medusa if client encryption is enabled in Cassandra.
 The secret must be in the same namespace as Cassandra and must contain three keys: "rootca.crt", "client.crt_signed" and "client.key".
 See https://docs.datastax.com/en/developer/python-driver/latest/security/ for more information on the required files.
@@ -54368,6 +54378,227 @@ See https://docs.datastax.com/en/developer/python-driver/latest/security/ for mo
         </tr>
     </thead>
     <tbody><tr>
+        <td><b>name</b></td>
+        <td>string</td>
+        <td>
+          Name of the referent.
+This field is effectively required, but due to backwards compatibility is
+allowed to be empty. Instances of this type with an empty value here are
+almost certainly wrong.
+More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names<br/>
+          <br/>
+            <i>Default</i>: <br/>
+        </td>
+        <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### K8ssandraCluster.spec.medusa.clientEncryptionStores
+<sup><sup>[↩ Parent](#k8ssandraclusterspecmedusa)</sup></sup>
+
+
+
+Certificates for Medusa to use if Cassandra has client encryption enabled. Replaces CertificatesSecretRef.
+The secret still must reside in the same namespace as the CassandraDatacenter, but we now allow configuring which keys contain which certificate component.
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b><a href="#k8ssandraclusterspecmedusaclientencryptionstoreskeystoresecretref">keystoreSecretRef</a></b></td>
+        <td>object</td>
+        <td>
+          ref to the secret that contains the keystore and optionally its password (which can also be specified through
+the keystorePasswordSecretRef field)
+if keys are not specified, "keystore" entry and a "keystore-password" entry will be used<br/>
+        </td>
+        <td>true</td>
+      </tr><tr>
+        <td><b><a href="#k8ssandraclusterspecmedusaclientencryptionstorestruststoresecretref">truststoreSecretRef</a></b></td>
+        <td>object</td>
+        <td>
+          ref to the secret that contains the truststore and optionally its password (which can also be specified through
+the truststorePasswordSecretRef field)
+if keys are not specified explicitly, "keystore" entry and a "keystore-password" entry will be used<br/>
+        </td>
+        <td>true</td>
+      </tr><tr>
+        <td><b><a href="#k8ssandraclusterspecmedusaclientencryptionstoreskeystorepasswordsecretref">keystorePasswordSecretRef</a></b></td>
+        <td>object</td>
+        <td>
+          ref to the secret that contains the keystore password if password stored in different secret than keystoreSecretRef
+if key isn't specified explicitly, "keystore-password" entry will be used<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b><a href="#k8ssandraclusterspecmedusaclientencryptionstorestruststorepasswordsecretref">truststorePasswordSecretRef</a></b></td>
+        <td>object</td>
+        <td>
+          ref to the secret that contains the truststore password if password stored in different secret than keystoreSecretRef
+if key isn't specified  explicitly, "truststore-password" entry will be used<br/>
+        </td>
+        <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### K8ssandraCluster.spec.medusa.clientEncryptionStores.keystoreSecretRef
+<sup><sup>[↩ Parent](#k8ssandraclusterspecmedusaclientencryptionstores)</sup></sup>
+
+
+
+ref to the secret that contains the keystore and optionally its password (which can also be specified through
+the keystorePasswordSecretRef field)
+if keys are not specified, "keystore" entry and a "keystore-password" entry will be used
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>key</b></td>
+        <td>string</td>
+        <td>
+          The key of the entry in the Secret resource's `data` field to be used.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>name</b></td>
+        <td>string</td>
+        <td>
+          Name of the referent.
+This field is effectively required, but due to backwards compatibility is
+allowed to be empty. Instances of this type with an empty value here are
+almost certainly wrong.
+More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names<br/>
+          <br/>
+            <i>Default</i>: <br/>
+        </td>
+        <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### K8ssandraCluster.spec.medusa.clientEncryptionStores.truststoreSecretRef
+<sup><sup>[↩ Parent](#k8ssandraclusterspecmedusaclientencryptionstores)</sup></sup>
+
+
+
+ref to the secret that contains the truststore and optionally its password (which can also be specified through
+the truststorePasswordSecretRef field)
+if keys are not specified explicitly, "keystore" entry and a "keystore-password" entry will be used
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>key</b></td>
+        <td>string</td>
+        <td>
+          The key of the entry in the Secret resource's `data` field to be used.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>name</b></td>
+        <td>string</td>
+        <td>
+          Name of the referent.
+This field is effectively required, but due to backwards compatibility is
+allowed to be empty. Instances of this type with an empty value here are
+almost certainly wrong.
+More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names<br/>
+          <br/>
+            <i>Default</i>: <br/>
+        </td>
+        <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### K8ssandraCluster.spec.medusa.clientEncryptionStores.keystorePasswordSecretRef
+<sup><sup>[↩ Parent](#k8ssandraclusterspecmedusaclientencryptionstores)</sup></sup>
+
+
+
+ref to the secret that contains the keystore password if password stored in different secret than keystoreSecretRef
+if key isn't specified explicitly, "keystore-password" entry will be used
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>key</b></td>
+        <td>string</td>
+        <td>
+          The key of the entry in the Secret resource's `data` field to be used.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>name</b></td>
+        <td>string</td>
+        <td>
+          Name of the referent.
+This field is effectively required, but due to backwards compatibility is
+allowed to be empty. Instances of this type with an empty value here are
+almost certainly wrong.
+More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names<br/>
+          <br/>
+            <i>Default</i>: <br/>
+        </td>
+        <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### K8ssandraCluster.spec.medusa.clientEncryptionStores.truststorePasswordSecretRef
+<sup><sup>[↩ Parent](#k8ssandraclusterspecmedusaclientencryptionstores)</sup></sup>
+
+
+
+ref to the secret that contains the truststore password if password stored in different secret than keystoreSecretRef
+if key isn't specified  explicitly, "truststore-password" entry will be used
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>key</b></td>
+        <td>string</td>
+        <td>
+          The key of the entry in the Secret resource's `data` field to be used.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>name</b></td>
         <td>string</td>
         <td>
