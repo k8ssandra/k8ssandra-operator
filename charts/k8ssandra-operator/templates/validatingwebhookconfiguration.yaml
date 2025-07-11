@@ -1,4 +1,5 @@
 {{- if .Values.controlPlane }}
+{{- if .Values.global.clusterScopedResources }}
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
@@ -50,7 +51,9 @@ webhooks:
         resources:
           - k8ssandraclusters
     sideEffects: None
+{{- end }}
 {{- else }}
+{{- if .Values.global.clusterScopedResources }}
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
@@ -78,4 +81,5 @@ webhooks:
       resources:
       - medusabackupschedules
     sideEffects: None
+{{- end }}
 {{- end }}
