@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // findSeeds queries for pods labeled as seeds. It does this for each DC, across all
@@ -98,15 +97,7 @@ func (r *K8ssandraClusterReconciler) reconcileSeedsEndpoints(
 	ipv6Slice := reconciliation.CreateEndpointSlice(dc, prefixName, discoveryv1.AddressTypeIPv6, ipv6Addresses)
 	endpointSlices = append(endpointSlices, ipv6Slice)
 
-	for _, slice := range endpointSlices {
-		// Set the owner reference to the K8ssandraCluster object
-		if err := controllerutil.SetControllerReference(kc, slice, r.Scheme); err != nil {
-			logger.Error(err, "Could not set owner reference for additional seed endpoint slice",
-				"slice", slice.Name,
-			)
-			return result.Error(err)
-		}
-	}
+	// Can't set owner reference for EndpointSlice as they can be in different namespace than K8ssandraCluster
 
 	if err := reconciliation.ReconcileEndpointSlices(ctx, remoteClient, logger, endpointSlices); err != nil {
 		logger.Error(err, "Failed to reconcile additional seed endpoint slices")
