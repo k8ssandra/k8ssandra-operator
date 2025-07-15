@@ -23,6 +23,7 @@ import (
 
 	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -260,7 +261,7 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters
 		handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
 	cb = cb.Watches(&corev1.ConfigMap{},
 		handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
-	cb = cb.Watches(&corev1.Endpoints{},
+	cb = cb.Watches(&discoveryv1.EndpointSlice{},
 		handler.EnqueueRequestsFromMapFunc(endpointsFilter))
 
 	for _, c := range clusters {
@@ -280,8 +281,8 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters
 			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, obj *corev1.ConfigMap) []reconcile.Request {
 				return clusterLabelFilter(ctx, obj)
 			})))
-		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &corev1.Endpoints{},
-			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, obj *corev1.Endpoints) []reconcile.Request {
+		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &discoveryv1.EndpointSlice{},
+			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, obj *discoveryv1.EndpointSlice) []reconcile.Request {
 				return clusterLabelFilter(ctx, obj)
 			})))
 	}

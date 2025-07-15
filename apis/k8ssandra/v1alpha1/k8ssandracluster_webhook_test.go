@@ -144,8 +144,7 @@ func TestWebhook(t *testing.T) {
 
 	clientCache := clientcache.New(k8sClient, k8sClient, scheme)
 	clientCache.AddClient("envtest", k8sClient)
-	err = (&K8ssandraCluster{}).SetupWebhookWithManager(mgr, clientCache)
-	required.NoError(err)
+	required.NoError(SetupK8ssandraClusterWebhookWithManager(mgr, clientCache))
 
 	//+kubebuilder:scaffold:webhook
 
@@ -314,9 +313,11 @@ func testNumTokens(t *testing.T) {
 	var oldCassConfig = oldCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig
 	var newCassConfig = newCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig
 
+	validator := K8ssandraClusterCustomValidator{}
+
 	// Handle new num_token value different from previously specified as nil
 	required.NotEqual(oldCassConfig.CassandraYaml["num_tokens"], newCassConfig.CassandraYaml["num_tokens"])
-	var _, errorWhenNew = (*newCluster).ValidateUpdate(oldCluster)
+	var _, errorWhenNew = validator.ValidateUpdate(context.TODO(), oldCluster, newCluster)
 	required.Error(errorWhenNew, "expected error having new num_token value different from previous specified as nil")
 
 	oldCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml["num_tokens"] = tokens
@@ -327,30 +328,30 @@ func testNumTokens(t *testing.T) {
 
 	// Handle new num_token value different from previously specified as an actual value
 	required.NotEqual(oldCassConfig.CassandraYaml["num_tokens"], newCassConfig.CassandraYaml["num_tokens"])
-	_, errorWhenNew = (*newCluster).ValidateUpdate(oldCluster)
+	_, errorWhenNew = validator.ValidateUpdate(context.TODO(), oldCluster, newCluster)
 	required.Error(errorWhenNew, "expected error having new num_token value different from previous specified")
 
 	// Handle new num_token not specified when previously specified
 	oldCassConfig.CassandraYaml["num_tokens"] = tokens
 	delete(newCassConfig.CassandraYaml, "num_tokens")
 
-	var _, errorWhenNil = (*newCluster).ValidateUpdate(oldCluster)
+	var _, errorWhenNil = validator.ValidateUpdate(context.TODO(), oldCluster, newCluster)
 	required.Error(errorWhenNil, "expected error having new num_token value as nil from previous specified")
 
 	oldCassConfig.CassandraYaml["num_tokens"] = tokens
 	newCassConfig.CassandraYaml = unstructured.Unstructured{}
 
-	_, errorWhenNil = (*newCluster).ValidateUpdate(oldCluster)
+	_, errorWhenNil = validator.ValidateUpdate(context.TODO(), oldCluster, newCluster)
 	required.Error(errorWhenNil, "expected error having new num_token value as nil from previous specified")
 
 	oldCassConfig.CassandraYaml["num_tokens"] = tokens
 	newCassConfig = &CassandraConfig{}
-	_, errorWhenNil = (*newCluster).ValidateUpdate(oldCluster)
+	_, errorWhenNil = validator.ValidateUpdate(context.TODO(), oldCluster, newCluster)
 	required.Error(errorWhenNil, "expected error having new num_token value as nil from previous specified")
 
 	oldCassConfig.CassandraYaml["num_tokens"] = tokens
 	newCassConfig = &CassandraConfig{}
-	_, errorWhenNil = (*newCluster).ValidateUpdate(oldCluster)
+	_, errorWhenNil = validator.ValidateUpdate(context.TODO(), oldCluster, newCluster)
 	required.Error(errorWhenNil, "expected error having new num_token value as nil from previous specified")
 
 	// Expected to be able to update without token change, however changes to other config values are made
@@ -364,7 +365,7 @@ func testNumTokens(t *testing.T) {
 	newCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml["cdc_enabled"] = enabled
 	newCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml["index_summary_resize_interval_in_minutes"] = intervalInMins
 
-	_, errorOnValidate := (*newCluster).ValidateUpdate(oldCluster)
+	_, errorOnValidate := validator.ValidateUpdate(context.TODO(), oldCluster, newCluster)
 	required.NoError(errorOnValidate)
 
 	// Expected failure for validation with token change while changes to other config values are being made
@@ -373,7 +374,7 @@ func testNumTokens(t *testing.T) {
 	newCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml["cdc_enabled"] = enabled
 	newCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml["index_summary_resize_interval_in_minutes"] = intervalInMins
 
-	_, errorOnValidate = (*newCluster).ValidateUpdate(oldCluster)
+	_, errorOnValidate = validator.ValidateUpdate(context.TODO(), oldCluster, newCluster)
 	required.Error(errorOnValidate, "expected error when changing the value of num tokens while also changing other field values")
 }
 
@@ -562,7 +563,7 @@ func testMedusaNonLocalNamespace(t *testing.T) {
 			Prefix:          "some-prefix",
 		},
 	}
-	err := badCluster.validateK8ssandraCluster()
+	err := validateK8ssandraCluster(badCluster)
 	required.Error(err)
 	required.Contains(err.Error(), "Medusa config must be namespace local")
 }
@@ -576,30 +577,30 @@ func testReaperStorage(t *testing.T) {
 			StorageType: reaperapi.StorageTypeLocal,
 		},
 	}
-	err := reaperWithNoStorageConfig.validateK8ssandraCluster()
+	err := validateK8ssandraCluster(reaperWithNoStorageConfig)
 	required.Error(err)
 
 	reaperWithDefaultConfig := createClusterObjWithCassandraConfig("reaper-default-storage-config", "ns")
 	reaperWithDefaultConfig.Spec.Reaper = minimalInMemoryReaperConfig.DeepCopy()
-	err = reaperWithDefaultConfig.validateK8ssandraCluster()
+	err = validateK8ssandraCluster(reaperWithDefaultConfig)
 	required.NoError(err)
 
 	reaperWithoutAccessMode := createClusterObjWithCassandraConfig("reaper-no-access-mode", "ns")
 	reaperWithoutAccessMode.Spec.Reaper = minimalInMemoryReaperConfig.DeepCopy()
 	reaperWithoutAccessMode.Spec.Reaper.StorageConfig.AccessModes = nil
-	err = reaperWithoutAccessMode.validateK8ssandraCluster()
+	err = validateK8ssandraCluster(reaperWithoutAccessMode)
 	required.Error(err)
 
 	reaperWithoutStorageSize := createClusterObjWithCassandraConfig("reaper-no-storage-size", "ns")
 	reaperWithoutStorageSize.Spec.Reaper = minimalInMemoryReaperConfig.DeepCopy()
 	reaperWithoutStorageSize.Spec.Reaper.StorageConfig.Resources.Requests = corev1.ResourceList{}
-	err = reaperWithoutStorageSize.validateK8ssandraCluster()
+	err = validateK8ssandraCluster(reaperWithoutStorageSize)
 	required.Error(err)
 
 	kc := createClusterObjWithCassandraConfig("kc-with-per-dc-reaper-and-local-storage", "ns")
 	kc.Spec.Reaper = minimalInMemoryReaperConfig.DeepCopy()
 	kc.Spec.Reaper.DeploymentMode = reaperapi.DeploymentModePerDc
-	err = kc.validateK8ssandraCluster()
+	err = validateK8ssandraCluster(kc)
 	required.Equal(ErrNoReaperPerDcWithLocal, err)
 }
 
@@ -690,23 +691,24 @@ func testAutomatedUpdateAnnotation(t *testing.T) {
 	require := require.New(t)
 	createNamespace(require, "automated-update-namespace")
 	cluster := createMinimalClusterObj("automated-update-test", "automated-update-namespace")
-	require.NoError(cluster.validateK8ssandraCluster())
+	require.NoError(validateK8ssandraCluster(cluster))
 
 	// Test should accept values once and always
 	metav1.SetMetaDataAnnotation(&cluster.ObjectMeta, AutomatedUpdateAnnotation, string(AllowUpdateOnce))
-	require.NoError(cluster.validateK8ssandraCluster())
+	require.NoError(validateK8ssandraCluster(cluster))
 
 	metav1.SetMetaDataAnnotation(&cluster.ObjectMeta, AutomatedUpdateAnnotation, string(AllowUpdateAlways))
-	require.NoError(cluster.validateK8ssandraCluster())
+	require.NoError(validateK8ssandraCluster(cluster))
 
 	cluster.Annotations[AutomatedUpdateAnnotation] = string("true")
-	require.Error(cluster.validateK8ssandraCluster())
+	require.Error(validateK8ssandraCluster(cluster))
 }
 
 func testNoDCRename(t *testing.T) {
 	kcOld := createClusterObjWithCassandraConfig("testcluster", "testns")
 	kcNew := kcOld.DeepCopy()
 	kcNew.Spec.Cassandra.Datacenters[0].Meta.Name = "newdc1name"
-	_, err := kcNew.ValidateUpdate(kcOld)
+	validator := K8ssandraClusterCustomValidator{}
+	_, err := validator.ValidateUpdate(context.TODO(), kcOld, kcNew)
 	require.Error(t, err)
 }

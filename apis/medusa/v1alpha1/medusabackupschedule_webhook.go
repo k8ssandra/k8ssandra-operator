@@ -17,6 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/robfig/cron/v3"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -24,33 +27,42 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-func (r *MedusaBackupSchedule) SetupWebhookWithManager(mgr ctrl.Manager) error {
+func SetupMedusaBackupScheduleWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
-		For(r).
+		For(&MedusaBackupSchedule{}).
+		WithValidator(&MedusaBackupScheduleValidator{}).
 		Complete()
 }
 
 //+kubebuilder:webhook:path=/validate-medusa-k8ssandra-io-v1alpha1-medusabackupschedule,mutating=false,failurePolicy=fail,sideEffects=None,groups=medusa.k8ssandra.io,resources=medusabackupschedules,verbs=create;update,versions=v1alpha1,name=vmedusabackupschedule.kb.io,admissionReviewVersions=v1
 
-var _ webhook.Validator = &MedusaBackupSchedule{}
+var _ webhook.CustomValidator = &MedusaBackupScheduleValidator{}
+
+type MedusaBackupScheduleValidator struct {
+}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *MedusaBackupSchedule) ValidateCreate() (admission.Warnings, error) {
-	return nil, r.validateCronSchedule()
+func (v *MedusaBackupScheduleValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	return nil, validateCronSchedule(obj)
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *MedusaBackupSchedule) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
-	return nil, r.validateCronSchedule()
+func (v *MedusaBackupScheduleValidator) ValidateUpdate(ctx context.Context, old runtime.Object, new runtime.Object) (admission.Warnings, error) {
+	return nil, validateCronSchedule(new)
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *MedusaBackupSchedule) ValidateDelete() (admission.Warnings, error) {
+func (v *MedusaBackupScheduleValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	return nil, nil
 }
 
-func (r *MedusaBackupSchedule) validateCronSchedule() error {
-	if _, err := cron.ParseStandard(r.Spec.CronSchedule); err != nil {
+func validateCronSchedule(obj runtime.Object) error {
+	schedule, ok := obj.(*MedusaBackupSchedule)
+	if !ok {
+		return fmt.Errorf("expected a MedusaBackupSchedule object but got %T", obj)
+	}
+
+	if _, err := cron.ParseStandard(schedule.Spec.CronSchedule); err != nil {
 		// The schedule is in incorrect format
 		return err
 	}

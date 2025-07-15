@@ -121,8 +121,7 @@ func (e *TestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(
 	}
 
 	clientCache := clientcache.New(e.TestClient, e.TestClient, scheme.Scheme)
-	err = (&api.K8ssandraCluster{}).SetupWebhookWithManager(k8sManager, clientCache)
-	if err != nil {
+	if err := api.SetupK8ssandraClusterWebhookWithManager(k8sManager, clientCache); err != nil {
 		return err
 	}
 	secretswebhook.SetupSecretsInjectorWebhook(k8sManager)
@@ -293,8 +292,7 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 		}
 	}
 
-	err = (&api.K8ssandraCluster{}).SetupWebhookWithManager(k8sManager, clientCache)
-	if err != nil {
+	if err := api.SetupK8ssandraClusterWebhookWithManager(k8sManager, clientCache); err != nil {
 		return err
 	}
 	secretswebhook.SetupSecretsInjectorWebhook(k8sManager)

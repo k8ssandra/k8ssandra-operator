@@ -5,20 +5,14 @@ metadata:
 spec:
   cassandra:
     serverVersion: 5.0.4
+    config:
+      jvmOptions:
+        heapSize: 512Mi
     datacenters:
       - metadata:
           name: dc1
         k8sContext: kind-k8ssandra-0
-        size: 2
-        initContainers:
-          - name: "server-config-init"
-            resources:
-              requests:
-                memory: 256Mi
-                cpu: 1
-              limits:
-                memory: 512Mi
-                cpu: 1
+        size: 3
         storageConfig:
           cassandraDataVolumeClaimSpec:
             storageClassName: standard
@@ -27,4 +21,3 @@ spec:
             resources:
               requests:
                 storage: 5Gi
-    mgmtAPIHeap: 64Mi

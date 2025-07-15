@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -57,33 +58,44 @@ var (
 // log is for logging in this package.
 var webhookLog = logf.Log.WithName("k8ssandracluster-webhook")
 
-func (r *K8ssandraCluster) SetupWebhookWithManager(mgr ctrl.Manager, cCache *clientcache.ClientCache) error {
+func SetupK8ssandraClusterWebhookWithManager(mgr ctrl.Manager, cCache *clientcache.ClientCache) error {
 	clientCache = cCache
 	return ctrl.NewWebhookManagedBy(mgr).
-		For(r).
+		For(&K8ssandraCluster{}).
+		WithValidator(&K8ssandraClusterCustomValidator{}).
 		Complete()
 }
 
-var _ webhook.Defaulter = &K8ssandraCluster{}
+var _ webhook.CustomDefaulter = &K8ssandraClusterCustomDefaulter{}
+
+type K8ssandraClusterCustomDefaulter struct {
+}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
-func (r *K8ssandraCluster) Default() {
-	webhookLog.Info("K8ssandraCluster default values", "K8ssandraCluster", r.Name)
-
+func (r *K8ssandraClusterCustomDefaulter) Default(ctx context.Context, obj runtime.Object) error {
+	return nil
 }
 
 //+kubebuilder:webhook:path=/validate-k8ssandra-io-v1alpha1-k8ssandracluster,mutating=false,failurePolicy=fail,sideEffects=None,groups=k8ssandra.io,resources=k8ssandraclusters,verbs=create;update,versions=v1alpha1,name=vk8ssandracluster.kb.io,admissionReviewVersions=v1
 
-var _ webhook.Validator = &K8ssandraCluster{}
+var _ webhook.CustomValidator = &K8ssandraClusterCustomValidator{}
 
-// ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *K8ssandraCluster) ValidateCreate() (admission.Warnings, error) {
-	webhookLog.Info("validate K8ssandraCluster create", "K8ssandraCluster", r.Name)
-
-	return ValidateDeprecatedFieldUsage(r), r.validateK8ssandraCluster()
+type K8ssandraClusterCustomValidator struct {
 }
 
-func (r *K8ssandraCluster) validateK8ssandraCluster() error {
+// ValidateCreate implements webhook.Validator so a webhook will be registered for the type
+func (v *K8ssandraClusterCustomValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	r, ok := obj.(*K8ssandraCluster)
+	if !ok {
+		return nil, fmt.Errorf("expected a K8ssandraCluster object but got %T", obj)
+	}
+
+	webhookLog.Info("validate K8ssandraCluster create", "K8ssandraCluster", r.Name)
+
+	return ValidateDeprecatedFieldUsage(r), validateK8ssandraCluster(r)
+}
+
+func validateK8ssandraCluster(r *K8ssandraCluster) error {
 	hasClusterStorageConfig := r.Spec.Cassandra.DatacenterOptions.StorageConfig != nil
 	for _, dc := range r.Spec.Cassandra.Datacenters {
 		dns1035Errs := validation.IsDNS1035Label(dc.Meta.Name)
@@ -120,22 +132,22 @@ func (r *K8ssandraCluster) validateK8ssandraCluster() error {
 		}
 	}
 
-	if err := r.ValidateMedusa(); err != nil {
+	if err := ValidateMedusa(r); err != nil {
 		return err
 	}
 
-	if err := r.validateReaper(); err != nil {
+	if err := validateReaper(r); err != nil {
 		return err
 	}
 
-	if err := r.validateStatefulsetNameSize(); err != nil {
+	if err := validateStatefulsetNameSize(r); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (r *K8ssandraCluster) validateStatefulsetNameSize() error {
+func validateStatefulsetNameSize(r *K8ssandraCluster) error {
 	clusterName := r.ObjectMeta.Name
 	if r.Spec.Cassandra.ClusterName != "" {
 		clusterName = r.Spec.Cassandra.ClusterName
@@ -169,10 +181,15 @@ func (r *K8ssandraCluster) validateStatefulsetNameSize() error {
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
+func (v *K8ssandraClusterCustomValidator) ValidateUpdate(ctx context.Context, old runtime.Object, new runtime.Object) (admission.Warnings, error) {
+	r, ok := new.(*K8ssandraCluster)
+	if !ok {
+		return nil, fmt.Errorf("expected a K8ssandraCluster object but got %T", new)
+	}
+
 	webhookLog.Info("validate K8ssandraCluster update", "K8ssandraCluster", r.Name)
 
-	if err := r.validateK8ssandraCluster(); err != nil {
+	if err := validateK8ssandraCluster(r); err != nil {
 		return nil, err
 	}
 
@@ -209,7 +226,7 @@ func (r *K8ssandraCluster) ValidateUpdate(old runtime.Object) (admission.Warning
 	// TODO StorageConfig can not be modified (not Cluster or DC level) in existing datacenters
 	// TODO Racks can only be added and only at the end of the list - no other operation is allowed to racks
 
-	if err := r.validateStatefulsetNameSize(); err != nil {
+	if err := validateStatefulsetNameSize(r); err != nil {
 		return nil, err
 	}
 
@@ -282,12 +299,11 @@ func numTokensPerDc(cassandra *CassandraClusterTemplate) (map[string]interface{}
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *K8ssandraCluster) ValidateDelete() (admission.Warnings, error) {
-	webhookLog.Info("validate K8ssandraCluster delete", "name", r.Name)
+func (v *K8ssandraClusterCustomValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	return nil, nil
 }
 
-func (r *K8ssandraCluster) ValidateMedusa() error {
+func ValidateMedusa(r *K8ssandraCluster) error {
 	if r.Spec.Medusa == nil {
 		return nil
 	}
@@ -321,7 +337,7 @@ func (r *K8ssandraCluster) ValidateMedusa() error {
 	return nil
 }
 
-func (r *K8ssandraCluster) validateReaper() error {
+func validateReaper(r *K8ssandraCluster) error {
 	if r.Spec.Reaper == nil {
 		return nil
 	}
