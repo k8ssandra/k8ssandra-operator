@@ -3,13 +3,31 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: k8ssandra-operator
+  namespace: cass-operator
+rules:
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: k8ssandra-operator
   namespace: k8ssandra
 rules:
 - apiGroups:
   - ""
   resources:
   - configmaps
-  - endpoints
   - secrets
   - services
   verbs:
