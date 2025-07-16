@@ -12,6 +12,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -104,7 +105,30 @@ func (r *K8ssandraClusterReconciler) reconcileSeedsEndpoints(
 		return result.Error(err)
 	}
 
-	// TODO Add code to cleanup old endpoints (or their slices as they are mirrored)
+	// Cleanup old endpoints object, it's not used anymore
+	removeLegacyEndpoints(ctx, remoteClient, dc, logger)
+
+	return result.Continue()
+}
+
+func removeLegacyEndpoints(ctx context.Context, remoteClient client.Client, dc *cassdcapi.CassandraDatacenter, logger logr.Logger) result.ReconcileResult {
+	// Cleanup old endpoints object, it's not used anymore
+	endpoints := &corev1.Endpoints{} //nolint:staticcheck // This is a legacy object that we are removing, but we still need to clean it up.
+	endpointsKey := client.ObjectKey{Namespace: dc.Namespace, Name: dc.GetAdditionalSeedsServiceName()}
+	if err := remoteClient.Get(ctx, endpointsKey, endpoints); err != nil {
+		if errors.IsNotFound(err) {
+			return result.Continue()
+		}
+		logger.Error(err, "Failed to get old additional seed endpoints")
+		return result.Error(err)
+	}
+
+	if err := remoteClient.Delete(ctx, endpoints); err != nil {
+		if !errors.IsNotFound(err) {
+			logger.Error(err, "Failed to delete old additional seed endpoints")
+			return result.Error(err)
+		}
+	}
 
 	return result.Continue()
 }

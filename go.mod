@@ -1,6 +1,6 @@
 module github.com/k8ssandra/k8ssandra-operator
 
-go 1.24.4
+go 1.24.5
 
 require (
 	github.com/Jeffail/gabs v1.4.0
@@ -15,7 +15,7 @@ require (
 	github.com/go-logr/zapr v1.3.0
 	github.com/google/uuid v1.6.0
 	github.com/gruntwork-io/terratest v0.48.2
-	github.com/k8ssandra/cass-operator v1.24.1-0.20250710142936-21cc710c9280
+	github.com/k8ssandra/cass-operator v1.24.1-0.20250716090828-9f4817938c16
 	github.com/k8ssandra/reaper-client-go v0.4.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.52.1
@@ -95,5 +95,3 @@ require (
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.6.0 // indirect
 )
-
-replace github.com/k8ssandra/cass-operator v1.24.1-0.20250710142936-21cc710c9280 => github.com/burmanm/cass-operator v1.23.2-0.20250714111116-d26f9b74372d

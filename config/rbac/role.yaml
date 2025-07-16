@@ -9,6 +9,7 @@ rules:
   - ""
   resources:
   - configmaps
+  - endpoints
   - secrets
   - services
   verbs:

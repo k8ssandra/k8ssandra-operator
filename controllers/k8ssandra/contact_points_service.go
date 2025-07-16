@@ -209,6 +209,16 @@ func (r *K8ssandraClusterReconciler) reconcileContactPointsServiceEndpoints(
 		return err
 	}
 
+	// Cleanup old endpoints object, it's not used anymore
+	oldEndpoints := &corev1.Endpoints{} //nolint:staticcheck // Endpoints is deprecated, but we still need to clean it up.
+	if err := r.Client.Get(ctx, key, oldEndpoints); client.IgnoreNotFound(err) != nil {
+		return err
+	}
+
+	if err := r.Client.Delete(ctx, oldEndpoints); client.IgnoreNotFound(err) != nil {
+		return err
+	}
+
 	return nil
 }
 

@@ -825,13 +825,48 @@ func createSingleDatacenterClusterWithUpgrade(t *testing.T, ctx context.Context,
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
 	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
-	checkDatacenterReady(t, ctx, dcKey, f)
+
+	// checkDatacenterReady() func checks stuff from newer version that are not available in the older version of the operator
+	t.Logf("check that datacenter %s in cluster %s is ready", dcKey.Name, dcKey.K8sContext)
+	withDatacenter := f.NewWithDatacenter(ctx, dcKey)
+	require.Eventually(withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
+		status := dc.GetConditionStatus(cassdcapi.DatacenterReady)
+		return status == corev1.ConditionTrue && dc.Status.CassandraOperatorProgress == cassdcapi.ProgressReady
+	}), polling.datacenterReady.timeout, polling.datacenterReady.interval, fmt.Sprintf("timed out waiting for datacenter %s to become ready", dcKey.Name))
+
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
 	dcPrefix := DcPrefix(t, f, dcKey)
 
 	// Perform the upgrade
 	err = upgradeToLatest(t, ctx, f, namespace, dcPrefix)
 	require.NoError(err, "failed to upgrade to latest version")
+
+	// Verify old endpoints were deleted
+	additionalSeedsEndpointsKey := framework.ClusterKey{
+		K8sContext: f.DataPlaneContexts[0],
+		NamespacedName: types.NamespacedName{
+			Namespace: namespace,
+			Name:      "test-dc1-additional-seeds-service",
+		},
+	}
+	require.Eventually(func() bool {
+		endpoints := &corev1.Endpoints{} //nolint:staticcheck
+		err := f.Get(ctx, additionalSeedsEndpointsKey, endpoints)
+		return err != nil && errors.IsNotFound(err)
+	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "additional seeds endpoints should be deleted")
+
+	contactPointsEndpointsKey := framework.ClusterKey{
+		K8sContext: f.DataPlaneContexts[0],
+		NamespacedName: types.NamespacedName{
+			Namespace: namespace,
+			Name:      "test-dc1-contact-points-service",
+		},
+	}
+	require.Eventually(func() bool {
+		endpoints := &corev1.Endpoints{} //nolint:staticcheck
+		err := f.Get(ctx, contactPointsEndpointsKey, endpoints)
+		return err != nil && errors.IsNotFound(err)
+	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "contact points endpoints should be deleted")
 }
 
 // createSingleDatacenterCluster creates a K8ssandraCluster with one CassandraDatacenter
@@ -1370,6 +1405,10 @@ func checkDatacenterReady(t *testing.T, ctx context.Context, key framework.Clust
 		status := dc.GetConditionStatus(cassdcapi.DatacenterReady)
 		return status == corev1.ConditionTrue && dc.Status.CassandraOperatorProgress == cassdcapi.ProgressReady
 	}), polling.datacenterReady.timeout, polling.datacenterReady.interval, fmt.Sprintf("timed out waiting for datacenter %s to become ready", key.Name))
+	t.Logf("check that datacenter %s in cluster %s has the finalizer", key.Name, key.K8sContext)
+	require.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
+		return controllerutil.ContainsFinalizer(dc, k8ssandrapkg.K8ssandraClusterFinalizer)
+	}), polling.datacenterReady.timeout, polling.datacenterReady.interval, fmt.Sprintf("timed out waiting for datacenter %s to have the finalizer", key.Name))
 }
 
 func checkDatacenterHasHeapSizeSet(t *testing.T, ctx context.Context, key framework.ClusterKey, f *framework.E2eFramework) {

@@ -22,8 +22,6 @@ github.com/blang/semver/v4 v4.0.0 h1:1PFHFE6yCCTv8C1TeyNNarDzntLi7wMI5i/pzqYIsAM
 github.com/blang/semver/v4 v4.0.0/go.mod h1:IbckMUScFkM3pff0VJDNKRiT6TG/YpiHIM2yvyW5YoQ=
 github.com/bombsimon/logrusr/v2 v2.0.1 h1:1VgxVNQMCvjirZIYaT9JYn6sAVGVEcNtRE0y4mvaOAM=
 github.com/bombsimon/logrusr/v2 v2.0.1/go.mod h1:ByVAX+vHdLGAfdroiMg6q0zgq2FODY2lc5YJvzmOJio=
-github.com/burmanm/cass-operator v1.23.2-0.20250714111116-d26f9b74372d h1:6ywP+u9wmrHqk/e7H8iJ0WBGTrmYnYpiXKvWFMb5N+A=
-github.com/burmanm/cass-operator v1.23.2-0.20250714111116-d26f9b74372d/go.mod h1:wnrXgxRSeTi6v/dpuu3KbKXq/ZW1c+ykZBcmDuG8oJY=
 github.com/cert-manager/cert-manager v1.10.2 h1:2/QH9C8ffeB+t8xHYsITkY2d9ulye9a5mi1F7o+MmC0=
 github.com/cert-manager/cert-manager v1.10.2/go.mod h1:v3T3yAt5ASv4/9cbO42EilLsoZDlybQrh8o6RhTw/vo=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
@@ -97,6 +95,8 @@ github.com/josharian/intern v1.0.0 h1:vlS4z54oSdjm0bgjRigI+G1HpF+tI+9rE5LLzOg8Hm
 github.com/josharian/intern v1.0.0/go.mod h1:5DoeVV0s6jJacbCEi61lwdGj/aVlrQvzHFFd8Hwg//Y=
 github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnrnM=
 github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHmT4TnhNGBo=
+github.com/k8ssandra/cass-operator v1.24.1-0.20250716090828-9f4817938c16 h1:TOblymJ1toCEku4JPUemINYdRZ1JJ3cn4kTnFD+Rfuk=
+github.com/k8ssandra/cass-operator v1.24.1-0.20250716090828-9f4817938c16/go.mod h1:wnrXgxRSeTi6v/dpuu3KbKXq/ZW1c+ykZBcmDuG8oJY=
 github.com/k8ssandra/reaper-client-go v0.4.0 h1:8Ucco65qgGonYMUiY9wSN+KpR6IPLc09I/RtLHEMorE=
 github.com/k8ssandra/reaper-client-go v0.4.0/go.mod h1:EztqEX3nW6EfsVgQoI/BK7eTnXMxvNU/35NoELd6HuU=
 github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
