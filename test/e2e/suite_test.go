@@ -589,8 +589,13 @@ func upgradeToLatest(t *testing.T, ctx context.Context, f *framework.E2eFramewor
 	}
 
 	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
-	// checkDatacenterUpdating(t, ctx, dcKey, f)
-	checkDatacenterReady(t, ctx, dcKey, f)
+	// checkDatacenterReady() func checks stuff from newer version that are not available in the older version of the operator
+	t.Logf("check that datacenter %s in cluster %s is ready", dcKey.Name, dcKey.K8sContext)
+	withDatacenter := f.NewWithDatacenter(ctx, dcKey)
+	require.Eventually(t, withDatacenter(func(dc *cassdcapi.CassandraDatacenter) bool {
+		status := dc.GetConditionStatus(cassdcapi.DatacenterReady)
+		return status == corev1.ConditionTrue && dc.Status.CassandraOperatorProgress == cassdcapi.ProgressReady
+	}), polling.datacenterReady.timeout, polling.datacenterReady.interval, fmt.Sprintf("timed out waiting for datacenter %s to become ready", dcKey.Name))
 
 	return nil
 }
