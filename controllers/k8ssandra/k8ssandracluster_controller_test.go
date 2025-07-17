@@ -933,7 +933,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 		}
 
 		return len(endpoints) == 1 && len(endpoints[0].Endpoints) == 1 &&
-			endpoints[0].Endpoints[0].Addresses[0] == "10.0.0.7" &&
+			endpoints[0].Endpoints[0].Addresses[0] == "10.0.0.2" &&
 			*endpoints[0].Ports[0].Port == 9042
 	}, timeout, interval, "timed out waiting for creation of contact-points Service for dc2")
 
