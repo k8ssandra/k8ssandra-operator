@@ -3,15 +3,16 @@ package k8ssandra
 import (
 	"context"
 	"fmt"
+	"net"
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -54,6 +55,7 @@ func (r *K8ssandraClusterReconciler) findSeeds(ctx context.Context, kc *api.K8ss
 
 func (r *K8ssandraClusterReconciler) reconcileSeedsEndpoints(
 	ctx context.Context,
+	kc *api.K8ssandraCluster,
 	dc *cassdcapi.CassandraDatacenter,
 	seeds []corev1.Pod,
 	additionalSeeds []string,
@@ -62,97 +64,71 @@ func (r *K8ssandraClusterReconciler) reconcileSeedsEndpoints(
 	logger.Info("Reconciling seeds")
 
 	// Additional seed nodes should never be part of the current datacenter
-	filteredSeeds := make([]corev1.Pod, 0)
+	filteredSeeds := make([]string, 0)
 	for _, seed := range seeds {
 		if seed.Labels[cassdcapi.DatacenterLabel] != dc.Name {
-			filteredSeeds = append(filteredSeeds, seed)
+			filteredSeeds = append(filteredSeeds, seed.Status.PodIP)
 		}
 	}
+	filteredSeeds = append(filteredSeeds, additionalSeeds...)
 
-	// The following if block was basically taken straight out of cass-operator. See
-	// https://github.com/k8ssandra/k8ssandra-operator/issues/210 for a detailed
-	// explanation of why this is being done.
+	prefixName := fmt.Sprintf("%s-%s", kc.Name, dc.GetAdditionalSeedsServiceName())
 
-	desiredEndpoints := newEndpoints(dc, filteredSeeds, additionalSeeds)
-	actualEndpoints := &corev1.Endpoints{}
-	endpointsKey := client.ObjectKey{Namespace: desiredEndpoints.Namespace, Name: desiredEndpoints.Name}
+	ipv4Addresses := make([]string, 0)
+	ipv6Addresses := make([]string, 0)
 
-	if err := remoteClient.Get(ctx, endpointsKey, actualEndpoints); err == nil {
-		// We can't have an Endpoints object that has no addresses or notReadyAddresses for
-		// its EndpointSubset elements. This would be the case if both seeds and
-		// additionalSeeds are empty, so we delete the Endpoints.
-		if len(filteredSeeds) == 0 && len(additionalSeeds) == 0 {
-			if err := remoteClient.Delete(ctx, actualEndpoints); err != nil {
-				return result.Error(fmt.Errorf("failed to delete endpoints for dc (%s): %v", dc.Name, err))
-			}
-			return result.Continue()
-		}
-
-		if !annotations.CompareHashAnnotations(actualEndpoints, desiredEndpoints) {
-			logger.Info("Updating endpoints", "Endpoints", endpointsKey)
-			actualEndpoints := actualEndpoints.DeepCopy()
-			resourceVersion := actualEndpoints.GetResourceVersion()
-			desiredEndpoints.DeepCopyInto(actualEndpoints)
-			actualEndpoints.SetResourceVersion(resourceVersion)
-			if err = remoteClient.Update(ctx, actualEndpoints); err != nil {
-				logger.Error(err, "Failed to update endpoints", "Endpoints", endpointsKey)
-				return result.Error(err)
+	for _, additionalSeed := range filteredSeeds {
+		ip := net.ParseIP(additionalSeed)
+		if ip != nil {
+			if ip.To4() != nil {
+				ipv4Addresses = append(ipv4Addresses, additionalSeed)
+			} else {
+				ipv6Addresses = append(ipv6Addresses, additionalSeed)
 			}
 		}
-	} else {
-		if errors.IsNotFound(err) {
-			// If we have seeds then we want to go ahead and create the Endpoints. But
-			// if we don't have seeds, then we don't need to do anything for a couple
-			// of reasons. First, no seeds means that cass-operator has not labeled any
-			// pods as seeds which would be the case when the CassandraDatacenter is f
-			// first created and no pods have reached the ready state. Secondly, you
-			// cannot create an Endpoints object that has both empty Addresses and
-			// empty NotReadyAddresses.
-			if len(filteredSeeds) > 0 || len(additionalSeeds) > 0 {
-				logger.Info("Creating endpoints", "Endpoints", endpointsKey)
-				if err = remoteClient.Create(ctx, desiredEndpoints); err != nil {
-					logger.Error(err, "Failed to create endpoints", "Endpoints", endpointsKey)
-					return result.Error(err)
-				}
-			}
-		} else {
-			logger.Error(err, "Failed to get endpoints", "Endpoints", endpointsKey)
-			return result.Error(err)
-		}
+		// In cass-operator, we support FQDN addresses also, but in k8ssandra-operator this feature is omitted on purpose.
+		// The feature is not well supported in practise and we should reduce our maintenance burden by avoiding it
 	}
+
+	endpointSlices := make([]*discoveryv1.EndpointSlice, 0)
+
+	ipv4Slice := reconciliation.CreateEndpointSlice(dc, prefixName, discoveryv1.AddressTypeIPv4, ipv4Addresses)
+	endpointSlices = append(endpointSlices, ipv4Slice)
+
+	ipv6Slice := reconciliation.CreateEndpointSlice(dc, prefixName, discoveryv1.AddressTypeIPv6, ipv6Addresses)
+	endpointSlices = append(endpointSlices, ipv6Slice)
+
+	// Can't set owner reference for EndpointSlice as they can be in different namespace than K8ssandraCluster
+
+	if err := reconciliation.ReconcileEndpointSlices(ctx, remoteClient, logger, endpointSlices); err != nil {
+		logger.Error(err, "Failed to reconcile additional seed endpoint slices")
+		return result.Error(err)
+	}
+
+	// Cleanup old endpoints object, it's not used anymore
+	removeLegacyEndpoints(ctx, remoteClient, dc, logger)
+
 	return result.Continue()
 }
 
-// newEndpoints returns an Endpoints object who is named after the additional seeds service
-// of dc.
-func newEndpoints(dc *cassdcapi.CassandraDatacenter, seeds []corev1.Pod, additionalSeeds []string) *corev1.Endpoints {
-	ep := &corev1.Endpoints{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:   dc.Namespace,
-			Name:        dc.GetAdditionalSeedsServiceName(),
-			Labels:      dc.GetDatacenterLabels(),
-			Annotations: map[string]string{},
-		},
+func removeLegacyEndpoints(ctx context.Context, remoteClient client.Client, dc *cassdcapi.CassandraDatacenter, logger logr.Logger) result.ReconcileResult {
+	// Cleanup old endpoints object, it's not used anymore
+	endpoints := &corev1.Endpoints{} //nolint:staticcheck // This is a legacy object that we are removing, but we still need to clean it up.
+	endpointsKey := client.ObjectKey{Namespace: dc.Namespace, Name: dc.GetAdditionalSeedsServiceName()}
+	if err := remoteClient.Get(ctx, endpointsKey, endpoints); err != nil {
+		if errors.IsNotFound(err) {
+			return result.Continue()
+		}
+		logger.Error(err, "Failed to get old additional seed endpoints")
+		return result.Error(err)
 	}
 
-	addresses := make([]corev1.EndpointAddress, 0, len(seeds))
-	for _, seed := range seeds {
-		addresses = append(addresses, corev1.EndpointAddress{
-			IP: seed.Status.PodIP,
-		})
+	if err := remoteClient.Delete(ctx, endpoints); err != nil {
+		if !errors.IsNotFound(err) {
+			logger.Error(err, "Failed to delete old additional seed endpoints")
+			return result.Error(err)
+		}
 	}
 
-	for _, seed := range additionalSeeds {
-		addresses = append(addresses, corev1.EndpointAddress{IP: seed})
-	}
-
-	ep.Subsets = []corev1.EndpointSubset{
-		{
-			Addresses: addresses,
-		},
-	}
-
-	annotations.AddHashAnnotation(ep)
-
-	return ep
+	return result.Continue()
 }

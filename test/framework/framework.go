@@ -25,6 +25,9 @@ import (
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
+	discoveryv1 "k8s.io/api/discovery/v1"
+	"k8s.io/utils/ptr"
+
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -742,20 +745,25 @@ func (f *Framework) AssertObjectDoesNotExist(ctx context.Context, t *testing.T, 
 // done by the CassandraDatacenter's StatefulSet).
 func (f *Framework) NewAllPodsEndpoints(
 	kcKey ClusterKey, kc *api.K8ssandraCluster, dcKey ClusterKey, podIp string,
-) *corev1.Endpoints {
-	return &corev1.Endpoints{
+) *discoveryv1.EndpointSlice {
+	return &discoveryv1.EndpointSlice{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: dcKey.Namespace,
 			Name:      fmt.Sprintf("%s-%s-all-pods-service", kc.SanitizedName(), dcKey.Name),
 			Labels: map[string]string{
 				api.K8ssandraClusterNamespaceLabel: kcKey.Namespace,
 				api.K8ssandraClusterNameLabel:      kcKey.Name,
+				cassdcapi.DatacenterLabel:          dcKey.Name,
+				cassdcapi.ClusterLabel:             kcKey.Name,
+				discoveryv1.LabelManagedBy:         "framework",
+				discoveryv1.LabelServiceName:       fmt.Sprintf("%s-%s-all-pods-service", kc.SanitizedName(), dcKey.Name),
 			},
 		},
-		Subsets: []corev1.EndpointSubset{
+		AddressType: discoveryv1.AddressTypeIPv4,
+		Ports:       []discoveryv1.EndpointPort{{Name: ptr.To("mock-port"), Port: ptr.To[int32](9042), Protocol: ptr.To(corev1.ProtocolTCP)}},
+		Endpoints: []discoveryv1.Endpoint{
 			{
-				Addresses: []corev1.EndpointAddress{{IP: podIp}},
-				Ports:     []corev1.EndpointPort{{Name: "mock-port", Port: 9042, Protocol: corev1.ProtocolTCP}},
+				Addresses: []string{podIp},
 			},
 		},
 	}
@@ -763,7 +771,7 @@ func (f *Framework) NewAllPodsEndpoints(
 
 func (f *Framework) GetContactPointsService(
 	ctx context.Context, kcKey ClusterKey, kc *api.K8ssandraCluster, dcKey ClusterKey,
-) (*corev1.Service, *corev1.Endpoints, error) {
+) (*corev1.Service, []discoveryv1.EndpointSlice, error) {
 	serviceKey := types.NamespacedName{
 		Namespace: kcKey.Namespace,
 		Name:      fmt.Sprintf("%s-%s-contact-points-service", kc.SanitizedName(), dcKey.Name),
@@ -773,10 +781,15 @@ func (f *Framework) GetContactPointsService(
 	if err != nil {
 		return nil, nil, err
 	}
-	endpoints := &corev1.Endpoints{}
-	err = f.Client.Get(ctx, serviceKey, endpoints)
-	if err != nil {
+	endpoints := &discoveryv1.EndpointSliceList{}
+	searchLabels := map[string]string{
+		"kubernetes.io/service-name": service.Name,
+	}
+	if err := f.Client.List(ctx, endpoints, client.MatchingLabels(searchLabels)); err != nil {
+		if errors.IsNotFound(err) {
+			return nil, nil, err
+		}
 		return nil, nil, err
 	}
-	return service, endpoints, nil
+	return service, endpoints.Items, nil
 }

@@ -96,9 +96,7 @@ func TestMedusaWebhooks(t *testing.T) {
 		},
 	})
 	require.NoError(err)
-
-	err = (&MedusaBackupSchedule{}).SetupWebhookWithManager(mgr)
-	require.NoError(err)
+	require.NoError(SetupMedusaBackupScheduleWebhookWithManager(mgr))
 
 	//+kubebuilder:scaffold:webhook
 

@@ -23,6 +23,7 @@ import (
 
 	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -73,6 +74,7 @@ type K8ssandraClusterReconciler struct {
 // +kubebuilder:rbac:groups=reaper.k8ssandra.io,namespace="k8ssandra",resources=reapers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=pods;secrets,verbs=get;list;watch
 // +kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=endpoints,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=discovery.k8s.io,namespace="k8ssandra",resources=endpointslices,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=monitoring.coreos.com,namespace="k8ssandra",resources=servicemonitors,verbs=get;list;watch;create;update;patch;delete;deletecollection
 // +kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",namespace="k8ssandra",resources=events,verbs=create;patch
@@ -260,7 +262,7 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters
 		handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
 	cb = cb.Watches(&corev1.ConfigMap{},
 		handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
-	cb = cb.Watches(&corev1.Endpoints{},
+	cb = cb.Watches(&discoveryv1.EndpointSlice{},
 		handler.EnqueueRequestsFromMapFunc(endpointsFilter))
 
 	for _, c := range clusters {
@@ -280,8 +282,8 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters
 			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, obj *corev1.ConfigMap) []reconcile.Request {
 				return clusterLabelFilter(ctx, obj)
 			})))
-		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &corev1.Endpoints{},
-			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, obj *corev1.Endpoints) []reconcile.Request {
+		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &discoveryv1.EndpointSlice{},
+			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, obj *discoveryv1.EndpointSlice) []reconcile.Request {
 				return clusterLabelFilter(ctx, obj)
 			})))
 	}

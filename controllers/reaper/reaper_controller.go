@@ -202,7 +202,7 @@ func (r *ReaperReconciler) reconcileDeployment(
 	if actualReaper.Spec.DatacenterRef.Name != "" {
 		if vectorReconcileResult, err := r.reconcileVectorConfigMap(ctx, *actualReaper, actualDc, r.Client, logger); err != nil {
 			return vectorReconcileResult, err
-		} else if vectorReconcileResult.Requeue {
+		} else if vectorReconcileResult.RequeueAfter > 0 {
 			return vectorReconcileResult, nil
 		}
 	}

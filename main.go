@@ -205,7 +205,7 @@ func main() {
 			setupLog.Error(err, "unable to create controller", "controller", "K8ssandraCluster")
 			os.Exit(1)
 		}
-		if err = (&k8ssandraiov1alpha1.K8ssandraCluster{}).SetupWebhookWithManager(mgr, clientCache); err != nil {
+		if err = k8ssandraiov1alpha1.SetupK8ssandraClusterWebhookWithManager(mgr, clientCache); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "K8ssandraCluster")
 			os.Exit(1)
 		}
@@ -285,7 +285,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "MedusaBackupSchedule")
 		os.Exit(1)
 	}
-	if err = (&medusav1alpha1.MedusaBackupSchedule{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = medusav1alpha1.SetupMedusaBackupScheduleWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "MedusaBackupSchedule")
 		os.Exit(1)
 	}

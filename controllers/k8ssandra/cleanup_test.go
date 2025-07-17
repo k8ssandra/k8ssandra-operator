@@ -228,7 +228,7 @@ func TestK8ssandraClusterReconciler_CheckDeletion(t *testing.T) {
 	require.True(t, result.IsRequeue())
 	ctrlResult, resultErr := result.Output()
 	require.NoError(t, resultErr)
-	require.True(t, ctrlResult.Requeue)
+	require.True(t, ctrlResult.RequeueAfter > 0)
 	require.Equal(t, time.Second, ctrlResult.RequeueAfter)
 
 	// Verify other resources were deleted
