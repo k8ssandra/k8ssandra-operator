@@ -228,9 +228,6 @@ images:
   - name: k8ssandra/k8ssandra-operator
     newName: {{ .ImageName }}
     newTag: {{ .ImageTag }}
-  - name: cr.k8ssandra.io/k8ssandra/cass-operator
-    newName: docker.io/k8ssandra/cass-operator
-    newTag: v1.26.0-dev.21cc710-20250710
 
 patches:
 - target:

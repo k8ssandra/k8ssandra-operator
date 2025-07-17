@@ -15,7 +15,7 @@ require (
 	github.com/go-logr/zapr v1.3.0
 	github.com/google/uuid v1.6.0
 	github.com/gruntwork-io/terratest v0.48.2
-	github.com/k8ssandra/cass-operator v1.24.1-0.20250716090828-9f4817938c16
+	github.com/k8ssandra/cass-operator v1.26.0
 	github.com/k8ssandra/reaper-client-go v0.4.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.52.1
@@ -30,9 +30,9 @@ require (
 	google.golang.org/grpc v1.68.1
 	google.golang.org/protobuf v1.36.5
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/api v0.33.2
-	k8s.io/apimachinery v0.33.2
-	k8s.io/client-go v0.33.2
+	k8s.io/api v0.33.3
+	k8s.io/apimachinery v0.33.3
+	k8s.io/client-go v0.33.3
 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
 	sigs.k8s.io/controller-runtime v0.21.0
 	sigs.k8s.io/yaml v1.4.0
