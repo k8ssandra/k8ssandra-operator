@@ -926,7 +926,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 
 	t.Log("check that the contact-points Service for dc2 was created in the control plane")
 	require.Eventually(func() bool {
-		_, endpoints, err := f.GetContactPointsService(ctx, kcKey, kc, dc2Key)
+		service, endpoints, err := f.GetContactPointsService(ctx, kcKey, kc, dc2Key)
 		if err != nil {
 			t.Logf("failed to get contact-points Service: %v", err)
 			return false
@@ -934,7 +934,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 
 		return len(endpoints) == 1 && len(endpoints[0].Endpoints) == 1 &&
 			endpoints[0].Endpoints[0].Addresses[0] == "10.0.0.2" &&
-			*endpoints[0].Ports[0].Port == 9042
+			*endpoints[0].Ports[0].Port == 9042 && service.Spec.Ports[0].Port == 9042
 	}, timeout, interval, "timed out waiting for creation of contact-points Service for dc2")
 
 	t.Log("simulate a change of Endpoints in dc2")
@@ -943,14 +943,14 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 
 	t.Log("check that the contact-points Service for dc2 was updated")
 	require.Eventually(func() bool {
-		_, endpoints, err := f.GetContactPointsService(ctx, kcKey, kc, dc2Key)
+		service, endpoints, err := f.GetContactPointsService(ctx, kcKey, kc, dc2Key)
 		if err != nil {
 			t.Logf("failed to get contact-points Service: %v", err)
 			return false
 		}
 		return len(endpoints) == 1 && len(endpoints[0].Endpoints) == 1 &&
 			endpoints[0].Endpoints[0].Addresses[0] == "10.0.0.3" &&
-			*endpoints[0].Ports[0].Port == 9042
+			*endpoints[0].Ports[0].Port == 9042 && service.Spec.Ports[0].Port == 9042
 	}, timeout, interval, "timed out waiting for update of contact-points Service for dc2")
 
 	t.Log("deleting K8ssandraCluster")
