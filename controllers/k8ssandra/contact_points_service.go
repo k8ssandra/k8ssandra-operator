@@ -41,7 +41,7 @@ func (r *K8ssandraClusterReconciler) reconcileContactPointsService(
 ) result.ReconcileResult {
 	// First, try to fetch the Endpoints of the *-all-pods-service of the CassandraDatacenter, it contains the
 	// information we want to duplicate locally.
-	remoteEndpoints, err := r.loadAllPodsEndpoints(ctx, logger, dc, remoteClient)
+	remoteEndpoints, err := r.loadAllPodsEndpoints(ctx, dc, remoteClient)
 	if err != nil {
 		return result.Error(err)
 	}
@@ -66,7 +66,7 @@ func (r *K8ssandraClusterReconciler) reconcileContactPointsService(
 }
 
 func (r *K8ssandraClusterReconciler) loadAllPodsEndpoints(
-	ctx context.Context, logger logr.Logger, dc *cassdcapi.CassandraDatacenter, remoteClient client.Client,
+	ctx context.Context, dc *cassdcapi.CassandraDatacenter, remoteClient client.Client,
 ) ([]discoveryv1.EndpointSlice, error) {
 	endpoints := &discoveryv1.EndpointSliceList{}
 	searchLabels := dc.GetDatacenterLabels()
@@ -94,16 +94,14 @@ func (r *K8ssandraClusterReconciler) createContactPointsService(
 	dc *cassdcapi.CassandraDatacenter,
 	ports []discoveryv1.EndpointPort,
 ) error {
+	actualService := &corev1.Service{}
 	key := contactPointsServiceKey(kc, dc)
-	err := r.Client.Get(ctx, key, &corev1.Service{})
-	if err == nil {
-		// Service already exists, nothing to do.
-		// (note that we don't use a hash annotation here, because the contents are always the same)
-		return nil
-	}
-	if !errors.IsNotFound(err) {
+	create := false
+	if err := r.Client.Get(ctx, key, actualService); client.IgnoreNotFound(err) != nil {
 		logger.Error(err, "Failed to fetch Service", "key", key)
 		return err
+	} else if errors.IsNotFound(err) {
+		create = true
 	}
 
 	var servicePorts []corev1.ServicePort
@@ -115,17 +113,27 @@ func (r *K8ssandraClusterReconciler) createContactPointsService(
 		})
 	}
 
-	// Else not found, create it
-	logger.Info("Creating Service", "key", key)
-	service, err := r.newContactPointsService(key, kc, dc, servicePorts)
+	desiredService, err := r.newContactPointsService(key, kc, dc, servicePorts)
 	if err != nil {
 		logger.Error(err, "Failed to initialize Service", "key", key)
 		return err
 	}
-	if err = r.Client.Create(ctx, service); err != nil {
-		logger.Error(err, "Failed to create Service", "key", key)
-		return err
+
+	if create {
+		if err = r.Client.Create(ctx, desiredService); err != nil {
+			logger.Error(err, "Failed to create Service", "key", key)
+			return err
+		}
+	} else if !annotations.CompareHashAnnotations(actualService, desiredService) {
+		resourceVersion := actualService.GetResourceVersion()
+		desiredService.DeepCopyInto(actualService)
+		actualService.SetResourceVersion(resourceVersion)
+		if err = r.Client.Update(ctx, actualService); err != nil {
+			logger.Error(err, "Failed to update contact-points Service")
+			return err
+		}
 	}
+
 	return nil
 }
 
@@ -160,6 +168,8 @@ func (r *K8ssandraClusterReconciler) newContactPointsService(
 	}
 	labels.AddCommonLabels(service, kc)
 	annotations.AddCommonAnnotations(service, kc)
+	annotations.AddHashAnnotation(service)
+
 	return service, nil
 }
 

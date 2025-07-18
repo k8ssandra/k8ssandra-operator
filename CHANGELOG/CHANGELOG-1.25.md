@@ -13,6 +13,10 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 
 When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
 
+## unreleased
+
+* [BUGFIX] [#1585](https://github.com/k8ssandra/k8ssandra-operator/issues/1585) If contact-points-service has updates (such as new ports coming from all-pods-service), we do not update it all. Only a delete would cause the service to be generated with new information. Fixed to correctly reconcile the service.
+
 ## v1.25.0 - 2025-07-17
 
 * [CHANGE] [#1582](https://github.com/k8ssandra/k8ssandra-operator/issues/1582) Replace use of Endpoints with EndpointSlices, same as cass-operator v1.26.0. Also, update to cass-operator v1.26.0 and k8ssandra-client v0.8.1
