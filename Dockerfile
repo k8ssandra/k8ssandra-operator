@@ -20,11 +20,22 @@ COPY controllers/ controllers/
 # Build
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -a -o manager main.go
 
-# Use distroless as minimal base image to package the manager binary
-# Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:nonroot
+# Build the UBI image
+FROM redhat/ubi9-micro:latest
+
+ARG VERSION
+
+LABEL maintainer="DataStax, Inc <info@datastax.com>"
+LABEL name="k8ssandra-operator"
+LABEL vendor="DataStax, Inc"
+LABEL release="${VERSION}"
+LABEL version="${VERSION}"
+LABEL summary="DataStax k8ssandra-operator"
+LABEL description="K8ssandra is a cloud-native distribution of Apache Cassandra® that runs on Kubernetes."
+
 WORKDIR /
-COPY --from=builder /workspace/manager .
+COPY --from=builder /workspace/manager /manager
+
 USER 65532:65532
 
 ENTRYPOINT ["/manager"]
