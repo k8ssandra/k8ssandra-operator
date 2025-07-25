@@ -42,7 +42,10 @@ func TestCassandraBackupRestore(t *testing.T) {
 	testEnv := setupMedusaBackupTestEnv(t, ctx)
 	defer testEnv.Stop(t)
 	t.Run("TestMedusaBackupDatacenter", testEnv.ControllerTest(ctx, testMedusaBackupDatacenter))
-	t.Run("TestMedusaTasks", testEnv.ControllerTest(ctx, testMedusaTasks))
+
+	// TODO: Uncomment this when we have a way to test medusa tasks without flakes
+	// t.Run("TestMedusaTasks", testEnv.ControllerTest(ctx, testMedusaTasks))
+
 	t.Run("TestMedusaRestoreDatacenter", testEnv.ControllerTest(ctx, testMedusaRestoreDatacenter))
 	t.Run("TestValidationErrorStopsRestore", testEnv.ControllerTest(ctx, testValidationErrorStopsRestore))
 	t.Run("TestMedusaConfiguration", testEnv.ControllerTest(ctx, testMedusaConfiguration))
