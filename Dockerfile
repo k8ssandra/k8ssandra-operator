@@ -35,6 +35,7 @@ LABEL description="K8ssandra is a cloud-native distribution of Apache CassandraÂ
 
 WORKDIR /
 COPY --from=builder /workspace/manager /manager
+COPY ./LICENSE /licenses/LICENSE
 
 USER 65532:65532
 
