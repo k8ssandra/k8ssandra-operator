@@ -14,6 +14,7 @@ rules:
   resources:
     - configmaps
     - endpoints
+    - endpoints/restricted
     - secrets
     - services
   verbs:
@@ -124,6 +125,7 @@ rules:
     - discovery.k8s.io
   resources:
     - endpointslices
+    - endpointslices/restricted
   verbs:
     - create
     - delete
