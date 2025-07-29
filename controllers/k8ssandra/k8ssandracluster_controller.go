@@ -19,9 +19,7 @@ package k8ssandra
 import (
 	"context"
 	"strings"
-	"time"
 
-	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 
@@ -41,12 +39,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -212,21 +208,9 @@ func updateStatus(ctx context.Context, r client.Client, kc *api.K8ssandraCluster
 	return result.Continue()
 }
 
-func IncreasedControllerRateLimiter[T comparable]() workqueue.TypedRateLimiter[T] {
-	return workqueue.NewTypedMaxOfRateLimiter(
-		workqueue.NewTypedItemExponentialFailureRateLimiter[T](5*time.Millisecond, 1000*time.Second),
-		// 10 qps, 100 bucket size.  This is only for retry speed and its only the overall factor (not per item)
-		&workqueue.TypedBucketRateLimiter[T]{Limiter: rate.NewLimiter(rate.Limit(1000), 10000)},
-	)
-}
-
 // SetupWithManager sets up the controller with the Manager.
 func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters []cluster.Cluster) error {
 	cb := ctrl.NewControllerManagedBy(mgr).
-		WithOptions(
-			controller.Options{
-				RateLimiter: IncreasedControllerRateLimiter[reconcile.Request](),
-			}).
 		For(&api.K8ssandraCluster{}, builder.WithPredicates(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})))
 
 	clusterLabelFilter := func(ctx context.Context, mapObj client.Object) []reconcile.Request {

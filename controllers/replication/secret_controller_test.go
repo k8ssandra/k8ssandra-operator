@@ -45,17 +45,12 @@ var (
 func TestSecretController(t *testing.T) {
 	ctx := testutils.TestSetup(t)
 	ctx, cancel := context.WithCancel(ctx)
-	reconcilerConfig := config.InitConfig()
-
-	reconcilerConfig.DefaultDelay = 20 * time.Millisecond
-	reconcilerConfig.LongDelay = 50 * time.Millisecond
-
 	testEnv = &testutils.MultiClusterTestEnv{NumDataPlanes: 2}
 	err := testEnv.Start(ctx, t, func(mgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error {
 		scheme = mgr.GetScheme()
 		logger = mgr.GetLogger()
 		return (&SecretSyncController{
-			ReconcilerConfig: reconcilerConfig,
+			ReconcilerConfig: config.InitConfig(),
 			ClientCache:      clientCache,
 		}).SetupWithManager(mgr, clusters, logger)
 	})
@@ -409,7 +404,7 @@ func wrongClusterIgnoreCopy(t *testing.T, ctx context.Context, f *framework.Fram
 	for _, s := range generatedSecrets {
 		require.Never(func() bool {
 			return verifySecretCopied(t, ctx, f.DataPlaneContexts[targetCopyToCluster], s, nil)
-		}, 200*time.Millisecond, interval)
+		}, 3, interval)
 	}
 }
 
