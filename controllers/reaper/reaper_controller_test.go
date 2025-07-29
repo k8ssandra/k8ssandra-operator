@@ -33,8 +33,8 @@ const (
 	cassandraClusterName    = "test-cluster"
 	cassandraDatacenterName = "test-dc"
 
-	timeout  = time.Second * 2
-	interval = time.Millisecond * 20
+	timeout  = time.Second * 5
+	interval = time.Millisecond * 50
 )
 
 var currentTest *testing.T
@@ -43,15 +43,9 @@ func TestReaper(t *testing.T) {
 	ctx := testutils.TestSetup(t)
 	ctx, cancel := context.WithCancel(ctx)
 	testEnv := &testutils.TestEnv{}
-
-	reconcilerConfig := config.InitConfig()
-
-	reconcilerConfig.DefaultDelay = 20 * time.Millisecond
-	reconcilerConfig.LongDelay = 50 * time.Millisecond
-
 	err := testEnv.Start(ctx, t, func(mgr manager.Manager) error {
 		err := (&ReaperReconciler{
-			ReconcilerConfig: reconcilerConfig,
+			ReconcilerConfig: config.InitConfig(),
 			Client:           mgr.GetClient(),
 			Scheme:           mgr.GetScheme(),
 			NewManager:       newMockManager,

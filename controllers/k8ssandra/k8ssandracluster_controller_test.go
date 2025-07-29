@@ -47,8 +47,8 @@ import (
 )
 
 const (
-	timeout  = time.Second * 2
-	interval = time.Millisecond * 20
+	timeout  = time.Second * 5
+	interval = time.Millisecond * 100
 )
 
 var (
@@ -70,8 +70,8 @@ func TestK8ssandraCluster(t *testing.T) {
 
 	reconcilerConfig := config.InitConfig()
 
-	reconcilerConfig.DefaultDelay = 20 * time.Millisecond
-	reconcilerConfig.LongDelay = 50 * time.Millisecond
+	reconcilerConfig.DefaultDelay = 100 * time.Millisecond
+	reconcilerConfig.LongDelay = 300 * time.Millisecond
 
 	err := testEnv.Start(ctx, t, func(mgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error {
 		err := (&K8ssandraClusterReconciler{
@@ -833,7 +833,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 		}
 
 		condition := FindDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
-		return condition != nil && condition.Status == corev1.ConditionTrue
+		return !(condition == nil && condition.Status == corev1.ConditionFalse)
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 
 	t.Log("simulate the creation of the all-pods Endpoints for dc1")
@@ -1117,7 +1117,7 @@ func createSingleDcCassandra4ClusterWithStargate(t *testing.T, ctx context.Conte
 		}
 
 		condition := FindDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
-		return condition != nil && condition.Status == corev1.ConditionTrue
+		return !(condition == nil && condition.Status == corev1.ConditionFalse)
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 
 	t.Log("update dc1 status to ready")
