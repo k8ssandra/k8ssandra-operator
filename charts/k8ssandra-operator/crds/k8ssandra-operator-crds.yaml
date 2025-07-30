@@ -29143,10 +29143,10 @@ spec:
                     default:
                       name: cassandra-reaper
                       repository: thelastpickle
-                      tag: 4.0.0-beta3
+                      tag: 4.0.0-rc1
                     description: |-
                       The image to use for the Reaper pod main container.
-                      The default is "thelastpickle/cassandra-reaper:4.0.0-beta3".
+                      The default is "thelastpickle/cassandra-reaper:4.0.0-rc1".
                     properties:
                       name:
                         description: The image name to use.
@@ -35578,10 +35578,10 @@ spec:
                 default:
                   name: cassandra-reaper
                   repository: thelastpickle
-                  tag: 4.0.0-beta3
+                  tag: 4.0.0-rc1
                 description: |-
                   The image to use for the Reaper pod main container.
-                  The default is "thelastpickle/cassandra-reaper:4.0.0-beta3".
+                  The default is "thelastpickle/cassandra-reaper:4.0.0-rc1".
                 properties:
                   name:
                     description: The image name to use.
