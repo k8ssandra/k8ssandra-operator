@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -16,8 +18,6 @@ import (
 	k8ssandrameta "github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -221,6 +221,7 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 	dc1 := &cassdcapi.CassandraDatacenter{}
 	err = f.Get(ctx, dc1Key, dc1)
 	checkMedusaObjectsCompliance(t, f, dc1, kc)
+	checkPurgeSchedule(ctx, namespace, kc, dc1, f, f.DataPlaneContexts[0], require)
 
 	t.Log("check that dc2 has not been created yet")
 	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: f.DataPlaneContexts[1]}
@@ -272,6 +273,7 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey, dc2Key)
 
 	checkMedusaObjectsCompliance(t, f, dc2, kc)
+	checkPurgeSchedule(ctx, namespace, kc, dc2, f, f.DataPlaneContexts[1], require)
 
 	t.Log("check that the K8ssandraCluster status is updated")
 	require.Eventually(func() bool {
@@ -687,4 +689,16 @@ func createSingleDcClusterWithManagementApiSecured(t *testing.T, ctx context.Con
 	require.True(foundMgmtEncryptionClient)
 	vol := dc.Spec.PodTemplateSpec.Spec.Volumes[volumeIndex]
 	require.Equal(kc.Spec.Cassandra.DatacenterOptions.ManagementApiAuth.Manual.ClientSecretName, vol.Secret.SecretName)
+
+	// Check for the presence of the purge schedule
+	checkPurgeSchedule(ctx, namespace, kc, dc, f, f.DataPlaneContexts[0], require)
+}
+
+func checkPurgeSchedule(ctx context.Context, namespace string, kc *api.K8ssandraCluster, dc *cassdcapi.CassandraDatacenter, f *framework.Framework, dataPlaneContext string, require *require.Assertions) {
+	purgeSchedule := &medusaapi.MedusaBackupSchedule{}
+	purgeScheduleKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: medusa.MedusaPurgeCronJobName(kc.SanitizedName(), dc.Name)}, K8sContext: dataPlaneContext}
+	require.NoError(f.Get(ctx, purgeScheduleKey, purgeSchedule))
+	require.Equal(purgeSchedule.Spec.OperationType, string(medusaapi.OperationTypePurge))
+	require.Equal(purgeSchedule.Spec.BackupSpec.CassandraDatacenter, dc.Name)
+	require.Equal(purgeSchedule.Spec.CronSchedule, "0 0 * * *")
 }
