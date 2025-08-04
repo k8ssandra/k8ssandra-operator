@@ -107,11 +107,19 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 			return result.Error(err)
 		}
 
-		// Create the MedusaBackupSchedule if it doesn't exist
-		if *medusaSpec.PurgeBackups {
+		// Create the MedusaBackupSchedule
+		// Default to true if not set
+		if medusaSpec.PurgeBackups == nil || *medusaSpec.PurgeBackups {
+			logger.Info("Creating Medusa purge schedule")
 			medusaBackupSchedule := r.createPurgeSchedule(ctx, remoteClient, kc, dcConfig, *r.Scheme, logger)
 			if recRes := reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *medusaBackupSchedule); recRes.Completed() {
 				return recRes
+			}
+		} else {
+			logger.Info("Deleting Medusa purge schedule if it exists")
+			err := r.maybeCleanupPurgeSchedule(ctx, dcConfig, kc, operatorNamespace, logger, remoteClient)
+			if err != nil {
+				return result.Error(err)
 			}
 		}
 	} else {
@@ -124,7 +132,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 // This function is used to cleanup the purge cronjob if it exists.
 // We no longer use CronJobs to schedule purges, but now rely on the MedusaBackupSchedule API.
 func (*K8ssandraClusterReconciler) cleanupPurgeCronJob(ctx context.Context, dcConfig *cassandra.DatacenterConfig, kc *api.K8ssandraCluster, operatorNamespace string, logger logr.Logger, remoteClient client.Client) error {
-	cronJobName := medusa.MedusaPurgeCronJobName(kc.SanitizedName(), dcConfig.SanitizedName())
+	cronJobName := medusa.MedusaPurgeScheduleName(kc.SanitizedName(), dcConfig.SanitizedName())
 	cronJobKey := types.NamespacedName{Namespace: operatorNamespace, Name: cronJobName}
 	cronJob := &batchv1.CronJob{}
 	if err := remoteClient.Get(ctx, cronJobKey, cronJob); err != nil {
@@ -138,6 +146,31 @@ func (*K8ssandraClusterReconciler) cleanupPurgeCronJob(ctx context.Context, dcCo
 		logger.Info("Deleting Medusa purge backups cronjob (may have been created before PurgeBackups was set to false")
 		if err := remoteClient.Delete(ctx, cronJob); err != nil {
 			logger.Info("Failed to delete Medusa purge backups cronjob", "error", err)
+			return err
+		}
+	}
+	return nil
+}
+
+func (*K8ssandraClusterReconciler) maybeCleanupPurgeSchedule(ctx context.Context, dcConfig *cassandra.DatacenterConfig, kc *api.K8ssandraCluster, operatorNamespace string, logger logr.Logger, remoteClient client.Client) error {
+	purgeScheduleName := medusa.MedusaPurgeScheduleName(kc.SanitizedName(), dcConfig.SanitizedName())
+	dcNamespace := dcConfig.Meta.Namespace
+	if dcNamespace == "" {
+		dcNamespace = kc.Namespace
+	}
+	purgeScheduleKey := types.NamespacedName{Namespace: dcNamespace, Name: purgeScheduleName}
+	purgeSchedule := &medusaapi.MedusaBackupSchedule{}
+	if err := remoteClient.Get(ctx, purgeScheduleKey, purgeSchedule); err != nil {
+		// If the error is anything else but not found, fail the reconcile
+		if !errors.IsNotFound(err) {
+			logger.Error(err, "Failed to get Medusa purge backup schedule")
+			return err
+		}
+	} else {
+		// The purge schedule exists, delete it
+		logger.Info("Deleting Medusa purge backup schedule")
+		if err := remoteClient.Delete(ctx, purgeSchedule); err != nil {
+			logger.Info("Failed to delete Medusa purge backup schedule", "error", err)
 			return err
 		}
 	}
@@ -263,7 +296,7 @@ func (r *K8ssandraClusterReconciler) createPurgeSchedule(ctx context.Context, re
 	}
 	purgeSchedule := medusaapi.MedusaBackupSchedule{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      medusa.MedusaPurgeCronJobName(kc.SanitizedName(), dcConfig.SanitizedName()),
+			Name:      medusa.MedusaPurgeScheduleName(kc.SanitizedName(), dcConfig.SanitizedName()),
 			Namespace: dcNamespace,
 		},
 		Spec: medusaapi.MedusaBackupScheduleSpec{
