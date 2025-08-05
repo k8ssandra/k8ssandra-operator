@@ -312,17 +312,28 @@ func (s *SecretSyncController) cleanupSecretsInTarget(ctx context.Context, secre
 		origSecret := &secrets[i]
 		targetNamespace := utils.FirstNonEmptyString(target.Namespace, origSecret.Namespace)
 		deleteObject := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: getPrefixedSecretName(target.TargetPrefix, origSecret.Name), Namespace: targetNamespace}}
-		if origSecret.Namespace == target.Namespace && origSecret.Name == deleteObject.Name {
-			// Target is the same secret as the original - bail.
-			// TODO: Note that this will cause secrets to not be cleaned up if they are in a remote cluster.
-			continue
-		}
-		logger.Info("Deleting secrets for", "objectMeta", deleteObject.ObjectMeta,
-			"Cluster", target.K8sContextName)
-		err := remoteClient.Delete(ctx, deleteObject)
-		if err != nil && !errors.IsNotFound(err) {
-			logger.Error(err, "Failed to remove secrets from target cluster", "ReplicatedSecret", rsec.Name, "TargetContext", target, "targetSecret", deleteObject.ObjectMeta)
+		// Get the secret from the target cluster
+		sec := &corev1.Secret{}
+		if err := remoteClient.Get(ctx, types.NamespacedName{Name: deleteObject.Name, Namespace: targetNamespace}, sec); err != nil {
+			if errors.IsNotFound(err) {
+				// Secret does not exist in target cluster, skip
+				continue
+			}
+			logger.Error(err, "Failed to fetch secret from target cluster", "Secret", deleteObject.Name, "TargetContext", target)
 			return err
+		} else {
+			// Delete the secret if it doesn't have the orphan annotation
+			if val, found := sec.GetAnnotations()[secret.OrphanResourceAnnotation]; found && val == "true" {
+				continue
+			}
+
+			logger.Info("Deleting secrets for", "objectMeta", deleteObject.ObjectMeta,
+				"Cluster", target.K8sContextName)
+			err := remoteClient.Delete(ctx, deleteObject)
+			if err != nil && !errors.IsNotFound(err) {
+				logger.Error(err, "Failed to remove secrets from target cluster", "ReplicatedSecret", rsec.Name, "TargetContext", target, "targetSecret", deleteObject.ObjectMeta)
+				return err
+			}
 		}
 	}
 	return nil

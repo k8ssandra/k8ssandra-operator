@@ -1222,6 +1222,98 @@ func TestCleanupSecretsInTarget(t *testing.T) {
 				assert.True(t, errors.IsNotFound(err))
 			},
 		},
+		{
+			name: "Do not cleanup secrets with orphan annotation",
+			setupFunc: func() (*SecretSyncController, []corev1.Secret, *api.ReplicatedSecret, api.ReplicationTarget, client.Client, logr.Logger) {
+				controller := &SecretSyncController{}
+				secrets := []corev1.Secret{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-secret",
+							Namespace: "test-ns",
+						},
+					},
+				}
+				rsec := &api.ReplicatedSecret{}
+				target := api.ReplicationTarget{
+					Namespace: "target-ns",
+				}
+				fakeClient, _ := testutils.NewFakeClient()
+
+				// Pre-create the secret in the target namespace with the orphan annotation
+				existingSecret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-secret",
+						Namespace: "target-ns",
+						Annotations: map[string]string{
+							secret.OrphanResourceAnnotation: "true",
+						},
+					},
+				}
+				require.NoError(t, fakeClient.Create(context.TODO(), existingSecret))
+
+				logger := logr.Discard()
+				return controller, secrets, rsec, target, fakeClient, logger
+			},
+			expectedError: false,
+			verify: func(t *testing.T, fakeClient client.Client, err error) {
+				require.NoError(t, err)
+
+				// Verify secret was NOT deleted
+				secret := &corev1.Secret{}
+				err = fakeClient.Get(context.TODO(), types.NamespacedName{
+					Name:      "test-secret",
+					Namespace: "target-ns",
+				}, secret)
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "Cleanup secrets with orphan annotation set to false",
+			setupFunc: func() (*SecretSyncController, []corev1.Secret, *api.ReplicatedSecret, api.ReplicationTarget, client.Client, logr.Logger) {
+				controller := &SecretSyncController{}
+				secrets := []corev1.Secret{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-secret",
+							Namespace: "test-ns",
+						},
+					},
+				}
+				rsec := &api.ReplicatedSecret{}
+				target := api.ReplicationTarget{
+					Namespace: "target-ns",
+				}
+				fakeClient, _ := testutils.NewFakeClient()
+
+				// Pre-create the secret with the orphan annotation set to "false"
+				existingSecret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-secret",
+						Namespace: "target-ns",
+						Annotations: map[string]string{
+							secret.OrphanResourceAnnotation: "false",
+						},
+					},
+				}
+				require.NoError(t, fakeClient.Create(context.TODO(), existingSecret))
+
+				logger := logr.Discard()
+				return controller, secrets, rsec, target, fakeClient, logger
+			},
+			expectedError: false,
+			verify: func(t *testing.T, fakeClient client.Client, err error) {
+				require.NoError(t, err)
+
+				// Verify secret was deleted
+				secret := &corev1.Secret{}
+				err = fakeClient.Get(context.TODO(), types.NamespacedName{
+					Name:      "test-secret",
+					Namespace: "target-ns",
+				}, secret)
+				assert.True(t, errors.IsNotFound(err))
+			},
+		},
 	}
 
 	for _, tt := range tests {
