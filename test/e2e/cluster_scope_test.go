@@ -25,8 +25,8 @@ func multiDcMultiCluster(t *testing.T, ctx context.Context, klusterNamespace str
 	require.NoError(err, "failed to get K8ssandraCluster in operatorNamespace %s", klusterNamespace)
 
 	dc1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: dc1Namespace, Name: "dc1"}}
-	dc1Prefix := DcPrefix(t, f, dc1Key)
 	checkDatacenterReady(t, ctx, dc1Key, f)
+	dc1Prefix := DcPrefix(t, f, dc1Key)
 	verifyBucketKeyPresent(t, f, ctx, k8ssandra, klusterNamespace, dc1Key.K8sContext, multiClusterBucketSecretName)
 	verifyBucketKeyPresent(t, f, ctx, k8ssandra, dc1Key.Namespace, dc1Key.K8sContext, multiClusterBucketSecretName)
 
@@ -46,8 +46,8 @@ func multiDcMultiCluster(t *testing.T, ctx context.Context, klusterNamespace str
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
 
 	dc2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: dc2Namespace, Name: "dc2"}}
-	dc2Prefix := DcPrefix(t, f, dc2Key)
 	checkDatacenterReady(t, ctx, dc2Key, f)
+	dc2Prefix := DcPrefix(t, f, dc2Key)
 	verifyBucketKeyPresent(t, f, ctx, k8ssandra, dc2Namespace, dc2Key.K8sContext, multiClusterBucketSecretName)
 
 	t.Log("check k8ssandra cluster status")
