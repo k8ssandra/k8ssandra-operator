@@ -176,30 +176,18 @@ func checkMedusaContainersExist(t *testing.T, ctx context.Context, namespace str
 
 func checkPurgeBackupScheduleExists(t *testing.T, ctx context.Context, namespace string, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
 	require := require.New(t)
-	// Get the Cassandra pod
-	dc1 := &cassdcapi.CassandraDatacenter{}
-	err := f.Get(ctx, dcKey, dc1)
-	// check medusa containers exist
-	require.NoError(err, "Error getting the CassandraDatacenter")
-	t.Log("Checking that the purge Backup Schedule exists")
 	// check that the cronjob exists
 	backupSchedule := &medusa.MedusaBackupSchedule{}
-	err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, medusapkg.MedusaPurgeScheduleName(kc.SanitizedName(), dc1.DatacenterName())), backupSchedule)
-	require.NoErrorf(err, "Error getting the Medusa purge schedule. ClusterName: %s, DatacenterName: %s", kc.SanitizedName(), dc1.LabelResourceName())
+	err := f.Get(ctx, dcKey, backupSchedule)
+	require.NoErrorf(err, "Error getting the Medusa purge schedule. ClusterName: %s, DatacenterName: %s", kc.SanitizedName(), dcKey.Name)
 }
 
 func checkNoPurgeBackupSchedule(t *testing.T, ctx context.Context, namespace string, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
 	require := require.New(t)
 	t.Log("Checking that the purge Cron Job doesn't exist")
-	// Get the Cassandra pod
-	dc1 := &cassdcapi.CassandraDatacenter{}
-	err := f.Get(ctx, dcKey, dc1)
-	// check medusa containers exist
-	require.NoError(err, "Error getting the CassandraDatacenter")
-	// ensure the cronjob was not created
 	backupSchedule := &medusa.MedusaBackupSchedule{}
-	err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, medusapkg.MedusaPurgeScheduleName(kc.SanitizedName(), dc1.DatacenterName())), backupSchedule)
-	require.Error(err, "MedusaBackupSchedule for purge should not exist")
+	err := f.Get(ctx, dcKey, backupSchedule)
+	require.Error(err, "MedusaBackupSchedule for purge should not exist for datacenter %s", dcKey.Name)
 }
 
 func checkPurgeBackupScheduleDeleted(t *testing.T, ctx context.Context, namespace string, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
