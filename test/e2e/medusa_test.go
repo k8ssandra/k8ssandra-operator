@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/ptr"
@@ -176,32 +177,42 @@ func checkMedusaContainersExist(t *testing.T, ctx context.Context, namespace str
 
 func checkPurgeBackupScheduleExists(t *testing.T, ctx context.Context, namespace string, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
 	require := require.New(t)
+	// Get the Cassandra pod
+	dc := &cassdcapi.CassandraDatacenter{}
+	err := f.Get(ctx, dcKey, dc)
+	t.Log("Checking that the purge Cron Job was deleted")
+	require.NoError(err, "Error getting the CassandraDatacenter")
 	// check that the cronjob exists
 	backupSchedule := &medusa.MedusaBackupSchedule{}
-	err := f.Get(ctx, dcKey, backupSchedule)
+	err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, medusapkg.MedusaPurgeScheduleName(kc.SanitizedName(), dc.DatacenterName())), backupSchedule)
 	require.NoErrorf(err, "Error getting the Medusa purge schedule. ClusterName: %s, DatacenterName: %s", kc.SanitizedName(), dcKey.Name)
 }
 
 func checkNoPurgeBackupSchedule(t *testing.T, ctx context.Context, namespace string, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
 	require := require.New(t)
+	// Get the Cassandra pod
+	dc := &cassdcapi.CassandraDatacenter{}
+	err := f.Get(ctx, dcKey, dc)
+	t.Log("Checking that the purge Cron Job was deleted")
+	require.NoError(err, "Error getting the CassandraDatacenter")
 	t.Log("Checking that the purge Cron Job doesn't exist")
 	backupSchedule := &medusa.MedusaBackupSchedule{}
-	err := f.Get(ctx, dcKey, backupSchedule)
+	err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, medusapkg.MedusaPurgeScheduleName(kc.SanitizedName(), dc.DatacenterName())), backupSchedule)
 	require.Error(err, "MedusaBackupSchedule for purge should not exist for datacenter %s", dcKey.Name)
 }
 
 func checkPurgeBackupScheduleDeleted(t *testing.T, ctx context.Context, namespace string, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
 	require := require.New(t)
 	// Get the Cassandra pod
-	dc1 := &cassdcapi.CassandraDatacenter{}
-	err := f.Get(ctx, dcKey, dc1)
+	dc := &cassdcapi.CassandraDatacenter{}
+	err := f.Get(ctx, dcKey, dc)
 	t.Log("Checking that the purge Cron Job was deleted")
 	require.NoError(err, "Error getting the CassandraDatacenter")
 
 	require.Eventually(func() bool {
 		// ensure the cronjob was deleted
 		backupSchedule := &medusa.MedusaBackupSchedule{}
-		err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, medusapkg.MedusaPurgeScheduleName(kc.SanitizedName(), dc1.DatacenterName())), backupSchedule)
+		err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, medusapkg.MedusaPurgeScheduleName(kc.SanitizedName(), dc.DatacenterName())), backupSchedule)
 		return errors.IsNotFound(err)
 	}, polling.medusaBackupDone.timeout, polling.medusaBackupDone.interval, "Medusa purge backup schedule wasn't deleted within timeout")
 }
@@ -276,6 +287,25 @@ func restoreBackupJob(t *testing.T, ctx context.Context, namespace string, f *fr
 
 func verifyRestoreJobFinished(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey, backupKey types.NamespacedName) {
 	require := require.New(t)
+	// Wait for the pods to restart
+	t.Log("waiting for the pods to restart")
+	require.Eventually(func() bool {
+		// Check the pods lifetime is no more than 1 minute
+		pods, err := f.GetCassandraDatacenterPods(t, ctx, dcKey, dcKey.Name)
+		if err != nil {
+			if !errors.IsNotFound(err) {
+				t.Logf("failed to get CassandraDatacenter pods: %v", err)
+				return false
+			}
+			return false
+		}
+		for _, pod := range pods {
+			if pod.Status.StartTime.IsZero() || time.Since(pod.Status.StartTime.Time) > 1*time.Minute {
+				return false
+			}
+		}
+		return true
+	}, polling.medusaRestoreDone.timeout, polling.medusaRestoreDone.interval, "pods didn't restart within timeout")
 
 	// The datacenter should then restart after the restore
 	checkDatacenterReady(t, ctx, dcKey, f)
