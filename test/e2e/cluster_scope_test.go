@@ -130,9 +130,9 @@ func multiDcMultiCluster(t *testing.T, ctx context.Context, klusterNamespace str
 	err = f.Get(ctx, reaper2SecretKey, &corev1.Secret{})
 	require.True(errors.IsNotFound(err), "Reaper UI secret should not exist in dc2")
 
-	username, password, err = f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], dc1Namespace, k8ssandra.SanitizedName())
+	_, _, err = f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], dc1Namespace, k8ssandra.SanitizedName())
 	require.True(errors.IsNotFound(err), "database credentials should not exist")
-	username, password, err = f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[1], dc2Namespace, k8ssandra.SanitizedName())
+	_, _, err = f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[1], dc2Namespace, k8ssandra.SanitizedName())
 	require.True(errors.IsNotFound(err), "database credentials should not exist")
 
 }
