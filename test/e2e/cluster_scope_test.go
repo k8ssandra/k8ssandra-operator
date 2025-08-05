@@ -118,7 +118,7 @@ func multiDcMultiCluster(t *testing.T, ctx context.Context, klusterNamespace str
 		k8ssandra := &api.K8ssandraCluster{}
 		err := f.Client.Get(ctx, types.NamespacedName{Namespace: klusterNamespace, Name: "test"}, k8ssandra)
 		return err != nil && errors.IsNotFound(err)
-	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster to be deleted")
+	}, polling.datacenterReady.timeout, polling.datacenterReady.interval, "timed out waiting for K8ssandraCluster to be deleted")
 
 	// Check that the secrets were deleted
 	t.Log("checking that the secrets were deleted")
