@@ -130,7 +130,7 @@ func createMultiDcSingleMedusaJob(t *testing.T, ctx context.Context, namespace s
 	checkMedusaContainersExist(t, ctx, namespace, dcKey, f, kc)
 	createBackupJob(t, ctx, namespace, f, dcKey)
 	verifyBackupJobFinished(t, ctx, f, dcKey, backupKey)
-	checkPurgeBackupScheduleExists(t, ctx, namespace, dcKey, f, kc)
+	checkNoPurgeBackupSchedule(t, ctx, namespace, dcKey, f, kc)
 }
 
 func verifyBucketKeyPresent(t *testing.T, f *framework.E2eFramework, ctx context.Context, kc *k8ssandraapi.K8ssandraCluster, namespace, k8sContext, secretName string) {
@@ -177,42 +177,53 @@ func checkMedusaContainersExist(t *testing.T, ctx context.Context, namespace str
 
 func checkPurgeBackupScheduleExists(t *testing.T, ctx context.Context, namespace string, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
 	require := require.New(t)
+	dcNamespace := dcKey.Namespace
+	if dcNamespace == "" {
+		dcNamespace = kc.Namespace
+	}
 	// Get the Cassandra pod
 	dc := &cassdcapi.CassandraDatacenter{}
 	err := f.Get(ctx, dcKey, dc)
-	t.Log("Checking that the purge Cron Job was deleted")
+	t.Log("Checking that the purge Cron Job exists")
 	require.NoError(err, "Error getting the CassandraDatacenter")
 	// check that the cronjob exists
 	backupSchedule := &medusa.MedusaBackupSchedule{}
-	err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, medusapkg.MedusaPurgeScheduleName(kc.SanitizedName(), dc.DatacenterName())), backupSchedule)
+	err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, dcNamespace, medusapkg.MedusaPurgeScheduleName(kc.SanitizedName(), dc.DatacenterName())), backupSchedule)
 	require.NoErrorf(err, "Error getting the Medusa purge schedule. ClusterName: %s, DatacenterName: %s", kc.SanitizedName(), dcKey.Name)
 }
 
 func checkNoPurgeBackupSchedule(t *testing.T, ctx context.Context, namespace string, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
 	require := require.New(t)
+	dcNamespace := dcKey.Namespace
+	if dcNamespace == "" {
+		dcNamespace = kc.Namespace
+	}
 	// Get the Cassandra pod
 	dc := &cassdcapi.CassandraDatacenter{}
 	err := f.Get(ctx, dcKey, dc)
-	t.Log("Checking that the purge Cron Job was deleted")
 	require.NoError(err, "Error getting the CassandraDatacenter")
-	t.Log("Checking that the purge Cron Job doesn't exist")
+	t.Log("Checking that the purge schedule doesn't exist")
 	backupSchedule := &medusa.MedusaBackupSchedule{}
-	err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, medusapkg.MedusaPurgeScheduleName(kc.SanitizedName(), dc.DatacenterName())), backupSchedule)
+	err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, dcNamespace, medusapkg.MedusaPurgeScheduleName(kc.SanitizedName(), dc.DatacenterName())), backupSchedule)
 	require.Error(err, "MedusaBackupSchedule for purge should not exist for datacenter %s", dcKey.Name)
 }
 
 func checkPurgeBackupScheduleDeleted(t *testing.T, ctx context.Context, namespace string, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
 	require := require.New(t)
+	dcNamespace := dcKey.Namespace
+	if dcNamespace == "" {
+		dcNamespace = kc.Namespace
+	}
 	// Get the Cassandra pod
 	dc := &cassdcapi.CassandraDatacenter{}
 	err := f.Get(ctx, dcKey, dc)
-	t.Log("Checking that the purge Cron Job was deleted")
+	t.Log("Checking that the purge schedule was deleted")
 	require.NoError(err, "Error getting the CassandraDatacenter")
 
 	require.Eventually(func() bool {
 		// ensure the cronjob was deleted
 		backupSchedule := &medusa.MedusaBackupSchedule{}
-		err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, medusapkg.MedusaPurgeScheduleName(kc.SanitizedName(), dc.DatacenterName())), backupSchedule)
+		err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, dcNamespace, medusapkg.MedusaPurgeScheduleName(kc.SanitizedName(), dc.DatacenterName())), backupSchedule)
 		return errors.IsNotFound(err)
 	}, polling.medusaBackupDone.timeout, polling.medusaBackupDone.interval, "Medusa purge backup schedule wasn't deleted within timeout")
 }
