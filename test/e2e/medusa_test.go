@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/ptr"
@@ -58,7 +57,6 @@ func createSingleMedusaJob(t *testing.T, ctx context.Context, namespace string, 
 
 	createBackupJob(t, ctx, namespace, f, dcKey)
 	verifyBackupJobFinished(t, ctx, f, dcKey, backupKey)
-	checkPurgeTaskWasCreated(t, ctx, namespace, dcKey, f, kc)
 	restoreBackupJob(t, ctx, namespace, f, dcKey)
 	verifyRestoreJobFinished(t, ctx, f, dcKey, backupKey)
 
@@ -131,7 +129,7 @@ func createMultiDcSingleMedusaJob(t *testing.T, ctx context.Context, namespace s
 	checkMedusaContainersExist(t, ctx, namespace, dcKey, f, kc)
 	createBackupJob(t, ctx, namespace, f, dcKey)
 	verifyBackupJobFinished(t, ctx, f, dcKey, backupKey)
-	checkNoPurgeBackupSchedule(t, ctx, namespace, dcKey, f, kc)
+	checkPurgeBackupScheduleExists(t, ctx, namespace, dcKey, f, kc)
 }
 
 func verifyBucketKeyPresent(t *testing.T, f *framework.E2eFramework, ctx context.Context, kc *k8ssandraapi.K8ssandraCluster, namespace, k8sContext, secretName string) {
@@ -218,30 +216,6 @@ func checkPurgeBackupScheduleDeleted(t *testing.T, ctx context.Context, namespac
 		err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, medusapkg.MedusaPurgeScheduleName(kc.SanitizedName(), dc1.DatacenterName())), backupSchedule)
 		return errors.IsNotFound(err)
 	}, polling.medusaBackupDone.timeout, polling.medusaBackupDone.interval, "Medusa purge backup schedule wasn't deleted within timeout")
-}
-
-func checkPurgeTaskWasCreated(t *testing.T, ctx context.Context, namespace string, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
-	require := require.New(t)
-	// list MedusaTask objects
-	t.Log("Checking that the purge task was created")
-	require.Eventually(func() bool {
-		medusaTasks := &medusa.MedusaTaskList{}
-		err := f.List(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, ""), medusaTasks)
-		if err != nil {
-			t.Logf("failed to list MedusaTasks: %v", err)
-			return false
-		}
-		// check that the task is a purge task
-		found := false
-		for _, task := range medusaTasks.Items {
-			if task.Spec.Operation == medusa.OperationTypePurge && task.Spec.CassandraDatacenter == dcKey.Name {
-				found = true
-				break
-			}
-		}
-		return found
-	}, 2*time.Minute, 5*time.Second, "Medusa purge task wasn't created within timeout")
-
 }
 
 func createBackupJob(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework, dcKey framework.ClusterKey) {
