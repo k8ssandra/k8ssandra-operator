@@ -710,3 +710,536 @@ func guardInfiniteReplication(t *testing.T, ctx context.Context, f *framework.Fr
 	}, timeout/2, interval)
 
 }
+
+func TestSyncSecretsToTarget(t *testing.T) {
+	tests := []struct {
+		name          string
+		setupFunc     func() (*SecretSyncController, []corev1.Secret, *api.ReplicatedSecret, api.ReplicationTarget, client.Client, logr.Logger)
+		expectedError bool
+		verify        func(t *testing.T, fakeClient client.Client, err error)
+	}{
+		{
+			name: "Create new secret successfully",
+			setupFunc: func() (*SecretSyncController, []corev1.Secret, *api.ReplicatedSecret, api.ReplicationTarget, client.Client, logr.Logger) {
+				controller := &SecretSyncController{}
+				secrets := []corev1.Secret{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-secret",
+							Namespace: "test-ns",
+							Labels: map[string]string{
+								"app": "test",
+							},
+							Annotations: map[string]string{
+								coreapi.ResourceHashAnnotation: "test-hash",
+							},
+						},
+						Data: map[string][]byte{
+							"key": []byte("value"),
+						},
+					},
+				}
+				rsec := &api.ReplicatedSecret{
+					Spec: api.ReplicatedSecretSpec{
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"app": "test",
+							},
+						},
+					},
+				}
+				target := api.ReplicationTarget{
+					Namespace: "target-ns",
+				}
+				fakeClient, _ := testutils.NewFakeClient()
+				logger := logr.Discard()
+				return controller, secrets, rsec, target, fakeClient, logger
+			},
+			expectedError: false,
+			verify: func(t *testing.T, fakeClient client.Client, err error) {
+				require.NoError(t, err)
+
+				// Verify secret was created
+				secret := &corev1.Secret{}
+				err = fakeClient.Get(context.TODO(), types.NamespacedName{
+					Name:      "test-secret",
+					Namespace: "target-ns",
+				}, secret)
+				require.NoError(t, err)
+				assert.Equal(t, "value", string(secret.Data["key"]))
+				assert.Equal(t, "target-ns", secret.Namespace)
+			},
+		},
+		{
+			name: "Create new secret with prefix",
+			setupFunc: func() (*SecretSyncController, []corev1.Secret, *api.ReplicatedSecret, api.ReplicationTarget, client.Client, logr.Logger) {
+				controller := &SecretSyncController{}
+				secrets := []corev1.Secret{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-secret",
+							Namespace: "test-ns",
+							Labels: map[string]string{
+								"app": "test",
+							},
+							Annotations: map[string]string{
+								coreapi.ResourceHashAnnotation: "test-hash",
+							},
+						},
+						Data: map[string][]byte{
+							"key": []byte("value"),
+						},
+					},
+				}
+				rsec := &api.ReplicatedSecret{
+					Spec: api.ReplicatedSecretSpec{
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"app": "test",
+							},
+						},
+					},
+				}
+				target := api.ReplicationTarget{
+					Namespace:    "target-ns",
+					TargetPrefix: "prefix-",
+				}
+				fakeClient, _ := testutils.NewFakeClient()
+				logger := logr.Discard()
+				return controller, secrets, rsec, target, fakeClient, logger
+			},
+			expectedError: false,
+			verify: func(t *testing.T, fakeClient client.Client, err error) {
+				require.NoError(t, err)
+
+				// Verify secret was created with prefix
+				secret := &corev1.Secret{}
+				err = fakeClient.Get(context.TODO(), types.NamespacedName{
+					Name:      "prefix-test-secret",
+					Namespace: "target-ns",
+				}, secret)
+				require.NoError(t, err)
+				assert.Equal(t, "value", string(secret.Data["key"]))
+			},
+		},
+		{
+			name: "Update existing secret",
+			setupFunc: func() (*SecretSyncController, []corev1.Secret, *api.ReplicatedSecret, api.ReplicationTarget, client.Client, logr.Logger) {
+				controller := &SecretSyncController{}
+
+				// Calculate actual hashes for the data
+				newData := map[string][]byte{"key": []byte("new-value")}
+				oldData := map[string][]byte{"key": []byte("old-value")}
+				newHash := utils.DeepHashString(newData)
+				oldHash := utils.DeepHashString(oldData)
+
+				secrets := []corev1.Secret{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-secret",
+							Namespace: "test-ns",
+							UID:       "source-uid",
+							Labels: map[string]string{
+								"app": "test",
+							},
+							Annotations: map[string]string{
+								coreapi.ResourceHashAnnotation: newHash,
+							},
+						},
+						Data: newData,
+					},
+				}
+				rsec := &api.ReplicatedSecret{
+					Spec: api.ReplicatedSecretSpec{
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"app": "test",
+							},
+						},
+					},
+				}
+				target := api.ReplicationTarget{
+					Namespace: "target-ns",
+				}
+				fakeClient, _ := testutils.NewFakeClient()
+
+				// Pre-create existing secret with old data
+				existingSecret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-secret",
+						Namespace: "target-ns",
+						UID:       "dest-uid",
+						Annotations: map[string]string{
+							coreapi.ResourceHashAnnotation: oldHash,
+						},
+					},
+					Data: oldData,
+				}
+				require.NoError(t, fakeClient.Create(context.TODO(), existingSecret))
+
+				logger := logr.Discard()
+				return controller, secrets, rsec, target, fakeClient, logger
+			},
+			expectedError: false,
+			verify: func(t *testing.T, fakeClient client.Client, err error) {
+				require.NoError(t, err)
+
+				// Verify secret was updated
+				secret := &corev1.Secret{}
+				err = fakeClient.Get(context.TODO(), types.NamespacedName{
+					Name:      "test-secret",
+					Namespace: "target-ns",
+				}, secret)
+				require.NoError(t, err)
+
+				assert.Equal(t, "new-value", string(secret.Data["key"]))
+
+				// Verify the hash was updated to match the new data
+				expectedHash := utils.DeepHashString(secret.Data)
+				assert.Equal(t, expectedHash, secret.Annotations[coreapi.ResourceHashAnnotation])
+			},
+		},
+		{
+			name: "Skip updating when not required",
+			setupFunc: func() (*SecretSyncController, []corev1.Secret, *api.ReplicatedSecret, api.ReplicationTarget, client.Client, logr.Logger) {
+				controller := &SecretSyncController{}
+				data := map[string][]byte{"key": []byte("value")}
+				hash := utils.DeepHashString(data)
+
+				secrets := []corev1.Secret{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-secret",
+							Namespace: "test-ns",
+							Labels: map[string]string{
+								"app": "test",
+							},
+							Annotations: map[string]string{
+								coreapi.ResourceHashAnnotation: hash,
+							},
+						},
+						Data: data,
+					},
+				}
+				rsec := &api.ReplicatedSecret{
+					Spec: api.ReplicatedSecretSpec{
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"app": "test",
+							},
+						},
+					},
+				}
+				target := api.ReplicationTarget{
+					Namespace: "target-ns",
+				}
+				fakeClient, _ := testutils.NewFakeClient()
+
+				// Pre-create existing secret with same data and hash
+				existingSecret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-secret",
+						Namespace: "target-ns",
+						Annotations: map[string]string{
+							coreapi.ResourceHashAnnotation: hash,
+						},
+					},
+					Data: data,
+				}
+				require.NoError(t, fakeClient.Create(context.TODO(), existingSecret))
+
+				logger := logr.Discard()
+				return controller, secrets, rsec, target, fakeClient, logger
+			},
+			expectedError: false,
+			verify: func(t *testing.T, fakeClient client.Client, err error) {
+				require.NoError(t, err)
+				// Verify no error occurred and secret still exists unchanged
+			},
+		},
+		{
+			name: "Skip infinite replication",
+			setupFunc: func() (*SecretSyncController, []corev1.Secret, *api.ReplicatedSecret, api.ReplicationTarget, client.Client, logr.Logger) {
+				controller := &SecretSyncController{}
+				secrets := []corev1.Secret{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-secret",
+							Namespace: "test-ns",
+							Labels: map[string]string{
+								"app": "test",
+							},
+							Annotations: map[string]string{
+								coreapi.ResourceHashAnnotation: "test-hash",
+							},
+						},
+						Data: map[string][]byte{
+							"key": []byte("value"),
+						},
+					},
+				}
+				rsec := &api.ReplicatedSecret{
+					Spec: api.ReplicatedSecretSpec{
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"app": "test",
+							},
+						},
+					},
+				}
+				// This target configuration would cause infinite replication
+				target := api.ReplicationTarget{
+					K8sContextName: "",        // local cluster
+					Namespace:      "",        // same namespace
+					TargetPrefix:   "prefix-", // non-empty prefix triggers infinite replication check
+				}
+				fakeClient, _ := testutils.NewFakeClient()
+				logger := logr.Discard()
+				return controller, secrets, rsec, target, fakeClient, logger
+			},
+			expectedError: false,
+			verify: func(t *testing.T, fakeClient client.Client, err error) {
+				require.NoError(t, err)
+
+				// Verify no secret was created (infinite replication was avoided)
+				secret := &corev1.Secret{}
+				err = fakeClient.Get(context.TODO(), types.NamespacedName{
+					Name:      "prefix-test-secret",
+					Namespace: "test-ns",
+				}, secret)
+				assert.True(t, errors.IsNotFound(err))
+			},
+		},
+		{
+			name: "Handle immutable target secret",
+			setupFunc: func() (*SecretSyncController, []corev1.Secret, *api.ReplicatedSecret, api.ReplicationTarget, client.Client, logr.Logger) {
+				controller := &SecretSyncController{}
+				secrets := []corev1.Secret{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-secret",
+							Namespace: "test-ns",
+							Labels: map[string]string{
+								"app": "test",
+							},
+							Annotations: map[string]string{
+								coreapi.ResourceHashAnnotation: "new-hash",
+							},
+						},
+						Data: map[string][]byte{
+							"key": []byte("new-value"),
+						},
+					},
+				}
+				rsec := &api.ReplicatedSecret{
+					Spec: api.ReplicatedSecretSpec{
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"app": "test",
+							},
+						},
+					},
+				}
+				target := api.ReplicationTarget{
+					Namespace: "target-ns",
+				}
+				fakeClient, _ := testutils.NewFakeClient()
+
+				// Pre-create immutable secret
+				immutable := true
+				existingSecret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-secret",
+						Namespace: "target-ns",
+						Annotations: map[string]string{
+							coreapi.ResourceHashAnnotation: "old-hash",
+						},
+					},
+					Immutable: &immutable,
+					Data: map[string][]byte{
+						"key": []byte("old-value"),
+					},
+				}
+				require.NoError(t, fakeClient.Create(context.TODO(), existingSecret))
+
+				logger := logr.Discard()
+				return controller, secrets, rsec, target, fakeClient, logger
+			},
+			expectedError: true,
+			verify: func(t *testing.T, fakeClient client.Client, err error) {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "target secret is immutable")
+			},
+		},
+		{
+			name: "Handle empty secrets list",
+			setupFunc: func() (*SecretSyncController, []corev1.Secret, *api.ReplicatedSecret, api.ReplicationTarget, client.Client, logr.Logger) {
+				controller := &SecretSyncController{}
+				secrets := []corev1.Secret{} // Empty list
+				rsec := &api.ReplicatedSecret{
+					Spec: api.ReplicatedSecretSpec{
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"app": "test",
+							},
+						},
+					},
+				}
+				target := api.ReplicationTarget{
+					Namespace: "target-ns",
+				}
+				fakeClient, _ := testutils.NewFakeClient()
+				logger := logr.Discard()
+				return controller, secrets, rsec, target, fakeClient, logger
+			},
+			expectedError: false,
+			verify: func(t *testing.T, fakeClient client.Client, err error) {
+				require.NoError(t, err)
+				// Should succeed with no operations
+			},
+		},
+		{
+			name: "Use source namespace when target namespace is empty",
+			setupFunc: func() (*SecretSyncController, []corev1.Secret, *api.ReplicatedSecret, api.ReplicationTarget, client.Client, logr.Logger) {
+				controller := &SecretSyncController{}
+				secrets := []corev1.Secret{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-secret",
+							Namespace: "source-ns",
+							Labels: map[string]string{
+								"app": "test",
+							},
+							Annotations: map[string]string{
+								coreapi.ResourceHashAnnotation: "test-hash",
+							},
+						},
+						Data: map[string][]byte{
+							"key": []byte("value"),
+						},
+					},
+				}
+				rsec := &api.ReplicatedSecret{
+					Spec: api.ReplicatedSecretSpec{
+						Selector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"app": "test",
+							},
+						},
+					},
+				}
+				target := api.ReplicationTarget{
+					Namespace: "", // Empty namespace should use source namespace
+				}
+				fakeClient, _ := testutils.NewFakeClient()
+				logger := logr.Discard()
+				return controller, secrets, rsec, target, fakeClient, logger
+			},
+			expectedError: false,
+			verify: func(t *testing.T, fakeClient client.Client, err error) {
+				require.NoError(t, err)
+
+				// Verify secret was created in source namespace
+				secret := &corev1.Secret{}
+				err = fakeClient.Get(context.TODO(), types.NamespacedName{
+					Name:      "test-secret",
+					Namespace: "source-ns",
+				}, secret)
+				require.NoError(t, err)
+				assert.Equal(t, "value", string(secret.Data["key"]))
+				assert.Equal(t, "source-ns", secret.Namespace)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.TODO()
+			controller, secrets, rsec, target, fakeClient, logger := tt.setupFunc()
+
+			err := controller.syncSecretsToTarget(ctx, secrets, rsec, target, fakeClient, logger)
+
+			if tt.expectedError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			if tt.verify != nil {
+				tt.verify(t, fakeClient, err)
+			}
+		})
+	}
+}
+
+func TestCleanupSecretsInTarget(t *testing.T) {
+	tests := []struct {
+		name          string
+		setupFunc     func() (*SecretSyncController, []corev1.Secret, *api.ReplicatedSecret, api.ReplicationTarget, client.Client, logr.Logger)
+		expectedError bool
+		verify        func(t *testing.T, fakeClient client.Client, err error)
+	}{
+		{
+			name: "Cleanup secrets successfully",
+			setupFunc: func() (*SecretSyncController, []corev1.Secret, *api.ReplicatedSecret, api.ReplicationTarget, client.Client, logr.Logger) {
+				controller := &SecretSyncController{}
+				secrets := []corev1.Secret{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-secret",
+							Namespace: "test-ns",
+						},
+					},
+				}
+				rsec := &api.ReplicatedSecret{}
+				target := api.ReplicationTarget{
+					Namespace: "target-ns",
+				}
+				fakeClient, _ := testutils.NewFakeClient()
+
+				// Pre-create the secret in the target namespace
+				existingSecret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-secret",
+						Namespace: "target-ns",
+					},
+				}
+				require.NoError(t, fakeClient.Create(context.TODO(), existingSecret))
+
+				logger := logr.Discard()
+				return controller, secrets, rsec, target, fakeClient, logger
+			},
+			expectedError: false,
+			verify: func(t *testing.T, fakeClient client.Client, err error) {
+				require.NoError(t, err)
+
+				// Verify secret was deleted
+				secret := &corev1.Secret{}
+				err = fakeClient.Get(context.TODO(), types.NamespacedName{
+					Name:      "test-secret",
+					Namespace: "target-ns",
+				}, secret)
+				assert.True(t, errors.IsNotFound(err))
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.TODO()
+			controller, secrets, rsec, target, fakeClient, logger := tt.setupFunc()
+
+			err := controller.cleanupSecretsInTarget(ctx, secrets, rsec, target, fakeClient, logger)
+
+			if tt.expectedError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			if tt.verify != nil {
+				tt.verify(t, fakeClient, err)
+			}
+		})
+	}
+}

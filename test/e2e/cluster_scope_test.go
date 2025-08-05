@@ -7,6 +7,8 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -105,4 +107,32 @@ func multiDcMultiCluster(t *testing.T, ctx context.Context, klusterNamespace str
 		username, password := retrieveCredentials(t, f, ctx, secretKey)
 		testReaperApi(t, ctx, f.ControlPlaneContext, DcClusterName(t, f, dcKey), "test_ks", username, password)
 	})
+
+	// Delete the K8ssandraCluster
+	t.Log("deleting K8ssandraCluster")
+	err = f.Client.Delete(ctx, k8ssandra)
+	require.NoError(err, "failed to delete K8ssandraCluster")
+
+	t.Log("waiting for K8ssandraCluster to be deleted")
+	require.Eventually(func() bool {
+		k8ssandra := &api.K8ssandraCluster{}
+		err := f.Client.Get(ctx, types.NamespacedName{Namespace: klusterNamespace, Name: "test"}, k8ssandra)
+		return err != nil && errors.IsNotFound(err)
+	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster to be deleted")
+
+	// Check that the secrets were deleted
+	t.Log("checking that the secrets were deleted")
+	reaper1SecretKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: k8ssandra.Namespace, Name: DcPrefix(t, f, dc1Key) + "-reaper"}}
+	err = f.Get(ctx, reaper1SecretKey, &corev1.Secret{})
+	require.True(errors.IsNotFound(err), "Reaper UI secret should not exist in dc1")
+
+	reaper2SecretKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: k8ssandra.Namespace, Name: DcPrefix(t, f, dc2Key) + "-reaper"}}
+	err = f.Get(ctx, reaper2SecretKey, &corev1.Secret{})
+	require.True(errors.IsNotFound(err), "Reaper UI secret should not exist in dc2")
+
+	username, password, err = f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], dc1Namespace, k8ssandra.SanitizedName())
+	require.True(errors.IsNotFound(err), "database credentials should not exist")
+	username, password, err = f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[1], dc2Namespace, k8ssandra.SanitizedName())
+	require.True(errors.IsNotFound(err), "database credentials should not exist")
+
 }
