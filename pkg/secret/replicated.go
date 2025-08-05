@@ -84,7 +84,10 @@ func ReconcileSecret(ctx context.Context, c client.Client, secretName string, kc
 			}
 			labels.AddCommonLabels(sec, kc)
 			annotations.AddCommonAnnotations(sec, kc)
-
+			err = controllerutil.SetControllerReference(kc, sec, c.Scheme())
+			if err != nil {
+				return err
+			}
 			return c.Create(ctx, sec)
 		} else {
 			return err
