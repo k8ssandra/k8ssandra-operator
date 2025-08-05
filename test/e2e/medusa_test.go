@@ -95,7 +95,7 @@ func createMultiMedusaJob(t *testing.T, ctx context.Context, namespace string, f
 	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
 		checkDatacenterReady(t, ctx, dcKey, f)
 		checkMedusaContainersExist(t, ctx, namespace, dcKey, f, kc)
-		checkNoPurgeBackupSchedule(t, ctx, namespace, dcKey, f, kc)
+		checkPurgeBackupScheduleExists(t, ctx, namespace, dcKey, f, kc)
 		checkReplicatedSecretMounted(t, ctx, f, dcKey, localBucketSecretName)
 	}
 
