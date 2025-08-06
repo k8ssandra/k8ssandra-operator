@@ -110,8 +110,6 @@ func createMultiMedusaJob(t *testing.T, ctx context.Context, namespace string, f
 	// Restore the backup in each DC and verify it finished correctly
 	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
 		restoreBackupJob(t, ctx, namespace, f, dcKey)
-	}
-	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
 		verifyRestoreJobFinished(t, ctx, f, dcKey, backupKey)
 	}
 }
@@ -184,9 +182,9 @@ func checkPurgeBackupScheduleExists(t *testing.T, ctx context.Context, namespace
 	// Get the Cassandra pod
 	dc := &cassdcapi.CassandraDatacenter{}
 	err := f.Get(ctx, dcKey, dc)
-	t.Log("Checking that the purge Cron Job exists")
+	t.Log("Checking that the purge schedule exists")
 	require.NoError(err, "Error getting the CassandraDatacenter")
-	// check that the cronjob exists
+	// check that the purge schedule exists
 	backupSchedule := &medusa.MedusaBackupSchedule{}
 	err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, dcNamespace, medusapkg.MedusaPurgeScheduleName(kc.SanitizedName(), dc.DatacenterName())), backupSchedule)
 	require.NoErrorf(err, "Error getting the Medusa purge schedule. ClusterName: %s, DatacenterName: %s", kc.SanitizedName(), dcKey.Name)

@@ -224,7 +224,6 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 	dc1 := &cassdcapi.CassandraDatacenter{}
 	err = f.Get(ctx, dc1Key, dc1)
 	checkMedusaObjectsCompliance(t, f, dc1, kc)
-	checkPurgeSchedule(ctx, namespace, kc, dc1, f, f.DataPlaneContexts[0], require)
 
 	t.Log("check that dc2 has not been created yet")
 	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: f.DataPlaneContexts[1]}
@@ -242,6 +241,7 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 		})
 	})
 	require.NoError(err, "failed to update dc1 status to ready")
+	checkPurgeSchedule(t, ctx, namespace, kc, dc1, f, f.DataPlaneContexts[0])
 
 	require.Eventually(func() bool {
 		return f.UpdateDatacenterGeneration(ctx, t, dc1Key)
@@ -276,7 +276,7 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey, dc2Key)
 
 	checkMedusaObjectsCompliance(t, f, dc2, kc)
-	checkPurgeSchedule(ctx, namespace, kc, dc2, f, f.DataPlaneContexts[1], require)
+	checkPurgeSchedule(t, ctx, namespace, kc, dc2, f, f.DataPlaneContexts[1])
 
 	t.Log("check that the K8ssandraCluster status is updated")
 	require.Eventually(func() bool {
@@ -705,21 +705,23 @@ func createSingleDcClusterWithManagementApiSecured(t *testing.T, ctx context.Con
 	vol := dc.Spec.PodTemplateSpec.Spec.Volumes[volumeIndex]
 	require.Equal(kc.Spec.Cassandra.DatacenterOptions.ManagementApiAuth.Manual.ClientSecretName, vol.Secret.SecretName)
 
-	// Check for the presence of the purge schedule
-	checkPurgeSchedule(ctx, namespace, kc, dc, f, f.DataPlaneContexts[0], require)
+	// DC was not updated to Ready, so no purge schedule was created
+	checkNoPurgeSchedule(ctx, namespace, kc, dc, f, f.DataPlaneContexts[0], require)
 }
 
-func checkPurgeSchedule(ctx context.Context, namespace string, kc *api.K8ssandraCluster, dc *cassdcapi.CassandraDatacenter, f *framework.Framework, dataPlaneContext string, require *require.Assertions) {
+func checkPurgeSchedule(t *testing.T, ctx context.Context, namespace string, kc *api.K8ssandraCluster, dc *cassdcapi.CassandraDatacenter, f *framework.Framework, dataPlaneContext string) {
 	purgeSchedule := &medusaapi.MedusaBackupSchedule{}
-	purgeScheduleKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: medusa.MedusaPurgeScheduleName(kc.SanitizedName(), dc.Name)}, K8sContext: dataPlaneContext}
-	require.NoError(f.Get(ctx, purgeScheduleKey, purgeSchedule))
-	require.Equal(purgeSchedule.Spec.OperationType, string(medusaapi.OperationTypePurge))
-	require.Equal(purgeSchedule.Spec.BackupSpec.CassandraDatacenter, dc.Name)
-	require.Equal(purgeSchedule.Spec.CronSchedule, "0 0 * * *")
+	purgeScheduleKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: medusa.MedusaPurgeScheduleName(kc.SanitizedName(), dc.DatacenterName())}, K8sContext: dataPlaneContext}
+	// Verify CassandraDatacenter was deleted
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		require.NoError(t, f.Get(ctx, purgeScheduleKey, purgeSchedule))
+		require.Equal(t, purgeSchedule.Spec.OperationType, string(medusaapi.OperationTypePurge))
+		require.Equal(t, purgeSchedule.Spec.CronSchedule, "0 0 * * *")
+	}, timeout, interval, "CassandraDatacenter should be deleted")
 }
 
 func checkNoPurgeSchedule(ctx context.Context, namespace string, kc *api.K8ssandraCluster, dc *cassdcapi.CassandraDatacenter, f *framework.Framework, dataPlaneContext string, require *require.Assertions) {
-	purgeScheduleKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: medusa.MedusaPurgeScheduleName(kc.SanitizedName(), dc.Name)}, K8sContext: dataPlaneContext}
+	purgeScheduleKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: medusa.MedusaPurgeScheduleName(kc.SanitizedName(), dc.DatacenterName())}, K8sContext: dataPlaneContext}
 	purgeSchedule := &medusaapi.MedusaBackupSchedule{}
 	require.Eventually(func() bool {
 		err := f.Get(ctx, purgeScheduleKey, purgeSchedule)
