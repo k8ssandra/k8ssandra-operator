@@ -130,9 +130,14 @@ func multiDcMultiCluster(t *testing.T, ctx context.Context, klusterNamespace str
 	err = f.Get(ctx, reaper2SecretKey, &corev1.Secret{})
 	require.True(errors.IsNotFound(err), "Reaper UI secret should not exist in dc2")
 
-	_, _, err = f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], dc1Namespace, k8ssandra.SanitizedName())
-	require.True(errors.IsNotFound(err), "database credentials should not exist")
-	_, _, err = f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[1], dc2Namespace, k8ssandra.SanitizedName())
-	require.True(errors.IsNotFound(err), "database credentials should not exist")
+	t.Log("checking that the database credentials were deleted")
+	require.Eventually(func() bool {
+		_, _, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], dc1Namespace, k8ssandra.SanitizedName())
+		return errors.IsNotFound(err)
+	}, polling.datacenterReady.timeout, polling.datacenterReady.interval, "timed out waiting for database credentials to be deleted in dc1")
 
+	require.Eventually(func() bool {
+		_, _, err = f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[1], dc2Namespace, k8ssandra.SanitizedName())
+		return errors.IsNotFound(err)
+	}, polling.datacenterReady.timeout, polling.datacenterReady.interval, "timed out waiting for database credentials to be deleted in dc2")
 }
