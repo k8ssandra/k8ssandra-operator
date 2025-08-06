@@ -52,6 +52,9 @@ const (
 	ReplicatedByLabel      = "k8ssandra.io/replicated-by"
 	ReplicatedByLabelValue = "k8ssandracluster-controller"
 
+	// ReplicatedSecretLabel is used to label secrets to identify which ReplicatedSecret created them.
+	ReplicatedSecretLabel = "k8ssandra.io/replicated-secret-name"
+
 	CleanedUpByLabel      = "k8ssandra.io/cleaned-up-by"
 	CleanedUpByLabelValue = "k8ssandracluster-controller"
 
