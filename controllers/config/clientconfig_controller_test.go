@@ -58,7 +58,7 @@ func TestClientConfigReconciler(t *testing.T) {
 		// reconciler.secretFilter = secretFilter
 		usedMgr = mgr
 		return reconciler.SetupWithManager(mgr, shutDownFunc)
-	})
+	}, nil)
 	if err != nil {
 		t.Fatalf("failed to start test environment: %s", err)
 	}

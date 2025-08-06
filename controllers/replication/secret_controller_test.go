@@ -53,7 +53,7 @@ func TestSecretController(t *testing.T) {
 			ReconcilerConfig: config.InitConfig(),
 			ClientCache:      clientCache,
 		}).SetupWithManager(mgr, clusters, logger)
-	})
+	}, nil)
 	if err != nil {
 		t.Fatalf("failed to start test environment: %s", err)
 	}

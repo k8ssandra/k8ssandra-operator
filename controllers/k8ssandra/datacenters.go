@@ -214,6 +214,11 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 				}
 			}
 
+			// Create Medusa purge schedule
+			if medusaResult := r.reconcileMedusaPurgeSchedule(ctx, kc, actualDc, remoteClient, dcLogger); medusaResult.Completed() {
+				return medusaResult, actualDcs
+			}
+
 			// DC is in the process of being upgraded but hasn't completed yet. Let's wait for it to go through.
 			if actualDc.GetGeneration() != actualDc.Status.ObservedGeneration {
 				dcLogger.Info("CassandraDatacenter is being updated. Requeuing the reconcile.", "Generation", actualDc.GetGeneration(), "ObservedGeneration", actualDc.Status.ObservedGeneration)

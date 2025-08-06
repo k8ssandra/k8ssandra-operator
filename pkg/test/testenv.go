@@ -115,6 +115,9 @@ func (e *TestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(
 		return err
 	}
 	secretswebhook.SetupSecretsInjectorWebhook(k8sManager)
+	if err = medusaapi.SetupMedusaBackupScheduleWebhookWithManager(k8sManager); err != nil {
+		return err
+	}
 
 	go func() {
 		err = k8sManager.Start(ctx)
@@ -133,7 +136,7 @@ func waitForWebhookServer(webhookInstallOptions *envtest.WebhookInstallOptions) 
 	var err error
 	dialer := &net.Dialer{Timeout: time.Second}
 	addrPort := fmt.Sprintf("%s:%d", webhookInstallOptions.LocalServingHost, webhookInstallOptions.LocalServingPort)
-
+	fmt.Printf("Waiting for webhook server to be ready at %s\n", addrPort)
 	for i := 0; i < 10; i++ {
 		// This is eventually - it can take a while for this to start
 		conn, err := tls.DialWithDialer(dialer, "tcp", addrPort, &tls.Config{InsecureSkipVerify: true})
@@ -176,7 +179,7 @@ type MultiClusterTestEnv struct {
 	dataPlanes   []string
 }
 
-func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(mgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error) error {
+func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, controlPlaneReconcilers func(mgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error, dataPlaneReconcilers func(mgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error) error {
 
 	// if err := prepareCRDs(); err != nil {
 	// 	t.Fatalf("failed to prepare CRDs: %s", err)
@@ -192,6 +195,7 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 	cfgs := make([]*rest.Config, clustersToCreate)
 	clusters := make([]cluster.Cluster, 0, clustersToCreate)
 
+	// Create all environments first (each with its own webhook configuration)
 	for i := range clustersToCreate {
 		clusterName := fmt.Sprintf(clusterProtoName, i, rand.String(6))
 		if i == 0 {
@@ -199,6 +203,7 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 		} else {
 			e.dataPlanes = append(e.dataPlanes, clusterName)
 		}
+
 		testEnv := &envtest.Environment{
 			CRDDirectoryPaths: []string{
 				filepath.Join("..", "..", "build", "crd", "k8ssandra-operator"),
@@ -235,57 +240,87 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, initRecon
 		clusters = append(clusters, c)
 	}
 
-	webhookInstallOptions := &e.testEnvs[0].WebhookInstallOptions
-	whServer := webhook.NewServer(webhook.Options{
-		Port:    webhookInstallOptions.LocalServingPort,
-		Host:    webhookInstallOptions.LocalServingHost,
-		CertDir: webhookInstallOptions.LocalServingCertDir,
-		TLSOpts: []func(*tls.Config){func(config *tls.Config) {}},
-	})
+	// Create a manager for each environment with its own webhook server
+	managers := make([]manager.Manager, 0, clustersToCreate)
 
-	k8sManager, err := ctrl.NewManager(cfgs[0], ctrl.Options{
-		Scheme:         scheme.Scheme,
-		WebhookServer:  whServer,
-		LeaderElection: false,
-		Metrics: server.Options{
-			BindAddress: "0",
-		},
-	})
+	for i, cfg := range cfgs {
+		webhookInstallOptions := &e.testEnvs[i].WebhookInstallOptions
+		whServer := webhook.NewServer(webhook.Options{
+			Port:    webhookInstallOptions.LocalServingPort,
+			Host:    webhookInstallOptions.LocalServingHost,
+			CertDir: webhookInstallOptions.LocalServingCertDir,
+			TLSOpts: []func(*tls.Config){func(config *tls.Config) {}},
+		})
 
-	if err != nil {
-		return err
+		k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
+			Scheme:         scheme.Scheme,
+			WebhookServer:  whServer,
+			LeaderElection: false,
+			Metrics: server.Options{
+				BindAddress: "0",
+			},
+		})
+		if err != nil {
+			return err
+		}
+
+		managers = append(managers, k8sManager)
 	}
 
+	// Only the control plane manager gets the clusters and reconcilers
+	controlPlaneManager := managers[0]
 	for _, c := range clusters {
-		if err = k8sManager.Add(c); err != nil {
+		if err := controlPlaneManager.Add(c); err != nil {
 			return err
 		}
 	}
 
-	clientCache := clientcache.New(k8sManager.GetClient(), e.Clients[e.controlPlane], scheme.Scheme)
+	clientCache := clientcache.New(controlPlaneManager.GetClient(), e.Clients[e.controlPlane], scheme.Scheme)
 	for ctxName, cli := range e.Clients {
 		clientCache.AddClient(ctxName, cli)
 	}
 
-	if initReconcilers != nil {
-		if err = initReconcilers(k8sManager, clientCache, clusters); err != nil {
+	if controlPlaneReconcilers != nil {
+		if err := controlPlaneReconcilers(controlPlaneManager, clientCache, clusters); err != nil {
 			return err
 		}
 	}
 
-	if err := api.SetupK8ssandraClusterWebhookWithManager(k8sManager, clientCache); err != nil {
-		return err
-	}
-	secretswebhook.SetupSecretsInjectorWebhook(k8sManager)
-
-	go func() {
-		err = k8sManager.Start(ctx)
-		if err != nil {
-			t.Errorf("failed to start manager: %s", err)
+	// Setup webhooks on all managers
+	for i, mgr := range managers {
+		if err := api.SetupK8ssandraClusterWebhookWithManager(mgr, clientCache); err != nil {
+			return err
 		}
-	}()
+		secretswebhook.SetupSecretsInjectorWebhook(mgr)
+		if err := medusaapi.SetupMedusaBackupScheduleWebhookWithManager(mgr); err != nil {
+			return err
+		}
 
-	err = waitForWebhookServer(webhookInstallOptions)
+		// Setup reconcilers for data planes if provided
+		if i > 0 && dataPlaneReconcilers != nil {
+			if err := dataPlaneReconcilers(mgr, clientCache, clusters); err != nil {
+				return err
+			}
+		}
+	}
+
+	// Start all managers
+	for _, mgr := range managers {
+		go func(m manager.Manager) {
+			err := m.Start(ctx)
+			if err != nil {
+				t.Errorf("failed to start manager: %s", err)
+			}
+		}(mgr)
+	}
+
+	// Wait for all webhook servers to be ready
+	for _, testEnv := range e.testEnvs {
+		err := waitForWebhookServer(&testEnv.WebhookInstallOptions)
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
