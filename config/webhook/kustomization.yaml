@@ -15,10 +15,10 @@ patchesJson6902:
     kind: ValidatingWebhookConfiguration
   patch: |-
     - op: replace
-      path: /webhooks/1/clientConfig/service/name
+      path: /webhooks/0/clientConfig/service/name
       value: k8ssandra-operator-webhook-service
     - op: replace
-      path: /webhooks/0/clientConfig/service/name
+      path: /webhooks/1/clientConfig/service/name
       value: k8ssandra-operator-webhook-service
 - target:
     group: admissionregistration.k8s.io

@@ -18,7 +18,6 @@ import (
 
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
-	"github.com/stretchr/testify/require"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
@@ -686,7 +685,7 @@ func (f *E2eFramework) DumpClusterInfo(test string, namespaces ...string) error 
 
 			// Dump all objects that we need to investigate failures as a flat list and as yaml manifests
 			for _, objectType := range []string{"K8ssandraCluster", "CassandraDatacenter", "Stargate", "Reaper", "StatefulSet", "Secrets",
-				"ReplicatedSecret", "ClientConfig", "CassandraTask", "MedusaBackup", "MedusaBackupJob", "MedusaRestoreJob", "MedusaTask", "ConfigMaps"} {
+				"ReplicatedSecret", "ClientConfig", "CassandraTask", "MedusaBackup", "MedusaBackupJob", "MedusaRestoreJob", "MedusaTask", "ConfigMaps", "MedusaBackupSchedule"} {
 				if err := os.MkdirAll(fmt.Sprintf("%s/%s/objects/%s", outputDir, namespace, objectType), 0755); err != nil {
 					return err
 				}
@@ -887,10 +886,8 @@ func (f *E2eFramework) GetCassandraDatacenterPods(t *testing.T, ctx context.Cont
 	podList := &corev1.PodList{}
 	labels := client.MatchingLabels{cassdcapi.DatacenterLabel: dcName}
 	err := f.List(ctx, dcKey, podList, labels)
-	require.NoError(t, err, "failed to get pods for cassandradatacenter", "CassandraDatacenter", dcKey.Name)
-
 	pods := make([]corev1.Pod, 0)
 	pods = append(pods, podList.Items...)
 
-	return pods, nil
+	return pods, err
 }

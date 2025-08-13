@@ -19,7 +19,6 @@ import (
 	medusapkg "github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/require"
-	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -45,7 +44,7 @@ func createSingleMedusaJob(t *testing.T, ctx context.Context, namespace string, 
 
 	checkDatacenterReady(t, ctx, dcKey, f)
 	checkMedusaContainersExist(t, ctx, namespace, dcKey, f, kc)
-	checkPurgeCronJobExists(t, ctx, namespace, dcKey, f, kc)
+	checkPurgeBackupScheduleExists(t, ctx, namespace, dcKey, f, kc)
 	checkDatacenterReadOnlyRootFS(t, ctx, dcKey, f, kc)
 
 	// Disable purges
@@ -55,11 +54,10 @@ func createSingleMedusaJob(t *testing.T, ctx context.Context, namespace string, 
 	kc.Spec.Medusa.PurgeBackups = ptr.To(false)
 	err = f.Client.Patch(ctx, kc, medusaPurgePatch)
 	require.NoError(err, "failed to patch K8ssandraCluster with purge modification in namespace %s", namespace)
-	checkPurgeCronJobDeleted(t, ctx, namespace, dcKey, f, kc)
+	checkPurgeBackupScheduleDeleted(t, ctx, namespace, dcKey, f, kc)
 
 	createBackupJob(t, ctx, namespace, f, dcKey)
 	verifyBackupJobFinished(t, ctx, f, dcKey, backupKey)
-	checkPurgeTaskWasCreated(t, ctx, namespace, dcKey, f, kc)
 	restoreBackupJob(t, ctx, namespace, f, dcKey)
 	verifyRestoreJobFinished(t, ctx, f, dcKey, backupKey)
 
@@ -97,7 +95,7 @@ func createMultiMedusaJob(t *testing.T, ctx context.Context, namespace string, f
 	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
 		checkDatacenterReady(t, ctx, dcKey, f)
 		checkMedusaContainersExist(t, ctx, namespace, dcKey, f, kc)
-		checkPurgeCronJobExists(t, ctx, namespace, dcKey, f, kc)
+		checkPurgeBackupScheduleExists(t, ctx, namespace, dcKey, f, kc)
 		checkReplicatedSecretMounted(t, ctx, f, dcKey, localBucketSecretName)
 	}
 
@@ -112,8 +110,6 @@ func createMultiMedusaJob(t *testing.T, ctx context.Context, namespace string, f
 	// Restore the backup in each DC and verify it finished correctly
 	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
 		restoreBackupJob(t, ctx, namespace, f, dcKey)
-	}
-	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
 		verifyRestoreJobFinished(t, ctx, f, dcKey, backupKey)
 	}
 }
@@ -132,7 +128,7 @@ func createMultiDcSingleMedusaJob(t *testing.T, ctx context.Context, namespace s
 	checkMedusaContainersExist(t, ctx, namespace, dcKey, f, kc)
 	createBackupJob(t, ctx, namespace, f, dcKey)
 	verifyBackupJobFinished(t, ctx, f, dcKey, backupKey)
-	checkNoPurgeCronJob(t, ctx, namespace, dcKey, f, kc)
+	checkNoPurgeBackupSchedule(t, ctx, namespace, dcKey, f, kc)
 }
 
 func verifyBucketKeyPresent(t *testing.T, f *framework.E2eFramework, ctx context.Context, kc *k8ssandraapi.K8ssandraCluster, namespace, k8sContext, secretName string) {
@@ -177,92 +173,57 @@ func checkMedusaContainersExist(t *testing.T, ctx context.Context, namespace str
 	require.True(found, fmt.Sprintf("%s doesn't have medusa container", dc1.Name))
 }
 
-func checkPurgeCronJobExists(t *testing.T, ctx context.Context, namespace string, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
+func checkPurgeBackupScheduleExists(t *testing.T, ctx context.Context, namespace string, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
 	require := require.New(t)
-	// Get the Cassandra pod
-	dc1 := &cassdcapi.CassandraDatacenter{}
-	err := f.Get(ctx, dcKey, dc1)
-	// check medusa containers exist
-	require.NoError(err, "Error getting the CassandraDatacenter")
-	t.Log("Checking that the purge Cron Job exists")
-	// check that the cronjob exists
-	cronJob := &batchv1.CronJob{}
-	err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, medusapkg.MedusaPurgeCronJobName(kc.SanitizedName(), dc1.DatacenterName())), cronJob)
-	require.NoErrorf(err, "Error getting the Medusa purge CronJob. ClusterName: %s, DatacenterName: %s", kc.SanitizedName(), dc1.LabelResourceName())
-	require.Equal("k8ssandra-operator", cronJob.Spec.JobTemplate.Spec.Template.Spec.ServiceAccountName, "Service account name is not correct")
-	// create a Job from the cronjob spec
-	job := &batchv1.Job{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      "test-purge-job",
-		},
-		Spec: cronJob.Spec.JobTemplate.Spec,
+	dcNamespace := dcKey.Namespace
+	if dcNamespace == "" {
+		dcNamespace = kc.Namespace
 	}
-	err = f.Create(ctx, dcKey, job)
-	require.NoErrorf(err, "Error creating the Medusa purge Job. ClusterName: %s, DataceneterName: %s, Namespace: %s, JobName: test-purge-job", kc.SanitizedName(), dc1.LabelResourceName(), namespace)
-	// ensure the job run was successful
-	require.Eventually(func() bool {
-		updated := &batchv1.Job{}
-		err := f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, "test-purge-job"), updated)
-		if err != nil {
-			return false
-		}
-		return updated.Status.Succeeded == 1
-	}, polling.medusaBackupDone.timeout, polling.medusaBackupDone.interval, "Medusa purge Job didn't finish within timeout")
-}
-
-func checkNoPurgeCronJob(t *testing.T, ctx context.Context, namespace string, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
-	require := require.New(t)
-	t.Log("Checking that the purge Cron Job doesn't exist")
 	// Get the Cassandra pod
-	dc1 := &cassdcapi.CassandraDatacenter{}
-	err := f.Get(ctx, dcKey, dc1)
-	// check medusa containers exist
+	dc := &cassdcapi.CassandraDatacenter{}
+	err := f.Get(ctx, dcKey, dc)
+	t.Log("Checking that the purge schedule exists")
 	require.NoError(err, "Error getting the CassandraDatacenter")
-	// ensure the cronjob was not created
-	cronJob := &batchv1.CronJob{}
-	err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, medusapkg.MedusaPurgeCronJobName(kc.SanitizedName(), dc1.DatacenterName())), cronJob)
-	require.Error(err, "Cronjob should not exist")
+	// check that the purge schedule exists
+	backupSchedule := &medusa.MedusaBackupSchedule{}
+	err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, dcNamespace, medusapkg.MedusaPurgeScheduleName(kc.SanitizedName(), dc.DatacenterName())), backupSchedule)
+	require.NoErrorf(err, "Error getting the Medusa purge schedule. ClusterName: %s, DatacenterName: %s", kc.SanitizedName(), dcKey.Name)
 }
 
-func checkPurgeCronJobDeleted(t *testing.T, ctx context.Context, namespace string, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
+func checkNoPurgeBackupSchedule(t *testing.T, ctx context.Context, namespace string, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
 	require := require.New(t)
+	dcNamespace := dcKey.Namespace
+	if dcNamespace == "" {
+		dcNamespace = kc.Namespace
+	}
 	// Get the Cassandra pod
-	dc1 := &cassdcapi.CassandraDatacenter{}
-	err := f.Get(ctx, dcKey, dc1)
-	t.Log("Checking that the purge Cron Job was deleted")
+	dc := &cassdcapi.CassandraDatacenter{}
+	err := f.Get(ctx, dcKey, dc)
+	require.NoError(err, "Error getting the CassandraDatacenter")
+	t.Log("Checking that the purge schedule doesn't exist")
+	backupSchedule := &medusa.MedusaBackupSchedule{}
+	err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, dcNamespace, medusapkg.MedusaPurgeScheduleName(kc.SanitizedName(), dc.DatacenterName())), backupSchedule)
+	require.Error(err, "MedusaBackupSchedule for purge should not exist for datacenter %s", dcKey.Name)
+}
+
+func checkPurgeBackupScheduleDeleted(t *testing.T, ctx context.Context, namespace string, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
+	require := require.New(t)
+	dcNamespace := dcKey.Namespace
+	if dcNamespace == "" {
+		dcNamespace = kc.Namespace
+	}
+	// Get the Cassandra pod
+	dc := &cassdcapi.CassandraDatacenter{}
+	err := f.Get(ctx, dcKey, dc)
+	t.Log("Checking that the purge schedule was deleted")
 	require.NoError(err, "Error getting the CassandraDatacenter")
 
 	require.Eventually(func() bool {
 		// ensure the cronjob was deleted
-		cronJob := &batchv1.CronJob{}
-		err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, medusapkg.MedusaPurgeCronJobName(kc.SanitizedName(), dc1.DatacenterName())), cronJob)
+		backupSchedule := &medusa.MedusaBackupSchedule{}
+		err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, dcNamespace, medusapkg.MedusaPurgeScheduleName(kc.SanitizedName(), dc.DatacenterName())), backupSchedule)
 		return errors.IsNotFound(err)
-	}, polling.medusaBackupDone.timeout, polling.medusaBackupDone.interval, "Medusa purge CronJob wasn't deleted within timeout")
-}
-
-func checkPurgeTaskWasCreated(t *testing.T, ctx context.Context, namespace string, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
-	require := require.New(t)
-	// list MedusaTask objects
-	t.Log("Checking that the purge task was created")
-	require.Eventually(func() bool {
-		medusaTasks := &medusa.MedusaTaskList{}
-		err := f.List(ctx, framework.NewClusterKey(dcKey.K8sContext, namespace, ""), medusaTasks)
-		if err != nil {
-			t.Logf("failed to list MedusaTasks: %v", err)
-			return false
-		}
-		// check that the task is a purge task
-		found := false
-		for _, task := range medusaTasks.Items {
-			if task.Spec.Operation == medusa.OperationTypePurge && task.Spec.CassandraDatacenter == dcKey.Name {
-				found = true
-				break
-			}
-		}
-		return found
-	}, 2*time.Minute, 5*time.Second, "Medusa purge task wasn't created within timeout")
-
+	}, polling.medusaBackupDone.timeout, polling.medusaBackupDone.interval, "Medusa purge backup schedule wasn't deleted within timeout")
 }
 
 func createBackupJob(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework, dcKey framework.ClusterKey) {
@@ -335,6 +296,25 @@ func restoreBackupJob(t *testing.T, ctx context.Context, namespace string, f *fr
 
 func verifyRestoreJobFinished(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey, backupKey types.NamespacedName) {
 	require := require.New(t)
+	// Wait for the pods to restart
+	t.Log("waiting for the pods to restart")
+	require.Eventually(func() bool {
+		// Check the pods lifetime is no more than 1 minute
+		pods, err := f.GetCassandraDatacenterPods(t, ctx, dcKey, dcKey.Name)
+		if err != nil {
+			if !errors.IsNotFound(err) {
+				t.Logf("failed to get CassandraDatacenter pods: %v", err)
+				return false
+			}
+			return false
+		}
+		for _, pod := range pods {
+			if pod.Status.StartTime.IsZero() || time.Since(pod.Status.StartTime.Time) > 1*time.Minute {
+				return false
+			}
+		}
+		return true
+	}, polling.medusaRestoreDone.timeout, polling.medusaRestoreDone.interval, "pods didn't restart within timeout")
 
 	// The datacenter should then restart after the restore
 	checkDatacenterReady(t, ctx, dcKey, f)

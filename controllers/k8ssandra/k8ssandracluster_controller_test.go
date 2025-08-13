@@ -83,7 +83,7 @@ func TestK8ssandraCluster(t *testing.T) {
 			Recorder:         mgr.GetEventRecorderFor("k8ssandracluster-controller"),
 		}).SetupWithManager(mgr, clusters)
 		return err
-	})
+	}, nil)
 	if err != nil {
 		t.Fatalf("failed to start test environment: %s", err)
 	}
