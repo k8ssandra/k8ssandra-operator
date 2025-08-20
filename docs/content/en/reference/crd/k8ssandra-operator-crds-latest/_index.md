@@ -1203,6 +1203,13 @@ The default is "k8ssandra/k8ssandra-client:v0.8.1".<br/>
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>podPriorityClassName</b></td>
+        <td>string</td>
+        <td>
+          PodPriorityClassName defines the priority class name for the Cassandra pods.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b><a href="#k8ssandraclusterspeccassandrapodsecuritycontext">podSecurityContext</a></b></td>
         <td>object</td>
         <td>
