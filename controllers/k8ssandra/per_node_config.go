@@ -115,7 +115,7 @@ func (r *K8ssandraClusterReconciler) reconcileDefaultPerNodeConfiguration(
 		dcConfig.PerNodeConfigMapRef.Name = desiredPerNodeConfig.Name
 		perNodeConfigMapHash := annotations.GetAnnotation(desiredPerNodeConfig, k8ssandraapi.ResourceHashAnnotation)
 		annotations.AddAnnotation(&dcConfig.PodTemplateSpec, k8ssandraapi.PerNodeConfigHashAnnotation, perNodeConfigMapHash)
-		nodeconfig.MountPerNodeConfig(dcConfig)
+		nodeconfig.MountPerNodeConfig(dcConfig, r.ImageRegistry)
 		dcLogger.Info("Mounted per-node configuration")
 	}
 

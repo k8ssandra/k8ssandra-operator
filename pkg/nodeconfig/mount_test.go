@@ -1,8 +1,12 @@
 package nodeconfig
 
 import (
+	"os"
+	"path/filepath"
+	"sync"
 	"testing"
 
+	"github.com/k8ssandra/cass-operator/pkg/images"
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
@@ -38,7 +42,7 @@ func TestMountPerNodeConfig(t *testing.T) {
 					Spec: corev1.PodSpec{
 						InitContainers: []corev1.Container{
 							{Name: reconciliation.ServerConfigContainerName},
-							newPerNodeConfigInitContainer(""),
+							newPerNodeConfigInitContainer("", getTestImageRegistry()),
 						},
 						Volumes: []corev1.Volume{
 							newPerNodeConfigVolume("test-dc1-per-node-config"),
@@ -71,7 +75,7 @@ func TestMountPerNodeConfig(t *testing.T) {
 					Spec: corev1.PodSpec{
 						InitContainers: []corev1.Container{
 							{Name: reconciliation.ServerConfigContainerName},
-							newPerNodeConfigInitContainer(testImage),
+							newPerNodeConfigInitContainer(testImage, getTestImageRegistry()),
 						},
 						Volumes: []corev1.Volume{
 							newPerNodeConfigVolume("test-dc1-per-node-config"),
@@ -87,7 +91,7 @@ func TestMountPerNodeConfig(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			MountPerNodeConfig(tt.dcConfig)
+			MountPerNodeConfig(tt.dcConfig, getTestImageRegistry())
 			assert.Equal(t, tt.wantConfig, tt.dcConfig)
 		})
 	}
@@ -95,7 +99,7 @@ func TestMountPerNodeConfig(t *testing.T) {
 
 func TestCorrectVolumes(t *testing.T) {
 	require := require.New(t)
-	initContainerConfig := newPerNodeConfigInitContainer("")
+	initContainerConfig := newPerNodeConfigInitContainer("", getTestImageRegistry())
 	require.Equal(3, len(initContainerConfig.VolumeMounts))
 	require.Equal("server-config", initContainerConfig.VolumeMounts[0].Name)
 	require.Equal("/config", initContainerConfig.VolumeMounts[0].MountPath)
@@ -105,4 +109,22 @@ func TestCorrectVolumes(t *testing.T) {
 
 	require.Equal("tmp", initContainerConfig.VolumeMounts[2].Name)
 	require.Equal("/tmp", initContainerConfig.VolumeMounts[2].MountPath)
+}
+
+var (
+	regOnce           sync.Once
+	imageRegistryTest images.ImageRegistry
+)
+
+func getTestImageRegistry() images.ImageRegistry {
+	regOnce.Do(func() {
+		p := filepath.Clean("../../test/testdata/imageconfig/image_config_test.yaml")
+		data, err := os.ReadFile(p)
+		if err == nil {
+			if r, e := images.NewImageRegistryV2(data); e == nil {
+				imageRegistryTest = r
+			}
+		}
+	})
+	return imageRegistryTest
 }
