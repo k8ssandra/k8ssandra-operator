@@ -1267,13 +1267,7 @@ spec:
                 - truststoreSecretRef
                 type: object
               containerImage:
-                default:
-                  name: cassandra-reaper
-                  repository: thelastpickle
-                  tag: 4.0.0-rc1
-                description: |-
-                  The image to use for the Reaper pod main container.
-                  The default is "thelastpickle/cassandra-reaper:4.0.0-rc1".
+                description: The image to use for the Reaper pod main container.
                 properties:
                   name:
                     description: The image name to use.

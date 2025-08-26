@@ -1,12 +1,16 @@
 package reaper
 
 import (
+	"os"
+	"path/filepath"
+	"sync"
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
 
 	testlogr "github.com/go-logr/logr/testing"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	cassimages "github.com/k8ssandra/cass-operator/pkg/images"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
@@ -52,7 +56,7 @@ func TestNewDeployment(t *testing.T) {
 	labels := createServiceAndDeploymentLabels(reaper)
 	podLabels := utils.MergeMap(labels, reaper.Spec.ResourceMeta.Pods.Labels)
 	logger := testlogr.NewTestLogger(t)
-	deployment := NewDeployment(reaper, newTestDatacenter(), ptr.To("keystore-password"), ptr.To("truststore-password"), logger)
+	deployment := NewDeployment(reaper, newTestDatacenter(), ptr.To("keystore-password"), ptr.To("truststore-password"), logger, getTestImageRegistry(t))
 
 	assert.Equal(t, reaper.Namespace, deployment.Namespace)
 	assert.Equal(t, reaper.Name, deployment.Name)
@@ -222,7 +226,7 @@ func TestNewDeployment(t *testing.T) {
 
 	reaper.Spec.Keyspace = "ks1"
 
-	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
+	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
 	podSpec = deployment.Spec.Template.Spec
 	container = podSpec.Containers[0]
 	assert.Len(t, container.Env, 8)
@@ -233,7 +237,7 @@ func TestNewDeployment(t *testing.T) {
 	})
 
 	reaper.Spec.AutoScheduling.Enabled = true
-	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
+	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
 	podSpec = deployment.Spec.Template.Spec
 	container = podSpec.Containers[0]
 	assert.Len(t, container.Env, 18)
@@ -299,7 +303,7 @@ func TestNewStatefulSet(t *testing.T) {
 
 	logger := testlogr.NewTestLogger(t)
 
-	sts := NewStatefulSet(reaper, newTestDatacenter(), logger, nil, nil)
+	sts := NewStatefulSet(reaper, newTestDatacenter(), logger, getTestImageRegistry(t))
 
 	podSpec := sts.Spec.Template.Spec
 	assert.Len(t, podSpec.Containers, 1)
@@ -342,7 +346,7 @@ func TestNewStatefulSetForControlPlane(t *testing.T) {
 	reaper := newTestControlPlaneReaper()
 	noDataCenter := &cassdcapi.CassandraDatacenter{}
 
-	sts := NewStatefulSet(reaper, noDataCenter, testlogr.NewTestLogger(t), nil, nil)
+	sts := NewStatefulSet(reaper, noDataCenter, testlogr.NewTestLogger(t), getTestImageRegistry(t))
 	podSpec := sts.Spec.Template.Spec
 	container := podSpec.Containers[0]
 	assert.ElementsMatch(t, container.Env, []corev1.EnvVar{
@@ -372,7 +376,7 @@ func TestHttpManagementConfiguration(t *testing.T) {
 	reaper.Spec.HttpManagement.Keystores = &corev1.LocalObjectReference{Name: "test-dc1-c-mgmt-ks"}
 	logger := testlogr.NewTestLogger(t)
 
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
 
 	assert := assert.New(t)
 	assert.Len(deployment.Spec.Template.Spec.Containers, 1)
@@ -413,7 +417,7 @@ func TestReadinessProbe(t *testing.T) {
 		InitialDelaySeconds: 123,
 	}
 	logger := testlogr.NewTestLogger(t)
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
 	expected := &corev1.Probe{
 		ProbeHandler: corev1.ProbeHandler{
 			HTTPGet: &corev1.HTTPGetAction{
@@ -438,7 +442,7 @@ func TestLivenessProbe(t *testing.T) {
 		InitialDelaySeconds: 123,
 	}
 	logger := testlogr.NewTestLogger(t)
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
 	expected := &corev1.Probe{
 		ProbeHandler: corev1.ProbeHandler{
 			HTTPGet: &corev1.HTTPGetAction{
@@ -457,7 +461,7 @@ func TestImages(t *testing.T) {
 		reaper := newTestReaper()
 		reaper.Spec.ContainerImage = nil
 		logger := testlogr.NewTestLogger(t)
-		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
+		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
 		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:4.0.0-rc1", deployment.Spec.Template.Spec.InitContainers[0].Image)
 		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:4.0.0-rc1", deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.InitContainers[0].ImagePullPolicy)
@@ -468,7 +472,7 @@ func TestImages(t *testing.T) {
 		reaper := newTestReaper()
 		reaper.Spec.ContainerImage = nil
 		logger := testlogr.NewTestLogger(t)
-		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
+		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
 		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:4.0.0-rc1", deployment.Spec.Template.Spec.InitContainers[0].Image)
 		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:4.0.0-rc1", deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.InitContainers[0].ImagePullPolicy)
@@ -485,11 +489,9 @@ func TestImages(t *testing.T) {
 		}
 		reaper.Spec.ContainerImage = image
 		logger := testlogr.NewTestLogger(t)
-		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
+		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
 		assert.Equal(t, "docker.io/my-custom-repo/my-custom-name:latest", deployment.Spec.Template.Spec.InitContainers[0].Image)
 		assert.Equal(t, "docker.io/my-custom-repo/my-custom-name:latest", deployment.Spec.Template.Spec.Containers[0].Image)
-		assert.Equal(t, corev1.PullAlways, deployment.Spec.Template.Spec.InitContainers[0].ImagePullPolicy)
-		assert.Equal(t, corev1.PullAlways, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Contains(t, deployment.Spec.Template.Spec.ImagePullSecrets, corev1.LocalObjectReference{Name: "my-secret"})
 		assert.Len(t, deployment.Spec.Template.Spec.ImagePullSecrets, 1)
 	})
@@ -514,7 +516,7 @@ func TestTolerations(t *testing.T) {
 	reaper := newTestReaper()
 	reaper.Spec.Tolerations = tolerations
 	logger := testlogr.NewTestLogger(t)
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
 	assert.ElementsMatch(t, tolerations, deployment.Spec.Template.Spec.Tolerations)
 }
 
@@ -539,13 +541,13 @@ func TestAffinity(t *testing.T) {
 	reaper := newTestReaper()
 	reaper.Spec.Affinity = affinity
 	logger := testlogr.NewTestLogger(t)
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
 	assert.EqualValues(t, affinity, deployment.Spec.Template.Spec.Affinity, "affinity does not match")
 }
 
 func TestContainerSecurityContext(t *testing.T) {
 	reaper := newTestReaper()
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, testlogr.NewTestLogger(t))
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, testlogr.NewTestLogger(t), getTestImageRegistry(t))
 
 	// Test default security context
 	container := deployment.Spec.Template.Spec.Containers[0]
@@ -568,14 +570,14 @@ func TestContainerSecurityContext(t *testing.T) {
 		},
 	}
 	reaper.Spec.SecurityContext = customSecurityContext
-	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, testlogr.NewTestLogger(t))
+	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, testlogr.NewTestLogger(t), getTestImageRegistry(t))
 	container = deployment.Spec.Template.Spec.Containers[0]
 	assert.Equal(t, customSecurityContext, container.SecurityContext)
 }
 
 func TestSchemaInitContainerSecurityContext(t *testing.T) {
 	reaper := newTestReaper()
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, testlogr.NewTestLogger(t))
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, testlogr.NewTestLogger(t), getTestImageRegistry(t))
 
 	// Test default security context
 	initContainer := deployment.Spec.Template.Spec.InitContainers[0]
@@ -598,14 +600,14 @@ func TestSchemaInitContainerSecurityContext(t *testing.T) {
 		},
 	}
 	reaper.Spec.InitContainerSecurityContext = customSecurityContext
-	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, testlogr.NewTestLogger(t))
+	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, testlogr.NewTestLogger(t), getTestImageRegistry(t))
 	initContainer = deployment.Spec.Template.Spec.InitContainers[0]
 	assert.Equal(t, customSecurityContext, initContainer.SecurityContext)
 }
 
 func TestPodSecurityContext(t *testing.T) {
 	reaper := newTestReaper()
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, testlogr.NewTestLogger(t))
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, testlogr.NewTestLogger(t), getTestImageRegistry(t))
 
 	// Test default security context
 	podSpec := deployment.Spec.Template.Spec
@@ -619,7 +621,7 @@ func TestPodSecurityContext(t *testing.T) {
 		FSGroup:      ptr.To[int64](2000),
 	}
 	reaper.Spec.PodSecurityContext = customPodSecurityContext
-	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, testlogr.NewTestLogger(t))
+	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, testlogr.NewTestLogger(t), getTestImageRegistry(t))
 	podSpec = deployment.Spec.Template.Spec
 	assert.Equal(t, customPodSecurityContext, podSpec.SecurityContext)
 }
@@ -628,7 +630,7 @@ func TestSkipSchemaMigration(t *testing.T) {
 	reaper := newTestReaper()
 	reaper.Spec.SkipSchemaMigration = true
 	logger := testlogr.NewTestLogger(t)
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
 	assert.Len(t, deployment.Spec.Template.Spec.InitContainers, 0, "expected pod template to not have any init container")
 }
 
@@ -638,14 +640,14 @@ func TestDeploymentTypes(t *testing.T) {
 	// reaper with cassandra backend becomes a deployment
 	reaper := newTestReaper()
 	reaper.Spec.ReaperTemplate.StorageType = reaperapi.StorageTypeCassandra
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
 	assert.Len(t, deployment.Spec.Template.Spec.Containers, 1)
 	assert.Equal(t, reaperapi.StorageTypeCassandra, deployment.Spec.Template.Spec.Containers[0].Env[0].Value)
 
 	// asking for a deployment with memory backend does not work
 	reaper = newTestReaper()
 	reaper.Spec.ReaperTemplate.StorageType = reaperapi.StorageTypeLocal
-	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
+	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
 	assert.Nil(t, deployment)
 
 	// reaper with memory backend becomes a stateful set
@@ -660,14 +662,14 @@ func TestDeploymentTypes(t *testing.T) {
 			},
 		},
 	}
-	sts := NewStatefulSet(reaper, newTestDatacenter(), logger, nil, nil)
+	sts := NewStatefulSet(reaper, newTestDatacenter(), logger, getTestImageRegistry(t))
 	assert.Len(t, sts.Spec.Template.Spec.Containers, 1)
 	assert.Equal(t, "memory", sts.Spec.Template.Spec.Containers[0].Env[0].Value)
 
 	// asking for a stateful set with cassandra backend does not work
 	reaper = newTestReaper()
 	reaper.Spec.ReaperTemplate.StorageType = reaperapi.StorageTypeCassandra
-	sts = NewStatefulSet(reaper, newTestDatacenter(), logger, nil, nil)
+	sts = NewStatefulSet(reaper, newTestDatacenter(), logger, getTestImageRegistry(t))
 	assert.Nil(t, sts)
 }
 
@@ -695,18 +697,18 @@ func TestMakeDesiredDeploymentType(t *testing.T) {
 	logger := testlogr.NewTestLogger(t)
 
 	reaper.Spec.StorageType = reaperapi.StorageTypeCassandra
-	d, err := MakeDesiredDeploymentType(reaper, fakeDc, nil, nil, logger)
+	d, err := MakeDesiredDeploymentType(reaper, fakeDc, nil, nil, logger, getTestImageRegistry(t))
 	assert.Nil(t, err)
 	assert.IsType(t, &appsv1.Deployment{}, d)
 
 	reaper.Spec.StorageType = reaperapi.StorageTypeLocal
 	reaper.Spec.StorageConfig = newTestStorageConfig()
-	sts, err := MakeDesiredDeploymentType(reaper, fakeDc, nil, nil, logger)
+	sts, err := MakeDesiredDeploymentType(reaper, fakeDc, nil, nil, logger, getTestImageRegistry(t))
 	assert.Nil(t, err)
 	assert.IsType(t, &appsv1.StatefulSet{}, sts)
 
 	reaper.Spec.StorageType = "invalid"
-	d, err = MakeDesiredDeploymentType(reaper, fakeDc, nil, nil, logger)
+	d, err = MakeDesiredDeploymentType(reaper, fakeDc, nil, nil, logger, getTestImageRegistry(t))
 	assert.NotNil(t, err)
 	assert.Nil(t, d)
 }
@@ -715,7 +717,7 @@ func TestDeepCopyActualDeployment(t *testing.T) {
 	reaper := newTestReaper()
 
 	reaper.Spec.StorageType = reaperapi.StorageTypeCassandra
-	deployment, err := MakeDesiredDeploymentType(reaper, newTestDatacenter(), nil, nil, testlogr.NewTestLogger(t))
+	deployment, err := MakeDesiredDeploymentType(reaper, newTestDatacenter(), nil, nil, testlogr.NewTestLogger(t), getTestImageRegistry(t))
 	assert.Nil(t, err)
 	deepCopy, err := DeepCopyActualDeployment(deployment)
 	assert.Nil(t, err)
@@ -735,7 +737,7 @@ func TestEnsureSingleReplica(t *testing.T) {
 
 	// deployment size is not touched on Deployments
 	actualDeployment, _ := MakeActualDeploymentType(reaper)
-	desiredDeployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
+	desiredDeployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
 	desiredDeployment.Spec.Replicas = func() *int32 { i := int32(2); return &i }()
 	err := EnsureSingleReplica(reaper, actualDeployment, desiredDeployment, logger)
 	assert.Nil(t, err)
@@ -747,7 +749,7 @@ func TestEnsureSingleReplica(t *testing.T) {
 	actualStatefulSet, _ := MakeActualDeploymentType(reaper)
 	err = setDeploymentReplicas(&actualStatefulSet, &oneReplica)
 	assert.Nil(t, err)
-	desiredStatefulSet := NewStatefulSet(reaper, newTestDatacenter(), logger, nil, nil)
+	desiredStatefulSet := NewStatefulSet(reaper, newTestDatacenter(), logger, getTestImageRegistry(t))
 	desiredStatefulSet.Spec.Replicas = &twoReplicas
 	err = EnsureSingleReplica(reaper, actualStatefulSet, desiredStatefulSet, logger)
 	// errors out because we desire 2 replicas
@@ -757,7 +759,7 @@ func TestEnsureSingleReplica(t *testing.T) {
 	actualStatefulSet, _ = MakeActualDeploymentType(reaper)
 	err = setDeploymentReplicas(&actualStatefulSet, &twoReplicas)
 	assert.Nil(t, err)
-	desiredStatefulSetObject, _ := MakeDesiredDeploymentType(reaper, newTestDatacenter(), nil, nil, logger)
+	desiredStatefulSetObject, _ := MakeDesiredDeploymentType(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
 	err = setDeploymentReplicas(&desiredStatefulSetObject, &oneReplica)
 	assert.Nil(t, err)
 
@@ -848,7 +850,7 @@ func newTestStorageConfig() *corev1.PersistentVolumeClaimSpec {
 func TestDefaultResources(t *testing.T) {
 	reaper := newTestReaper()
 	logger := testlogr.NewTestLogger(t)
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
 
 	// Init container resources
 	assert.Equal(t, resource.MustParse(InitContainerMemRequest), *deployment.Spec.Template.Spec.InitContainers[0].Resources.Requests.Memory(), "expected init container memory request to be set")
@@ -883,7 +885,7 @@ func TestCustomResources(t *testing.T) {
 		},
 	}
 	logger := testlogr.NewTestLogger(t)
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
 
 	// Init container resources
 	assert.Equal(t, resource.MustParse("1Gi"), *deployment.Spec.Template.Spec.InitContainers[0].Resources.Requests.Memory(), "expected init container memory request to be set")
@@ -899,7 +901,7 @@ func TestCustomResources(t *testing.T) {
 func TestLabelsAnnotations(t *testing.T) {
 	reaper := newTestReaper()
 	logger := testlogr.NewTestLogger(t)
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger)
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
 
 	deploymentLabels := map[string]string{
 		k8ssandraapi.NameLabel:      k8ssandraapi.NameLabelValue,
@@ -968,7 +970,7 @@ func TestComputeEnvVarsAdditionalEnvVars(t *testing.T) {
 	}
 	dc := newTestDatacenter()
 
-	envVars := computeEnvVars(reaper, dc)
+	envVars := computeEnvVars(reaper, dc, getTestImageRegistry(t))
 
 	// Test 1: Additional env var can be added
 	found := false
@@ -1058,7 +1060,7 @@ func TestIsReaperPostV4(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := isReaperPostV4(tt.reaper)
+			result := isReaperPostV4(tt.reaper, getTestImageRegistry(t))
 			if result != tt.expected {
 				t.Errorf("isReaperPostV4() = %v, want %v", result, tt.expected)
 			}
@@ -1077,7 +1079,7 @@ func TestReaperV4ContactPointsFormat(t *testing.T) {
 	dc := newTestDatacenter()
 	logger := testlogr.NewTestLogger(t)
 
-	deployment := NewDeployment(reaper, dc, nil, nil, logger)
+	deployment := NewDeployment(reaper, dc, nil, nil, logger, getTestImageRegistry(t))
 	container := deployment.Spec.Template.Spec.Containers[0]
 
 	// Find the REAPER_CASS_CONTACT_POINTS env var
@@ -1099,7 +1101,7 @@ func TestDefaultReaperContactPointsFormat(t *testing.T) {
 	dc := newTestDatacenter()
 	logger := testlogr.NewTestLogger(t)
 
-	deployment := NewDeployment(reaper, dc, nil, nil, logger)
+	deployment := NewDeployment(reaper, dc, nil, nil, logger, getTestImageRegistry(t))
 	container := deployment.Spec.Template.Spec.Containers[0]
 
 	// Find the REAPER_CASS_CONTACT_POINTS env var
@@ -1114,4 +1116,26 @@ func TestDefaultReaperContactPointsFormat(t *testing.T) {
 	assert.NotNil(t, contactPointsEnvVar, "REAPER_CASS_CONTACT_POINTS environment variable not found")
 	assert.Equal(t, "[{\"host\": \"cluster1-dc1-service\", \"port\": 9042}]", contactPointsEnvVar.Value,
 		"REAPER_CASS_CONTACT_POINTS should be formatted as an array of hosts for Reaper v3 and below")
+}
+
+var (
+	regOnce           sync.Once
+	imageRegistryTest cassimages.ImageRegistry
+)
+
+func getTestImageRegistry(t testing.TB) cassimages.ImageRegistry {
+	regOnce.Do(func() {
+		// Path from pkg/reaper to testdata
+		p := filepath.Clean("../../test/testdata/imageconfig/image_config_test.yaml")
+		data, err := os.ReadFile(p)
+		if err != nil {
+			t.Fatalf("failed reading test image config: %v", err)
+		}
+		r, err := cassimages.NewImageRegistryV2(data)
+		if err != nil {
+			t.Fatalf("failed parsing test image config: %v", err)
+		}
+		imageRegistryTest = r
+	})
+	return imageRegistryTest
 }

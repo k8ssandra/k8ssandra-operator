@@ -93,9 +93,11 @@ func (r *K8ssandraClusterReconciler) reconcileSeedsEndpoints(
 	endpointSlices := make([]*discoveryv1.EndpointSlice, 0)
 
 	ipv4Slice := reconciliation.CreateEndpointSlice(dc, prefixName, discoveryv1.AddressTypeIPv4, ipv4Addresses)
+	ipv4Slice.Labels[discoveryv1.LabelManagedBy] = api.NameLabelValue
 	endpointSlices = append(endpointSlices, ipv4Slice)
 
 	ipv6Slice := reconciliation.CreateEndpointSlice(dc, prefixName, discoveryv1.AddressTypeIPv6, ipv6Addresses)
+	ipv6Slice.Labels[discoveryv1.LabelManagedBy] = api.NameLabelValue
 	endpointSlices = append(endpointSlices, ipv6Slice)
 
 	// Can't set owner reference for EndpointSlice as they can be in different namespace than K8ssandraCluster

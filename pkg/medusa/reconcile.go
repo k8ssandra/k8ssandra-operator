@@ -7,6 +7,7 @@ import (
 	"text/template"
 
 	"github.com/adutra/goalesce"
+	cassimages "github.com/k8ssandra/cass-operator/pkg/images"
 	k8ss "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
@@ -41,14 +42,6 @@ const (
 	serviceAccountNameEnvVar = "SERVICE_ACCOUNT_NAME"
 
 	CredentialsTypeRoleBased = "role-based"
-)
-
-var (
-	defaultMedusaImage = images.Image{
-		Repository: DefaultMedusaImageRepository,
-		Name:       DefaultMedusaImageName,
-		Tag:        DefaultMedusaVersion,
-	}
 )
 
 func CreateMedusaIni(kc *k8ss.K8ssandraCluster, dcConfig *cassandra.DatacenterConfig) string {
@@ -185,7 +178,7 @@ func CassandraUserSecretName(medusaSpec *api.MedusaClusterTemplate, k8cName stri
 	return medusaSpec.CassandraUserSecretRef.Name
 }
 
-func UpdateMedusaInitContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, useExternalSecrets bool, k8cName string, logger logr.Logger) {
+func UpdateMedusaInitContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, useExternalSecrets bool, k8cName string, logger logr.Logger, registry cassimages.ImageRegistry) {
 	restoreContainerIndex, found := cassandra.FindInitContainer(&dcConfig.PodTemplateSpec, "medusa-restore")
 	restoreContainer := &corev1.Container{Name: "medusa-restore"}
 	if found {
@@ -193,7 +186,23 @@ func UpdateMedusaInitContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 		// medusa-restore init container already exists, we may need to update it
 		restoreContainer = dcConfig.PodTemplateSpec.Spec.InitContainers[restoreContainerIndex].DeepCopy()
 	}
-	setImage(medusaSpec.ContainerImage, restoreContainer)
+	setImage(registry, medusaSpec.ContainerImage, restoreContainer)
+	// Add default image pull secrets from registry
+	if registry != nil {
+		names := registry.GetImagePullSecrets()
+		for _, n := range names {
+			exists := false
+			for _, s := range dcConfig.PodTemplateSpec.Spec.ImagePullSecrets {
+				if s.Name == n {
+					exists = true
+					break
+				}
+			}
+			if !exists {
+				dcConfig.PodTemplateSpec.Spec.ImagePullSecrets = append(dcConfig.PodTemplateSpec.Spec.ImagePullSecrets, corev1.LocalObjectReference{Name: n})
+			}
+		}
+	}
 	restoreContainer.SecurityContext = medusaSpec.SecurityContext
 	restoreContainer.Env = medusaEnvVars(medusaSpec, k8cName, useExternalSecrets, "RESTORE")
 	restoreContainer.VolumeMounts = medusaVolumeMounts(dcConfig, medusaSpec, k8cName)
@@ -232,9 +241,25 @@ func medusaInitContainerResources(medusaSpec *api.MedusaClusterTemplate) corev1.
 	}
 }
 
-func CreateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, useExternalSecrets bool, k8cName string, logger logr.Logger) (*corev1.Container, error) {
+func CreateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.MedusaClusterTemplate, useExternalSecrets bool, k8cName string, logger logr.Logger, registry cassimages.ImageRegistry) (*corev1.Container, error) {
 	medusaContainer := &corev1.Container{Name: "medusa"}
-	setImage(medusaSpec.ContainerImage, medusaContainer)
+	setImage(registry, medusaSpec.ContainerImage, medusaContainer)
+	// Add default image pull secrets from registry
+	if registry != nil {
+		names := registry.GetImagePullSecrets()
+		for _, n := range names {
+			exists := false
+			for _, s := range dcConfig.PodTemplateSpec.Spec.ImagePullSecrets {
+				if s.Name == n {
+					exists = true
+					break
+				}
+			}
+			if !exists {
+				dcConfig.PodTemplateSpec.Spec.ImagePullSecrets = append(dcConfig.PodTemplateSpec.Spec.ImagePullSecrets, corev1.LocalObjectReference{Name: n})
+			}
+		}
+	}
 	medusaContainer.SecurityContext = medusaSpec.SecurityContext
 	medusaContainer.Env = medusaEnvVars(medusaSpec, k8cName, useExternalSecrets, "GRPC")
 	var grpcPort = DefaultMedusaPort
@@ -288,8 +313,14 @@ func medusaMainContainerResources(medusaSpec *api.MedusaClusterTemplate) corev1.
 }
 
 // Build the image name and pull policy and add it to a medusa container definition
-func setImage(containerImage *images.Image, container *corev1.Container) {
-	image := containerImage.ApplyDefaults(defaultMedusaImage)
+func setImage(registry cassimages.ImageRegistry, containerImage *images.Image, container *corev1.Container) {
+	// Fallback to legacy image defaults
+
+	image := registry.Image("medusa")
+	if containerImage != nil {
+		image.ApplyOverrides(containerImage.Convert())
+	}
+
 	container.Image = image.String()
 	container.ImagePullPolicy = image.PullPolicy
 }

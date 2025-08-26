@@ -1,10 +1,14 @@
 package medusa
 
 import (
+	"os"
+	"path/filepath"
+	sync "sync"
 	"testing"
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	cassimages "github.com/k8ssandra/cass-operator/pkg/images"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
@@ -514,13 +518,13 @@ func TestInitContainerDefaultResources(t *testing.T) {
 
 	logger := logr.New(logr.Discard().GetSink())
 
-	medusaContainer, err := CreateMedusaMainContainer(&dcConfig, medusaSpec, false, "test", logger)
+	medusaContainer, err := CreateMedusaMainContainer(&dcConfig, medusaSpec, false, "test", logger, getTestImageRegistry(t))
 	medusaPort, found := cassandra.FindPort(medusaContainer, "grpc")
 	assert.True(t, found, "Couldn't find medusa grpc port")
 	assert.Equal(t, int32(50051), medusaPort, "expected medusa grpc port to NOT be set")
 
 	assert.NoError(t, err)
-	UpdateMedusaInitContainer(&dcConfig, medusaSpec, false, "test", logger)
+	UpdateMedusaInitContainer(&dcConfig, medusaSpec, false, "test", logger, getTestImageRegistry(t))
 	UpdateMedusaMainContainer(&dcConfig, medusaContainer)
 
 	assert.Equal(t, 1, len(dcConfig.PodTemplateSpec.Spec.Containers))
@@ -596,14 +600,14 @@ func TestInitContainerCustomResources(t *testing.T) {
 
 	logger := logr.New(logr.Discard().GetSink())
 
-	medusaContainer, err := CreateMedusaMainContainer(&dcConfig, medusaSpec, false, "test", logger)
+	medusaContainer, err := CreateMedusaMainContainer(&dcConfig, medusaSpec, false, "test", logger, getTestImageRegistry(t))
 	assert.NoError(t, err)
 
 	medusaPort, found := cassandra.FindPort(medusaContainer, "grpc")
 	assert.True(t, found, "Couldn't find medusa grpc port")
 	assert.Equal(t, int32(55055), medusaPort, "expected medusa grpc port to be set")
 
-	UpdateMedusaInitContainer(&dcConfig, medusaSpec, false, "test", logger)
+	UpdateMedusaInitContainer(&dcConfig, medusaSpec, false, "test", logger, getTestImageRegistry(t))
 	UpdateMedusaMainContainer(&dcConfig, medusaContainer)
 
 	assert.Equal(t, 1, len(dcConfig.PodTemplateSpec.Spec.Containers))
@@ -643,9 +647,9 @@ func TestExternalSecretsFlag(t *testing.T) {
 
 	logger := logr.New(logr.Discard().GetSink())
 
-	medusaContainer, err := CreateMedusaMainContainer(&dcConfig, medusaSpec, true, "test", logger)
+	medusaContainer, err := CreateMedusaMainContainer(&dcConfig, medusaSpec, true, "test", logger, getTestImageRegistry(t))
 	assert.NoError(t, err)
-	UpdateMedusaInitContainer(&dcConfig, medusaSpec, true, "test", logger)
+	UpdateMedusaInitContainer(&dcConfig, medusaSpec, true, "test", logger, getTestImageRegistry(t))
 	UpdateMedusaMainContainer(&dcConfig, medusaContainer)
 
 	medusaInitContainerIndex, found := cassandra.FindInitContainer(&dcConfig.PodTemplateSpec, "medusa-restore")
@@ -705,4 +709,25 @@ func TestGenerateMedusaProbe(t *testing.T) {
 	probe, err := generateMedusaProbe(rejectedProbe, 55055)
 	assert.Error(t, err)
 	assert.Nil(t, probe)
+}
+
+var (
+	regOnce           sync.Once
+	imageRegistryTest cassimages.ImageRegistry
+)
+
+func getTestImageRegistry(t testing.TB) cassimages.ImageRegistry {
+	regOnce.Do(func() {
+		p := filepath.Clean("../../test/testdata/imageconfig/image_config_test.yaml")
+		data, err := os.ReadFile(p)
+		if err != nil {
+			t.Fatalf("failed reading test image config: %v", err)
+		}
+		r, err := cassimages.NewImageRegistryV2(data)
+		if err != nil {
+			t.Fatalf("failed parsing test image config: %v", err)
+		}
+		imageRegistryTest = r
+	})
+	return imageRegistryTest
 }

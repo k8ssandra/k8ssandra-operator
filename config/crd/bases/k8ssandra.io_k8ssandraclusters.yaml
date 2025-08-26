@@ -9939,11 +9939,10 @@ spec:
                               type: object
                           type: object
                         perNodeConfigInitContainerImage:
-                          default: k8ssandra/k8ssandra-client:v0.8.1
                           description: |-
                             The image to use in each Cassandra pod for the (short-lived) init container that merges global and perNodeConfig
                             configuration. This is only useful when PerNodeConfigMapRef is set.
-                            The default is "k8ssandra/k8ssandra-client:v0.8.1".
+                            DEPRECATED: use ImageConfig's k8ssandra-client instead
                           type: string
                         perNodeConfigMapRef:
                           description: |-
@@ -23015,11 +23014,10 @@ spec:
                         type: object
                     type: object
                   perNodeConfigInitContainerImage:
-                    default: k8ssandra/k8ssandra-client:v0.8.1
                     description: |-
                       The image to use in each Cassandra pod for the (short-lived) init container that merges global and perNodeConfig
                       configuration. This is only useful when PerNodeConfigMapRef is set.
-                      The default is "k8ssandra/k8ssandra-client:v0.8.1".
+                      DEPRECATED: use ImageConfig's k8ssandra-client instead
                     type: string
                   podPriorityClassName:
                     description: PodPriorityClassName defines the priority class name
@@ -29075,13 +29073,7 @@ spec:
                     type: object
                     x-kubernetes-map-type: atomic
                   containerImage:
-                    default:
-                      name: cassandra-reaper
-                      repository: thelastpickle
-                      tag: 4.0.0-rc1
-                    description: |-
-                      The image to use for the Reaper pod main container.
-                      The default is "thelastpickle/cassandra-reaper:4.0.0-rc1".
+                    description: The image to use for the Reaper pod main container.
                     properties:
                       name:
                         description: The image name to use.

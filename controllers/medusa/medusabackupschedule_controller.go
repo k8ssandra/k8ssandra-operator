@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	cassimages "github.com/k8ssandra/cass-operator/pkg/images"
 	medusav1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	cron "github.com/robfig/cron/v3"
 )
@@ -45,8 +46,9 @@ type Clock interface {
 // MedusaBackupScheduleReconciler reconciles a MedusaBackupSchedule object
 type MedusaBackupScheduleReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	Clock  Clock
+	Scheme        *runtime.Scheme
+	Clock         Clock
+	ImageRegistry cassimages.ImageRegistry
 }
 
 type RealClock struct{}

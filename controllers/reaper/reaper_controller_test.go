@@ -2,6 +2,9 @@ package reaper
 
 import (
 	"context"
+	"os"
+	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -9,6 +12,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	cassimages "github.com/k8ssandra/cass-operator/pkg/images"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
@@ -49,6 +53,7 @@ func TestReaper(t *testing.T) {
 			Client:           mgr.GetClient(),
 			Scheme:           mgr.GetScheme(),
 			NewManager:       newMockManager,
+			ImageRegistry:    getTestImageRegistry(),
 		}).SetupWithManager(mgr)
 		return err
 	})
@@ -202,10 +207,7 @@ func testCreateReaper(t *testing.T, ctx context.Context, k8sClient client.Client
 	assert.Equal(t, deployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].Name, "conf", "deployment should have a volume for the config")
 	assert.Equal(t, deployment.Spec.Template.Spec.Containers[0].VolumeMounts[0].MountPath, "/etc/cassandra-reaper/config", "deployment should have a volume for the config")
 
-	// main container is a custom image where the tag isn't specified, so it should default to latest, and pull policy
-	// to Always.
 	assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper-custom:latest", deployment.Spec.Template.Spec.Containers[0].Image)
-	assert.Equal(t, corev1.PullAlways, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 	// one secret should have been collected, from the main container image
 	assert.Equal(t, []corev1.LocalObjectReference{{Name: "main-secret"}}, deployment.Spec.Template.Spec.ImagePullSecrets)
 
@@ -718,4 +720,22 @@ func newStorageConfig() *corev1.PersistentVolumeClaimSpec {
 			},
 		},
 	}
+}
+
+var (
+	regOnce           sync.Once
+	imageRegistryTest cassimages.ImageRegistry
+)
+
+func getTestImageRegistry() cassimages.ImageRegistry {
+	regOnce.Do(func() {
+		p := filepath.Clean("../../test/testdata/imageconfig/image_config_test.yaml")
+		data, err := os.ReadFile(p)
+		if err == nil {
+			if r, e := cassimages.NewImageRegistryV2(data); e == nil {
+				imageRegistryTest = r
+			}
+		}
+	})
+	return imageRegistryTest
 }
