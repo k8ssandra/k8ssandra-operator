@@ -30,7 +30,6 @@ import (
 
 const (
 	medusaImageRepo                     = "test"
-	storageSecret                       = "storage-secret"
 	cassandraUserSecret                 = "medusa-secret"
 	k8ssandraClusterName                = "test"
 	medusaConfigName                    = "medusa-config"
@@ -353,7 +352,7 @@ func checkMedusaObjectsCompliance(t *testing.T, f *framework.Framework, dc *cass
 
 	for _, container := range [](corev1.Container){initContainer, mainContainer} {
 		// Check containers Image
-		require.True(container.Image == fmt.Sprintf("docker.io/%s/medusa:latest", medusaImageRepo), fmt.Sprintf("%s %s init container doesn't have the right image %s vs docker.io/%s/medusa:latest", dc.Name, container.Name, container.Image, medusaImageRepo))
+		require.True(container.Image == fmt.Sprintf("docker.io/%s/cassandra-medusa:latest", medusaImageRepo), fmt.Sprintf("%s %s init container doesn't have the right image %s vs docker.io/%s/medusa:latest", dc.Name, container.Name, container.Image, medusaImageRepo))
 
 		// Check volume mounts
 		assert.True(t, f.ContainerHasVolumeMount(container, "server-config", "/etc/cassandra"), "Missing Volume Mount for medusa-restore server-config")

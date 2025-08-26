@@ -85,10 +85,7 @@ type ReaperTemplate struct {
 	SecretsProvider string `json:"secretsProvider,omitempty"`
 
 	// The image to use for the Reaper pod main container.
-	// The default is "thelastpickle/cassandra-reaper:4.0.0-rc1".
 	// +optional
-	// TODO: update with real release version.
-	// +kubebuilder:default={repository:"thelastpickle",name:"cassandra-reaper",tag:"4.0.0-rc1"}
 	ContainerImage *images.Image `json:"containerImage,omitempty"`
 
 	// Deprecated: The main container image will be used for the init container as well.

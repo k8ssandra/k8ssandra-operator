@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
+	cassimages "github.com/k8ssandra/cass-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -39,7 +40,8 @@ import (
 type MedusaConfigurationReconciler struct {
 	*config.ReconcilerConfig
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme        *runtime.Scheme
+	ImageRegistry cassimages.ImageRegistry
 }
 
 //+kubebuilder:rbac:groups=medusa.k8ssandra.io,namespace="k8ssandra",resources=medusaconfigurations,verbs=get;list;watch;create;update;patch;delete

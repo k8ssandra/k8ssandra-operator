@@ -5,10 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"os"
+	"path/filepath"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
+	cassimages "github.com/k8ssandra/cass-operator/pkg/images"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
@@ -81,6 +85,7 @@ func TestK8ssandraCluster(t *testing.T) {
 			ClientCache:      clientCache,
 			ManagementApi:    managementApiFactory,
 			Recorder:         mgr.GetEventRecorderFor("k8ssandracluster-controller"),
+			ImageRegistry:    getTestImageRegistry(),
 		}).SetupWithManager(mgr, clusters)
 		return err
 	}, nil)
@@ -125,6 +130,24 @@ func TestK8ssandraCluster(t *testing.T) {
 	t.Run("createSingleDcClusterWithMetricsAgent", testEnv.ControllerTest(ctx, createSingleDcClusterWithMetricsAgent))
 	t.Run("GenerationCheck", testEnv.ControllerTest(ctx, testGenerationCheck))
 	t.Run("CheckDeletion", testEnv.ControllerTest(ctx, testCheckDeletion))
+}
+
+var (
+	regOnce           sync.Once
+	imageRegistryTest cassimages.ImageRegistry
+)
+
+func getTestImageRegistry() cassimages.ImageRegistry {
+	regOnce.Do(func() {
+		p := filepath.Clean("../../test/testdata/imageconfig/image_config_test.yaml")
+		data, err := os.ReadFile(p)
+		if err == nil {
+			if r, e := cassimages.NewImageRegistryV2(data); e == nil {
+				imageRegistryTest = r
+			}
+		}
+	})
+	return imageRegistryTest
 }
 
 // createSingleDcCluster verifies that the CassandraDatacenter is created and that the

@@ -26,6 +26,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/go-logr/logr"
+	cassimages "github.com/k8ssandra/cass-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/shared"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -63,6 +64,7 @@ type MedusaRestoreJobReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 	medusa.ClientFactory
+	ImageRegistry cassimages.ImageRegistry
 }
 
 // +kubebuilder:rbac:groups=medusa.k8ssandra.io,namespace="k8ssandra",resources=medusarestorejobs,verbs=get;list;watch;update;patch;delete
