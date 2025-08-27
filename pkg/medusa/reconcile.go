@@ -20,9 +20,6 @@ import (
 )
 
 const (
-	DefaultMedusaImageRepository = "k8ssandra"
-	DefaultMedusaImageName       = "medusa"
-	DefaultMedusaVersion         = "0.25.0"
 	DefaultMedusaPort            = 50051
 	DefaultProbeInitialDelay     = 10
 	DefaultProbeTimeout          = 1
@@ -37,9 +34,8 @@ const (
 	MainContainerMemLimit   = "8Gi"
 	MainContainerCpuRequest = "100m"
 
-	MedusaBackupsVolumeName  = "medusa-backups"
-	MedusaBackupsMountPath   = "/mnt/backups"
-	serviceAccountNameEnvVar = "SERVICE_ACCOUNT_NAME"
+	MedusaBackupsVolumeName = "medusa-backups"
+	MedusaBackupsMountPath  = "/mnt/backups"
 
 	CredentialsTypeRoleBased = "role-based"
 )
