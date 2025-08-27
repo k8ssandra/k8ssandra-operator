@@ -25,7 +25,7 @@ func MountPerNodeConfig(dcConfig *cassandra.DatacenterConfig) {
 }
 
 const (
-	defaultPerNodeConfigInitContainerImage = "k8ssandra/k8ssandra-client:v0.8.1"
+	defaultPerNodeConfigInitContainerImage = "k8ssandra/k8ssandra-client:v0.8.2"
 )
 
 func newPerNodeConfigInitContainer(image string) v1.Container {
