@@ -129,10 +129,13 @@ help: ## Display this help.
 
 ##@ Development
 
+CASS_OPERATOR_TAG ?= v1.26.0
+
 .PHONY: manifests
 manifests: controller-gen kustomize ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=k8ssandra-operator webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 	KUSTOMIZE=$(KUSTOMIZE) ./scripts/prepare-helm-release.sh
+	KUSTOMIZE=$(KUSTOMIZE) CASS_OPERATOR_REF=$(CASS_OPERATOR_TAG) ./scripts/generate-imageconfig.sh
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
