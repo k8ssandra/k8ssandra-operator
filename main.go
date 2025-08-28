@@ -32,6 +32,7 @@ import (
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	cassimages "github.com/k8ssandra/cass-operator/pkg/images"
+	cassoputils "github.com/k8ssandra/cass-operator/pkg/utils"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
@@ -176,13 +177,10 @@ func main() {
 	reconcilerConfig := config.InitConfig()
 
 	// Require ImageConfig to be present, otherwise we bail out.
-	registry, err := cassimages.NewImageRegistryFromConfigMap(ctx, uncachedClient)
+
+	registry, err := setupImageRegistry(ctx, uncachedClient)
 	if err != nil {
 		setupLog.Error(err, "unable to load image config from ConfigMap (v1beta2)")
-		os.Exit(1)
-	}
-	if registry == nil {
-		setupLog.Error(fmt.Errorf("image config not found"), "no ImageConfig ConfigMap found (label k8ssandra.io/config=image)")
 		os.Exit(1)
 	}
 
@@ -335,6 +333,22 @@ func main() {
 		os.Exit(1)
 	}
 
+}
+
+func setupImageRegistry(ctx context.Context, uncachedClient client.Client) (cassimages.ImageRegistry, error) {
+	operatorNs, err := cassoputils.GetOperatorNamespace()
+	if err != nil {
+		setupLog.Error(err, "unable to get operator namespace")
+		return nil, err
+	}
+
+	registry, err := cassimages.NewImageRegistryFromConfigMap(ctx, client.NewNamespacedClient(uncachedClient, operatorNs))
+	if err != nil {
+		setupLog.Error(err, "unable to load the image config file")
+		return nil, err
+	}
+
+	return registry, nil
 }
 
 // getWatchNamespace returns the Namespace the operator should be watching for changes
