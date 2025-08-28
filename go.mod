@@ -1,6 +1,6 @@
 module github.com/k8ssandra/k8ssandra-operator
 
-go 1.24.5
+go 1.24.6
 
 require (
 	github.com/Jeffail/gabs v1.4.0
@@ -15,7 +15,7 @@ require (
 	github.com/go-logr/zapr v1.3.0
 	github.com/google/uuid v1.6.0
 	github.com/gruntwork-io/terratest v0.48.2
-	github.com/k8ssandra/cass-operator v1.26.0
+	github.com/k8ssandra/cass-operator v1.26.1-0.20250828112336-e3146f3b6dcc
 	github.com/k8ssandra/reaper-client-go v0.4.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.52.1
@@ -29,15 +29,13 @@ require (
 	google.golang.org/grpc v1.68.1
 	google.golang.org/protobuf v1.36.5
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/api v0.33.3
-	k8s.io/apimachinery v0.33.3
-	k8s.io/client-go v0.33.3
+	k8s.io/api v0.33.4
+	k8s.io/apimachinery v0.33.4
+	k8s.io/client-go v0.33.4
 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
 	sigs.k8s.io/controller-runtime v0.21.0
 	sigs.k8s.io/yaml v1.4.0
 )
-
-replace github.com/k8ssandra/cass-operator v1.26.0 => github.com/burmanm/cass-operator v1.23.2-0.20250825151309-dba93b37348b
 
 require (
 	github.com/Jeffail/gabs/v2 v2.7.0 // indirect
@@ -89,7 +87,7 @@ require (
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.33.0 // indirect
+	k8s.io/apiextensions-apiserver v0.33.4 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff // indirect
 	sigs.k8s.io/gateway-api v0.5.0 // indirect

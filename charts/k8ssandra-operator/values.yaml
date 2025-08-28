@@ -86,13 +86,23 @@ client:
     # -- Image repository for the client
     repository: k8ssandra/k8ssandra-client
     # -- Tag of the client image to pull from
-    tag: v0.8.1
+    tag: v0.8.2
     # -- Pull policy for the client container
     pullPolicy: IfNotPresent
   # -- HTTPS proxy address to use for communication to helm.k8ssandra.io
   #proxy:
 # -- Allows managing CRD upgrades externally and fully disable the CRD upgrader job hook
 disableCrdUpgraderJob: false
-# -- Allows disabling the check for the presence of cert-manager.
 cass-operator:
-  disableCertManagerCheck: false
+# -- Allows disabling the check for the presence of cert-manager.
+  # disableCertManagerCheck: false
+  images:
+    images:
+      reaper:
+        repository: "thelastpickle"
+        name: "cassandra-reaper"
+        tag: "4.0.0-rc1"
+    medusa:
+      repository: "thelastpickle"
+      name: "cassandra-medusa"
+      tag: "v0.25.0"
