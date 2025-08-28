@@ -49,6 +49,8 @@ spec:
             - {{ .Chart.Name }}
             - --chartRepo
             - k8ssandra
+            - --charts
+            - cass-operator
       {{- if .Values.nodeSelector }}
       nodeSelector: {{ toYaml .Values.nodeSelector | nindent 8 }}
       {{- end }}

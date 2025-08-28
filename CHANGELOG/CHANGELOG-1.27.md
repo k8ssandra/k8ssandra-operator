@@ -16,3 +16,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 ## unreleased
 
 * [ENHANCEMENT] [#1591](https://github.com/k8ssandra/k8ssandra-operator/issues/1591) Remove the old medusa purge cronjob in favor of scheduled tasks
+* [BUGFIX] [#1603](https://github.com/k8ssandra/k8ssandra-operator/issues/1603) Fix the crd-upgrader to update cass-operator CRDs also as part of the Helm upgrade
