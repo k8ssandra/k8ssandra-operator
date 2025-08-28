@@ -1,6 +1,7 @@
 package nodeconfig
 
 import (
+	"github.com/k8ssandra/cass-operator/pkg/images"
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	v1 "k8s.io/api/core/v1"
@@ -15,20 +16,16 @@ const (
 // MountPerNodeConfig mounts the per-node-config ConfigMap, on all pods in the given datacenter and
 // adds an init container that will merge the per-node config into the main config. This function
 // should only be called for DCs having a per-node ConfigMap reference.
-func MountPerNodeConfig(dcConfig *cassandra.DatacenterConfig) {
+func MountPerNodeConfig(dcConfig *cassandra.DatacenterConfig, registry images.ImageRegistry) {
 	// if the config-builder init container isn't found, declare a placeholder now to guarantee order of execution
 	cassandra.UpdateInitContainer(&dcConfig.PodTemplateSpec, reconciliation.ServerConfigContainerName, func(container *v1.Container) {})
 	// add per-node-config init container
-	cassandra.AddInitContainersToPodTemplateSpec(dcConfig, newPerNodeConfigInitContainer(dcConfig.PerNodeInitContainerImage))
+	cassandra.AddInitContainersToPodTemplateSpec(dcConfig, newPerNodeConfigInitContainer(dcConfig.PerNodeInitContainerImage, registry))
 	// add per-node config volume to pod spec
 	cassandra.AddVolumesToPodTemplateSpec(&dcConfig.PodTemplateSpec, newPerNodeConfigVolume(dcConfig.PerNodeConfigMapRef.Name))
 }
 
-const (
-	defaultPerNodeConfigInitContainerImage = "k8ssandra/k8ssandra-client:v0.8.1"
-)
-
-func newPerNodeConfigInitContainer(image string) v1.Container {
+func newPerNodeConfigInitContainer(image string, registry images.ImageRegistry) v1.Container {
 	var perNodeConfigInitContainer = v1.Container{
 		Name: PerNodeConfigInitContainerName,
 		Resources: v1.ResourceRequirements{
@@ -80,7 +77,7 @@ func newPerNodeConfigInitContainer(image string) v1.Container {
 		},
 	}
 	if image == "" {
-		perNodeConfigInitContainer.Image = defaultPerNodeConfigInitContainerImage
+		perNodeConfigInitContainer.Image = registry.GetClientImage()
 	} else {
 		perNodeConfigInitContainer.Image = image
 	}

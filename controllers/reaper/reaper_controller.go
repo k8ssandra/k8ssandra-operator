@@ -23,6 +23,7 @@ import (
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	cassimages "github.com/k8ssandra/cass-operator/pkg/images"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
@@ -47,8 +48,9 @@ import (
 type ReaperReconciler struct {
 	*config.ReconcilerConfig
 	client.Client
-	Scheme     *runtime.Scheme
-	NewManager func() reaper.Manager
+	Scheme        *runtime.Scheme
+	NewManager    func() reaper.Manager
+	ImageRegistry cassimages.ImageRegistry
 }
 
 // +kubebuilder:rbac:groups=reaper.k8ssandra.io,namespace="k8ssandra",resources=reapers,verbs=get;list;watch;create;update;patch;delete
@@ -214,7 +216,7 @@ func (r *ReaperReconciler) reconcileDeployment(
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	desiredDeployment, err := reaper.MakeDesiredDeploymentType(actualReaper, actualDc, keystorePassword, truststorePassword, logger, authVars...)
+	desiredDeployment, err := reaper.MakeDesiredDeploymentType(actualReaper, actualDc, keystorePassword, truststorePassword, logger, r.ImageRegistry, authVars...)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

@@ -1,0 +1,6 @@
+images:
+  reaper:
+    repository: "thelastpickle"
+    name: "cassandra-reaper"
+    tag: "4.0.0-rc1"
+
