@@ -88,7 +88,7 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	// Set an owner reference on the backup job so that it can be cleaned up when the cassandra datacenter is deleted
 	if backupJob.OwnerReferences == nil {
-		if err = controllerutil.SetControllerReference(cassdc, backupJob, r.Scheme); err != nil {
+		if err = controllerutil.SetOwnerReference(cassdc, backupJob, r.Scheme); err != nil {
 			logger.Error(err, "failed to set controller reference", "CassandraDatacenter", cassdcKey)
 			return ctrl.Result{}, err
 		}

@@ -19,8 +19,9 @@ package medusa
 import (
 	"context"
 	"fmt"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"time"
+
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -83,7 +84,7 @@ func (r *MedusaBackupScheduleReconciler) Reconcile(ctx context.Context, req ctrl
 
 	// Set an owner reference on the task so that it can be cleaned up when the cassandra datacenter is deleted
 	if backupSchedule.OwnerReferences == nil {
-		if err = controllerutil.SetControllerReference(dc, backupSchedule, r.Scheme); err != nil {
+		if err = controllerutil.SetOwnerReference(dc, backupSchedule, r.Scheme); err != nil {
 			logger.Error(err, "failed to set controller reference", "CassandraDatacenter", dcKey)
 			return ctrl.Result{}, err
 		}
