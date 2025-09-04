@@ -126,18 +126,13 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 		logger.Error(err, "Failed to fetch linked secrets", "ReplicatedSecret", req.NamespacedName, "namespace", req.Namespace)
 		return reconcile.Result{}, err
 	}
-	// Verify secrets have up-to-date hashes and finalizers
-	secretsUpdated := false
+	// Verify secrets have up-to-date hashes
 	for i := range secrets {
 		sec := &secrets[i]
 		if err := s.verifyHashAnnotation(ctx, sec); err != nil {
 			logger.Error(err, "Failed to update secret hashes", "ReplicatedSecret", req.NamespacedName, "Secret", sec.Name)
 			return reconcile.Result{}, err
 		}
-	}
-
-	if secretsUpdated {
-		return ctrl.Result{}, nil
 	}
 
 	// For status updates
