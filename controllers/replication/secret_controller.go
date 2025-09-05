@@ -72,85 +72,21 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 	// Deletion and finalizer logic
 	if rsec.GetDeletionTimestamp() != nil {
 		if controllerutil.ContainsFinalizer(rsec, replicatedResourceFinalizer) {
-			logger.Info("Starting cleanup")
-
-			// Fetch all secrets from managed cluster.
-			// Remove only those secrets which are not matched by any other ReplicatedSecret and do not have the orphan annotation
-			if val, found := rsec.GetAnnotations()[secret.OrphanResourceAnnotation]; !found || val != "true" {
-				logger.Info("Cleaning up all the replicated resources", "ReplicatedSecret", req.NamespacedName)
-				selector, err := metav1.LabelSelectorAsSelector(rsec.Spec.Selector)
+			logger.Info("Cleaning up all the replicated resources", "ReplicatedSecret", req.NamespacedName)
+			for _, target := range rsec.Spec.ReplicationTargets {
+				logger.Info("Deleting secrets for ReplicationTarget", "Target", target)
+				// Only replicate to clusters that are in the ReplicatedSecret's context
+				remoteClient, err := s.ClientCache.GetRemoteClient(target.K8sContextName)
 				if err != nil {
-					logger.Error(err, "Failed to delete the replicated secret, defined labels are invalid", "ReplicatedSecret", req.NamespacedName)
-					return reconcile.Result{}, err
+					logger.Error(err, "Failed to fetch remote client for managed cluster", "ReplicatedSecret", req.NamespacedName, "TargetContext", target)
+					return ctrl.Result{}, err
 				}
 
-				secrets, err := s.fetchAllMatchingSecrets(ctx, selector, rsec.Namespace)
-				if err != nil {
-					logger.Error(err, "Failed to fetch the replicated secrets to cleanup", "ReplicatedSecret", req.NamespacedName, "Namespace", rsec.Namespace)
-					return reconcile.Result{}, err
-				}
-
-				sourceSecretsToMapToTargets := make([]*corev1.Secret, 0, len(secrets))
-
-				s.selectorMutex.RLock()
-
-			SecretsToCheck:
-				for _, sec := range secrets {
-					key := client.ObjectKey{Namespace: sec.Namespace, Name: sec.Name}
-					logger.Info("Checking secret", "key", key)
-					for k, v := range s.selectors {
-						if k.Namespace != sec.Namespace {
-							logger.Info("Skipping secret", "key", key, "namespace", k.Namespace)
-							continue
-						}
-						if k == req.NamespacedName {
-							// This is the ReplicatedSecret that will be deleted, we don't want its rules to match
-							continue
-						}
-
-						if val, found := sec.GetAnnotations()[secret.OrphanResourceAnnotation]; found && val == "true" {
-							// Managed cluster has orphan set to the secret, do not delete it from target clusters
-							continue SecretsToCheck
-						}
-
-						if v.Matches(labels.Set(sec.GetLabels())) {
-							// Another Replication rule is matching this secret, do not delete it
-							logger.Info("Another replication rule matches secret", "key", key)
-							continue SecretsToCheck
-						}
-					}
-					logger.Info("Preparing to delete secrets downstream from", "key", key)
-					sourceSecretsToMapToTargets = append(sourceSecretsToMapToTargets, &sec)
-				}
-
-				s.selectorMutex.RUnlock()
-
-				for _, target := range rsec.Spec.ReplicationTargets {
-					logger.Info("Deleting secrets for ReplicationTarget", "Target", target)
-					// Only replicate to clusters that are in the ReplicatedSecret's context
-					remoteClient, err := s.ClientCache.GetRemoteClient(target.K8sContextName)
-					if err != nil {
-						logger.Error(err, "Failed to fetch remote client for managed cluster", "ReplicatedSecret", req.NamespacedName, "TargetContext", target)
-						return ctrl.Result{}, err
-					}
-					for _, origSecret := range sourceSecretsToMapToTargets {
-						targetNamespace := utils.FirstNonEmptyString(target.Namespace, origSecret.Namespace)
-						deleteObject := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: getPrefixedSecretName(target.TargetPrefix, origSecret.Name), Namespace: targetNamespace}}
-						if origSecret.Namespace == target.Namespace && origSecret.Name == deleteObject.Name {
-							// Target is the same secret as the original - bail.
-							// TODO: Note that this will cause secrets to not be cleaned up if they are in a remote cluster.
-							continue
-						}
-						logger.Info("Deleting secrets for", "objectMeta", deleteObject.ObjectMeta,
-							"Cluster", target.K8sContextName)
-						err = remoteClient.Delete(ctx, deleteObject)
-						if err != nil && !errors.IsNotFound(err) {
-							logger.Error(err, "Failed to remove secrets from target cluster", "ReplicatedSecret", req.NamespacedName, "TargetContext", target, "targetSecret", deleteObject.ObjectMeta)
-							return ctrl.Result{}, err
-						}
-					}
+				if err := s.cleanupSecretsInTarget(ctx, rsec, target, remoteClient, logger); err != nil {
+					return ctrl.Result{}, err
 				}
 			}
+
 			s.selectorMutex.Lock()
 			delete(s.selectors, req.NamespacedName)
 			s.selectorMutex.Unlock()
@@ -223,64 +159,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 			Type:    api.ReplicationDone,
 		}
 
-	TargetSecrets:
-		// Iterate all the matching secrets
-		for i := range secrets {
-			sec := &secrets[i]
-			// If the secret would be created in the same target namespace with the same labels, skip and warn.
-			isInf, err := wouldBeInfinite(*sec, *rsec, target)
-			if err != nil {
-				logger.Error(err, "failed to check infinite replication", "Secret", "TargetContext", target)
-				break TargetSecrets
-			}
-			if isInf {
-				logger.Info("warning: secret would be infinite, bailing", "Secret", sec.Name, "TargetContext", target)
-				continue TargetSecrets
-			}
-			namespace := ""
-			if target.Namespace == "" {
-				namespace = sec.Namespace
-			} else {
-				namespace = target.Namespace
-			}
-			fetchedSecret := &corev1.Secret{}
-			if err = remoteClient.Get(ctx, types.NamespacedName{Name: getPrefixedSecretName(target.TargetPrefix, sec.Name), Namespace: namespace}, fetchedSecret); err != nil {
-				if errors.IsNotFound(err) {
-					logger.Info("Copying secret to target cluster", "Secret", sec.Name, "TargetContext", target)
-					// Create it
-					copiedSecret := sec.DeepCopy()
-					copiedSecret.Namespace = namespace
-					copiedSecret.ResourceVersion = ""
-					copiedSecret.OwnerReferences = []metav1.OwnerReference{}
-					copiedSecret.Name = getPrefixedSecretName(target.TargetPrefix, sec.Name)
-					copiedSecret.Labels = calculateTargetLabels(copiedSecret.Labels, target)
-					if err = remoteClient.Create(ctx, copiedSecret); err != nil {
-						logger.Error(err, "Failed to sync secret to target cluster", "Secret", copiedSecret.Name, "TargetContext", target)
-						break TargetSecrets
-					}
-					continue
-				}
-				logger.Error(err, "Failed to fetch secret from target cluster", "Secret", fetchedSecret.Name, "TargetContext", target)
-				break TargetSecrets
-			}
-
-			if fetchedSecret.Immutable != nil && *fetchedSecret.Immutable {
-				err := fmt.Errorf("target secret is immutable")
-				logger.Error(err, "Failed to modify target secret, secret is set to immutable", "Secret", fetchedSecret.Name, "TargetContext", target)
-				break TargetSecrets
-			}
-
-			if requiresUpdate(sec, fetchedSecret) {
-				logger.Info("Modifying secret in target cluster", "Secret", sec.Name, "TargetContext", target)
-				syncSecrets(sec, fetchedSecret, target)
-				copiedSecret := fetchedSecret.DeepCopy()
-				copiedSecret.Name = getPrefixedSecretName(target.TargetPrefix, sec.Name)
-				if err = remoteClient.Update(ctx, copiedSecret); err != nil {
-					logger.Error(err, "Failed to sync target secret for matching payloads", "Secret", fetchedSecret.Name, "TargetContext", target)
-					break TargetSecrets
-				}
-			}
-		}
+		err = s.syncSecretsToTarget(ctx, secrets, rsec, target, remoteClient, logger)
 		if err != nil {
 			cond.Status = corev1.ConditionFalse
 		} else {
@@ -306,6 +185,115 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 	}
 	return ctrl.Result{}, err
+}
+
+// syncSecretsToTarget syncs a list of secrets to a specific replication target
+func (s *SecretSyncController) syncSecretsToTarget(ctx context.Context, secrets []corev1.Secret, rsec *api.ReplicatedSecret, target api.ReplicationTarget, remoteClient client.Client, logger logr.Logger) error {
+	for i := range secrets {
+		sec := &secrets[i]
+		// If the secret would be created in the same target namespace with the same labels, skip and warn.
+		isInf, err := wouldBeInfinite(*sec, *rsec, target)
+		if err != nil {
+			logger.Error(err, "failed to check infinite replication", "Secret", "TargetContext", target)
+			return err
+		}
+		if isInf {
+			logger.Info("warning: secret would be infinite, bailing", "Secret", sec.Name, "TargetContext", target)
+			continue
+		}
+		namespace := ""
+		if target.Namespace == "" {
+			namespace = sec.Namespace
+		} else {
+			namespace = target.Namespace
+		}
+		fetchedSecret := &corev1.Secret{}
+		if err = remoteClient.Get(ctx, types.NamespacedName{Name: getPrefixedSecretName(target.TargetPrefix, sec.Name), Namespace: namespace}, fetchedSecret); err != nil {
+			if errors.IsNotFound(err) {
+				logger.Info("Copying secret to target cluster", "Secret", sec.Name, "TargetContext", target)
+				// Create it
+				copiedSecret := sec.DeepCopy()
+				copiedSecret.Namespace = namespace
+				copiedSecret.ResourceVersion = ""
+				copiedSecret.OwnerReferences = []metav1.OwnerReference{}
+				copiedSecret.Finalizers = []string{}
+				copiedSecret.Name = getPrefixedSecretName(target.TargetPrefix, sec.Name)
+				copiedSecret.Labels = calculateTargetLabels(copiedSecret.Labels, target, rsec.Namespace, rsec.Name)
+				if err = remoteClient.Create(ctx, copiedSecret); err != nil {
+					logger.Error(err, "Failed to sync secret to target cluster", "Secret", copiedSecret.Name, "TargetContext", target)
+					return err
+				}
+				continue
+			}
+			logger.Error(err, "Failed to fetch secret from target cluster", "Secret", fetchedSecret.Name, "TargetContext", target)
+			return err
+		}
+
+		if fetchedSecret.Immutable != nil && *fetchedSecret.Immutable {
+			err := fmt.Errorf("target secret is immutable")
+			logger.Error(err, "Failed to modify target secret, secret is set to immutable", "Secret", fetchedSecret.Name, "TargetContext", target)
+			return err
+		}
+
+		if requiresUpdate(sec, fetchedSecret) {
+			logger.Info("Modifying secret in target cluster", "Secret", sec.Name, "TargetContext", target)
+			syncSecrets(sec, fetchedSecret, target, rsec.Namespace, rsec.Name)
+			copiedSecret := fetchedSecret.DeepCopy()
+			copiedSecret.Name = getPrefixedSecretName(target.TargetPrefix, sec.Name)
+			if err = remoteClient.Update(ctx, copiedSecret); err != nil {
+				logger.Error(err, "Failed to sync target secret for matching payloads", "Secret", fetchedSecret.Name, "TargetContext", target)
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// cleanupSecretsInTarget deletes replicated secrets from a target
+func (s *SecretSyncController) cleanupSecretsInTarget(ctx context.Context, rsec *api.ReplicatedSecret, target api.ReplicationTarget, remoteClient client.Client, logger logr.Logger) error {
+	// List all secrets in the target cluster that match the replicated-secret-name label
+	secrets := &corev1.SecretList{}
+	listOption := client.ListOptions{
+		LabelSelector: labels.SelectorFromSet(map[string]string{coreapi.ReplicatedSecretLabel: replicatedSecretLabel(rsec.Namespace, rsec.Name)}),
+		Namespace:     target.Namespace,
+	}
+	err := remoteClient.List(ctx, secrets, &listOption)
+	if err != nil {
+		return err
+	}
+
+	for _, deleteObject := range secrets.Items {
+		logger.Info("Checking secret", "Secret", deleteObject.Name, "TargetContext", target)
+		targetNamespace := utils.FirstNonEmptyString(target.Namespace, deleteObject.Namespace)
+		sec := &corev1.Secret{}
+		if err := remoteClient.Get(ctx, types.NamespacedName{Name: deleteObject.Name, Namespace: targetNamespace}, sec); err != nil {
+			if errors.IsNotFound(err) {
+				// Secret does not exist in target cluster, skip
+				logger.Info("Secret does not exist in target cluster, skipping", "Secret", deleteObject.Name, "TargetContext", target)
+				continue
+			}
+			logger.Error(err, "Failed to fetch secret from target cluster", "Secret", deleteObject.Name, "TargetContext", target)
+			return err
+		} else {
+			// Delete the secret if it doesn't have the orphan annotation
+			if val, found := sec.GetAnnotations()[secret.OrphanResourceAnnotation]; found && val == "true" {
+				logger.Info("Skipping secret deletion because it has the orphan annotation", "Secret", deleteObject.Name, "TargetContext", target)
+				continue
+			}
+			logger.Info("Deleting secrets for", "objectMeta", deleteObject.ObjectMeta,
+				"Cluster", target.K8sContextName)
+			err := remoteClient.Delete(ctx, &deleteObject)
+			if err != nil {
+				if errors.IsNotFound(err) {
+					logger.Info("Secret does not exist in target cluster, skipping", "Secret", deleteObject.Name, "TargetContext", target)
+					continue
+				}
+				logger.Error(err, "Failed to remove secrets from target cluster", "ReplicatedSecret", rsec.Name, "TargetContext", target, "targetSecret", deleteObject.ObjectMeta)
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func requiresUpdate(source, dest client.Object) bool {
@@ -334,7 +322,7 @@ func requiresUpdate(source, dest client.Object) bool {
 	return false
 }
 
-func syncSecrets(src, dest *corev1.Secret, target api.ReplicationTarget) {
+func syncSecrets(src, dest *corev1.Secret, target api.ReplicationTarget, replicatedSecretNamespace, replicatedSecretName string) {
 	origMeta := dest.ObjectMeta
 	src.DeepCopyInto(dest)
 	dest.ObjectMeta = origMeta
@@ -363,7 +351,7 @@ func syncSecrets(src, dest *corev1.Secret, target api.ReplicationTarget) {
 	}
 	// TODO: it would be nice at some point in future to remove the DC specific hardcoded stuff and
 	// filter DC specific stuff by setting dropLabels in the replicatedsecret resource.
-	dest.Labels = calculateTargetLabels(dest.Labels, target)
+	dest.Labels = calculateTargetLabels(dest.Labels, target, replicatedSecretNamespace, replicatedSecretName)
 }
 
 // filterValue verifies the annotation is not something datacenter specific
@@ -472,7 +460,7 @@ func getPrefixedSecretName(prefix string, secretName string) string {
 	return fmt.Sprintf("%s%s", prefix, secretName)
 }
 
-func calculateTargetLabels(originalLabels map[string]string, target api.ReplicationTarget) map[string]string {
+func calculateTargetLabels(originalLabels map[string]string, target api.ReplicationTarget, replicatedSecretNamespace, replicatedSecretName string) map[string]string {
 	out := make(map[string]string)
 	for k, v := range originalLabels {
 		out[k] = v
@@ -483,11 +471,18 @@ func calculateTargetLabels(originalLabels map[string]string, target api.Replicat
 	for _, key := range target.DropLabels {
 		delete(out, key)
 	}
+	if replicatedSecretNamespace != "" && replicatedSecretName != "" {
+		out[coreapi.ReplicatedSecretLabel] = replicatedSecretLabel(replicatedSecretNamespace, replicatedSecretName)
+	}
 	return out
 }
 
+func replicatedSecretLabel(replicatedSecretNamespace, replicatedSecretName string) string {
+	return replicatedSecretNamespace + "." + replicatedSecretName
+}
+
 func wouldBeInfinite(origin corev1.Secret, rsec api.ReplicatedSecret, target api.ReplicationTarget) (bool, error) {
-	computedLabels := labels.Set(calculateTargetLabels(origin.Labels, target))
+	computedLabels := labels.Set(calculateTargetLabels(origin.Labels, target, "", ""))
 	selector, err := metav1.LabelSelectorAsSelector(rsec.Spec.Selector)
 	if err != nil {
 		return true, err

@@ -231,10 +231,11 @@ func verifySecretIsDeleted(t *testing.T, ctx context.Context, f *framework.Frame
 	remoteClient := testEnv.Clients[f.DataPlaneContexts[targetCopyToCluster]]
 	require.Eventually(func() bool {
 		remoteSecret := &corev1.Secret{}
-		err := remoteClient.Get(context.TODO(), types.NamespacedName{Name: generatedSecrets[0].Name, Namespace: rsec.Namespace}, remoteSecret)
+		err := remoteClient.Get(context.TODO(), types.NamespacedName{Name: generatedSecrets[0].Name, Namespace: generatedSecrets[0].Namespace}, remoteSecret)
 		if err != nil {
 			return errors.IsNotFound(err)
 		}
+		t.Logf("Secret still exists in target cluster: %v", remoteSecret)
 		return false
 	}, timeout, interval)
 }
@@ -549,6 +550,7 @@ func TestSyncSecrets(t *testing.T) {
 			Annotations: map[string]string{
 				coreapi.ResourceHashAnnotation: "12345678",
 			},
+			Finalizers: []string{"test-finalizer"},
 		},
 		Data: map[string][]byte{
 			"first-key": []byte("firstVal"),
@@ -557,26 +559,29 @@ func TestSyncSecrets(t *testing.T) {
 
 	target := api.ReplicationTarget{}
 
-	syncSecrets(orig, dest, target)
+	syncSecrets(orig, dest, target, "test-namespace", "test-replicated-secret")
 
 	assert.Equal(orig.GetAnnotations(), dest.GetAnnotations())
 	assert.Equal(orig.GetLabels()["label1"], dest.GetLabels()["label1"])
 	assert.Equal(orig.GetLabels()["dropMe"], dest.GetLabels()["dropMe"])
-
+	assert.Equal([]string(nil), dest.GetFinalizers())
 	assert.Equal(orig.Data, dest.Data)
 
-	dest.GetLabels()[secret.OrphanResourceAnnotation] = "true"
+	dest.GetAnnotations()[secret.OrphanResourceAnnotation] = "true"
 
 	dest.GetAnnotations()[coreapi.ResourceHashAnnotation] = "9876555"
 
-	syncSecrets(orig, dest, target)
+	syncSecrets(orig, dest, target, "test-namespace", "test-replicated-secret")
 
 	// Verify additional orphan annotation was not removed
-	assert.Contains(dest.GetLabels(), secret.OrphanResourceAnnotation)
+	assert.Contains(dest.GetAnnotations(), secret.OrphanResourceAnnotation)
 
 	// Verify original labels and their values are set
 
 	assert.Equal(orig.GetLabels()["label1"], dest.GetLabels()["label1"])
+
+	// Verify the ReplicatedSecret label is correctly set
+	assert.Equal("test-namespace.test-replicated-secret", dest.GetLabels()[coreapi.ReplicatedSecretLabel])
 
 	// Verify original annotations and their values are set (modified hash annotation is overwritten)
 	for k, v := range orig.GetAnnotations() {
@@ -619,7 +624,7 @@ func TestRequiresUpdate(t *testing.T) {
 		AddLabels:  map[string]string{"added": "true"},
 	}
 
-	syncSecrets(orig, dest, target)
+	syncSecrets(orig, dest, target, "test-namespace", "test-replicated-secret")
 
 	assert.False(requiresUpdate(orig, dest))
 
@@ -628,7 +633,7 @@ func TestRequiresUpdate(t *testing.T) {
 	assert.True(requiresUpdate(orig, dest))
 	assert.Equal("true", dest.GetLabels()["added"])
 
-	syncSecrets(orig, dest, target)
+	syncSecrets(orig, dest, target, "test-namespace", "test-replicated-secret")
 	assert.False(requiresUpdate(orig, dest))
 }
 
