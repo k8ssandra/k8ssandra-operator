@@ -216,6 +216,7 @@ func (s *SecretSyncController) syncSecretsToTarget(ctx context.Context, secrets 
 				copiedSecret.Namespace = namespace
 				copiedSecret.ResourceVersion = ""
 				copiedSecret.OwnerReferences = []metav1.OwnerReference{}
+				copiedSecret.Finalizers = []string{}
 				copiedSecret.Name = getPrefixedSecretName(target.TargetPrefix, sec.Name)
 				copiedSecret.Labels = calculateTargetLabels(copiedSecret.Labels, target, rsec.Namespace, rsec.Name)
 				if err = remoteClient.Create(ctx, copiedSecret); err != nil {

@@ -550,6 +550,7 @@ func TestSyncSecrets(t *testing.T) {
 			Annotations: map[string]string{
 				coreapi.ResourceHashAnnotation: "12345678",
 			},
+			Finalizers: []string{"test-finalizer"},
 		},
 		Data: map[string][]byte{
 			"first-key": []byte("firstVal"),
@@ -563,7 +564,7 @@ func TestSyncSecrets(t *testing.T) {
 	assert.Equal(orig.GetAnnotations(), dest.GetAnnotations())
 	assert.Equal(orig.GetLabels()["label1"], dest.GetLabels()["label1"])
 	assert.Equal(orig.GetLabels()["dropMe"], dest.GetLabels()["dropMe"])
-
+	assert.Equal([]string(nil), dest.GetFinalizers())
 	assert.Equal(orig.Data, dest.Data)
 
 	dest.GetAnnotations()[secret.OrphanResourceAnnotation] = "true"
