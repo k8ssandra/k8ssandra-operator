@@ -1,5 +1,5 @@
 images:
   medusa: 
-    repository: "thelastpickle"
-    name: "cassandra-medusa"
-    tag: "v0.25.0"
+    repository: "k8ssandra"
+    name: "medusa"
+    tag: "0.25.0"
