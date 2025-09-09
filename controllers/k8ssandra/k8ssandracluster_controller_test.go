@@ -856,7 +856,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 		}
 
 		condition := FindDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
-		return !(condition == nil && condition.Status == corev1.ConditionFalse)
+		return condition != nil
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 
 	t.Log("simulate the creation of the all-pods Endpoints for dc1")
