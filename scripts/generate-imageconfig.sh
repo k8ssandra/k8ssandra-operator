@@ -46,6 +46,7 @@ if [[ -d "${FRAG_DIR}" ]]; then
   done < <(find "${FRAG_DIR}" -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 | sort -z)
 fi
 
+BASE_FILE="${TMP_DIR}/image_config.yaml"
 yq -I4 -i ea '. as $item ireduce ({}; . *+ $item)' "${BASE_FILE}" "${FRAG_FILES[@]:-}"
 
 # Lets write the output
@@ -78,7 +79,7 @@ update_ref_in_file() {
   if [[ ! -f "$file" ]]; then
     return 1
   fi
-  sed -i -E "s|(github.com/k8ssandra/cass-operator/[^[:space:]]*\?ref=)[^[:space:]]+|\\1${CASS_OPERATOR_REF}|g" "$file"
+  sed -i '' -E "s|(github.com/k8ssandra/cass-operator/[^[:space:]]*\?ref=)[^[:space:]]+|\\1${CASS_OPERATOR_REF}|g" "$file"
 }
 update_ref_in_file "${CLUSTER_KUSTOMIZE}"
 update_ref_in_file "${NAMESPACE_KUSTOMIZE}"
