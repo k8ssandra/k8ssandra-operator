@@ -71,7 +71,8 @@ metadata:
 data:
   image_config.yaml: |
 EOF
-cat "${TMP_DIR}/image_config.yaml" >> "${PATCH_FILE}"
+INPUT_FILE="${TMP_DIR}/image_config.yaml" yq -i '.data."image_config.yaml" style="literal" | .data."image_config.yaml" = load_str(env(INPUT_FILE))' "${PATCH_FILE}"
+# cat "${TMP_DIR}/image_config.yaml" >> "${PATCH_FILE}"
 
 cat > "${COMPONENT_KUSTOMIZE_FILE}" <<'EOF'
 apiVersion: kustomize.config.k8s.io/v1alpha1

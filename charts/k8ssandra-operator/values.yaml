@@ -12,7 +12,16 @@ global:
   # watchNamespaces: []
   # -- If true, the helm chart will generate ClusterRoles and ClusterRoleBindings.
   clusterScopedResources: true
-
+  imageConfig:
+    images:
+      reaper:
+        repository: "thelastpickle"
+        name: "cassandra-reaper"
+        tag: "4.0.0-rc1"
+      medusa:
+        repository: "thelastpickle"
+        name: "cassandra-medusa"
+        tag: "v0.25.0"
 # -- A name in place of the chart name which is used in the metadata.name of
 # objects created by this chart.
 nameOverride: ''
@@ -93,16 +102,6 @@ client:
   #proxy:
 # -- Allows managing CRD upgrades externally and fully disable the CRD upgrader job hook
 disableCrdUpgraderJob: false
-cass-operator:
+# cass-operator:
 # -- Allows disabling the check for the presence of cert-manager.
   # disableCertManagerCheck: false
-  images:
-    images:
-      reaper:
-        repository: "thelastpickle"
-        name: "cassandra-reaper"
-        tag: "4.0.0-rc1"
-    medusa:
-      repository: "thelastpickle"
-      name: "cassandra-medusa"
-      tag: "v0.25.0"
