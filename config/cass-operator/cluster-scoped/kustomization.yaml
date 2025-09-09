@@ -4,6 +4,9 @@ kind: Kustomization
 resources:
 - github.com/k8ssandra/cass-operator/config/deployments/cluster?ref=v1.27.0
 
+components:
+  - ../imageconfig
+
 patchesStrategicMerge:
 - |-
   apiVersion: v1
