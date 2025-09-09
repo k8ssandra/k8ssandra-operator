@@ -1,6 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# uname -s is not part of POSIX, but works on linux, bsd and darwin
+# https://stackoverflow.com/a/27776822/3867297
+sedi=
+case "$(uname -s)" in
+  Darwin) 
+    sedi=(-i '')
+    ;;
+  Linux)
+    sedi=(-i)
+    ;;
+esac
+
 # Generates a Kustomize Component that patches cass-operator's image-config ConfigMap
 # by embedding ImageConfig fragments from config/cass-operator/imageconfig/fragments/*
 #
@@ -79,7 +91,7 @@ update_ref_in_file() {
   if [[ ! -f "$file" ]]; then
     return 1
   fi
-  sed -i '' -E "s|(github.com/k8ssandra/cass-operator/[^[:space:]]*\?ref=)[^[:space:]]+|\\1${CASS_OPERATOR_REF}|g" "$file"
+  sed "${sedi[@]}" -E "s|(github.com/k8ssandra/cass-operator/[^[:space:]]*\?ref=)[^[:space:]]+|\\1${CASS_OPERATOR_REF}|g" "$file"
 }
 update_ref_in_file "${CLUSTER_KUSTOMIZE}"
 update_ref_in_file "${NAMESPACE_KUSTOMIZE}"
