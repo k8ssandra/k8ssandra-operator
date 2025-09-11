@@ -61,13 +61,16 @@ func deleteDcWithUserKeyspacesFails(ctx context.Context, t *testing.T, f *framew
 
 	kcKey := utils.GetKey(kc)
 
-	err := f.Client.Get(ctx, kcKey, kc)
-	require.NoError(err, "failed to get K8ssandraCluster")
-
-	t.Log("remove dc2 from k8ssandraCluster spec")
-	kc.Spec.Cassandra.Datacenters = kc.Spec.Cassandra.Datacenters[:1]
-	err = f.Client.Update(ctx, kc)
-	require.NoError(err, "failed to remove dc2 from K8ssandraCluster spec")
+	require.Eventually(func() bool {
+		err := f.Client.Get(ctx, kcKey, kc)
+		if err != nil {
+			return false
+		}
+		t.Log("remove dc2 from k8ssandraCluster spec")
+		kc.Spec.Cassandra.Datacenters = kc.Spec.Cassandra.Datacenters[:1]
+		err = f.Client.Update(ctx, kc)
+		return err == nil
+	}, timeout, interval, "failed to remove dc2 from K8ssandraCluster spec")
 
 	t.Log("verify that dc2 removal generates an error")
 	require.Eventually(func() bool {
