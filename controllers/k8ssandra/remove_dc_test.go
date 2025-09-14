@@ -68,8 +68,7 @@ func deleteDcWithUserKeyspacesFails(ctx context.Context, t *testing.T, f *framew
 		}
 		t.Log("remove dc2 from k8ssandraCluster spec")
 		kc.Spec.Cassandra.Datacenters = kc.Spec.Cassandra.Datacenters[:1]
-		err = f.Client.Update(ctx, kc)
-		return err == nil
+		return f.Client.Update(ctx, kc) == nil
 	}, timeout, interval, "failed to remove dc2 from K8ssandraCluster spec")
 
 	t.Log("verify that dc2 removal generates an error")
