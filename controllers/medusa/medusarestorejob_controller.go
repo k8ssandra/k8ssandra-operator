@@ -242,7 +242,7 @@ func (r *MedusaRestoreJobReconciler) podTemplateSpecUpdateComplete(ctx context.C
 	statefulsetList := &appsv1.StatefulSetList{}
 	labels := client.MatchingLabels{cassdcapi.ClusterLabel: cassdcapi.CleanLabelValue(req.Datacenter.Spec.ClusterName), cassdcapi.DatacenterLabel: req.Datacenter.Name}
 
-	if err := r.List(ctx, statefulsetList, labels); err != nil {
+	if err := r.List(ctx, statefulsetList, labels, client.InNamespace(req.Datacenter.Namespace)); err != nil {
 		req.Log.Error(err, "Failed to get StatefulSets")
 		return false, err
 	}
