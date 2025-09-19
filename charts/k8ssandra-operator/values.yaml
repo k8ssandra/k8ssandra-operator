@@ -83,8 +83,8 @@ nodeSelector: {}
 ## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
 ##
 tolerations: []
-# -- k8ssandra-client provides CLI utilities, but also certain functions such as
-# upgradecrds that allow modifying the running instances
+# -- This client configuration is used for the CRD upgrader job only. Otherwise, modify
+# the global.imageConfig values to change k8ssandra-client
 client:
   # -- Uncomment to specify the name of the service account to use for the
   # client tools image. Defaults to <release-name>-crd-upgrader-k8ssandra.
@@ -95,7 +95,7 @@ client:
     # -- Image repository for the client
     repository: k8ssandra/k8ssandra-client
     # -- Tag of the client image to pull from
-    tag: v0.8.2
+    tag: v0.8.3
     # -- Pull policy for the client container
     pullPolicy: IfNotPresent
   # -- HTTPS proxy address to use for communication to helm.k8ssandra.io

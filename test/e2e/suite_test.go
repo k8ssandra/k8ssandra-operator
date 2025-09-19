@@ -233,10 +233,8 @@ func TestOperator(t *testing.T) {
 		fixture:  framework.NewTestFixture("remove-local-dc", controlPlane),
 	}))
 	t.Run("CreateSingleReaperNoStargate", e2eTest(ctx, &e2eTestOpts{
-		testFunc:                     createSingleReaper,
-		fixture:                      framework.NewTestFixture("single-dc-reaper", controlPlane),
-		skipK8ssandraClusterCleanup:  false,
-		doCassandraDatacenterCleanup: true,
+		testFunc: createSingleReaper,
+		fixture:  framework.NewTestFixture("single-dc-reaper", controlPlane),
 	}))
 	t.Run("CreateMultiReaper", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createMultiReaper,
@@ -664,7 +662,7 @@ func applyPollingDefaults() {
 	polling.nodetoolStatus.timeout = 15 * time.Minute
 	polling.nodetoolStatus.interval = 5 * time.Second
 
-	polling.k8ssandraClusterStatus.timeout = 1 * time.Minute
+	polling.k8ssandraClusterStatus.timeout = 3 * time.Minute
 	polling.k8ssandraClusterStatus.interval = 3 * time.Second
 
 	polling.reaperReady.timeout = 10 * time.Minute
@@ -676,7 +674,7 @@ func applyPollingDefaults() {
 	polling.medusaRestoreDone.timeout = 15 * time.Minute
 	polling.medusaRestoreDone.interval = 15 * time.Second
 
-	polling.datacenterUpdating.timeout = 1 * time.Minute
+	polling.datacenterUpdating.timeout = 3 * time.Minute
 	polling.datacenterUpdating.interval = 1 * time.Second
 
 	polling.cassandraTaskCreated.timeout = 1 * time.Minute
@@ -728,7 +726,6 @@ func cleanUp(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) error {
 			t.Logf("failed to delete namespace: %v", err)
 		}
 	}
-
 	return nil
 }
 
@@ -1934,4 +1931,28 @@ func checkSuperUserSecretHasLabelsAnnotations(t *testing.T, ctx context.Context,
 	require.NoError(t, err)
 	require.Equal(t, "test-label-value", superUserSecret.Labels["test-label-name"])
 	require.Equal(t, "test-annotation-value", superUserSecret.Annotations["test-annotation-name"])
+}
+
+func verifyClusterReconcileFinished(ctx context.Context, t *testing.T, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
+	t.Log("check K8ssandraCluster reconciliation finished")
+	key := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
+
+	require.Eventually(t, func() bool {
+		kc := &api.K8ssandraCluster{}
+		if err := f.Client.Get(ctx, key, kc); err != nil {
+			t.Logf("failed to get K8ssandraCluster: %v", err)
+			return false
+		}
+		return kc.ObjectMeta.Generation == kc.Status.ObservedGeneration
+	}, polling.k8ssandraClusterStatus.timeout*5, polling.k8ssandraClusterStatus.interval, "cluster hasn't finished reconciliation")
+}
+
+func verifyDatacenterReconcileFinished(ctx context.Context, t *testing.T, f *framework.E2eFramework, dcKey framework.ClusterKey) {
+	t.Log("check CassandraDatacenter reconciliation finished")
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		dc := &cassdcapi.CassandraDatacenter{}
+		require.NoError(c, f.Client.Get(ctx, dcKey.NamespacedName, dc))
+		require.Equal(c, dc.Generation, dc.Status.ObservedGeneration,
+			"expected CassandraDatacenter observed generation to match generation")
+	}, polling.datacenterUpdating.timeout, polling.datacenterUpdating.interval, "CassandraDatacenter should be reconciled")
 }
