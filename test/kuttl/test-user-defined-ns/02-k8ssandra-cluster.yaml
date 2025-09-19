@@ -1,8 +1,0 @@
-# While all operators are in k8ssandra-operator ns, the K8ssandraCluster is in test-ns. This demonstrates that cluster scoping is successful.
-apiVersion: kuttl.dev/v1beta1
-kind: TestStep
-commands: 
-- command:  kubectl create ns test-ns
-  ignoreFailure: false 
-- command:  kubectl apply -n test-ns --server-side --force-conflicts -f ../../testdata/samples/k8ssandra-single-kind.yaml
-  ignoreFailure: false 

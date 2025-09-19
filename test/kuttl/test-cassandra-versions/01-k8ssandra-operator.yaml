@@ -1,6 +1,0 @@
-apiVersion: kuttl.dev/v1beta1
-kind: TestStep
-commands: 
-- script: |
-    kustomize build ../../../config/deployments/control-plane | kubectl apply --server-side --force-conflicts -f -
-  ignoreFailure: false 

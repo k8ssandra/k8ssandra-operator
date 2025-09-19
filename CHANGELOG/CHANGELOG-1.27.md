@@ -20,3 +20,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [BUGFIX] [#1603](https://github.com/k8ssandra/k8ssandra-operator/issues/1603) Fix the crd-upgrader to update cass-operator CRDs also as part of the Helm upgrade
 * [BUGFIX] [#1610](https://github.com/k8ssandra/k8ssandra-operator/issues/1610) Replace all Medusa setControllerReference with setOwnerReference when targetting CassandraDatacenter objects
 * [BUGFIX] [#1618](https://github.com/k8ssandra/k8ssandra-operator/issues/1618) If two datacenters with same clusterName were present in different namespaces, it was possible that the wrong one was picked when checking the status of the restore. 
+* [TESTING] Remove the kuttl tests in CI
