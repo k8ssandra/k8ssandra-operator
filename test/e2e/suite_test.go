@@ -778,12 +778,14 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	require.NoError(f.Client.Delete(ctx, k8ssandra))
 
 	// Check that the finalizer is removed on the cassdc
-	require.EventuallyWithT(func(c *assert.CollectT) {
+	require.Eventually(func() bool {
 		dc := &cassdcapi.CassandraDatacenter{}
 		err := f.Get(ctx, dcKey, dc)
-		assert.NoError(c, err)
-		assert.False(c, controllerutil.ContainsFinalizer(dc, k8ssandrapkg.K8ssandraClusterFinalizer), "finalizer should be removed from cassdc")
-	}, polling.datacenterUpdating.timeout, polling.datacenterUpdating.interval, "finalizer should be removed from cassdc")
+		if err != nil {
+			return false
+		}
+		return !controllerutil.ContainsFinalizer(dc, k8ssandrapkg.K8ssandraClusterFinalizer)
+	}, polling.datacenterUpdating.timeout, 100*time.Millisecond, "finalizer should be removed from cassdc")
 
 	// Check that the K8ssandraCluster still exists despite the finalizer being removed on the cassdc
 	err = f.Client.Get(ctx, kcKey, k8ssandra)
@@ -795,7 +797,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 		dc := &cassdcapi.CassandraDatacenter{}
 		err := f.Get(ctx, dcKey, dc)
 		assert.True(c, errors.IsNotFound(err), "CassandraDatacenter should be deleted")
-	}, 3*time.Minute, 15*time.Second, "CassandraDatacenter should be deleted")
+	}, 3*time.Minute, 1*time.Second, "CassandraDatacenter should be deleted")
 
 	// Check that the K8ssandraCluster is deleted
 	t.Log("Check that the K8ssandraCluster is deleted")
@@ -1933,13 +1935,12 @@ func checkSuperUserSecretHasLabelsAnnotations(t *testing.T, ctx context.Context,
 	require.Equal(t, "test-annotation-value", superUserSecret.Annotations["test-annotation-name"])
 }
 
-func verifyClusterReconcileFinished(ctx context.Context, t *testing.T, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
+func verifyClusterReconcileFinished(ctx context.Context, t *testing.T, f *framework.E2eFramework, kcKey client.ObjectKey) {
 	t.Log("check K8ssandraCluster reconciliation finished")
-	key := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
 
 	require.Eventually(t, func() bool {
 		kc := &api.K8ssandraCluster{}
-		if err := f.Client.Get(ctx, key, kc); err != nil {
+		if err := f.Client.Get(ctx, kcKey, kc); err != nil {
 			t.Logf("failed to get K8ssandraCluster: %v", err)
 			return false
 		}
