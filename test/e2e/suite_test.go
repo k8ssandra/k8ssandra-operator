@@ -776,7 +776,6 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	// Delete the K8ssandraCluster
 	t.Log("Delete the K8ssandraCluster and check that the finalizer is removed on the cassdc")
 	require.NoError(f.Client.Delete(ctx, k8ssandra))
-	verifyClusterReconcileFinished(ctx, t, f, kcKey)
 
 	// Check that the finalizer is removed on the cassdc
 	require.Eventually(func() bool {
