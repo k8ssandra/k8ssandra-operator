@@ -125,7 +125,8 @@ func TestK8ssandraClusterReconciler_reconcilePerNodeConfiguration(t *testing.T) 
 		t.Run(tt.name, func(t *testing.T) {
 			framework.Init(t)
 			r := &K8ssandraClusterReconciler{
-				Scheme: scheme.Scheme,
+				Scheme:        scheme.Scheme,
+				ImageRegistry: getTestImageRegistry(),
 			}
 			testLogger := testr.New(t)
 			kc := &api.K8ssandraCluster{

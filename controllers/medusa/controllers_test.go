@@ -2,10 +2,14 @@ package medusa
 
 import (
 	"context"
+	"os"
+	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	cassimages "github.com/k8ssandra/cass-operator/pkg/images"
 	k8ssandractrl "github.com/k8ssandra/k8ssandra-operator/controllers/k8ssandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
@@ -75,6 +79,7 @@ func setupMedusaBackupTestEnv(t *testing.T, ctx context.Context) *testutils.Mult
 			ClientCache:      clientCache,
 			ManagementApi:    managementApi,
 			Recorder:         controlPlaneMgr.GetEventRecorderFor("cassandrabackup-controller"),
+			ImageRegistry:    getTestImageRegistry(),
 		}).SetupWithManager(controlPlaneMgr, clusters)
 		if err != nil {
 			return err
@@ -86,6 +91,7 @@ func setupMedusaBackupTestEnv(t *testing.T, ctx context.Context) *testutils.Mult
 			Client:           dataPlaneMgr.GetClient(),
 			Scheme:           scheme.Scheme,
 			ClientFactory:    medusaClientFactory,
+			ImageRegistry:    getTestImageRegistry(),
 		}).SetupWithManager(dataPlaneMgr); err != nil {
 			return err
 		}
@@ -95,6 +101,7 @@ func setupMedusaBackupTestEnv(t *testing.T, ctx context.Context) *testutils.Mult
 			Client:           dataPlaneMgr.GetClient(),
 			Scheme:           scheme.Scheme,
 			ClientFactory:    medusaClientFactory,
+			ImageRegistry:    getTestImageRegistry(),
 		}).SetupWithManager(dataPlaneMgr); err != nil {
 			return err
 		}
@@ -104,6 +111,7 @@ func setupMedusaBackupTestEnv(t *testing.T, ctx context.Context) *testutils.Mult
 			Client:           dataPlaneMgr.GetClient(),
 			Scheme:           scheme.Scheme,
 			ClientFactory:    medusaRestoreClientFactory,
+			ImageRegistry:    getTestImageRegistry(),
 		}).SetupWithManager(dataPlaneMgr); err != nil {
 			return err
 		}
@@ -112,6 +120,7 @@ func setupMedusaBackupTestEnv(t *testing.T, ctx context.Context) *testutils.Mult
 			ReconcilerConfig: reconcilerConfig,
 			Client:           dataPlaneMgr.GetClient(),
 			Scheme:           scheme.Scheme,
+			ImageRegistry:    getTestImageRegistry(),
 		}).SetupWithManager(dataPlaneMgr); err != nil {
 			return err
 		}
@@ -125,4 +134,22 @@ func setupMedusaBackupTestEnv(t *testing.T, ctx context.Context) *testutils.Mult
 
 type fakeSeedsResolver struct {
 	callback func(dc *cassdcapi.CassandraDatacenter) ([]string, error)
+}
+
+var (
+	regOnce           sync.Once
+	imageRegistryTest cassimages.ImageRegistry
+)
+
+func getTestImageRegistry() cassimages.ImageRegistry {
+	regOnce.Do(func() {
+		p := filepath.Clean("../../test/testdata/imageconfig/image_config_test.yaml")
+		data, err := os.ReadFile(p)
+		if err == nil {
+			if r, e := cassimages.NewImageRegistryV2(data); e == nil {
+				imageRegistryTest = r
+			}
+		}
+	})
+	return imageRegistryTest
 }

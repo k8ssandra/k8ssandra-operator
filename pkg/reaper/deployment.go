@@ -15,10 +15,11 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	imageapi "github.com/k8ssandra/cass-operator/apis/config/v1beta2"
+	cassimages "github.com/k8ssandra/cass-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -28,9 +29,6 @@ import (
 )
 
 const (
-	DefaultImageRepository = "thelastpickle"
-	DefaultImageName       = "cassandra-reaper"
-	DefaultVersion         = "4.0.0-rc1"
 	// When changing the default version above, please also change the kubebuilder markers in
 	// apis/reaper/v1alpha1/reaper_types.go accordingly.
 
@@ -42,13 +40,7 @@ const (
 	MainContainerCpuRequest = "100m"
 )
 
-var defaultImage = images.Image{
-	Repository: DefaultImageRepository,
-	Name:       DefaultImageName,
-	Tag:        DefaultVersion,
-}
-
-func computeEnvVars(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter) []corev1.EnvVar {
+func computeEnvVars(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, registry cassimages.ImageRegistry) []corev1.EnvVar {
 	var storageType string
 	if reaper.Spec.StorageType == api.StorageTypeLocal {
 		storageType = "memory"
@@ -81,7 +73,7 @@ func computeEnvVars(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter) []cor
 			Name:  "REAPER_CASS_KEYSPACE",
 			Value: reaper.Spec.Keyspace,
 		})
-		if isReaperPostV4(reaper) {
+		if isReaperPostV4(reaper, registry) {
 			// For Reaper v4 and above, we need to specify the contact points as a JSON array of objects, with the host and port
 			envVars = append(envVars, corev1.EnvVar{
 				Name:  "REAPER_CASS_CONTACT_POINTS",
@@ -310,10 +302,15 @@ func configureClientEncryption(reaper *api.Reaper, envVars []corev1.EnvVar, volu
 	return envVars, volumes, volumeMounts
 }
 
-func computePodSpec(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, initContainerResources *corev1.ResourceRequirements, keystorePassword *string, truststorePassword *string) corev1.PodSpec {
-	envVars := computeEnvVars(reaper, dc)
+func computePodSpec(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, initContainerResources *corev1.ResourceRequirements, keystorePassword *string, truststorePassword *string, registry cassimages.ImageRegistry) corev1.PodSpec {
+	envVars := computeEnvVars(reaper, dc, registry)
 	volumes, volumeMounts := computeVolumes(reaper)
-	mainImage := reaper.Spec.ContainerImage.ApplyDefaults(defaultImage)
+	mainImage := registry.Image("reaper")
+	mainImageOverride := reaper.Spec.ContainerImage
+	if mainImageOverride != nil {
+		mainImage.ApplyOverrides(mainImageOverride.Convert())
+	}
+
 	mainContainerResources := computeMainContainerResources(reaper.Spec.Resources)
 
 	if keystorePassword != nil && truststorePassword != nil {
@@ -355,6 +352,17 @@ func computePodSpec(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, initC
 		containerSecurityContext = defaultContainerSecurityContext
 	}
 
+	pullSecrets := registry.GetImagePullSecrets("reaper")
+	if mainImage.PullSecret != "" {
+		pullSecrets = append(pullSecrets, mainImage.PullSecret)
+	}
+
+	// Convert pullSecrets to localObjectReferences
+	var pullSecretRefs []corev1.LocalObjectReference
+	for _, secret := range pullSecrets {
+		pullSecretRefs = append(pullSecretRefs, corev1.LocalObjectReference{Name: secret})
+	}
+
 	return corev1.PodSpec{
 		Affinity:       reaper.Spec.Affinity,
 		InitContainers: initContainers,
@@ -389,7 +397,7 @@ func computePodSpec(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, initC
 		ServiceAccountName: reaper.Spec.ServiceAccountName,
 		Tolerations:        reaper.Spec.Tolerations,
 		SecurityContext:    podSecurityContext,
-		ImagePullSecrets:   computeImagePullSecrets(reaper, mainImage),
+		ImagePullSecrets:   pullSecretRefs,
 		Volumes:            volumes,
 	}
 }
@@ -412,7 +420,7 @@ func computeVolumeClaims(reaper *api.Reaper) []corev1.PersistentVolumeClaim {
 	return vcs
 }
 
-func NewStatefulSet(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, logger logr.Logger, _ *string, _ *string, authVars ...*corev1.EnvVar) *appsv1.StatefulSet {
+func NewStatefulSet(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, logger logr.Logger, registry cassimages.ImageRegistry, authVars ...*corev1.EnvVar) *appsv1.StatefulSet {
 
 	if reaper.Spec.ReaperTemplate.StorageType != api.StorageTypeLocal {
 		logger.Error(fmt.Errorf("cannot be creating a Reaper statefulset with storage type other than Memory"), "bad storage type", "storageType", reaper.Spec.StorageType)
@@ -430,7 +438,7 @@ func NewStatefulSet(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, logge
 			Selector: makeSelector(reaper),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: computePodMeta(reaper),
-				Spec:       computePodSpec(reaper, dc, nil, nil, nil),
+				Spec:       computePodSpec(reaper, dc, nil, nil, nil, registry),
 			},
 			VolumeClaimTemplates: computeVolumeClaims(reaper),
 			Replicas:             ptr.To[int32](1),
@@ -444,7 +452,7 @@ func NewStatefulSet(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, logge
 	return statefulSet
 }
 
-func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keystorePassword *string, truststorePassword *string, logger logr.Logger, authVars ...*corev1.EnvVar) *appsv1.Deployment {
+func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keystorePassword *string, truststorePassword *string, logger logr.Logger, registry cassimages.ImageRegistry, authVars ...*corev1.EnvVar) *appsv1.Deployment {
 
 	if reaper.Spec.ReaperTemplate.StorageType != api.StorageTypeCassandra {
 		logger.Error(fmt.Errorf("cannot be creating a Reaper deployment with storage type other than Cassandra"), "bad storage type", "storageType", reaper.Spec.ReaperTemplate.StorageType)
@@ -459,7 +467,7 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 			Selector: makeSelector(reaper),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: computePodMeta(reaper),
-				Spec:       computePodSpec(reaper, dc, initContainerResources, keystorePassword, truststorePassword),
+				Spec:       computePodSpec(reaper, dc, initContainerResources, keystorePassword, truststorePassword, registry),
 			},
 		},
 	}
@@ -505,7 +513,7 @@ func computeMainContainerResources(resourceRequirements *corev1.ResourceRequirem
 
 func computeInitContainers(
 	reaper *api.Reaper,
-	mainImage *images.Image,
+	mainImage *imageapi.Image,
 	envVars []corev1.EnvVar,
 	volumeMounts []corev1.VolumeMount,
 	resourceRequirements *corev1.ResourceRequirements) []corev1.Container {
@@ -541,10 +549,6 @@ func computeInitContainers(
 			})
 	}
 	return initContainers
-}
-
-func computeImagePullSecrets(reaper *api.Reaper, mainImage *images.Image) []corev1.LocalObjectReference {
-	return images.CollectPullSecrets(mainImage)
 }
 
 func computeProbe(probeTemplate *corev1.Probe) *corev1.Probe {
@@ -624,9 +628,9 @@ func MakeActualDeploymentType(actualReaper *api.Reaper) (client.Object, error) {
 	}
 }
 
-func MakeDesiredDeploymentType(actualReaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keystorePassword *string, truststorePassword *string, logger logr.Logger, authVars ...*corev1.EnvVar) (client.Object, error) {
+func MakeDesiredDeploymentType(actualReaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keystorePassword *string, truststorePassword *string, logger logr.Logger, registry cassimages.ImageRegistry, authVars ...*corev1.EnvVar) (client.Object, error) {
 	if actualReaper.Spec.StorageType == api.StorageTypeCassandra {
-		return NewDeployment(actualReaper, dc, keystorePassword, truststorePassword, logger, authVars...), nil
+		return NewDeployment(actualReaper, dc, keystorePassword, truststorePassword, logger, registry, authVars...), nil
 	} else if actualReaper.Spec.StorageType == api.StorageTypeLocal {
 		// we're checking for this same thing in the k8ssandra-cluster webohooks
 		// but in tests (and in the future) we'll be creating reaper directly (not through k8ssandra-cluster)
@@ -635,7 +639,7 @@ func MakeDesiredDeploymentType(actualReaper *api.Reaper, dc *cassdcapi.Cassandra
 			err := fmt.Errorf("storageConfig is required for memory storage")
 			return nil, err
 		}
-		return NewStatefulSet(actualReaper, dc, logger, keystorePassword, truststorePassword, authVars...), nil
+		return NewStatefulSet(actualReaper, dc, logger, registry, authVars...), nil
 	} else {
 		err := fmt.Errorf("invalid storage type %s", actualReaper.Spec.StorageType)
 		return nil, err
@@ -702,12 +706,13 @@ func setDeploymentReplicas(desiredDeployment *client.Object, numberOfReplicas *i
 	return nil
 }
 
-func isReaperPostV4(reaper *api.Reaper) bool {
-	tag := DefaultVersion
-	if reaper.Spec.ContainerImage != nil && reaper.Spec.ContainerImage.Tag != "" {
-		tag = reaper.Spec.ContainerImage.Tag
+func isReaperPostV4(reaper *api.Reaper, registry cassimages.ImageRegistry) bool {
+	img := registry.Image("reaper")
+	if reaper.Spec.ContainerImage != nil {
+		img.ApplyOverrides(reaper.Spec.ContainerImage.Convert())
 	}
 
+	tag := img.Tag
 	// Latest is always >= v4
 	if tag == "latest" {
 		return true

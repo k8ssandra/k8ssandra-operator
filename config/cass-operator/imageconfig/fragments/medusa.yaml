@@ -1,0 +1,5 @@
+images:
+  medusa: 
+    repository: "k8ssandra"
+    name: "medusa"
+    tag: "0.25.0"

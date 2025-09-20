@@ -137,11 +137,14 @@ func copySecretsFromClusterToCluster(t *testing.T, ctx context.Context, f *frame
 	require.NoError(err)
 	for _, targetSecret := range targetSecrets.Items {
 		if targetSecret.Name == generatedSecrets[0].Name {
-			phantomSecret := targetSecret.DeepCopy()
-			phantomSecret.Data["be-gone-key"] = []byte("my-phantom-value")
-			targetSecret.GetAnnotations()[coreapi.ResourceHashAnnotation] = "XXXXXX"
-			err = modifierClient.Update(ctx, phantomSecret)
-			require.NoError(err)
+			require.EventuallyWithT(func(c *assert.CollectT) {
+				phantomSecret := &corev1.Secret{}
+				assert.NoError(c, modifierClient.Get(ctx, types.NamespacedName{Name: targetSecret.Name, Namespace: targetSecret.Namespace}, phantomSecret))
+				patch := client.MergeFrom(phantomSecret.DeepCopy())
+				phantomSecret.Data["be-gone-key"] = []byte("my-phantom-value")
+				targetSecret.GetAnnotations()[coreapi.ResourceHashAnnotation] = "XXXXXX"
+				assert.NoError(c, modifierClient.Patch(ctx, phantomSecret, patch))
+			}, timeout, interval)
 			break
 		}
 	}

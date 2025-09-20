@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/adutra/goalesce"
+	imageapi "github.com/k8ssandra/cass-operator/apis/config/v1beta2"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -102,4 +103,20 @@ func CollectPullSecrets(images ...*Image) []corev1.LocalObjectReference {
 		}
 	}
 	return secrets
+}
+
+// Convert converts this repository's Image type into a cass-operator v1beta2 Image.
+func (in *Image) Convert() *imageapi.Image {
+	var pull string
+	if in.PullSecretRef != nil {
+		pull = in.PullSecretRef.Name
+	}
+	return &imageapi.Image{
+		Registry:   in.Registry,
+		Repository: in.Repository,
+		Name:       in.Name,
+		Tag:        in.Tag,
+		PullPolicy: in.PullPolicy,
+		PullSecret: pull,
+	}
 }
