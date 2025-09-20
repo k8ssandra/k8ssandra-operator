@@ -776,12 +776,18 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	// Delete the K8ssandraCluster
 	t.Log("Delete the K8ssandraCluster and check that the finalizer is removed on the cassdc")
 	require.NoError(f.Client.Delete(ctx, k8ssandra))
+	verifyClusterReconcileFinished(ctx, t, f, kcKey)
 
 	// Check that the finalizer is removed on the cassdc
 	require.Eventually(func() bool {
 		dc := &cassdcapi.CassandraDatacenter{}
 		err := f.Get(ctx, dcKey, dc)
 		if err != nil {
+			if errors.IsNotFound(err) {
+				// The CassandraDatacenter was already deleted, this assert was too slow to detect the change.
+				// This means the finalizer was removed, otherwise Kubernetes would block the deletion.
+				return true
+			}
 			return false
 		}
 		return !controllerutil.ContainsFinalizer(dc, k8ssandrapkg.K8ssandraClusterFinalizer)
@@ -797,7 +803,7 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 		dc := &cassdcapi.CassandraDatacenter{}
 		err := f.Get(ctx, dcKey, dc)
 		assert.True(c, errors.IsNotFound(err), "CassandraDatacenter should be deleted")
-	}, 3*time.Minute, 1*time.Second, "CassandraDatacenter should be deleted")
+	}, 3*time.Minute, 100*time.Millisecond, "CassandraDatacenter should be deleted")
 
 	// Check that the K8ssandraCluster is deleted
 	t.Log("Check that the K8ssandraCluster is deleted")
