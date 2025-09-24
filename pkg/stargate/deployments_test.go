@@ -826,6 +826,23 @@ func testImages(t *testing.T) {
 		assert.Contains(t, deployment.Spec.Template.Spec.ImagePullSecrets, corev1.LocalObjectReference{Name: "my-secret"})
 		assert.Len(t, deployment.Spec.Template.Spec.ImagePullSecrets, 1)
 	})
+	t.Run("custom image 5", func(t *testing.T) {
+		stargate := stargate.DeepCopy()
+		image := &images.Image{
+			Repository: "my-custom-repo",
+			Tag:        "latest",
+			PullSecret: "my-secret",
+		}
+		stargate.Spec.ContainerImage = image
+		logger := testlogr.NewTestLogger(t)
+		deployments := NewDeployments(stargate, dc, logger)
+		require.Len(t, deployments, 1)
+		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
+		assert.Equal(t, "docker.io/my-custom-repo/stargate-3_11:latest", deployment.Spec.Template.Spec.Containers[0].Image)
+		assert.Equal(t, corev1.PullAlways, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
+		assert.Contains(t, deployment.Spec.Template.Spec.ImagePullSecrets, corev1.LocalObjectReference{Name: "my-secret"})
+		assert.Len(t, deployment.Spec.Template.Spec.ImagePullSecrets, 1)
+	})
 	t.Run("default image DSE 6.8", func(t *testing.T) {
 		stargate := stargate.DeepCopy()
 		stargate.Spec.ContainerImage = &images.Image{
