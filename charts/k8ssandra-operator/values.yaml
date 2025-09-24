@@ -12,6 +12,8 @@ global:
   # watchNamespaces: []
   # -- If true, the helm chart will generate ClusterRoles and ClusterRoleBindings.
   clusterScopedResources: true
+  # -- imageConfig modifications to the default settings provided by the cass-operator. One can override all the
+  # settings here. See https://github.com/k8ssandra/k8ssandra/blob/main/charts/cass-operator/values.yaml#L17 for more details.
   imageConfig:
     images:
       reaper:

@@ -1,5 +1,26 @@
 # k8ssandra-operator - Release Notes
 
+## v1.27.0
+
+### Modifications to the configuration of images
+
+Starting from 1.27.0, the k8ssandra-operator will use the same ImageConfig structure as cass-operator. In the Helm charts, the configuration happens through the global.imageConfig property. It's divided to three sections, with the most important part usually being the `defaults` where we define the properties that are used by all the containers unless otherwise overridden:
+
+```
+defaults:
+  registry: "docker.io"
+  pullPolicy: IfNotPresent
+  # -- pullSecrets allow configuring the secret to use for pulling images from private registries.
+  # pullSecrets:
+  #   - my-secret-pull-registry
+```
+
+Changing any setting will apply to all images. For example, setting ``--set global.imageConfig.defaults.registry=privateregistry.local`` would pull all the images from `privateregistry.local` instead of `docker.io`. Setting a `pullSecret` would similarly allow pulling all images using that secret instead of having to define it separately for all container types.
+
+For more information, see the comments in the [Helm chart of cass-operator](https://github.com/k8ssandra/k8ssandra/blob/main/charts/cass-operator/values.yaml#L17).
+
+This also means deprecation of multiple fields in the CRD that were required to modify the image to be used such as `PerNodeConfigInitContainerImage`. To modify the image used by `perNodeConfigInitContainerImage`, modify the `k8ssandra-client` image. For Kustomize installations, the `imageConfig` is available in the `config/cass-operator/imageconfig` directory. 
+
 ## v1.15.0
 
 ### Deprecation of non-namespace-local MedusaConfigRef
