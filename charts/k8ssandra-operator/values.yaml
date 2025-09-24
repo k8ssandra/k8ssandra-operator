@@ -12,7 +12,18 @@ global:
   # watchNamespaces: []
   # -- If true, the helm chart will generate ClusterRoles and ClusterRoleBindings.
   clusterScopedResources: true
-
+  # -- imageConfig modifications to the default settings provided by the cass-operator. One can override all the
+  # settings here. See https://github.com/k8ssandra/k8ssandra/blob/main/charts/cass-operator/values.yaml#L17 for more details.
+  imageConfig:
+    images:
+      reaper:
+        repository: "thelastpickle"
+        name: "cassandra-reaper"
+        tag: "4.0.0-rc1"
+      medusa:
+        repository: "k8ssandra"
+        name: "medusa"
+        tag: "0.25.0"
 # -- A name in place of the chart name which is used in the metadata.name of
 # objects created by this chart.
 nameOverride: ''
@@ -74,8 +85,8 @@ nodeSelector: {}
 ## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
 ##
 tolerations: []
-# -- k8ssandra-client provides CLI utilities, but also certain functions such as
-# upgradecrds that allow modifying the running instances
+# -- This client configuration is used for the CRD upgrader job only. Otherwise, modify
+# the global.imageConfig values to change k8ssandra-client
 client:
   # -- Uncomment to specify the name of the service account to use for the
   # client tools image. Defaults to <release-name>-crd-upgrader-k8ssandra.
@@ -86,13 +97,13 @@ client:
     # -- Image repository for the client
     repository: k8ssandra/k8ssandra-client
     # -- Tag of the client image to pull from
-    tag: v0.8.1
+    tag: v0.8.3
     # -- Pull policy for the client container
     pullPolicy: IfNotPresent
   # -- HTTPS proxy address to use for communication to helm.k8ssandra.io
   #proxy:
 # -- Allows managing CRD upgrades externally and fully disable the CRD upgrader job hook
 disableCrdUpgraderJob: false
+# cass-operator:
 # -- Allows disabling the check for the presence of cert-manager.
-cass-operator:
-  disableCertManagerCheck: false
+  # disableCertManagerCheck: false

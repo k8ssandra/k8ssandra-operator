@@ -64,6 +64,8 @@ func createSingleDseDatacenterCluster(t *testing.T, ctx context.Context, namespa
 	allocateTokensSetting := dcConfig["cassandra-yaml"].(map[string]interface{})["allocate_tokens_for_local_replication_factor"].(float64)
 	require.Equal(t, float64(3), allocateTokensSetting, "expected smart token allocation to be enabled by default for DSE")
 
+	verifyClusterReconcileFinished(ctx, t, f, kcKey)
+	verifyDatacenterReconcileFinished(ctx, t, f, dcKey)
 	checkDatacenterReady(t, ctx, dcKey, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
 

@@ -31,6 +31,8 @@ import (
 
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
+	cassimages "github.com/k8ssandra/cass-operator/pkg/images"
+	cassoputils "github.com/k8ssandra/cass-operator/pkg/utils"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
@@ -174,6 +176,14 @@ func main() {
 	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
 	reconcilerConfig := config.InitConfig()
 
+	// Require ImageConfig to be present, otherwise we bail out.
+
+	registry, err := setupImageRegistry(ctx, uncachedClient)
+	if err != nil {
+		setupLog.Error(err, "unable to load image config from ConfigMap (v1beta2)")
+		os.Exit(1)
+	}
+
 	if isControlPlane() {
 		// Fetch ClientConfigs and create the clientCache
 		clientCache := clientcache.New(mgr.GetClient(), uncachedClient, scheme)
@@ -201,6 +211,7 @@ func main() {
 			ClientCache:      clientCache,
 			ManagementApi:    cassandra.NewManagementApiFactory(),
 			Recorder:         mgr.GetEventRecorderFor("k8ssandracluster-controller"),
+			ImageRegistry:    registry,
 		}).SetupWithManager(mgr, additionalClusters); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "K8ssandraCluster")
 			os.Exit(1)
@@ -246,6 +257,7 @@ func main() {
 		Client:           mgr.GetClient(),
 		Scheme:           mgr.GetScheme(),
 		NewManager:       reaper.NewManager,
+		ImageRegistry:    registry,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Reaper")
 		os.Exit(1)
@@ -255,6 +267,7 @@ func main() {
 		Client:           mgr.GetClient(),
 		Scheme:           mgr.GetScheme(),
 		ClientFactory:    &medusa.DefaultFactory{},
+		ImageRegistry:    registry,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "MedusaTask")
 		os.Exit(1)
@@ -264,6 +277,7 @@ func main() {
 		Client:           mgr.GetClient(),
 		Scheme:           mgr.GetScheme(),
 		ClientFactory:    &medusa.DefaultFactory{},
+		ImageRegistry:    registry,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "MedusaBackupJob")
 		os.Exit(1)
@@ -273,14 +287,16 @@ func main() {
 		Client:           mgr.GetClient(),
 		Scheme:           mgr.GetScheme(),
 		ClientFactory:    &medusa.DefaultFactory{},
+		ImageRegistry:    registry,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "MedusaRestoreJob")
 	}
 
 	if err = (&medusactrl.MedusaBackupScheduleReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-		Clock:  &medusactrl.RealClock{},
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		Clock:         &medusactrl.RealClock{},
+		ImageRegistry: registry,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "MedusaBackupSchedule")
 		os.Exit(1)
@@ -290,8 +306,10 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&medusactrl.MedusaConfigurationReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		ReconcilerConfig: reconcilerConfig,
+		Client:           mgr.GetClient(),
+		Scheme:           mgr.GetScheme(),
+		ImageRegistry:    registry,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "MedusaConfiguration")
 		os.Exit(1)
@@ -315,6 +333,22 @@ func main() {
 		os.Exit(1)
 	}
 
+}
+
+func setupImageRegistry(ctx context.Context, uncachedClient client.Client) (cassimages.ImageRegistry, error) {
+	operatorNs, err := cassoputils.GetOperatorNamespace()
+	if err != nil {
+		setupLog.Error(err, "unable to get operator namespace")
+		return nil, err
+	}
+
+	registry, err := cassimages.NewImageRegistryFromConfigMap(ctx, client.NewNamespacedClient(uncachedClient, operatorNs))
+	if err != nil {
+		setupLog.Error(err, "unable to load the image config file")
+		return nil, err
+	}
+
+	return registry, nil
 }
 
 // getWatchNamespace returns the Namespace the operator should be watching for changes

@@ -75,11 +75,11 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 			return res
 		}
 
-		medusaContainer, err := medusa.CreateMedusaMainContainer(dcConfig, medusaSpec, kc.Spec.UseExternalSecrets(), kc.SanitizedName(), logger)
+		medusaContainer, err := medusa.CreateMedusaMainContainer(dcConfig, medusaSpec, kc.Spec.UseExternalSecrets(), kc.SanitizedName(), logger, r.ImageRegistry)
 		if err != nil {
 			return result.Error(err)
 		}
-		medusa.UpdateMedusaInitContainer(dcConfig, medusaSpec, kc.Spec.UseExternalSecrets(), kc.SanitizedName(), logger)
+		medusa.UpdateMedusaInitContainer(dcConfig, medusaSpec, kc.Spec.UseExternalSecrets(), kc.SanitizedName(), logger, r.ImageRegistry)
 		medusa.UpdateMedusaMainContainer(dcConfig, medusaContainer)
 
 		// Create required volumes for the Medusa containers

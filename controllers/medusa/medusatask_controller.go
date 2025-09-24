@@ -39,6 +39,7 @@ import (
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	cassimages "github.com/k8ssandra/cass-operator/pkg/images"
 	medusav1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
@@ -52,6 +53,7 @@ type MedusaTaskReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 	medusa.ClientFactory
+	ImageRegistry cassimages.ImageRegistry
 }
 
 // +kubebuilder:rbac:groups=medusa.k8ssandra.io,namespace="k8ssandra",resources=medusatasks,verbs=get;list;watch;create;update;patch;delete
