@@ -19,11 +19,11 @@ global:
       reaper:
         repository: "thelastpickle"
         name: "cassandra-reaper"
-        tag: "4.0.0-rc1"
+        tag: "4.0.0"
       medusa:
         repository: "k8ssandra"
         name: "medusa"
-        tag: "0.25.0"
+        tag: "0.25.1"
 # -- A name in place of the chart name which is used in the metadata.name of
 # objects created by this chart.
 nameOverride: ''
