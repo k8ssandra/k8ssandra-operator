@@ -15,6 +15,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [CHANGE] Upgrade Reaper to v4.0.0 and Medusa to v0.25.1
 * [FEATURE] [#1605](https://github.com/k8ssandra/k8ssandra-operator/issues/1605) Container images, tags, repositories, registry and pullsecrets and now centrally managed in a ConfigMap with label `k8ssandra.io/config: image`. This is shared with the cass-operator and allows to configure everything from a single place. perNodeConfig is using k8ssandra-client as the image name.
 * [ENHANCEMENT] [#1591](https://github.com/k8ssandra/k8ssandra-operator/issues/1591) Remove the old medusa purge cronjob in favor of scheduled tasks
 * [ENHANCEMENT] [#1245](https://github.com/k8ssandra/k8ssandra-operator/issues/1245) Ensure ReplicatedSecret targets are cleaned up correctly
