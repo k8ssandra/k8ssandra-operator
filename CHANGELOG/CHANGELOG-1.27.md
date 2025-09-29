@@ -13,7 +13,7 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 
 When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
 
-## unreleased
+## v1.27.0 - 2025-09-26
 
 * [CHANGE] Upgrade Reaper to v4.0.0 and Medusa to v0.25.1
 * [FEATURE] [#1605](https://github.com/k8ssandra/k8ssandra-operator/issues/1605) Container images, tags, repositories, registry and pullsecrets and now centrally managed in a ConfigMap with label `k8ssandra.io/config: image`. This is shared with the cass-operator and allows to configure everything from a single place. perNodeConfig is using k8ssandra-client as the image name.
