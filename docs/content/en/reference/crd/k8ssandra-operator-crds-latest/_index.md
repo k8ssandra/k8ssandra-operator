@@ -1190,9 +1190,7 @@ api heap.<br/>
         <td>
           The image to use in each Cassandra pod for the (short-lived) init container that merges global and perNodeConfig
 configuration. This is only useful when PerNodeConfigMapRef is set.
-The default is "k8ssandra/k8ssandra-client:v0.8.1".<br/>
-          <br/>
-            <i>Default</i>: k8ssandra/k8ssandra-client:v0.8.1<br/>
+DEPRECATED: use ImageConfig's k8ssandra-client instead<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -5584,9 +5582,7 @@ api heap.<br/>
         <td>
           The image to use in each Cassandra pod for the (short-lived) init container that merges global and perNodeConfig
 configuration. This is only useful when PerNodeConfigMapRef is set.
-The default is "k8ssandra/k8ssandra-client:v0.8.1".<br/>
-          <br/>
-            <i>Default</i>: k8ssandra/k8ssandra-client:v0.8.1<br/>
+DEPRECATED: use ImageConfig's k8ssandra-client instead<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -56697,10 +56693,7 @@ and must contain two keys: "username" and "password".<br/>
         <td><b><a href="#k8ssandraclusterspecreapercontainerimage">containerImage</a></b></td>
         <td>object</td>
         <td>
-          The image to use for the Reaper pod main container.
-The default is "thelastpickle/cassandra-reaper:4.0.0-rc1".<br/>
-          <br/>
-            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:4.0.0-rc1]<br/>
+          The image to use for the Reaper pod main container.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -58939,7 +58932,6 @@ More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/nam
 
 
 The image to use for the Reaper pod main container.
-The default is "thelastpickle/cassandra-reaper:4.0.0-rc1".
 
 <table>
     <thead>
@@ -87194,10 +87186,7 @@ and must contain two keys: "username" and "password".<br/>
         <td><b><a href="#reaperspeccontainerimage">containerImage</a></b></td>
         <td>object</td>
         <td>
-          The image to use for the Reaper pod main container.
-The default is "thelastpickle/cassandra-reaper:4.0.0-rc1".<br/>
-          <br/>
-            <i>Default</i>: map[name:cassandra-reaper repository:thelastpickle tag:4.0.0-rc1]<br/>
+          The image to use for the Reaper pod main container.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -89661,7 +89650,6 @@ More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/nam
 
 
 The image to use for the Reaper pod main container.
-The default is "thelastpickle/cassandra-reaper:4.0.0-rc1".
 
 <table>
     <thead>
