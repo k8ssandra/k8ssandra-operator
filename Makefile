@@ -129,7 +129,7 @@ help: ## Display this help.
 
 ##@ Development
 
-CASS_OPERATOR_TAG ?= v1.27.1
+CASS_OPERATOR_TAG ?= v1.28.0
 
 .PHONY: manifests
 manifests: controller-gen kustomize ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
@@ -303,13 +303,13 @@ create-kind-multicluster:
 	scripts/setup-kind-multicluster.sh --clusters $(NUM_CLUSTERS) --kind-node-version $(KIND_NODE_VERSION) --kind-worker-nodes $(NUM_WORKER_NODES) --output-file $(KIND_KUBECONFIG)
 
 kind-load-image:
-	docker tag ${IMG} cr.k8ssandra.io/${IMG}
-	kind load docker-image --name $(KIND_CLUSTER) cr.k8ssandra.io/${IMG}
+	docker tag ${IMG} ${IMG}
+	kind load docker-image --name $(KIND_CLUSTER) ${IMG}
 
 kind-load-image-multi:
-	docker tag ${IMG} cr.k8ssandra.io/${IMG}
+	docker tag ${IMG} ${IMG}
 	for ((i = 0; i < $(NUM_CLUSTERS); ++i)); do \
-		kind load docker-image --name k8ssandra-$$i cr.k8ssandra.io/${IMG}; \
+		kind load docker-image --name k8ssandra-$$i ${IMG}; \
 	done
 
 ##@ Deployment
