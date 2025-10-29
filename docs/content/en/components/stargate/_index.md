@@ -9,6 +9,8 @@ Stargate provides a data gateway with REST, GraphQL, and Document APIs in front 
 
 If you haven't already installed a K8ssandraCluster using K8ssandra Operator, see the [local install]({{< relref "/install/local" >}}) topic.
 
+**Warning** Stargate is deprecated and does not work with Cassandra 5.0 and newer.
+
 ## Introduction
 
 [Stargate](https://stargate.io) is an open source data gateway that sits between your app and your databases. It brings together an API platform and data request coordination code into one OSS project.
