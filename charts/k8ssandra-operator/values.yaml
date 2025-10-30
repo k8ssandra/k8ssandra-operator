@@ -38,7 +38,7 @@ controlPlane: true
 # Sets properties for the k8ssandra-operator container
 image:
   # -- Container registry containing the repository where the image resides
-  registry: cr.k8ssandra.io
+  registry: docker.io
   # -- Docker repository for cass-operator
   repository: k8ssandra/k8ssandra-operator
   # -- Pull policy for the operator container
