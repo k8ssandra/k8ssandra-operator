@@ -462,8 +462,8 @@ func TestImages(t *testing.T) {
 		reaper.Spec.ContainerImage = nil
 		logger := testlogr.NewTestLogger(t)
 		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
-		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:4.0.0-rc1", deployment.Spec.Template.Spec.InitContainers[0].Image)
-		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:4.0.0-rc1", deployment.Spec.Template.Spec.Containers[0].Image)
+		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:4.0.1", deployment.Spec.Template.Spec.InitContainers[0].Image)
+		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:4.0.1", deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.InitContainers[0].ImagePullPolicy)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Empty(t, deployment.Spec.Template.Spec.ImagePullSecrets)
@@ -473,8 +473,8 @@ func TestImages(t *testing.T) {
 		reaper.Spec.ContainerImage = nil
 		logger := testlogr.NewTestLogger(t)
 		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
-		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:4.0.0-rc1", deployment.Spec.Template.Spec.InitContainers[0].Image)
-		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:4.0.0-rc1", deployment.Spec.Template.Spec.Containers[0].Image)
+		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:4.0.1", deployment.Spec.Template.Spec.InitContainers[0].Image)
+		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:4.0.1", deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.InitContainers[0].ImagePullPolicy)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy)
 		assert.Empty(t, deployment.Spec.Template.Spec.ImagePullSecrets)
@@ -1018,7 +1018,7 @@ func TestIsReaperPostV4(t *testing.T) {
 				Spec: reaperapi.ReaperSpec{
 					ReaperTemplate: reaperapi.ReaperTemplate{
 						ContainerImage: &images.Image{
-							Tag: "4.0.0",
+							Tag: "4.0.1",
 						},
 					},
 				},
@@ -1073,7 +1073,7 @@ func TestReaperV4ContactPointsFormat(t *testing.T) {
 	reaper.Spec.ContainerImage = &images.Image{
 		Repository: "test",
 		Name:       "reaper",
-		Tag:        "4.0.0",
+		Tag:        "4.0.1",
 		PullPolicy: corev1.PullAlways,
 	}
 	dc := newTestDatacenter()

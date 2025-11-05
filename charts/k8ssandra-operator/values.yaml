@@ -19,7 +19,7 @@ global:
       reaper:
         repository: "thelastpickle"
         name: "cassandra-reaper"
-        tag: "4.0.0"
+        tag: "4.0.1"
       medusa:
         repository: "k8ssandra"
         name: "medusa"
