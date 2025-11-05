@@ -13,11 +13,11 @@ spec:
   containerImage:
     repository: thelastpickle
     name: cassandra-reaper
-    tag: 4.0.0-rc1
+    tag: 4.0.1
     pullPolicy: Always
   initContainerImage:
     repository: thelastpickle
     name: cassandra-reaper
-    tag: 4.0.0-rc1
+    tag: 4.0.1
     pullPolicy: IfNotPresent
   heapSize: 256Mi
