@@ -15,8 +15,6 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
-* [CHANGE] Upgrade Reaper to v4.0.1
-
 ## v1.28.0 - 2025-10-31
 
 * [CHANGE] Switch from cr.k8ssandra.io back to docker.io
