@@ -23,7 +23,7 @@ global:
       medusa:
         repository: "k8ssandra"
         name: "medusa"
-        tag: "0.25.1"
+        tag: "0.26.0"
 # -- A name in place of the chart name which is used in the metadata.name of
 # objects created by this chart.
 nameOverride: ''
