@@ -50,6 +50,14 @@ type Image struct {
 	// secrets are honored. More info:
 	// https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
 	// +optional
+	PullSecret string `json:"pullSecret,omitempty"`
+
+	// The secret to use when pulling the image from private repositories. If specified, this secret will be passed to
+	// individual puller implementations for them to use. For example, in the case of Docker, only DockerConfig type
+	// secrets are honored. More info:
+	// https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
+	// +optional
+	// DEPRECATED Use pullSecret instead
 	PullSecretRef *corev1.LocalObjectReference `json:"pullSecretRef,omitempty"`
 }
 
@@ -97,7 +105,14 @@ func CollectPullSecrets(images ...*Image) []corev1.LocalObjectReference {
 
 	var secretNames []string
 	for _, image := range images {
-		if image != nil && image.PullSecretRef != nil && !utils.SliceContains(secretNames, image.PullSecretRef.Name) {
+		if image != nil &&
+			((image.PullSecretRef != nil && !utils.SliceContains(secretNames, image.PullSecretRef.Name)) ||
+				(image.PullSecret != "" && !utils.SliceContains(secretNames, image.PullSecret))) {
+			if image.PullSecret != "" {
+				secrets = append(secrets, corev1.LocalObjectReference{Name: image.PullSecret})
+				secretNames = append(secretNames, image.PullSecret)
+				continue
+			}
 			secrets = append(secrets, *image.PullSecretRef)
 			secretNames = append(secretNames, image.PullSecretRef.Name)
 		}
@@ -108,7 +123,9 @@ func CollectPullSecrets(images ...*Image) []corev1.LocalObjectReference {
 // Convert converts this repository's Image type into a cass-operator v1beta2 Image.
 func (in *Image) Convert() *imageapi.Image {
 	var pull string
-	if in.PullSecretRef != nil {
+	if in.PullSecret != "" {
+		pull = in.PullSecret
+	} else if in.PullSecretRef != nil {
 		pull = in.PullSecretRef.Name
 	}
 	return &imageapi.Image{

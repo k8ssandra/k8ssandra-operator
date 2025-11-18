@@ -14,6 +14,7 @@ var (
 		"default-name",
 		"default-tag",
 		"",
+		"",
 		nil,
 	}
 	latestImage = Image{
@@ -22,6 +23,7 @@ var (
 		"latest-name",
 		"latest",
 		"",
+		"latest-pull-secret",
 		&corev1.LocalObjectReference{Name: "latest-pull-secret"},
 	}
 	customImage = Image{
@@ -30,6 +32,7 @@ var (
 		"custom-name",
 		"",
 		corev1.PullAlways,
+		"custom-pull-secret",
 		&corev1.LocalObjectReference{Name: "custom-pull-secret"},
 	}
 	coalescedImage1 = Image{
@@ -38,6 +41,7 @@ var (
 		"default-name",
 		"default-tag",
 		corev1.PullIfNotPresent,
+		"",
 		nil,
 	}
 	coalescedImage2 = Image{
@@ -46,6 +50,7 @@ var (
 		customImage.Name,
 		defaultImage.Tag,
 		customImage.PullPolicy,
+		customImage.PullSecretRef.Name,
 		customImage.PullSecretRef,
 	}
 	coalescedImage3 = Image{
@@ -54,6 +59,7 @@ var (
 		latestImage.Name,
 		latestImage.Tag,
 		corev1.PullAlways,
+		latestImage.PullSecretRef.Name,
 		latestImage.PullSecretRef,
 	}
 	emptyImage = Image{}
