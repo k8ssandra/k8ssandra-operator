@@ -14156,6 +14156,15 @@ spec:
                                                 type: string
                                               port:
                                                 type: string
+                                              tls:
+                                                properties:
+                                                  ca.crt:
+                                                    type: string
+                                                  tls.crt:
+                                                    type: string
+                                                  tls.key:
+                                                    type: string
+                                                type: object
                                             type: object
                                           relabels:
                                             items:
@@ -14206,11 +14215,13 @@ spec:
                                             type: array
                                         type: object
                                       mcac:
+                                        description: DEPRECATED MCAC has been deprecated
+                                          in favor of the new metrics endpoint
                                         properties:
                                           enabled:
                                             description: |-
                                               enabled sets whether MCAC (legacy metrics endpoint) is enabled.
-                                              This is considered true by default.
+                                              This is considered false by default.
                                             type: boolean
                                           metricFilters:
                                             description: |-
@@ -14339,9 +14350,9 @@ spec:
                                               Enabling the vector agent will inject a sidecar container into the pod.
                                             type: boolean
                                           image:
-                                            description: |-
-                                              Image is the name of the Vector image to use. If not set, the default image will be used.
-                                              kube:default="timberio/vector:0.26.0-alpine"
+                                            description: Image is the name of the
+                                              Vector image to use. If not set, the
+                                              default image will be used.
                                             type: string
                                           resources:
                                             description: Resources is the resource
@@ -14712,6 +14723,15 @@ spec:
                                           type: string
                                         port:
                                           type: string
+                                        tls:
+                                          properties:
+                                            ca.crt:
+                                              type: string
+                                            tls.crt:
+                                              type: string
+                                            tls.key:
+                                              type: string
+                                          type: object
                                       type: object
                                     relabels:
                                       items:
@@ -14761,11 +14781,13 @@ spec:
                                       type: array
                                   type: object
                                 mcac:
+                                  description: DEPRECATED MCAC has been deprecated
+                                    in favor of the new metrics endpoint
                                   properties:
                                     enabled:
                                       description: |-
                                         enabled sets whether MCAC (legacy metrics endpoint) is enabled.
-                                        This is considered true by default.
+                                        This is considered false by default.
                                       type: boolean
                                     metricFilters:
                                       description: |-
@@ -14893,9 +14915,9 @@ spec:
                                         Enabling the vector agent will inject a sidecar container into the pod.
                                       type: boolean
                                     image:
-                                      description: |-
-                                        Image is the name of the Vector image to use. If not set, the default image will be used.
-                                        kube:default="timberio/vector:0.26.0-alpine"
+                                      description: Image is the name of the Vector
+                                        image to use. If not set, the default image
+                                        will be used.
                                       type: string
                                     resources:
                                       description: Resources is the resource requirements
@@ -17301,6 +17323,15 @@ spec:
                                       type: string
                                     port:
                                       type: string
+                                    tls:
+                                      properties:
+                                        ca.crt:
+                                          type: string
+                                        tls.crt:
+                                          type: string
+                                        tls.key:
+                                          type: string
+                                      type: object
                                   type: object
                                 relabels:
                                   items:
@@ -17349,11 +17380,13 @@ spec:
                                   type: array
                               type: object
                             mcac:
+                              description: DEPRECATED MCAC has been deprecated in
+                                favor of the new metrics endpoint
                               properties:
                                 enabled:
                                   description: |-
                                     enabled sets whether MCAC (legacy metrics endpoint) is enabled.
-                                    This is considered true by default.
+                                    This is considered false by default.
                                   type: boolean
                                 metricFilters:
                                   description: |-
@@ -17474,9 +17507,9 @@ spec:
                                     Enabling the vector agent will inject a sidecar container into the pod.
                                   type: boolean
                                 image:
-                                  description: |-
-                                    Image is the name of the Vector image to use. If not set, the default image will be used.
-                                    kube:default="timberio/vector:0.26.0-alpine"
+                                  description: Image is the name of the Vector image
+                                    to use. If not set, the default image will be
+                                    used.
                                   type: string
                                 resources:
                                   description: Resources is the resource requirements
@@ -26723,6 +26756,15 @@ spec:
                                 type: string
                               port:
                                 type: string
+                              tls:
+                                properties:
+                                  ca.crt:
+                                    type: string
+                                  tls.crt:
+                                    type: string
+                                  tls.key:
+                                    type: string
+                                type: object
                             type: object
                           relabels:
                             items:
@@ -26770,11 +26812,13 @@ spec:
                             type: array
                         type: object
                       mcac:
+                        description: DEPRECATED MCAC has been deprecated in favor
+                          of the new metrics endpoint
                         properties:
                           enabled:
                             description: |-
                               enabled sets whether MCAC (legacy metrics endpoint) is enabled.
-                              This is considered true by default.
+                              This is considered false by default.
                             type: boolean
                           metricFilters:
                             description: |-
@@ -26895,9 +26939,8 @@ spec:
                               Enabling the vector agent will inject a sidecar container into the pod.
                             type: boolean
                           image:
-                            description: |-
-                              Image is the name of the Vector image to use. If not set, the default image will be used.
-                              kube:default="timberio/vector:0.26.0-alpine"
+                            description: Image is the name of the Vector image to
+                              use. If not set, the default image will be used.
                             type: string
                           resources:
                             description: Resources is the resource requirements for
@@ -30668,6 +30711,15 @@ spec:
                                 type: string
                               port:
                                 type: string
+                              tls:
+                                properties:
+                                  ca.crt:
+                                    type: string
+                                  tls.crt:
+                                    type: string
+                                  tls.key:
+                                    type: string
+                                type: object
                             type: object
                           relabels:
                             items:
@@ -30715,11 +30767,13 @@ spec:
                             type: array
                         type: object
                       mcac:
+                        description: DEPRECATED MCAC has been deprecated in favor
+                          of the new metrics endpoint
                         properties:
                           enabled:
                             description: |-
                               enabled sets whether MCAC (legacy metrics endpoint) is enabled.
-                              This is considered true by default.
+                              This is considered false by default.
                             type: boolean
                           metricFilters:
                             description: |-
@@ -30840,9 +30894,8 @@ spec:
                               Enabling the vector agent will inject a sidecar container into the pod.
                             type: boolean
                           image:
-                            description: |-
-                              Image is the name of the Vector image to use. If not set, the default image will be used.
-                              kube:default="timberio/vector:0.26.0-alpine"
+                            description: Image is the name of the Vector image to
+                              use. If not set, the default image will be used.
                             type: string
                           resources:
                             description: Resources is the resource requirements for
@@ -32483,6 +32536,15 @@ spec:
                                 type: string
                               port:
                                 type: string
+                              tls:
+                                properties:
+                                  ca.crt:
+                                    type: string
+                                  tls.crt:
+                                    type: string
+                                  tls.key:
+                                    type: string
+                                type: object
                             type: object
                           relabels:
                             items:
@@ -32530,11 +32592,13 @@ spec:
                             type: array
                         type: object
                       mcac:
+                        description: DEPRECATED MCAC has been deprecated in favor
+                          of the new metrics endpoint
                         properties:
                           enabled:
                             description: |-
                               enabled sets whether MCAC (legacy metrics endpoint) is enabled.
-                              This is considered true by default.
+                              This is considered false by default.
                             type: boolean
                           metricFilters:
                             description: |-
@@ -32655,9 +32719,8 @@ spec:
                               Enabling the vector agent will inject a sidecar container into the pod.
                             type: boolean
                           image:
-                            description: |-
-                              Image is the name of the Vector image to use. If not set, the default image will be used.
-                              kube:default="timberio/vector:0.26.0-alpine"
+                            description: Image is the name of the Vector image to
+                              use. If not set, the default image will be used.
                             type: string
                           resources:
                             description: Resources is the resource requirements for
@@ -37069,6 +37132,15 @@ spec:
                             type: string
                           port:
                             type: string
+                          tls:
+                            properties:
+                              ca.crt:
+                                type: string
+                              tls.crt:
+                                type: string
+                              tls.key:
+                                type: string
+                            type: object
                         type: object
                       relabels:
                         items:
@@ -37116,11 +37188,13 @@ spec:
                         type: array
                     type: object
                   mcac:
+                    description: DEPRECATED MCAC has been deprecated in favor of the
+                      new metrics endpoint
                     properties:
                       enabled:
                         description: |-
                           enabled sets whether MCAC (legacy metrics endpoint) is enabled.
-                          This is considered true by default.
+                          This is considered false by default.
                         type: boolean
                       metricFilters:
                         description: |-
@@ -37241,9 +37315,8 @@ spec:
                           Enabling the vector agent will inject a sidecar container into the pod.
                         type: boolean
                       image:
-                        description: |-
-                          Image is the name of the Vector image to use. If not set, the default image will be used.
-                          kube:default="timberio/vector:0.26.0-alpine"
+                        description: Image is the name of the Vector image to use.
+                          If not set, the default image will be used.
                         type: string
                       resources:
                         description: Resources is the resource requirements for the
@@ -40581,6 +40654,15 @@ spec:
                                   type: string
                                 port:
                                   type: string
+                                tls:
+                                  properties:
+                                    ca.crt:
+                                      type: string
+                                    tls.crt:
+                                      type: string
+                                    tls.key:
+                                      type: string
+                                  type: object
                               type: object
                             relabels:
                               items:
@@ -40628,11 +40710,13 @@ spec:
                               type: array
                           type: object
                         mcac:
+                          description: DEPRECATED MCAC has been deprecated in favor
+                            of the new metrics endpoint
                           properties:
                             enabled:
                               description: |-
                                 enabled sets whether MCAC (legacy metrics endpoint) is enabled.
-                                This is considered true by default.
+                                This is considered false by default.
                               type: boolean
                             metricFilters:
                               description: |-
@@ -40753,9 +40837,8 @@ spec:
                                 Enabling the vector agent will inject a sidecar container into the pod.
                               type: boolean
                             image:
-                              description: |-
-                                Image is the name of the Vector image to use. If not set, the default image will be used.
-                                kube:default="timberio/vector:0.26.0-alpine"
+                              description: Image is the name of the Vector image to
+                                use. If not set, the default image will be used.
                               type: string
                             resources:
                               description: Resources is the resource requirements
@@ -41121,6 +41204,15 @@ spec:
                             type: string
                           port:
                             type: string
+                          tls:
+                            properties:
+                              ca.crt:
+                                type: string
+                              tls.crt:
+                                type: string
+                              tls.key:
+                                type: string
+                            type: object
                         type: object
                       relabels:
                         items:
@@ -41168,11 +41260,13 @@ spec:
                         type: array
                     type: object
                   mcac:
+                    description: DEPRECATED MCAC has been deprecated in favor of the
+                      new metrics endpoint
                     properties:
                       enabled:
                         description: |-
                           enabled sets whether MCAC (legacy metrics endpoint) is enabled.
-                          This is considered true by default.
+                          This is considered false by default.
                         type: boolean
                       metricFilters:
                         description: |-
@@ -41293,9 +41387,8 @@ spec:
                           Enabling the vector agent will inject a sidecar container into the pod.
                         type: boolean
                       image:
-                        description: |-
-                          Image is the name of the Vector image to use. If not set, the default image will be used.
-                          kube:default="timberio/vector:0.26.0-alpine"
+                        description: Image is the name of the Vector image to use.
+                          If not set, the default image will be used.
                         type: string
                       resources:
                         description: Resources is the resource requirements for the
