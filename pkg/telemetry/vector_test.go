@@ -460,3 +460,36 @@ assert!(exists(.class))
 
 	assert.NoError(os.WriteFile(fmt.Sprintf("%s/vector-emptyline.toml", outputDir), []byte(b.String()), 0644))
 }
+
+func TestTLSEndpoint(t *testing.T) {
+	require := require.New(t)
+	telemetrySpec := &telemetry.TelemetrySpec{
+		Vector: &telemetry.VectorSpec{
+			Enabled: ptr.To(true),
+			Components: &telemetry.VectorComponentsSpec{
+				Sinks: []telemetry.VectorSinkSpec{
+					{
+						Name:   "metrics_output",
+						Inputs: []string{"cassandra_metrics"},
+					},
+				},
+			},
+		},
+		Cassandra: &telemetry.CassandraAgentSpec{
+			Endpoint: &telemetry.Endpoint{
+				TLS: &telemetry.TLSConfig{
+					CAFile:   "/opt/management-api/certs/ca.crt",
+					KeyFile:  "/opt/management-api/certs/tls.key",
+					CertFile: "/opt/management-api/certs/tls.crt",
+				},
+			},
+		},
+	}
+	vectorToml, err := CreateCassandraVectorToml(telemetrySpec, false)
+	require.NoError(err)
+
+	require.Contains(vectorToml, "https://localhost:9000/metrics")
+	require.Contains(vectorToml, "ca_file = \"/opt/management-api/certs/ca.crt\"")
+	require.Contains(vectorToml, "cert_file = \"/opt/management-api/certs/tls.crt\"")
+	require.Contains(vectorToml, "key_file = \"/opt/management-api/certs/tls.key\"")
+}
