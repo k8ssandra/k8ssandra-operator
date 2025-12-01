@@ -3,7 +3,9 @@ package stargate
 import (
 	"fmt"
 
+	cassimages "github.com/k8ssandra/cass-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -12,7 +14,6 @@ import (
 	k8ssandra "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/vector"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,10 +50,10 @@ func CreateVectorConfigMap(namespace, vectorToml string, dc cassdcapi.CassandraD
 	}
 }
 
-func configureVector(stargate *api.Stargate, deployment *appsv1.Deployment, dc *cassdcapi.CassandraDatacenter, logger logr.Logger) {
+func configureVector(stargate *api.Stargate, deployment *appsv1.Deployment, dc *cassdcapi.CassandraDatacenter, logger logr.Logger, registry cassimages.ImageRegistry) {
 	if stargate.Spec.Telemetry.IsVectorEnabled() {
 		logger.Info("Injecting Vector agent into Stargate deployments")
-		vectorImage := vector.DefaultVectorImage
+		vectorImage := registry.GetSystemLoggerImage()
 		if stargate.Spec.Telemetry.Vector.Image != "" {
 			vectorImage = stargate.Spec.Telemetry.Vector.Image
 		}
@@ -62,15 +63,10 @@ func configureVector(stargate *api.Stargate, deployment *appsv1.Deployment, dc *
 			Name:            VectorContainerName,
 			Image:           vectorImage,
 			ImagePullPolicy: corev1.PullIfNotPresent,
-			Env: []corev1.EnvVar{
-				{Name: "VECTOR_CONFIG", Value: "/etc/vector/vector.toml"},
-				{Name: "VECTOR_ENVIRONMENT", Value: "kubernetes"},
-				{Name: "VECTOR_HOSTNAME", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.nodeName"}}},
-			},
 			VolumeMounts: []corev1.VolumeMount{
 				{Name: "stargate-vector-config", MountPath: "/etc/vector"},
 			},
-			Resources: vector.VectorContainerResources(stargate.Spec.Telemetry),
+			Resources: telemetry.VectorContainerResources(stargate.Spec.Telemetry),
 		}
 		// Create the definition of the Vector agent config map volume
 		logger.Info("Creating Stargate Vector Agent Volume")

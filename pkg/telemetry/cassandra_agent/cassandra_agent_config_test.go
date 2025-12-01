@@ -14,11 +14,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 )
 
 var (
 	testCluster k8ssandraapi.K8ssandraCluster = testutils.NewK8ssandraCluster("test-cluster", "test-namespace")
-	Cfg         Configurator                  = Configurator{
+	cfg         Configurator                  = Configurator{
 		TelemetrySpec: telemetry.NewTelemetrySpec(),
 		Kluster:       &testCluster,
 		Ctx:           context.Background(),
@@ -119,8 +120,8 @@ relabels:
 func getExpectedConfigMap() corev1.ConfigMap {
 	expectedCm := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: Cfg.DcNamespace,
-			Name:      Cfg.Kluster.Name + "-" + Cfg.DcName + "-metrics-agent-config",
+			Namespace: cfg.DcNamespace,
+			Name:      cfg.Kluster.Name + "-" + cfg.DcName + "-metrics-agent-config",
 		},
 		Data: map[string]string{filepath.Base(agentConfigLocation): allDefinedYaml},
 	}
@@ -128,7 +129,7 @@ func getExpectedConfigMap() corev1.ConfigMap {
 }
 
 func getExampleTelemetrySpec() telemetryapi.TelemetrySpec {
-	tspec := &Cfg.TelemetrySpec
+	tspec := &cfg.TelemetrySpec
 	tspec.Cassandra.Relabels = []promapi.RelabelConfig{
 		{
 			SourceLabels: []string{"tag1", "tag2"},
@@ -146,9 +147,9 @@ func getExampleTelemetrySpec() telemetryapi.TelemetrySpec {
 // Make sure when both endpoint and relabels are defined they come through to yaml.
 func Test_GetTelemetryAgentConfigMapAllDefined(t *testing.T) {
 	expectedCm := getExpectedConfigMap()
-	Cfg.RemoteClient = testutils.NewFakeClientWRestMapper() // Reset the Client
-	Cfg.TelemetrySpec = getExampleTelemetrySpec()
-	cm, err := Cfg.GetTelemetryAgentConfigMap()
+	cfg.RemoteClient = testutils.NewFakeClientWRestMapper() // Reset the Client
+	cfg.TelemetrySpec = getExampleTelemetrySpec()
+	cm, err := cfg.GetTelemetryAgentConfigMap()
 	assert.NoError(t, err)
 	assert.Equal(t, expectedCm.Data["metrics-collector.yaml"], cm.Data["metrics-collector.yaml"])
 	assert.Equal(t, expectedCm.Name, cm.Name)
@@ -159,15 +160,14 @@ func Test_GetTelemetryAgentConfigMapAllDefined(t *testing.T) {
 func Test_GetTelemetryAgentConfigMapWithDefinedEndpoint(t *testing.T) {
 	expectedCm := getExpectedConfigMap()
 	expectedCm.Data[filepath.Base(agentConfigLocation)] = endpointDefinedYaml
-	Cfg.RemoteClient = testutils.NewFakeClientWRestMapper() // Reset the Client
-	Cfg.TelemetrySpec = getExampleTelemetrySpec()
-	Cfg.TelemetrySpec.Cassandra.Relabels = nil
-	Cfg.TelemetrySpec.Cassandra.Endpoint = &telemetryapi.Endpoint{
+	cfg.RemoteClient = testutils.NewFakeClientWRestMapper() // Reset the Client
+	cfg.TelemetrySpec = getExampleTelemetrySpec()
+	cfg.TelemetrySpec.Cassandra.Relabels = nil
+	cfg.TelemetrySpec.Cassandra.Endpoint = &telemetryapi.Endpoint{
 		Address: "192.168.1.10",
 		Port:    "50000",
 	}
-	cm, err := Cfg.GetTelemetryAgentConfigMap()
-	println(cm.Data)
+	cm, err := cfg.GetTelemetryAgentConfigMap()
 	assert.NoError(t, err)
 	assert.Equal(t, expectedCm.Data["metrics-collector.yaml"], cm.Data["metrics-collector.yaml"])
 	assert.Equal(t, expectedCm.Name, cm.Name)
@@ -177,9 +177,9 @@ func Test_GetTelemetryAgentConfigMapWithDefinedEndpoint(t *testing.T) {
 func Test_GetTelemetryAgentConfigMapWithDefinedRelabels(t *testing.T) {
 	expectedCm := getExpectedConfigMap()
 	expectedCm.Data[filepath.Base(agentConfigLocation)] = relabelsDefinedYaml
-	Cfg.RemoteClient = testutils.NewFakeClientWRestMapper() // Reset the Client
-	Cfg.TelemetrySpec = getExampleTelemetrySpec()
-	Cfg.TelemetrySpec.Cassandra.Relabels = []promapi.RelabelConfig{
+	cfg.RemoteClient = testutils.NewFakeClientWRestMapper() // Reset the Client
+	cfg.TelemetrySpec = getExampleTelemetrySpec()
+	cfg.TelemetrySpec.Cassandra.Relabels = []promapi.RelabelConfig{
 		{
 			SourceLabels: []string{"tag1", "tag2"},
 			Separator:    ";",
@@ -187,11 +187,35 @@ func Test_GetTelemetryAgentConfigMapWithDefinedRelabels(t *testing.T) {
 			Action:       "drop",
 		},
 	}
-	Cfg.TelemetrySpec.Cassandra.Endpoint = nil
-	cm, err := Cfg.GetTelemetryAgentConfigMap()
-	println(cm.Data)
+	cfg.TelemetrySpec.Cassandra.Endpoint = nil
+	cm, err := cfg.GetTelemetryAgentConfigMap()
 	assert.NoError(t, err)
 	assert.Equal(t, expectedCm.Data["metrics-collector.yaml"], cm.Data["metrics-collector.yaml"])
 	assert.Equal(t, expectedCm.Name, cm.Name)
 	assert.Equal(t, expectedCm.Namespace, cm.Namespace)
+}
+
+func TestTelemetryEnableTLS(t *testing.T) {
+	expectedCm := getExpectedConfigMap()
+	expectedCm.Data[filepath.Base(agentConfigLocation)] = endpointDefinedYaml
+	cfg.RemoteClient = testutils.NewFakeClientWRestMapper()
+	cfg.TelemetrySpec = getExampleTelemetrySpec()
+	cfg.TelemetrySpec.Cassandra.Relabels = nil
+	cfg.TelemetrySpec.Cassandra.Endpoint = &telemetryapi.Endpoint{
+		Address: "192.168.1.10",
+		Port:    "50000",
+		TLS: &telemetryapi.TLSConfig{
+			CAFile: "/opt/management-api/certs/ca.crt",
+		},
+	}
+	cm, err := cfg.GetTelemetryAgentConfigMap()
+	assert.NoError(t, err)
+	assert.Equal(t, expectedCm.Name, cm.Name)
+	assert.Equal(t, expectedCm.Namespace, cm.Namespace)
+
+	agentSpec := &telemetryapi.CassandraAgentSpec{}
+	assert.NoError(t, yaml.Unmarshal([]byte(cm.Data["metrics-collector.yaml"]), agentSpec))
+	assert.NotNil(t, agentSpec.Endpoint)
+	assert.NotNil(t, agentSpec.Endpoint.TLS)
+	assert.Equal(t, "/opt/management-api/certs/ca.crt", agentSpec.Endpoint.TLS.CAFile)
 }

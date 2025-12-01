@@ -97,7 +97,7 @@ func TestNewDeployments(t *testing.T) {
 
 func testNewDeploymentsDefaultRackSingleReplica(t *testing.T) {
 	logger := testlogr.NewTestLogger(t)
-	deployments := NewDeployments(stargate, dc, logger)
+	deployments := NewDeployments(stargate, dc, logger, getTestImageRegistry())
 	require.Len(t, deployments, 1)
 	require.Contains(t, deployments, "cluster1-dc1-default-stargate-deployment")
 	deployment := deployments["cluster1-dc1-default-stargate-deployment"]
@@ -193,7 +193,7 @@ func testNewDeploymentsSingleRackManyReplicas(t *testing.T) {
 	stargate.Spec.Size = 3
 
 	logger := testlogr.NewTestLogger(t)
-	deployments := NewDeployments(stargate, dc, logger)
+	deployments := NewDeployments(stargate, dc, logger, getTestImageRegistry())
 	require.Len(t, deployments, 1)
 	require.Contains(t, deployments, "cluster1-dc1-rack1-stargate-deployment")
 	deployment := deployments["cluster1-dc1-rack1-stargate-deployment"]
@@ -246,7 +246,7 @@ func testNewDeploymentsManyRacksManyReplicas(t *testing.T) {
 	stargate.Spec.Size = 8
 
 	logger := testlogr.NewTestLogger(t)
-	deployments := NewDeployments(stargate, dc, logger)
+	deployments := NewDeployments(stargate, dc, logger, getTestImageRegistry())
 
 	require.Len(t, deployments, 3)
 	require.Contains(t, deployments, "cluster1-dc1-rack1-stargate-deployment")
@@ -343,7 +343,7 @@ func testNewDeploymentsManyRacksCustomAffinityDc(t *testing.T) {
 	stargate.Spec.Size = 8
 
 	logger := testlogr.NewTestLogger(t)
-	deployments := NewDeployments(stargate, dc, logger)
+	deployments := NewDeployments(stargate, dc, logger, getTestImageRegistry())
 	require.Len(t, deployments, 3)
 	require.Contains(t, deployments, "cluster1-dc1-rack1-stargate-deployment")
 	require.Contains(t, deployments, "cluster1-dc1-rack2-stargate-deployment")
@@ -456,7 +456,7 @@ func testNewDeploymentsManyRacksCustomAffinityStargate(t *testing.T) {
 	}}
 
 	logger := testlogr.NewTestLogger(t)
-	deployments := NewDeployments(stargate, dc, logger)
+	deployments := NewDeployments(stargate, dc, logger, getTestImageRegistry())
 	require.Len(t, deployments, 3)
 	require.Contains(t, deployments, "cluster1-dc1-rack1-stargate-deployment")
 	require.Contains(t, deployments, "cluster1-dc1-rack2-stargate-deployment")
@@ -532,7 +532,7 @@ func testNewDeploymentsManyRacksFewReplicas(t *testing.T) {
 	stargate.Spec.Size = 2 // rack3 will get no deployment
 
 	logger := testlogr.NewTestLogger(t)
-	deployments := NewDeployments(stargate, dc, logger)
+	deployments := NewDeployments(stargate, dc, logger, getTestImageRegistry())
 	require.Len(t, deployments, 2)
 	require.Contains(t, deployments, "cluster1-dc1-rack1-stargate-deployment")
 	require.Contains(t, deployments, "cluster1-dc1-rack2-stargate-deployment")
@@ -554,7 +554,7 @@ func testNewDeploymentsCassandraConfigMap(t *testing.T) {
 	stargate.Spec.CassandraConfigMapRef = &corev1.LocalObjectReference{Name: configMapName}
 
 	logger := testlogr.NewTestLogger(t)
-	deployments := NewDeployments(stargate, dc, logger)
+	deployments := NewDeployments(stargate, dc, logger, getTestImageRegistry())
 	require.Len(t, deployments, 1)
 	deployment := deployments["cluster1-dc1-default-stargate-deployment"]
 
@@ -587,7 +587,7 @@ func testNewDeploymentsEncryption(t *testing.T) {
 	stargate := stargate.DeepCopy()
 
 	logger := testlogr.NewTestLogger(t)
-	deployments := NewDeployments(stargate, dc, logger)
+	deployments := NewDeployments(stargate, dc, logger, getTestImageRegistry())
 	require.Len(t, deployments, 1)
 	deployment := deployments["cluster1-dc1-default-stargate-deployment"]
 
@@ -692,7 +692,7 @@ func testNewDeploymentsAuthentication(t *testing.T) {
 		sg := stargate.DeepCopy()
 		sg.Spec.Auth = ptr.To(false)
 		logger := testlogr.NewTestLogger(t)
-		deployments := NewDeployments(sg, dc, logger)
+		deployments := NewDeployments(sg, dc, logger, getTestImageRegistry())
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
 		javaOpts := utils.FindEnvVarInContainer(&deployment.Spec.Template.Spec.Containers[0], "JAVA_OPTS")
@@ -707,7 +707,7 @@ func testNewDeploymentsAuthentication(t *testing.T) {
 			TokenTtlSeconds: 123,
 		}
 		logger := testlogr.NewTestLogger(t)
-		deployments := NewDeployments(sg, dc, logger)
+		deployments := NewDeployments(sg, dc, logger, getTestImageRegistry())
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
 		javaOpts := utils.FindEnvVarInContainer(&deployment.Spec.Template.Spec.Containers[0], "JAVA_OPTS")
@@ -723,7 +723,7 @@ func testNewDeploymentsAuthentication(t *testing.T) {
 			JwtProviderUrl: "https://auth.example.com/auth/realms/stargate/protocol/openid-connect/token",
 		}
 		logger := testlogr.NewTestLogger(t)
-		deployments := NewDeployments(sg, dc, logger)
+		deployments := NewDeployments(sg, dc, logger, getTestImageRegistry())
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
 		javaOpts := utils.FindEnvVarInContainer(&deployment.Spec.Template.Spec.Containers[0], "JAVA_OPTS")
@@ -740,7 +740,7 @@ func testImages(t *testing.T) {
 		stargate := stargate.DeepCopy()
 		stargate.Spec.ContainerImage = nil
 		logger := testlogr.NewTestLogger(t)
-		deployments := NewDeployments(stargate, dc, logger)
+		deployments := NewDeployments(stargate, dc, logger, getTestImageRegistry())
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
 		assert.Equal(t, "docker.io/stargateio/stargate-3_11:v1.0.77", deployment.Spec.Template.Spec.Containers[0].Image)
@@ -753,7 +753,7 @@ func testImages(t *testing.T) {
 		dc := dc.DeepCopy()
 		dc.Spec.ServerVersion = "4.0.1"
 		logger := testlogr.NewTestLogger(t)
-		deployments := NewDeployments(stargate, dc, logger)
+		deployments := NewDeployments(stargate, dc, logger, getTestImageRegistry())
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
 		assert.Equal(t, "docker.io/stargateio/stargate-4_0:v1.0.77", deployment.Spec.Template.Spec.Containers[0].Image)
@@ -767,7 +767,7 @@ func testImages(t *testing.T) {
 			Tag:        "v" + DefaultVersion,
 		}
 		logger := testlogr.NewTestLogger(t)
-		deployments := NewDeployments(stargate, dc, logger)
+		deployments := NewDeployments(stargate, dc, logger, getTestImageRegistry())
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
 		assert.Equal(t, "docker.io/stargateio/stargate-3_11:v1.0.77", deployment.Spec.Template.Spec.Containers[0].Image)
@@ -783,7 +783,7 @@ func testImages(t *testing.T) {
 		dc := dc.DeepCopy()
 		dc.Spec.ServerVersion = "4.0.1"
 		logger := testlogr.NewTestLogger(t)
-		deployments := NewDeployments(stargate, dc, logger)
+		deployments := NewDeployments(stargate, dc, logger, getTestImageRegistry())
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
 		assert.Equal(t, "docker.io/stargateio/stargate-4_0:v1.0.77", deployment.Spec.Template.Spec.Containers[0].Image)
@@ -799,7 +799,7 @@ func testImages(t *testing.T) {
 		}
 		stargate.Spec.ContainerImage = image
 		logger := testlogr.NewTestLogger(t)
-		deployments := NewDeployments(stargate, dc, logger)
+		deployments := NewDeployments(stargate, dc, logger, getTestImageRegistry())
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
 		assert.Equal(t, "docker.io/my-custom-repo/stargate-3_11:latest", deployment.Spec.Template.Spec.Containers[0].Image)
@@ -818,7 +818,7 @@ func testImages(t *testing.T) {
 		dc := dc.DeepCopy()
 		dc.Spec.ServerVersion = "4.0.1"
 		logger := testlogr.NewTestLogger(t)
-		deployments := NewDeployments(stargate, dc, logger)
+		deployments := NewDeployments(stargate, dc, logger, getTestImageRegistry())
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
 		assert.Equal(t, "docker.io/my-custom-repo/stargate-4_0:latest", deployment.Spec.Template.Spec.Containers[0].Image)
@@ -836,7 +836,7 @@ func testImages(t *testing.T) {
 		dc.Spec.ServerVersion = "6.8.40"
 		dc.Spec.ServerType = "dse"
 		logger := testlogr.NewTestLogger(t)
-		deployments := NewDeployments(stargate, dc, logger)
+		deployments := NewDeployments(stargate, dc, logger, getTestImageRegistry())
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
 		assert.Equal(t, "docker.io/stargateio/stargate-dse-68:v1.0.77", deployment.Spec.Template.Spec.Containers[0].Image)
@@ -856,7 +856,7 @@ func testImages(t *testing.T) {
 		dc.Spec.ServerVersion = "6.8.40"
 		dc.Spec.ServerType = "dse"
 		logger := testlogr.NewTestLogger(t)
-		deployments := NewDeployments(stargate, dc, logger)
+		deployments := NewDeployments(stargate, dc, logger, getTestImageRegistry())
 		require.Len(t, deployments, 1)
 		deployment := deployments["cluster1-dc1-default-stargate-deployment"]
 		assert.Equal(t, "docker.io/my-custom-repo/stargate-dse-68:latest", deployment.Spec.Template.Spec.Containers[0].Image)

@@ -10,9 +10,13 @@ import (
 	"github.com/k8ssandra/cass-operator/pkg/httphelper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/mocks"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"github.com/stretchr/testify/mock"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+const (
+	StargateAuthKeyspace = "data_endpoint_auth"
+	StargateAuthTable    = "token"
 )
 
 type ManagementApiFactoryAdapter func(
@@ -29,9 +33,9 @@ var defaultAdapter ManagementApiFactoryAdapter = func(
 
 	m := new(mocks.ManagementApiFacade)
 	m.On(EnsureKeyspaceReplication, mock.Anything, mock.Anything).Return(nil)
-	m.On(ListTables, stargate.AuthKeyspace).Return([]string{"token"}, nil)
+	m.On(ListTables, StargateAuthKeyspace).Return([]string{"token"}, nil)
 	m.On(CreateTable, mock.MatchedBy(func(def *httphelper.TableDefinition) bool {
-		return def.KeyspaceName == stargate.AuthKeyspace && def.TableName == stargate.AuthTable
+		return def.KeyspaceName == StargateAuthKeyspace && def.TableName == StargateAuthTable
 	})).Return(nil)
 	m.On(ListKeyspaces, "").Return([]string{}, nil)
 	m.On(GetSchemaVersions).Return(map[string][]string{"fake": {"test"}}, nil)

@@ -445,7 +445,7 @@ func NewStatefulSet(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, logge
 		},
 	}
 	addAuthEnvVars(&statefulSet.Spec.Template, authVars)
-	configureVector(reaper, &statefulSet.Spec.Template, dc, logger)
+	configureVector(reaper, &statefulSet.Spec.Template, dc, logger, registry)
 	labels.AddCommonLabelsFromReaper(statefulSet, reaper)
 	annotations.AddCommonAnnotationsFromReaper(statefulSet, reaper)
 	annotations.AddHashAnnotation(statefulSet)
@@ -472,7 +472,7 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 		},
 	}
 	addAuthEnvVars(&deployment.Spec.Template, authVars)
-	configureVector(reaper, &deployment.Spec.Template, dc, logger)
+	configureVector(reaper, &deployment.Spec.Template, dc, logger, registry)
 	labels.AddCommonLabelsFromReaper(deployment, reaper)
 	annotations.AddCommonAnnotationsFromReaper(deployment, reaper)
 	annotations.AddHashAnnotation(deployment)

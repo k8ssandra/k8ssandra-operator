@@ -13,6 +13,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	cassimages "github.com/k8ssandra/cass-operator/pkg/images"
 	coreapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
@@ -68,7 +69,7 @@ var (
 
 // NewDeployments compute the Deployments to create for the given Stargate and CassandraDatacenter
 // resources.
-func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter, logger logr.Logger) map[string]appsv1.Deployment {
+func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter, logger logr.Logger, registry cassimages.ImageRegistry) map[string]appsv1.Deployment {
 
 	clusterVersion := computeClusterVersion(dc)
 	seedService := computeSeedServiceUrl(dc)
@@ -209,7 +210,7 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter, l
 		}
 
 		configureAuth(stargate, deployment)
-		configureVector(stargate, deployment, dc, logger)
+		configureVector(stargate, deployment, dc, logger, registry)
 
 		annotations.AddHashAnnotation(deployment)
 		deployments[deploymentName] = *deployment

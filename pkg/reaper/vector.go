@@ -4,15 +4,16 @@ import (
 	"fmt"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	cassimages "github.com/k8ssandra/cass-operator/pkg/images"
 	k8ssandra "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/vector"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -49,10 +50,11 @@ func CreateVectorConfigMap(namespace, vectorToml string, dc cassdcapi.CassandraD
 	}
 }
 
-func configureVector(reaper *api.Reaper, template *corev1.PodTemplateSpec, dc *cassdcapi.CassandraDatacenter, logger logr.Logger) {
+func configureVector(reaper *api.Reaper, template *corev1.PodTemplateSpec, dc *cassdcapi.CassandraDatacenter, logger logr.Logger, registry cassimages.ImageRegistry) {
 	if reaper.Spec.Telemetry.IsVectorEnabled() {
 		logger.Info("Injecting Vector agent into Reaper deployments")
-		vectorImage := vector.DefaultVectorImage
+
+		vectorImage := registry.GetSystemLoggerImage()
 		if reaper.Spec.Telemetry.Vector.Image != "" {
 			vectorImage = reaper.Spec.Telemetry.Vector.Image
 		}
@@ -74,15 +76,10 @@ func configureVector(reaper *api.Reaper, template *corev1.PodTemplateSpec, dc *c
 			Image:           vectorImage,
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			SecurityContext: defaultVectorSecurityContext,
-			Env: []corev1.EnvVar{
-				{Name: "VECTOR_CONFIG", Value: "/etc/vector/vector.toml"},
-				{Name: "VECTOR_ENVIRONMENT", Value: "kubernetes"},
-				{Name: "VECTOR_HOSTNAME", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.nodeName"}}},
-			},
 			VolumeMounts: []corev1.VolumeMount{
 				{Name: "reaper-vector-config", MountPath: "/etc/vector"},
 			},
-			Resources: vector.VectorContainerResources(reaper.Spec.Telemetry),
+			Resources: telemetry.VectorContainerResources(reaper.Spec.Telemetry),
 		}
 		// Create the definition of the Vector agent config map volume
 		logger.Info("Creating Reaper Vector Agent Volume")

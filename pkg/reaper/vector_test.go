@@ -9,7 +9,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/vector"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -25,14 +25,14 @@ func TestConfigureVector(t *testing.T) {
 	fakeDc := &cassdcapi.CassandraDatacenter{}
 
 	logger := testlogr.NewTestLogger(t)
-	configureVector(reaper, template, fakeDc, logger)
+	configureVector(reaper, template, fakeDc, logger, getTestImageRegistry(t))
 
 	assert.Equal(t, 1, len(template.Spec.Containers))
 	assert.Equal(t, "reaper-vector-agent", template.Spec.Containers[0].Name)
-	assert.Equal(t, resource.MustParse(vector.DefaultVectorCpuLimit), *template.Spec.Containers[0].Resources.Limits.Cpu())
-	assert.Equal(t, resource.MustParse(vector.DefaultVectorCpuRequest), *template.Spec.Containers[0].Resources.Requests.Cpu())
-	assert.Equal(t, resource.MustParse(vector.DefaultVectorMemoryLimit), *template.Spec.Containers[0].Resources.Limits.Memory())
-	assert.Equal(t, resource.MustParse(vector.DefaultVectorMemoryRequest), *template.Spec.Containers[0].Resources.Requests.Memory())
+	assert.Equal(t, resource.MustParse(telemetry.DefaultVectorCpuLimit), *template.Spec.Containers[0].Resources.Limits.Cpu())
+	assert.Equal(t, resource.MustParse(telemetry.DefaultVectorCpuRequest), *template.Spec.Containers[0].Resources.Requests.Cpu())
+	assert.Equal(t, resource.MustParse(telemetry.DefaultVectorMemoryLimit), *template.Spec.Containers[0].Resources.Limits.Memory())
+	assert.Equal(t, resource.MustParse(telemetry.DefaultVectorMemoryRequest), *template.Spec.Containers[0].Resources.Requests.Memory())
 
 	// Verify security context settings
 	var vectorContainer *corev1.Container

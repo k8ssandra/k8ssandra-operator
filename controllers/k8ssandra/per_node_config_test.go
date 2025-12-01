@@ -175,7 +175,7 @@ func defaultPerNodeConfiguration(t *testing.T, ctx context.Context, f *framework
 						Meta:       api.EmbeddedObjectMeta{Name: "dc1"},
 						Size:       5,
 						DatacenterOptions: api.DatacenterOptions{
-							ServerVersion: "4.0.1",
+							ServerVersion: "4.0.18",
 							StorageConfig: &cassdcapi.StorageConfig{
 								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{StorageClassName: &defaultStorageClass},
 							},
@@ -191,7 +191,7 @@ func defaultPerNodeConfiguration(t *testing.T, ctx context.Context, f *framework
 						Meta:       api.EmbeddedObjectMeta{Name: "dc2"},
 						Size:       10,
 						DatacenterOptions: api.DatacenterOptions{
-							ServerVersion: "4.0.1",
+							ServerVersion: "4.0.18",
 							StorageConfig: &cassdcapi.StorageConfig{
 								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{StorageClassName: &defaultStorageClass},
 							},
@@ -320,7 +320,7 @@ func userDefinedPerNodeConfiguration(t *testing.T, ctx context.Context, f *frame
 						Meta:       api.EmbeddedObjectMeta{Name: "dc1"},
 						Size:       3,
 						DatacenterOptions: api.DatacenterOptions{
-							ServerVersion: "4.0.1",
+							ServerVersion: "4.0.18",
 							StorageConfig: &cassdcapi.StorageConfig{
 								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{StorageClassName: &defaultStorageClass},
 							},
