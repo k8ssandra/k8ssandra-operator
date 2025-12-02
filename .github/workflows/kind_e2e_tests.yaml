@@ -99,7 +99,7 @@ jobs:
           - PerNodeConfig/UserDefined
           - RemoveLocalDcFrom4.0Cluster
           - RemoveLocalDcFrom4.1Cluster
-          - RemoveLocalDcFrom5.1Cluster
+          - RemoveLocalDcFrom5.0Cluster
           - AddDcToClusterSameDataplane
           - CreateMedusaConfiguration
       fail-fast: false
