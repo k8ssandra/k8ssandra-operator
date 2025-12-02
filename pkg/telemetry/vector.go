@@ -218,7 +218,7 @@ if err != null {
   .loglevel = "warn"
 }  
 
-if parsed_timestamp, err = parse_timestamp(.timestamp_raw, format: "%Y-%m-%d %T,%3f")
+parsed_timestamp, err = parse_timestamp(.timestamp_raw, format: "%Y-%m-%d %T,%3f")
 if err == null {
   .timestamp = parsed_timestamp
 } else {
