@@ -97,7 +97,9 @@ jobs:
 #          - CreateSingleHcdDatacenterCluster
           - ChangeDseWorkload
           - PerNodeConfig/UserDefined
-          - RemoveLocalDcFromCluster
+          - RemoveLocalDcFrom4.0Cluster
+          - RemoveLocalDcFrom4.1Cluster
+          - RemoveLocalDcFrom5.1Cluster
           - AddDcToClusterSameDataplane
           - CreateMedusaConfiguration
       fail-fast: false

@@ -1,0 +1,35 @@
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: test
+spec:
+  cassandra:
+    serverVersion: "4.1.9"
+    storageConfig:
+      cassandraDataVolumeClaimSpec:
+        storageClassName: standard
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 256Mi
+    config:
+      cassandraYaml:
+        auto_snapshot: false
+        memtable_flush_writers: 1
+        concurrent_compactors: 1
+        concurrent_reads: 2
+        concurrent_writes: 2
+        concurrent_counter_writes: 2
+      jvmOptions:
+        heapSize: 512Mi
+    networking:
+      hostNetwork: true
+    datacenters:
+      - metadata:
+          name: dc1
+        size: 1
+      - metadata:
+          name: dc2
+        size: 1
+        datacenterName: real-dc2

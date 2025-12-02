@@ -4,7 +4,7 @@ metadata:
   name: test
 spec:
   cassandra:
-    serverVersion: "4.0.17"
+    serverVersion: "5.0.6"
     storageConfig:
       cassandraDataVolumeClaimSpec:
         storageClassName: standard
