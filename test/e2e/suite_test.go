@@ -359,6 +359,10 @@ func TestOperator(t *testing.T) {
 		testFunc: createMedusaConfiguration,
 		fixture:  framework.NewTestFixture("medusa-configuration", controlPlane),
 	}))
+	t.Run("CreateSingleDatacenterClusterMgmtAuth", e2eTest(ctx, &e2eTestOpts{
+		testFunc: createSingleDatacenterClusterMgmtAuth,
+		fixture:  framework.NewTestFixture("single-dc-mgmt-auth", controlPlane),
+	}))
 }
 
 func beforeSuite(t *testing.T) {
@@ -780,6 +784,67 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
 	// Check that Cassandra Vector's configmap is deleted
 	checkVectorConfigMapDeleted(t, ctx, f, dcKey, telemetry.VectorAgentConfigMapName)
+
+	// Delete the K8ssandraCluster
+	t.Log("Delete the K8ssandraCluster and check that the finalizer is removed on the cassdc")
+	require.NoError(f.Client.Delete(ctx, k8ssandra))
+
+	// Check that the finalizer is removed on the cassdc
+	require.Eventually(func() bool {
+		dc := &cassdcapi.CassandraDatacenter{}
+		err := f.Get(ctx, dcKey, dc)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				// The CassandraDatacenter was already deleted, this assert was too slow to detect the change.
+				// This means the finalizer was removed, otherwise Kubernetes would block the deletion.
+				return true
+			}
+			return false
+		}
+		return !controllerutil.ContainsFinalizer(dc, k8ssandrapkg.K8ssandraClusterFinalizer)
+	}, polling.datacenterUpdating.timeout, 100*time.Millisecond, "finalizer should be removed from cassdc")
+
+	// Check that the K8ssandraCluster still exists despite the finalizer being removed on the cassdc
+	err = f.Client.Get(ctx, kcKey, k8ssandra)
+	require.NoError(err, "failed to get K8ssandraCluster in namespace %s. It has been prematurely deleted", namespace)
+
+	// Check that the cassdc is deleted
+	t.Log("Check that the cassdc is deleted")
+	require.EventuallyWithT(func(c *assert.CollectT) {
+		dc := &cassdcapi.CassandraDatacenter{}
+		err := f.Get(ctx, dcKey, dc)
+		assert.True(c, errors.IsNotFound(err), "CassandraDatacenter should be deleted")
+	}, 3*time.Minute, 100*time.Millisecond, "CassandraDatacenter should be deleted")
+
+	// Check that the K8ssandraCluster is deleted
+	t.Log("Check that the K8ssandraCluster is deleted")
+	require.EventuallyWithT(func(c *assert.CollectT) {
+		err := f.Client.Get(ctx, kcKey, k8ssandra)
+		assert.True(c, errors.IsNotFound(err), "K8ssandraCluster should be deleted")
+	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "K8ssandraCluster should be deleted")
+
+}
+
+// createSingleDatacenterClusterMgmtAuth creates a K8ssandraCluster with one CassandraDatacenter that is deployed in the local cluster.
+// the mgmt-api mTLS authentication is enabled and Telemetry with TLS is also enabled
+func createSingleDatacenterClusterMgmtAuth(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	require := require.New(t)
+
+	t.Log("check that the K8ssandraCluster was created")
+	k8ssandra := &api.K8ssandraCluster{}
+	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
+	err := f.Client.Get(ctx, kcKey, k8ssandra)
+	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
+
+	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	checkDatacenterReady(t, ctx, dcKey, f)
+	require.NoError(CheckLabelsAnnotationsCreated(dcKey, t, ctx, f))
+	require.NoError(checkMetricsFiltersAbsence(t, ctx, f, dcKey))
+	require.NoError(checkInjectedContainersPresence(t, ctx, f, dcKey))
+	require.NoError(checkInjectedVolumePresence(t, ctx, f, dcKey, 4))
+
+	// check that the Cassandra Vector container and config map exist
+	checkVectorAgentConfigMapPresence(t, ctx, f, dcKey, telemetry.VectorAgentConfigMapName)
 
 	// Delete the K8ssandraCluster
 	t.Log("Delete the K8ssandraCluster and check that the finalizer is removed on the cassdc")
