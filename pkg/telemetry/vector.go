@@ -97,7 +97,7 @@ func (p *PrometheusScrapeConfig) String() string {
 }
 
 const (
-	DefaultScrapeInterval = 30
+	DefaultScrapeIntervalInSeconds = 30
 	// CassandraMetricsPortLegacy is the metrics port to scrape for the legacy MCAC stack (Metrics
 	// Collector for Apache Cassandra).
 	CassandraMetricsPortLegacy = 9103
@@ -116,7 +116,7 @@ func CreateCassandraVectorToml(telemetrySpec *telemetry.TelemetrySpec, mcacEnabl
 		metricsEndpoint = "/metrics"
 	}
 
-	var scrapeInterval int32 = DefaultScrapeInterval
+	var scrapeInterval int32 = DefaultScrapeIntervalInSeconds
 	if telemetrySpec.Vector.ScrapeInterval != nil {
 		scrapeInterval = int32(telemetrySpec.Vector.ScrapeInterval.Seconds())
 	}

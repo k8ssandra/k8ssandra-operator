@@ -74,7 +74,7 @@ target = "stdout"
 		vectorConfigToml = telemetry.BuildCustomVectorToml(telemetrySpec)
 	}
 
-	var scrapeInterval int32 = 30
+	var scrapeInterval int32 = telemetry.DefaultScrapeIntervalInSeconds
 	if telemetrySpec.Vector.ScrapeInterval != nil {
 		scrapeInterval = int32(telemetrySpec.Vector.ScrapeInterval.Seconds())
 	}
