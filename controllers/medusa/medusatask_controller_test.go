@@ -36,6 +36,9 @@ func testMedusaTasks(t *testing.T, ctx context.Context, f *framework.Framework, 
 		},
 		Spec: k8ss.K8ssandraClusterSpec{
 			Cassandra: &k8ss.CassandraClusterTemplate{
+				DatacenterOptions: k8ss.DatacenterOptions{
+					ServerVersion: "3.11.14",
+				},
 				Datacenters: []k8ss.CassandraDatacenterTemplate{
 					{
 						Meta: k8ss.EmbeddedObjectMeta{

@@ -175,9 +175,12 @@ func (r *K8ssandraClusterReconciler) updateReplicationOfSystemKeyspaces(
 
 	if kc.Spec.Cassandra.ServerType == api.ServerDistributionCassandra {
 		versionString := kc.Spec.Cassandra.ServerVersion
+		if versionString == "" {
+			versionString = kc.Spec.Cassandra.Datacenters[0].ServerVersion
+		}
 		version, err := semver.NewVersion(versionString)
 		if err == nil {
-			if version.GreaterThanEqual(semver.MustParse("4.1.0")) && len(kc.Status.Datacenters) > len(kc.Spec.Cassandra.Datacenters) {
+			if version.GreaterThanEqual(semver.MustParse("4.0.0")) && len(kc.Status.Datacenters) > len(kc.Spec.Cassandra.Datacenters) {
 				// A DC is being decommissioned and Cassandra 4.1+ will require to keep system_auth replicas until the DC is gone.
 				return result.Continue()
 			}
