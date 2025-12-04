@@ -207,6 +207,7 @@ func (in *K8ssandraCluster) GetInitializedDatacenters() []CassandraDatacenterTem
 			}
 		}
 	}
+
 	return datacenters
 }
 

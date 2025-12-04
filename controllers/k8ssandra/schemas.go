@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -170,6 +171,20 @@ func (r *K8ssandraClusterReconciler) updateReplicationOfSystemKeyspaces(
 
 	if recResult := r.versionCheck(ctx, kc); recResult.Completed() {
 		return recResult
+	}
+
+	if kc.Spec.Cassandra.ServerType == api.ServerDistributionCassandra {
+		versionString := kc.Spec.Cassandra.ServerVersion
+		version, err := semver.NewVersion(versionString)
+		if err == nil {
+			if version.GreaterThanEqual(semver.MustParse("4.0.0")) && len(kc.Status.Datacenters) > len(kc.Spec.Cassandra.Datacenters) {
+				// A DC is being decommissioned and Cassandra 4.1+ will require to keep system_auth replicas until the DC is gone.
+				return result.Continue()
+			}
+		} else {
+			logger.Error(err, "Failed to parse version", "version", versionString)
+			return result.Error(err)
+		}
 	}
 
 	replication := cassandra.ComputeReplicationFromDatacenters(3, kc.Spec.ExternalDatacenters, kc.GetInitializedDatacenters()...)

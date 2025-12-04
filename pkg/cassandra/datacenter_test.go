@@ -1558,6 +1558,7 @@ func TestSetNewDefaultNumTokens(t *testing.T) {
 				Spec: api.K8ssandraClusterSpec{
 					Cassandra: &api.CassandraClusterTemplate{
 						DatacenterOptions: api.DatacenterOptions{
+							ServerVersion: "4.0.12",
 							CassandraConfig: &api.CassandraConfig{
 								CassandraYaml: unstructured.Unstructured{"num_tokens": 33},
 							},
@@ -1575,6 +1576,7 @@ func TestSetNewDefaultNumTokens(t *testing.T) {
 				Spec: api.K8ssandraClusterSpec{
 					Cassandra: &api.CassandraClusterTemplate{
 						DatacenterOptions: api.DatacenterOptions{
+							ServerVersion: "4.0.12",
 							CassandraConfig: &api.CassandraConfig{
 								CassandraYaml: unstructured.Unstructured{"other": "setting"},
 							},

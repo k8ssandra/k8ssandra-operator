@@ -228,9 +228,17 @@ func TestOperator(t *testing.T) {
 		testFunc: removeDcFromCluster,
 		fixture:  framework.NewTestFixture("remove-dc", controlPlane),
 	}))
-	t.Run("RemoveLocalDcFromCluster", e2eTest(ctx, &e2eTestOpts{
+	t.Run("RemoveLocalDcFrom4.0Cluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: removeLocalDcFromCluster,
-		fixture:  framework.NewTestFixture("remove-local-dc", controlPlane),
+		fixture:  framework.NewTestFixture("remove-local-dc-4.0", controlPlane),
+	}))
+	t.Run("RemoveLocalDcFrom4.1Cluster", e2eTest(ctx, &e2eTestOpts{
+		testFunc: removeLocalDcFromCluster,
+		fixture:  framework.NewTestFixture("remove-local-dc-4.1", controlPlane),
+	}))
+	t.Run("RemoveLocalDcFrom5.0Cluster", e2eTest(ctx, &e2eTestOpts{
+		testFunc: removeLocalDcFromCluster,
+		fixture:  framework.NewTestFixture("remove-local-dc-5.0", controlPlane),
 	}))
 	t.Run("CreateSingleReaperNoStargate", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createSingleReaper,

@@ -31,6 +31,7 @@ func createSingleDcClusterWithMetricsAgent(t *testing.T, ctx context.Context, f 
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
 				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: "3.11.14",
 					Telemetry: &telemetryapi.TelemetrySpec{
 						Vector: &telemetryapi.VectorSpec{
 							Enabled: ptr.To(true),

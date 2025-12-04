@@ -159,6 +159,9 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: "3.11.14",
+				},
 				Datacenters: []api.CassandraDatacenterTemplate{
 					dcTemplate("dc1", f.DataPlaneContexts[0]),
 					dcTemplate("dc2", f.DataPlaneContexts[1]),
@@ -404,6 +407,9 @@ func createSingleDcClusterWithMedusaConfigRef(t *testing.T, ctx context.Context,
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: "3.11.14",
+				},
 				Datacenters: []api.CassandraDatacenterTemplate{
 					dcTemplate("dc1", f.DataPlaneContexts[0]),
 				},
@@ -442,6 +448,9 @@ func createSingleDcClusterWithoutStorageCredentials(t *testing.T, ctx context.Co
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: "3.11.14",
+				},
 				Datacenters: []api.CassandraDatacenterTemplate{
 					dcTemplate("dc1", f.DataPlaneContexts[0]),
 				},
@@ -494,6 +503,9 @@ func creatingSingleDcClusterWithoutPrefixInClusterSpecFails(t *testing.T, ctx co
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: "3.11.14",
+				},
 				Datacenters: []api.CassandraDatacenterTemplate{
 					dcTemplate("dc1", f.DataPlaneContexts[0]),
 				},
@@ -587,6 +599,9 @@ func createMultiDcClusterWithReplicatedSecrets(t *testing.T, ctx context.Context
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: "3.11.14",
+				},
 				Datacenters: []api.CassandraDatacenterTemplate{
 					dcTemplate("dc1", f.DataPlaneContexts[1]),
 					dcTemplate("dc2", f.DataPlaneContexts[2]),
@@ -668,6 +683,7 @@ func createSingleDcClusterWithManagementApiSecured(t *testing.T, ctx context.Con
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
 				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: "4.0.12",
 					ManagementApiAuth: &cassdcapi.ManagementApiAuthConfig{
 						Manual: &cassdcapi.ManagementApiAuthManualConfig{
 							ClientSecretName: "test-client-secret",

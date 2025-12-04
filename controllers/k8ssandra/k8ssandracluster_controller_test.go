@@ -163,6 +163,9 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
 				ClusterName: "Not K8s_Compliant",
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: "3.11.14",
+				},
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						Meta: api.EmbeddedObjectMeta{
@@ -1064,6 +1067,9 @@ func createSingleDcCassandra4ClusterWithStargate(t *testing.T, ctx context.Conte
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: "4.0.6",
+				},
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						Meta: api.EmbeddedObjectMeta{
@@ -2085,6 +2091,9 @@ func convertSystemReplicationAnnotation(t *testing.T, ctx context.Context, f *fr
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: "3.11.14",
+				},
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						Meta: api.EmbeddedObjectMeta{
@@ -2417,6 +2426,9 @@ func createMultiDcDseCluster(t *testing.T, ctx context.Context, f *framework.Fra
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
 				ServerType: "dse",
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: "6.8.17",
+				},
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						Meta: api.EmbeddedObjectMeta{
@@ -2509,6 +2521,9 @@ func testGenerationCheck(t *testing.T, ctx context.Context, f *framework.Framewo
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
 				ClusterName: "Not K8s_Compliant",
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: "3.11.14",
+				},
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						Meta: api.EmbeddedObjectMeta{

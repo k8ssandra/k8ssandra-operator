@@ -36,6 +36,9 @@ func testMedusaIniFull(t *testing.T) {
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: "3.11.14",
+				},
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						Meta: api.EmbeddedObjectMeta{
@@ -107,6 +110,9 @@ func testMedusaIniNoPrefix(t *testing.T) {
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: "3.11.14",
+				},
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						Meta: api.EmbeddedObjectMeta{
@@ -174,6 +180,9 @@ func testMedusaIniZeroConcurrentTransfers(t *testing.T) {
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: "3.11.14",
+				},
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						Meta: api.EmbeddedObjectMeta{
@@ -242,6 +251,7 @@ func testMedusaIniSecured(t *testing.T) {
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
 				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: "3.11.14",
 					ManagementApiAuth: &cassdcapi.ManagementApiAuthConfig{
 						Manual: &cassdcapi.ManagementApiAuthManualConfig{
 							ClientSecretName: "test-client-secret",
@@ -323,6 +333,9 @@ func testMedusaIniSecuredDcLevelSetting(t *testing.T) {
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: "3.11.14",
+				},
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						Meta: api.EmbeddedObjectMeta{
@@ -386,6 +399,9 @@ func testMedusaIniUnsecured(t *testing.T) {
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: "3.11.14",
+				},
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						Meta: api.EmbeddedObjectMeta{
@@ -453,6 +469,9 @@ func testMedusaIniMissingOptionalSettings(t *testing.T) {
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: "3.11.14",
+				},
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						Meta: api.EmbeddedObjectMeta{
