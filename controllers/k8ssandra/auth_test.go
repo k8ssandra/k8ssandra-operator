@@ -31,6 +31,9 @@ func createSingleDcClusterNoAuth(t *testing.T, ctx context.Context, f *framework
 		Spec: api.K8ssandraClusterSpec{
 			Auth: ptr.To(false),
 			Cassandra: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: "3.11.14",
+				},
 				Datacenters: []api.CassandraDatacenterTemplate{{
 					Meta:       api.EmbeddedObjectMeta{Name: "dc1"},
 					K8sContext: f.DataPlaneContexts[1],
@@ -102,6 +105,9 @@ func createSingleDcClusterAuth(t *testing.T, ctx context.Context, f *framework.F
 		Spec: api.K8ssandraClusterSpec{
 			Auth: ptr.To(true),
 			Cassandra: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: "3.11.14",
+				},
 				Datacenters: []api.CassandraDatacenterTemplate{{
 					Meta:       api.EmbeddedObjectMeta{Name: "dc1"},
 					K8sContext: f.DataPlaneContexts[1],
@@ -173,6 +179,9 @@ func createSingleDcClusterAuthExternalSecrets(t *testing.T, ctx context.Context,
 		Spec: api.K8ssandraClusterSpec{
 			Auth: ptr.To(true),
 			Cassandra: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: "3.11.14",
+				},
 				Datacenters: []api.CassandraDatacenterTemplate{{
 					Meta:       api.EmbeddedObjectMeta{Name: "dc1"},
 					K8sContext: f.DataPlaneContexts[1],
@@ -248,6 +257,9 @@ func createSingleDcClusterExternalInternode(t *testing.T, ctx context.Context, f
 		Spec: api.K8ssandraClusterSpec{
 			Auth: ptr.To(true),
 			Cassandra: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: "4.1.2",
+				},
 				Datacenters: []api.CassandraDatacenterTemplate{{
 					Meta:       api.EmbeddedObjectMeta{Name: "dc1"},
 					K8sContext: f.DataPlaneContexts[1],

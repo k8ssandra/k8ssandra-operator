@@ -175,9 +175,6 @@ func (r *K8ssandraClusterReconciler) updateReplicationOfSystemKeyspaces(
 
 	if kc.Spec.Cassandra.ServerType == api.ServerDistributionCassandra {
 		versionString := kc.Spec.Cassandra.ServerVersion
-		if versionString == "" {
-			versionString = kc.Spec.Cassandra.Datacenters[0].ServerVersion
-		}
 		version, err := semver.NewVersion(versionString)
 		if err == nil {
 			if version.GreaterThanEqual(semver.MustParse("4.0.0")) && len(kc.Status.Datacenters) > len(kc.Spec.Cassandra.Datacenters) {

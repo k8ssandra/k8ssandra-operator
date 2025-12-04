@@ -166,6 +166,9 @@ func defaultPerNodeConfiguration(t *testing.T, ctx context.Context, f *framework
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: "4.0.1",
+				},
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						K8sContext: f.DataPlaneContexts[0],
@@ -308,6 +311,9 @@ func userDefinedPerNodeConfiguration(t *testing.T, ctx context.Context, f *frame
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: "4.0.1",
+				},
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
 						K8sContext: f.DataPlaneContexts[0],

@@ -335,6 +335,9 @@ func verifyReaperSecretAnnotationAdded(t *testing.T, f *framework.Framework, ctx
 
 func newTwoDcCassandraClusterTemplate(f *framework.Framework) *api.CassandraClusterTemplate {
 	return &api.CassandraClusterTemplate{
+		DatacenterOptions: api.DatacenterOptions{
+			ServerVersion: "3.11.14",
+		},
 		Datacenters: []api.CassandraDatacenterTemplate{
 			{
 				Meta: api.EmbeddedObjectMeta{
