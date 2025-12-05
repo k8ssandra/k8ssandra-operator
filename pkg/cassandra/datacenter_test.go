@@ -71,7 +71,7 @@ func TestCoalesce(t *testing.T) {
 				Size:               3,
 				AdditionalSeeds:    []string{"172.18.0.8", "172.18.0.14"},
 				ServerType:         "dse",
-				McacEnabled:        true,
+				McacEnabled:        false,
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
@@ -93,7 +93,7 @@ func TestCoalesce(t *testing.T) {
 			},
 			want: &DatacenterConfig{
 				ServerVersion: semver.MustParse("4.0.1"),
-				McacEnabled:   true,
+				McacEnabled:   false,
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
@@ -115,7 +115,7 @@ func TestCoalesce(t *testing.T) {
 			},
 			want: &DatacenterConfig{
 				ServerImage: "k8ssandra/cass-operator:dev",
-				McacEnabled: true,
+				McacEnabled: false,
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
@@ -152,7 +152,7 @@ func TestCoalesce(t *testing.T) {
 						corev1.ResourceMemory: resource.MustParse("2048Mi"),
 					},
 				},
-				McacEnabled: true,
+				McacEnabled: false,
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
@@ -201,7 +201,7 @@ func TestCoalesce(t *testing.T) {
 						},
 					},
 				},
-				McacEnabled: true,
+				McacEnabled: false,
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
@@ -229,7 +229,7 @@ func TestCoalesce(t *testing.T) {
 				Networking: &cassdcapi.NetworkingConfig{
 					HostNetwork: true,
 				},
-				McacEnabled: true,
+				McacEnabled: false,
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
@@ -273,7 +273,7 @@ func TestCoalesce(t *testing.T) {
 						MaxHeapSize: parseQuantity("1024Mi"),
 					},
 				},
-				McacEnabled: true,
+				McacEnabled: false,
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
@@ -319,7 +319,7 @@ func TestCoalesce(t *testing.T) {
 						Name: "rack3",
 					},
 				},
-				McacEnabled: true,
+				McacEnabled: false,
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
@@ -410,7 +410,7 @@ func TestCoalesce(t *testing.T) {
 				SuperuserSecretRef: corev1.LocalObjectReference{Name: "test-superuser"},
 				Size:               3,
 				MgmtAPIHeap:        &mgmtAPIHeap,
-				McacEnabled:        true,
+				McacEnabled:        false,
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
@@ -426,7 +426,7 @@ func TestCoalesce(t *testing.T) {
 			},
 			want: &DatacenterConfig{
 				Stopped:     true,
-				McacEnabled: true,
+				McacEnabled: false,
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
@@ -448,7 +448,7 @@ func TestCoalesce(t *testing.T) {
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{},
 			want: &DatacenterConfig{
-				McacEnabled: true,
+				McacEnabled: false,
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
@@ -490,7 +490,7 @@ func TestCoalesce(t *testing.T) {
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{},
 			want: &DatacenterConfig{
-				McacEnabled: true,
+				McacEnabled: false,
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						InitContainers: []corev1.Container{
@@ -542,7 +542,7 @@ func TestCoalesce(t *testing.T) {
 						},
 					},
 				},
-				McacEnabled: true,
+				McacEnabled: false,
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
@@ -627,7 +627,7 @@ func TestCoalesce(t *testing.T) {
 						},
 					},
 				},
-				McacEnabled: true,
+				McacEnabled: false,
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Volumes: []corev1.Volume{
@@ -667,7 +667,7 @@ func TestCoalesce(t *testing.T) {
 			},
 			want: &DatacenterConfig{
 				DseWorkloads: &cassdcapi.DseWorkloads{AnalyticsEnabled: true, GraphEnabled: true},
-				McacEnabled:  true,
+				McacEnabled:  false,
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
@@ -751,7 +751,7 @@ func TestCoalesce(t *testing.T) {
 				},
 			},
 			want: &DatacenterConfig{
-				McacEnabled: true,
+				McacEnabled: false,
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
@@ -843,7 +843,7 @@ func TestCoalesce(t *testing.T) {
 				},
 			},
 			want: &DatacenterConfig{
-				McacEnabled: true,
+				McacEnabled: false,
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
@@ -886,7 +886,7 @@ func TestCoalesce(t *testing.T) {
 			},
 			want: &DatacenterConfig{
 				PerNodeInitContainerImage: "dc-level:latest",
-				McacEnabled:               true,
+				McacEnabled:               false,
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
@@ -928,7 +928,7 @@ func TestCoalesce(t *testing.T) {
 						Annotations: map[string]string{"annotation:": "avalue"},
 					},
 				},
-				McacEnabled: true,
+				McacEnabled: false,
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels:      map[string]string{"label": "lvalue"},
@@ -975,7 +975,7 @@ func TestCoalesce(t *testing.T) {
 						Annotations: map[string]string{"annotation:": "avalue"},
 					},
 				},
-				McacEnabled: true,
+				McacEnabled: false,
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels:      map[string]string{"label": "lvalue"},
@@ -1016,7 +1016,7 @@ func TestCoalesce(t *testing.T) {
 						Annotations: map[string]string{"annotation:": "dcvalue", "dc": "dc", "cluster": "cluster"},
 					},
 				},
-				McacEnabled: true,
+				McacEnabled: false,
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels:      map[string]string{"label": "dcvalue", "cluster": "cluster", "dc": "dc"},
@@ -1091,7 +1091,7 @@ func TestCoalesce(t *testing.T) {
 						},
 					},
 				},
-				McacEnabled: true,
+				McacEnabled: false,
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
@@ -1162,7 +1162,7 @@ func TestCoalesce(t *testing.T) {
 						},
 					},
 				},
-				McacEnabled: true,
+				McacEnabled: false,
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
@@ -1251,7 +1251,7 @@ func TestCoalesce(t *testing.T) {
 						},
 					},
 				},
-				McacEnabled: true,
+				McacEnabled: false,
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
@@ -1273,7 +1273,7 @@ func TestCoalesce(t *testing.T) {
 			},
 			want: &DatacenterConfig{
 				ServiceAccount: "dc_account",
-				McacEnabled:    true,
+				McacEnabled:    false,
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},
@@ -1290,7 +1290,7 @@ func TestCoalesce(t *testing.T) {
 			},
 			dcTemplate: &api.CassandraDatacenterTemplate{},
 			want: &DatacenterConfig{
-				McacEnabled: true,
+				McacEnabled: false,
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers:        []corev1.Container{{Name: "cassandra"}},
@@ -1312,7 +1312,7 @@ func TestCoalesce(t *testing.T) {
 				},
 			},
 			want: &DatacenterConfig{
-				McacEnabled: true,
+				McacEnabled: false,
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers:        []corev1.Container{{Name: "cassandra"}},
@@ -1367,7 +1367,6 @@ func TestNewDatacenter_McacDisabled_Set(t *testing.T) {
 	assert.True(t, found, "could not find expected MCAC disabled environment variable")
 }
 
-// TestNewDatacenter_MgmtAPIHeapSize_Unset tests that the podTemplateSpec remains empty when no management API heap size is set.
 func TestNewDatacenter_MgmtAPIHeapSize_Unset(t *testing.T) {
 	template := GetDatacenterConfig()
 	dc, err := NewDatacenter(
@@ -1375,7 +1374,9 @@ func TestNewDatacenter_MgmtAPIHeapSize_Unset(t *testing.T) {
 		&template,
 	)
 	assert.Equal(t, err, nil)
-	assert.Equal(t, &corev1.PodTemplateSpec{}, dc.Spec.PodTemplateSpec)
+	assert.Equal(t, "cassandra", dc.Spec.PodTemplateSpec.Spec.Containers[0].Name)
+	assert.Equal(t, 1, len(dc.Spec.PodTemplateSpec.Spec.Containers[0].Env))
+	assert.NotEqual(t, dc.Spec.PodTemplateSpec.Spec.Containers[0].Env[0].Name, mgmtApiHeapSizeEnvVar)
 }
 
 func TestNewDatacenter_AllowMultipleCassPerNodeSet(t *testing.T) {
@@ -1540,7 +1541,7 @@ func GetDatacenterConfig() DatacenterConfig {
 				},
 			},
 		},
-		McacEnabled: true,
+		McacEnabled: false,
 	}
 }
 

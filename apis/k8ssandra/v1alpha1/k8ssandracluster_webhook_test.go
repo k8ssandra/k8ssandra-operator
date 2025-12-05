@@ -208,7 +208,7 @@ func testNumTokensInUpdate(t *testing.T) {
 
 	// Now update to 4.1.3
 	cluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml = unstructured.Unstructured{"num_tokens": 256}
-	cluster.Spec.Cassandra.ServerVersion = "4.1.3"
+	cluster.Spec.Cassandra.ServerVersion = "4.1.8"
 
 	// This should be acceptable change, since 3.11.10 defaulted to 256 and so it is the same value
 	err = k8sClient.Update(ctx, cluster)

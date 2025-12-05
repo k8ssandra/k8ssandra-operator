@@ -4,9 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
+	cassimages "github.com/k8ssandra/cass-operator/pkg/images"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
@@ -54,6 +57,7 @@ func TestStargate(t *testing.T) {
 			Client:           mgr.GetClient(),
 			Scheme:           scheme.Scheme,
 			ManagementApi:    managementApiFactory,
+			Registry:         getTestImageRegistry(),
 		}).SetupWithManager(mgr)
 		return err
 	})
@@ -1026,4 +1030,22 @@ func testCreateStargateEncryptionExternalSecrets(t *testing.T, ctx context.Conte
 		return err != nil && k8serrors.IsNotFound(err)
 	}, timeout, interval, "stargate was never deleted")
 
+}
+
+var (
+	regOnce           sync.Once
+	imageRegistryTest cassimages.ImageRegistry
+)
+
+func getTestImageRegistry() cassimages.ImageRegistry {
+	regOnce.Do(func() {
+		p := filepath.Clean("../../test/testdata/imageconfig/image_config_test.yaml")
+		data, err := os.ReadFile(p)
+		if err == nil {
+			if r, e := cassimages.NewImageRegistryV2(data); e == nil {
+				imageRegistryTest = r
+			}
+		}
+	})
+	return imageRegistryTest
 }

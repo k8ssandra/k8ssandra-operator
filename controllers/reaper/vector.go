@@ -16,7 +16,6 @@ import (
 	reaperpkg "github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reconciliation"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/vector"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -75,12 +74,18 @@ target = "stdout"
 		vectorConfigToml = telemetry.BuildCustomVectorToml(telemetrySpec)
 	}
 
-	var scrapeInterval int32 = vector.DefaultScrapeInterval
+	var scrapeInterval int32 = telemetry.DefaultScrapeIntervalInSeconds
 	if telemetrySpec.Vector.ScrapeInterval != nil {
 		scrapeInterval = int32(telemetrySpec.Vector.ScrapeInterval.Seconds())
 	}
 
-	config := vector.VectorConfig{
+	type templateConfig struct {
+		Sinks          string
+		ScrapePort     int32
+		ScrapeInterval int32
+	}
+
+	config := templateConfig{
 		Sinks:          vectorConfigToml,
 		ScrapePort:     reaperpkg.MetricsPort,
 		ScrapeInterval: scrapeInterval,

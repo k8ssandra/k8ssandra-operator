@@ -56,6 +56,55 @@ func TestTelemetrySpec_IsPrometheusEnabled(t *testing.T) {
 	}
 }
 
+func TestTelemetrySpec_IsMcacEnabled(t *testing.T) {
+	tests := []struct {
+		name string
+		in   *TelemetrySpec
+		want bool
+	}{
+		{
+			name: "nil",
+			in:   nil,
+			want: false,
+		},
+		{
+			name: "nil mcac",
+			in:   &TelemetrySpec{},
+			want: false,
+		},
+		{
+			name: "nil enabled",
+			in: &TelemetrySpec{
+				Mcac: &McacTelemetrySpec{},
+			},
+			want: false,
+		},
+		{
+			name: "false",
+			in: &TelemetrySpec{
+				Mcac: &McacTelemetrySpec{
+					Enabled: ptr.To(false),
+				},
+			},
+			want: false,
+		},
+		{
+			name: "true",
+			in: &TelemetrySpec{
+				Mcac: &McacTelemetrySpec{
+					Enabled: ptr.To(true),
+				},
+			},
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.in.IsMcacEnabled())
+		})
+	}
+}
+
 func TestTelemetrySpec_MergeWith(t *testing.T) {
 	tests := []struct {
 		name    string

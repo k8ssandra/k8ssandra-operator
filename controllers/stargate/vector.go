@@ -12,7 +12,6 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reconciliation"
 	stargatepkg "github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/vector"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -87,12 +86,18 @@ target = "stdout"
 		vectorConfigToml = telemetry.BuildCustomVectorToml(telemetrySpec)
 	}
 
-	var scrapeInterval int32 = vector.DefaultScrapeInterval
+	var scrapeInterval int32 = telemetry.DefaultScrapeIntervalInSeconds
 	if telemetrySpec.Vector.ScrapeInterval != nil {
 		scrapeInterval = int32(telemetrySpec.Vector.ScrapeInterval.Seconds())
 	}
 
-	config := vector.VectorConfig{
+	type templateConfig struct {
+		Sinks          string
+		ScrapePort     int32
+		ScrapeInterval int32
+	}
+
+	config := templateConfig{
 		Sinks:          vectorConfigToml,
 		ScrapePort:     stargatepkg.MetricsPort,
 		ScrapeInterval: scrapeInterval,

@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
@@ -14,8 +15,8 @@ import (
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	telemetry "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/vector"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -33,7 +34,7 @@ func InjectCassandraVectorAgentConfig(telemetrySpec *telemetry.TelemetrySpec, dc
 			}
 		}
 
-		loggerResources := vector.VectorContainerResources(telemetrySpec)
+		loggerResources := VectorContainerResources(telemetrySpec)
 		dcConfig.SystemLoggerResources = &loggerResources
 
 		if dcConfig.StorageConfig == nil {
@@ -62,25 +63,90 @@ func InjectCassandraVectorAgentConfig(telemetrySpec *telemetry.TelemetrySpec, dc
 	return nil
 }
 
+type PrometheusScrapeConfig struct {
+	ScrapePort     int32
+	ScrapeInterval int32
+	ScrapeAddress  string
+	ScrapeEndpoint string
+	TLS            *telemetry.TLSConfig
+}
+
+func (p *PrometheusScrapeConfig) String() string {
+	var sb strings.Builder
+	protocol := "http"
+	if p.TLS != nil {
+		protocol = "https"
+	}
+
+	sb.WriteString(fmt.Sprintf("endpoints = [ \"%s://%s:%v%s\" ]\n", protocol, p.ScrapeAddress, p.ScrapePort, p.ScrapeEndpoint))
+	sb.WriteString(fmt.Sprintf("scrape_interval_secs = %v", p.ScrapeInterval))
+
+	if p.TLS != nil {
+		if p.TLS.CAFile != "" {
+			sb.WriteString(fmt.Sprintf("\ntls.ca_file = \"%s\"", p.TLS.CAFile))
+		}
+		if p.TLS.CertFile != "" {
+			sb.WriteString(fmt.Sprintf("\ntls.cert_file = \"%s\"", p.TLS.CertFile))
+		}
+		if p.TLS.KeyFile != "" {
+			sb.WriteString(fmt.Sprintf("\ntls.key_file = \"%s\"", p.TLS.KeyFile))
+		}
+	}
+
+	return sb.String()
+}
+
+const (
+	DefaultScrapeIntervalInSeconds = 30
+	// CassandraMetricsPortLegacy is the metrics port to scrape for the legacy MCAC stack (Metrics
+	// Collector for Apache Cassandra).
+	CassandraMetricsPortLegacy = 9103
+	// CassandraMetricsPortModern is the metrics port to scrape for the modern stack (metrics
+	// exposed by management-api).
+	CassandraMetricsPortModern = 9000
+)
+
 func CreateCassandraVectorToml(telemetrySpec *telemetry.TelemetrySpec, mcacEnabled bool) (string, error) {
 	var scrapePort int32
 	metricsEndpoint := ""
 	if mcacEnabled {
-		scrapePort = vector.CassandraMetricsPortLegacy
+		scrapePort = CassandraMetricsPortLegacy
 	} else {
-		scrapePort = vector.CassandraMetricsPortModern
+		scrapePort = CassandraMetricsPortModern
 		metricsEndpoint = "/metrics"
 	}
 
-	var scrapeInterval int32 = vector.DefaultScrapeInterval
+	var scrapeInterval int32 = DefaultScrapeIntervalInSeconds
 	if telemetrySpec.Vector.ScrapeInterval != nil {
 		scrapeInterval = int32(telemetrySpec.Vector.ScrapeInterval.Seconds())
 	}
 
-	config := vector.VectorConfig{
+	config := PrometheusScrapeConfig{
 		ScrapePort:     scrapePort,
 		ScrapeInterval: scrapeInterval,
+		ScrapeAddress:  "localhost",
 		ScrapeEndpoint: metricsEndpoint,
+	}
+
+	if telemetrySpec.Cassandra != nil && telemetrySpec.Cassandra.Endpoint != nil {
+		endpoint := telemetrySpec.Cassandra.Endpoint
+		// We might have endpoint changes here, like port overrides, TLS configuration, etc. And we need that information for the Vector sources (prometheus_scrape).
+		if endpoint.Port != "" {
+			port, err := strconv.Atoi(endpoint.Port)
+			if err != nil || port <= 1024 || port > 65535 {
+				return "", fmt.Errorf("invalid port in Cassandra telemetry endpoint configuration: %v", err)
+			}
+
+			config.ScrapePort = int32(port)
+		}
+
+		if endpoint.Address != "" {
+			config.ScrapeAddress = endpoint.Address
+		}
+
+		if endpoint.TLS != nil {
+			config.TLS = endpoint.TLS
+		}
 	}
 
 	defaultSources, defaultTransformers, defaultSinks := BuildDefaultVectorComponents(config)
@@ -104,7 +170,7 @@ func CreateCassandraVectorToml(telemetrySpec *telemetry.TelemetrySpec, mcacEnabl
 	return vectorConfigToml, nil
 }
 
-func BuildDefaultVectorComponents(config vector.VectorConfig) ([]telemetry.VectorSourceSpec, []telemetry.VectorTransformSpec, []telemetry.VectorSinkSpec) {
+func BuildDefaultVectorComponents(config PrometheusScrapeConfig) ([]telemetry.VectorSourceSpec, []telemetry.VectorTransformSpec, []telemetry.VectorSinkSpec) {
 	sources := make([]telemetry.VectorSourceSpec, 0, 2)
 	transformers := make([]telemetry.VectorTransformSpec, 0, 1)
 	sinks := make([]telemetry.VectorSinkSpec, 0, 1)
@@ -126,7 +192,7 @@ timeout_ms = 10000
 	metricsInput := telemetry.VectorSourceSpec{
 		Name:   "cassandra_metrics_raw",
 		Type:   "prometheus_scrape",
-		Config: fmt.Sprintf("endpoints = [ \"http://localhost:%v%s\" ]\nscrape_interval_secs = %v", config.ScrapePort, config.ScrapeEndpoint, config.ScrapeInterval),
+		Config: config.String(),
 	}
 
 	sources = append(sources, systemLogInput, metricsInput)
@@ -142,12 +208,24 @@ timeout_ms = 10000
 del(.source_type)
 .message = string!(.message)
 .message = strip_whitespace(.message)
-. |= parse_groks!(.message, patterns: [
+., err = . | parse_groks(.message, patterns: [
   "%{LOGLEVEL:loglevel}\\s+\\[(?<thread>((.+)))\\]\\s+%{TIMESTAMP_ISO8601:timestamp_raw}\\s+%{JAVACLASS:class}:%{NUMBER:line}\\s+-\\s+(?<message>(.+\\n?)+)",
   ]
 )
-.timestamp = parse_timestamp!(.timestamp_raw, format: "%Y-%m-%d %T,%3f")
+if err != null {
+  log("Unable to parse line: " + err, level: "error")
+  .message = .message
+  .loglevel = "warn"
+}  
+
+parsed_timestamp, err = parse_timestamp(.timestamp_raw, format: "%Y-%m-%d %T,%3f")
+if err == null {
+  .timestamp = parsed_timestamp
+} else {
+  .timestamp = now()
+}
 del(.timestamp_raw)
+
 pod_name, err = get_env_var("POD_NAME")
 if err == null {
   .pod_name = pod_name
@@ -342,4 +420,28 @@ func BuildVectorAgentConfigMap(namespace, k8cName, dcName, k8cNamespace, vectorT
 
 func VectorAgentConfigMapName(k8cName, dcName string) string {
 	return cassdcapi.CleanupForKubernetes(fmt.Sprintf("%s-%s-cass-vector", k8cName, dcName))
+}
+
+const (
+	DefaultVectorCpuRequest    = "200m"
+	DefaultVectorMemoryRequest = "128Mi"
+	DefaultVectorCpuLimit      = "2"
+	DefaultVectorMemoryLimit   = "2Gi"
+)
+
+func VectorContainerResources(telemetrySpec *telemetry.TelemetrySpec) corev1.ResourceRequirements {
+	if telemetrySpec.Vector.Resources != nil {
+		return *telemetrySpec.Vector.Resources
+	}
+
+	return corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse(DefaultVectorCpuRequest),
+			corev1.ResourceMemory: resource.MustParse(DefaultVectorMemoryRequest),
+		},
+		Limits: corev1.ResourceList{
+			corev1.ResourceMemory: resource.MustParse(DefaultVectorMemoryLimit),
+			corev1.ResourceCPU:    resource.MustParse(DefaultVectorCpuLimit),
+		},
+	}
 }

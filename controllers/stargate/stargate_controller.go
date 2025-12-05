@@ -23,6 +23,7 @@ import (
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	cassimages "github.com/k8ssandra/cass-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
@@ -61,6 +62,7 @@ type StargateReconciler struct {
 	client.Client
 	Scheme        *runtime.Scheme
 	ManagementApi cassandra.ManagementApiFactory
+	Registry      cassimages.ImageRegistry
 }
 
 func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -203,7 +205,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	// Compute the desired deployments
-	desiredDeployments := stargateutil.NewDeployments(stargate, actualDc, logger)
+	desiredDeployments := stargateutil.NewDeployments(stargate, actualDc, logger, r.Registry)
 
 	// Transition status from Created/Pending to Deploying
 	if stargate.Status.Progress == api.StargateProgressPending {

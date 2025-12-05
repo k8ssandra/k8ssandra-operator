@@ -1,5 +1,20 @@
 # k8ssandra-operator - Release Notes
 
+## v1.30.0
+
+MCAC is now disabled by default. If one wishes to use it on products that still support it, it must be enabled manually by setting the following parameters:
+
+```yaml
+spec:
+  cassandra:
+    serverVersion: 4.0.7
+    telemetry:
+      mcac:
+        enabled: true
+```
+
+Support for MCAC will be entirely removed in upcoming versions.
+
 ## v1.27.0
 
 ### Modifications to the configuration of images

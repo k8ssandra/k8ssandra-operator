@@ -106,7 +106,7 @@ func beforeTest(t *testing.T, ctx context.Context, k8sClient client.Client, test
 		Spec: cassdcapi.CassandraDatacenterSpec{
 			ClusterName:   cassandraClusterName,
 			ServerType:    "cassandra",
-			ServerVersion: "3.11.7",
+			ServerVersion: "3.11.14",
 			Size:          3,
 		},
 	}

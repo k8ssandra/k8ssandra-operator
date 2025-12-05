@@ -265,7 +265,7 @@ func createSingleDcClusterExternalInternode(t *testing.T, ctx context.Context, f
 					K8sContext: f.DataPlaneContexts[1],
 					Size:       1,
 					DatacenterOptions: api.DatacenterOptions{
-						ServerVersion: "4.1.2",
+						ServerVersion: "4.1.8",
 						StorageConfig: &cassdcapi.StorageConfig{
 							CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
 								StorageClassName: &defaultStorageClass,

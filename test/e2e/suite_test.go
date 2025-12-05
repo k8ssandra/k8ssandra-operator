@@ -359,6 +359,10 @@ func TestOperator(t *testing.T) {
 		testFunc: createMedusaConfiguration,
 		fixture:  framework.NewTestFixture("medusa-configuration", controlPlane),
 	}))
+	t.Run("CreateSingleDatacenterClusterMgmtAuth", e2eTest(ctx, &e2eTestOpts{
+		testFunc: createSingleDatacenterClusterMgmtAuth,
+		fixture:  framework.NewTestFixture("single-dc-mgmt-auth", controlPlane),
+	}))
 }
 
 func beforeSuite(t *testing.T) {
@@ -821,6 +825,63 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 
 }
 
+// createSingleDatacenterClusterMgmtAuth creates a K8ssandraCluster with one CassandraDatacenter that is deployed in the local cluster.
+// the mgmt-api mTLS authentication is enabled and Telemetry with TLS is also enabled
+func createSingleDatacenterClusterMgmtAuth(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	require := require.New(t)
+
+	t.Log("check that the K8ssandraCluster was created")
+	k8ssandra := &api.K8ssandraCluster{}
+	kcKey := types.NamespacedName{Namespace: namespace, Name: "mgmt-auth"}
+	err := f.Client.Get(ctx, kcKey, k8ssandra)
+	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
+
+	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	checkDatacenterReady(t, ctx, dcKey, f)
+
+	// check that the Cassandra Vector container and config map exist
+	checkVectorAgentConfigMapPresence(t, ctx, f, dcKey, telemetry.VectorAgentConfigMapName)
+
+	// Delete the K8ssandraCluster
+	t.Log("Delete the K8ssandraCluster and check that the finalizer is removed on the cassdc")
+	require.NoError(f.Client.Delete(ctx, k8ssandra))
+
+	// Check that the finalizer is removed on the cassdc
+	require.Eventually(func() bool {
+		dc := &cassdcapi.CassandraDatacenter{}
+		err := f.Get(ctx, dcKey, dc)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				// The CassandraDatacenter was already deleted, this assert was too slow to detect the change.
+				// This means the finalizer was removed, otherwise Kubernetes would block the deletion.
+				return true
+			}
+			return false
+		}
+		return !controllerutil.ContainsFinalizer(dc, k8ssandrapkg.K8ssandraClusterFinalizer)
+	}, polling.datacenterUpdating.timeout, 100*time.Millisecond, "finalizer should be removed from cassdc")
+
+	// Check that the K8ssandraCluster still exists despite the finalizer being removed on the cassdc
+	err = f.Client.Get(ctx, kcKey, k8ssandra)
+	require.NoError(err, "failed to get K8ssandraCluster in namespace %s. It has been prematurely deleted", namespace)
+
+	// Check that the cassdc is deleted
+	t.Log("Check that the cassdc is deleted")
+	require.EventuallyWithT(func(c *assert.CollectT) {
+		dc := &cassdcapi.CassandraDatacenter{}
+		err := f.Get(ctx, dcKey, dc)
+		assert.True(c, errors.IsNotFound(err), "CassandraDatacenter should be deleted")
+	}, 3*time.Minute, 100*time.Millisecond, "CassandraDatacenter should be deleted")
+
+	// Check that the K8ssandraCluster is deleted
+	t.Log("Check that the K8ssandraCluster is deleted")
+	require.EventuallyWithT(func(c *assert.CollectT) {
+		err := f.Client.Get(ctx, kcKey, k8ssandra)
+		assert.True(c, errors.IsNotFound(err), "K8ssandraCluster should be deleted")
+	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "K8ssandraCluster should be deleted")
+
+}
+
 func checkDatacenterReadOnlyRootFS(t *testing.T, ctx context.Context, key framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
 	t.Logf("check that datacenter %s in cluster %s uses readOnlyRootFilesystem", key.Name, key.K8sContext)
 	dc := &cassdcapi.CassandraDatacenter{}
@@ -928,8 +989,11 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	checkSuperUserSecretHasLabelsAnnotations(t, ctx, f, dc1Key.K8sContext, namespace, k8ssandra.Name)
 	checkSuperUserSecretHasLabelsAnnotations(t, ctx, f, dc2Key.K8sContext, namespace, k8ssandra.Name)
 
-	checkVectorAgentConfigMapPresence(t, ctx, f, dc1Key, telemetry.VectorAgentConfigMapName)
-	checkVectorAgentConfigMapPresence(t, ctx, f, dc2Key, telemetry.VectorAgentConfigMapName)
+	// Verify Vector config maps exist and they have the correct annotations / labels
+	cm := checkVectorAgentConfigMapPresence(t, ctx, f, dc1Key, telemetry.VectorAgentConfigMapName)
+	cm2 := checkVectorAgentConfigMapPresence(t, ctx, f, dc2Key, telemetry.VectorAgentConfigMapName)
+	checkVectorAgentConfigMapLabels(t, cm)
+	checkVectorAgentConfigMapLabels(t, cm2)
 
 	t.Log("retrieve database credentials")
 	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.SanitizedName())
@@ -1886,7 +1950,7 @@ func checkContainerDeleted(t *testing.T, ctx context.Context, f *framework.E2eFr
 	require.False(t, containerFound, "Found Container in pod template spec")
 }
 
-func checkVectorAgentConfigMapPresence(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey, configMapNameFunc func(clusterName string, dcName string) string) {
+func checkVectorAgentConfigMapPresence(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey, configMapNameFunc func(clusterName string, dcName string) string) *corev1.ConfigMap {
 	configMapName := types.NamespacedName{
 		Namespace: dcKey.Namespace,
 		Name:      cassdcapi.CleanupForKubernetes(configMapNameFunc(DcClusterName(t, f, dcKey), DcName(t, f, dcKey))),
@@ -1896,19 +1960,18 @@ func checkVectorAgentConfigMapPresence(t *testing.T, ctx context.Context, f *fra
 		NamespacedName: configMapName,
 		K8sContext:     dcKey.K8sContext,
 	}
+	cm := &corev1.ConfigMap{}
 	require.Eventually(t, func() bool {
-		cm := &corev1.ConfigMap{}
+		cm = &corev1.ConfigMap{}
 		err := f.Get(ctx, configMapKey, cm)
 		return err == nil
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "Vector configmap was not found")
+	return cm
+}
 
-	t.Logf("check that Vector agent config map %v has the correct labels and annotations", configMapName)
-	cm := &corev1.ConfigMap{}
-	err := f.Get(ctx, configMapKey, cm)
-	require.NoError(t, err)
+func checkVectorAgentConfigMapLabels(t *testing.T, cm *corev1.ConfigMap) {
 	require.Equal(t, "test-label-value", cm.Labels["test-label-name"])
 	require.Equal(t, "test-annotation-value", cm.Annotations["test-annotation-name"])
-
 }
 
 func CheckLabelsAnnotationsCreated(dcKey framework.ClusterKey, t *testing.T, ctx context.Context, f *framework.E2eFramework) error {

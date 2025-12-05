@@ -11,7 +11,6 @@ import (
 	k8ssandra "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	telemetry "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/vector"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -36,10 +35,10 @@ func TestInjectCassandraVectorAgentConfig(t *testing.T) {
 
 	assert.Equal(t, 1, len(dcConfig.PodTemplateSpec.Spec.Containers))
 	assert.Equal(t, "server-system-logger", dcConfig.PodTemplateSpec.Spec.Containers[0].Name)
-	assert.Equal(t, resource.MustParse(vector.DefaultVectorCpuLimit), *dcConfig.SystemLoggerResources.Limits.Cpu())
-	assert.Equal(t, resource.MustParse(vector.DefaultVectorCpuRequest), *dcConfig.SystemLoggerResources.Requests.Cpu())
-	assert.Equal(t, resource.MustParse(vector.DefaultVectorMemoryLimit), *dcConfig.SystemLoggerResources.Limits.Memory())
-	assert.Equal(t, resource.MustParse(vector.DefaultVectorMemoryRequest), *dcConfig.SystemLoggerResources.Requests.Memory())
+	assert.Equal(t, resource.MustParse(DefaultVectorCpuLimit), *dcConfig.SystemLoggerResources.Limits.Cpu())
+	assert.Equal(t, resource.MustParse(DefaultVectorCpuRequest), *dcConfig.SystemLoggerResources.Requests.Cpu())
+	assert.Equal(t, resource.MustParse(DefaultVectorMemoryLimit), *dcConfig.SystemLoggerResources.Limits.Memory())
+	assert.Equal(t, resource.MustParse(DefaultVectorMemoryRequest), *dcConfig.SystemLoggerResources.Requests.Memory())
 }
 
 func TestCreateCassandraVectorTomlDefault(t *testing.T) {
@@ -258,7 +257,7 @@ encoding.codec = "text"
 
 func TestDefaultRemoveUnusedSources(t *testing.T) {
 	assert := assert.New(t)
-	sources, transformers, sinks := BuildDefaultVectorComponents(vector.VectorConfig{})
+	sources, transformers, sinks := BuildDefaultVectorComponents(PrometheusScrapeConfig{})
 	assert.Equal(2, len(sources))
 	assert.Equal(2, len(transformers))
 	assert.Equal(1, len(sinks))
@@ -272,7 +271,7 @@ func TestDefaultRemoveUnusedSources(t *testing.T) {
 
 func TestRemoveUnusedSourcesModified(t *testing.T) {
 	assert := assert.New(t)
-	sources, transformers, sinks := BuildDefaultVectorComponents(vector.VectorConfig{})
+	sources, transformers, sinks := BuildDefaultVectorComponents(PrometheusScrapeConfig{})
 	assert.Equal(2, len(sources))
 	assert.Equal(2, len(transformers))
 	assert.Equal(1, len(sinks))
@@ -347,7 +346,7 @@ func TestRemoveUnusedTransformers(t *testing.T) {
 
 func TestOverrideSourcePossible(t *testing.T) {
 	assert := assert.New(t)
-	sources, transformers, sinks := BuildDefaultVectorComponents(vector.VectorConfig{})
+	sources, transformers, sinks := BuildDefaultVectorComponents(PrometheusScrapeConfig{})
 	assert.Equal(2, len(sources))
 	assert.Equal(2, len(transformers))
 	assert.Equal(1, len(sinks))
@@ -380,7 +379,7 @@ func TestGenerateTomlTestFiles(t *testing.T) {
 		t.FailNow()
 	}
 	assert := assert.New(t)
-	sources, transformers, sinks := BuildDefaultVectorComponents(vector.VectorConfig{})
+	sources, transformers, sinks := BuildDefaultVectorComponents(PrometheusScrapeConfig{})
 	assert.Equal(2, len(sources))
 	assert.Equal(2, len(transformers))
 	assert.Equal(1, len(sinks))
@@ -460,4 +459,37 @@ assert!(exists(.class))
 `)
 
 	assert.NoError(os.WriteFile(fmt.Sprintf("%s/vector-emptyline.toml", outputDir), []byte(b.String()), 0644))
+}
+
+func TestTLSEndpoint(t *testing.T) {
+	require := require.New(t)
+	telemetrySpec := &telemetry.TelemetrySpec{
+		Vector: &telemetry.VectorSpec{
+			Enabled: ptr.To(true),
+			Components: &telemetry.VectorComponentsSpec{
+				Sinks: []telemetry.VectorSinkSpec{
+					{
+						Name:   "metrics_output",
+						Inputs: []string{"cassandra_metrics"},
+					},
+				},
+			},
+		},
+		Cassandra: &telemetry.CassandraAgentSpec{
+			Endpoint: &telemetry.Endpoint{
+				TLS: &telemetry.TLSConfig{
+					CAFile:   "/opt/management-api/certs/ca.crt",
+					KeyFile:  "/opt/management-api/certs/tls.key",
+					CertFile: "/opt/management-api/certs/tls.crt",
+				},
+			},
+		},
+	}
+	vectorToml, err := CreateCassandraVectorToml(telemetrySpec, false)
+	require.NoError(err)
+
+	require.Contains(vectorToml, "https://localhost:9000/metrics")
+	require.Contains(vectorToml, "ca_file = \"/opt/management-api/certs/ca.crt\"")
+	require.Contains(vectorToml, "cert_file = \"/opt/management-api/certs/tls.crt\"")
+	require.Contains(vectorToml, "key_file = \"/opt/management-api/certs/tls.key\"")
 }
