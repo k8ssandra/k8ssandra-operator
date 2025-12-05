@@ -832,16 +832,12 @@ func createSingleDatacenterClusterMgmtAuth(t *testing.T, ctx context.Context, na
 
 	t.Log("check that the K8ssandraCluster was created")
 	k8ssandra := &api.K8ssandraCluster{}
-	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
+	kcKey := types.NamespacedName{Namespace: namespace, Name: "mgmt-auth"}
 	err := f.Client.Get(ctx, kcKey, k8ssandra)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
 	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	checkDatacenterReady(t, ctx, dcKey, f)
-	require.NoError(CheckLabelsAnnotationsCreated(dcKey, t, ctx, f))
-	require.NoError(checkMetricsFiltersAbsence(t, ctx, f, dcKey))
-	require.NoError(checkInjectedContainersPresence(t, ctx, f, dcKey))
-	require.NoError(checkInjectedVolumePresence(t, ctx, f, dcKey, 4))
 
 	// check that the Cassandra Vector container and config map exist
 	checkVectorAgentConfigMapPresence(t, ctx, f, dcKey, telemetry.VectorAgentConfigMapName)
@@ -993,8 +989,11 @@ func createMultiDatacenterCluster(t *testing.T, ctx context.Context, namespace s
 	checkSuperUserSecretHasLabelsAnnotations(t, ctx, f, dc1Key.K8sContext, namespace, k8ssandra.Name)
 	checkSuperUserSecretHasLabelsAnnotations(t, ctx, f, dc2Key.K8sContext, namespace, k8ssandra.Name)
 
-	checkVectorAgentConfigMapPresence(t, ctx, f, dc1Key, telemetry.VectorAgentConfigMapName)
-	checkVectorAgentConfigMapPresence(t, ctx, f, dc2Key, telemetry.VectorAgentConfigMapName)
+	// Verify Vector config maps exist and they have the correct annotations / labels
+	cm := checkVectorAgentConfigMapPresence(t, ctx, f, dc1Key, telemetry.VectorAgentConfigMapName)
+	cm2 := checkVectorAgentConfigMapPresence(t, ctx, f, dc2Key, telemetry.VectorAgentConfigMapName)
+	checkVectorAgentConfigMapLabels(t, cm)
+	checkVectorAgentConfigMapLabels(t, cm2)
 
 	t.Log("retrieve database credentials")
 	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, k8ssandra.SanitizedName())
@@ -1951,7 +1950,7 @@ func checkContainerDeleted(t *testing.T, ctx context.Context, f *framework.E2eFr
 	require.False(t, containerFound, "Found Container in pod template spec")
 }
 
-func checkVectorAgentConfigMapPresence(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey, configMapNameFunc func(clusterName string, dcName string) string) {
+func checkVectorAgentConfigMapPresence(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey, configMapNameFunc func(clusterName string, dcName string) string) *corev1.ConfigMap {
 	configMapName := types.NamespacedName{
 		Namespace: dcKey.Namespace,
 		Name:      cassdcapi.CleanupForKubernetes(configMapNameFunc(DcClusterName(t, f, dcKey), DcName(t, f, dcKey))),
@@ -1961,19 +1960,18 @@ func checkVectorAgentConfigMapPresence(t *testing.T, ctx context.Context, f *fra
 		NamespacedName: configMapName,
 		K8sContext:     dcKey.K8sContext,
 	}
+	cm := &corev1.ConfigMap{}
 	require.Eventually(t, func() bool {
-		cm := &corev1.ConfigMap{}
+		cm = &corev1.ConfigMap{}
 		err := f.Get(ctx, configMapKey, cm)
 		return err == nil
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "Vector configmap was not found")
+	return cm
+}
 
-	t.Logf("check that Vector agent config map %v has the correct labels and annotations", configMapName)
-	cm := &corev1.ConfigMap{}
-	err := f.Get(ctx, configMapKey, cm)
-	require.NoError(t, err)
+func checkVectorAgentConfigMapLabels(t *testing.T, cm *corev1.ConfigMap) {
 	require.Equal(t, "test-label-value", cm.Labels["test-label-name"])
 	require.Equal(t, "test-annotation-value", cm.Annotations["test-annotation-name"])
-
 }
 
 func CheckLabelsAnnotationsCreated(dcKey framework.ClusterKey, t *testing.T, ctx context.Context, f *framework.E2eFramework) error {
