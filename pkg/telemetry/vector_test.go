@@ -489,7 +489,7 @@ func TestTLSEndpoint(t *testing.T) {
 	require.NoError(err)
 
 	require.Contains(vectorToml, "https://localhost:9000/metrics")
-	require.Contains(vectorToml, "ca_file = \"/opt/management-api/certs/ca.crt\"")
-	require.Contains(vectorToml, "cert_file = \"/opt/management-api/certs/tls.crt\"")
-	require.Contains(vectorToml, "key_file = \"/opt/management-api/certs/tls.key\"")
+	require.Contains(vectorToml, "tls.ca_file = \"/opt/management-api/certs/ca.crt\"")
+	require.Contains(vectorToml, "tls.crt_file = \"/opt/management-api/certs/tls.crt\"")
+	require.Contains(vectorToml, "tls.key_file = \"/opt/management-api/certs/tls.key\"")
 }
