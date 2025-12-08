@@ -86,7 +86,7 @@ func (p *PrometheusScrapeConfig) String() string {
 			sb.WriteString(fmt.Sprintf("\ntls.ca_file = \"%s\"", p.TLS.CAFile))
 		}
 		if p.TLS.CertFile != "" {
-			sb.WriteString(fmt.Sprintf("\ntls.cert_file = \"%s\"", p.TLS.CertFile))
+			sb.WriteString(fmt.Sprintf("\ntls.crt_file = \"%s\"", p.TLS.CertFile))
 		}
 		if p.TLS.KeyFile != "" {
 			sb.WriteString(fmt.Sprintf("\ntls.key_file = \"%s\"", p.TLS.KeyFile))
