@@ -164,14 +164,6 @@ rules:
 - apiGroups:
     - medusa.k8ssandra.io
   resources:
-    - cassandradatacenters
-  verbs:
-    - get
-    - list
-    - watch
-- apiGroups:
-    - medusa.k8ssandra.io
-  resources:
     - medusabackupjobs
     - medusabackups
     - medusabackupschedules
