@@ -114,6 +114,11 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster, dcConfig *cassandra.DatacenterCo
     {{- if .Spec.Medusa.ServiceProperties.GrpcPort }}
     port = {{ .Spec.Medusa.ServiceProperties.GrpcPort }}
     {{- end }}
+	{{- if .Spec.Medusa.ServiceProperties.Encryption }}
+	ca_cert = /etc/certificates/grpc-server-certs/ca.crt
+	tls_cert = /etc/certificates/grpc-server-certs/tls.crt
+	tls_key = /etc/certificates/grpc-server-certs/tls.key
+	{{- end }}
 
     [logging]
     level = DEBUG
@@ -366,6 +371,14 @@ func medusaVolumeMounts(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.Me
 		})
 	}
 
+	// Mount gRPC server encryption certificates if secretName is provided
+	if medusaSpec.ServiceProperties.Encryption != nil && medusaSpec.ServiceProperties.Encryption.ServerSecretName != "" {
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "grpc-server-certs",
+			MountPath: "/etc/certificates/grpc-server-certs",
+		})
+	}
+
 	// Mount secret with Medusa storage backend credentials if the secret ref is provided.
 	if medusaSpec.StorageProperties.StorageSecretRef.Name != "" {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
@@ -545,6 +558,23 @@ func GenerateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *api
 		VolumeIndex: emptyDirVolumeIndex,
 		Exists:      found,
 	})
+
+	if medusaSpec.ServiceProperties.Encryption != nil && medusaSpec.ServiceProperties.Encryption.ServerSecretName != "" {
+		grpcServerCertsVolumeIndex, found := cassandra.FindVolume(&dcConfig.PodTemplateSpec, "grpc-server-certs")
+		grpcServerCertsVolume := &corev1.Volume{
+			Name: "grpc-server-certs",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: medusaSpec.ServiceProperties.Encryption.ServerSecretName,
+				},
+			},
+		}
+		newVolumes = append(newVolumes, medusaVolume{
+			Volume:      grpcServerCertsVolume,
+			VolumeIndex: grpcServerCertsVolumeIndex,
+			Exists:      found,
+		})
+	}
 
 	return newVolumes
 }

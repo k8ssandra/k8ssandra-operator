@@ -27841,6 +27841,19 @@ spec:
                   serviceProperties:
                     description: Provides all service related properties for Medusa.
                     properties:
+                      encryption:
+                        description: gRPC allows modifying the gRPC server settings
+                          in Medusa. Settings these values enables mTLS in the gRPC
+                          server.
+                        properties:
+                          clientSecretName:
+                            type: string
+                          serverSecretName:
+                            type: string
+                        required:
+                        - clientSecretName
+                        - serverSecretName
+                        type: object
                       grpcPort:
                         description: |-
                           GrpcPort to listen on when running as gRPC service

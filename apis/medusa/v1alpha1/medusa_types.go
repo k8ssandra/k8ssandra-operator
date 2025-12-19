@@ -123,6 +123,10 @@ type Service struct {
 	// Included grpc in the field name to avoid misunderstanding with storage.port
 	// +optional
 	GrpcPort int `json:"grpcPort,omitempty"`
+
+	// gRPC allows modifying the gRPC server settings in Medusa. Settings these values enables mTLS in the gRPC server.
+	// +optional
+	Encryption *GRPCEncryption `json:"encryption,omitempty"`
 }
 
 type PodStorageSettings struct {
@@ -204,4 +208,9 @@ type MedusaClusterTemplate struct {
 	// +kubebuilder:default=true
 	// +optional
 	PurgeBackups *bool `json:"purgeBackups,omitempty"`
+}
+
+type GRPCEncryption struct {
+	ClientSecretName string `json:"clientSecretName"`
+	ServerSecretName string `json:"serverSecretName"`
 }

@@ -74,6 +74,10 @@ func testMedusaIniFull(t *testing.T) {
 				},
 				ServiceProperties: medusaapi.Service{
 					GrpcPort: 55055,
+					Encryption: &medusaapi.GRPCEncryption{
+						ServerSecretName: "mgmt-api-server-certs",
+						ClientSecretName: "mgmt-api-client-certs",
+					},
 				},
 				CassandraUserSecretRef: corev1.LocalObjectReference{
 					Name: "test-superuser",
@@ -100,6 +104,9 @@ func testMedusaIniFull(t *testing.T) {
 	assert.Contains(t, medusaIni, "secure = False")
 	assert.Contains(t, medusaIni, "backup_grace_period_in_days = 7")
 	assert.Contains(t, medusaIni, "port = 55055")
+	assert.Contains(t, medusaIni, "ca_cert = /etc/certificates/grpc-server-certs/ca.crt")
+	assert.Contains(t, medusaIni, "tls_cert = /etc/certificates/grpc-server-certs/tls.crt")
+	assert.Contains(t, medusaIni, "tls_key = /etc/certificates/grpc-server-certs/tls.key")
 }
 
 func testMedusaIniNoPrefix(t *testing.T) {
