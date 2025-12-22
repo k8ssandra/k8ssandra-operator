@@ -38,6 +38,9 @@ const (
 	MedusaBackupsMountPath  = "/mnt/backups"
 
 	CredentialsTypeRoleBased = "role-based"
+
+	MedusaClientSecretNameAnnotation = "medusa.k8ssandra.io/grpc-client-secret-name"
+	MedusaGRPCPortAnnotation         = "medusa.k8ssandra.io/grpc-port"
 )
 
 func CreateMedusaIni(kc *k8ss.K8ssandraCluster, dcConfig *cassandra.DatacenterConfig) string {
@@ -155,6 +158,10 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster, dcConfig *cassandra.DatacenterCo
     cassandra_url = http://127.0.0.1:8080/api/v0/ops/node/snapshots`
 	}
 
+	if kc.Spec.Medusa.ServiceProperties.Encryption != nil && kc.Spec.Medusa.ServiceProperties.Encryption.ClientSecretName != "" {
+		dcConfig.Meta.Annotations = goalesce.MustDeepMerge(dcConfig.Meta.Annotations, map[string]string{MedusaClientSecretNameAnnotation: kc.Spec.Medusa.ServiceProperties.Encryption.ClientSecretName})
+	}
+
 	return medusaConfig
 }
 
@@ -266,6 +273,7 @@ func CreateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 	var grpcPort = DefaultMedusaPort
 	if medusaSpec.ServiceProperties.GrpcPort != 0 {
 		grpcPort = medusaSpec.ServiceProperties.GrpcPort
+		dcConfig.Meta.Annotations = goalesce.MustDeepMerge(dcConfig.Meta.Annotations, map[string]string{MedusaGRPCPortAnnotation: fmt.Sprintf("%d", grpcPort)})
 	}
 	medusaContainer.Ports = []corev1.ContainerPort{
 		{
