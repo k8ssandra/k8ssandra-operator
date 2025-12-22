@@ -145,7 +145,7 @@ func testMedusaBackupDatacenter(t *testing.T, ctx context.Context, f *framework.
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 
 	dc1 := &cassdcapi.CassandraDatacenter{}
-	err = f.Get(ctx, dc1Key, dc1)
+	require.NoError(f.Get(ctx, dc1Key, dc1))
 
 	t.Log("update dc1 status to ready")
 	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {
