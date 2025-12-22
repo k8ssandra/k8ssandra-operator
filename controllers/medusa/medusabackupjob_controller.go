@@ -19,10 +19,7 @@ package medusa
 import (
 	"context"
 	"fmt"
-	"net"
 	"strings"
-
-	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 
 	corev1 "k8s.io/api/core/v1"
 	apiErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -123,7 +120,7 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		for _, podName := range backupJob.Status.InProgress {
 			for _, pod := range pods {
 				if podName == pod.Name {
-					status, err := backupStatus(ctx, backupJob.ObjectMeta.Name, &pod, r.ClientFactory, logger)
+					status, err := backupStatus(ctx, backupJob.ObjectMeta.Name, &pod, cassdc, r.Client, r.ClientFactory, logger)
 					if err != nil {
 						return ctrl.Result{}, err
 					}
@@ -190,7 +187,7 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		logger.Info("backup complete")
 
 		// The MedusaBackupJob is finished successfully and we now need to create the MedusaBackup object.
-		backupSummary, err := r.getBackupSummary(ctx, backupJob, pods, logger)
+		backupSummary, err := r.getBackupSummary(ctx, backupJob, pods, cassdc, logger)
 		if err != nil {
 			logger.Error(err, "Failed to get backup summary")
 			return ctrl.Result{}, err
@@ -227,7 +224,7 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	for _, p := range pods {
 		logger.Info("starting backup", "CassandraPod", p.Name)
-		_, err := doMedusaBackup(ctx, backupJob.ObjectMeta.Name, backupJob.Spec.Type, &p, r.ClientFactory, logger)
+		_, err := doMedusaBackup(ctx, backupJob.ObjectMeta.Name, backupJob.Spec.Type, &p, cassdc, r.Client, r.ClientFactory, logger)
 		if err != nil {
 			logger.Error(err, "backup failed", "CassandraPod", p.Name)
 		}
@@ -242,9 +239,9 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 }
 
-func (r *MedusaBackupJobReconciler) getBackupSummary(ctx context.Context, backup *medusav1alpha1.MedusaBackupJob, pods []corev1.Pod, logger logr.Logger) (*medusa.BackupSummary, error) {
+func (r *MedusaBackupJobReconciler) getBackupSummary(ctx context.Context, backup *medusav1alpha1.MedusaBackupJob, pods []corev1.Pod, cassdc *cassdcapi.CassandraDatacenter, logger logr.Logger) (*medusa.BackupSummary, error) {
 	for _, pod := range pods {
-		if remoteBackups, err := GetBackups(ctx, &pod, r.ClientFactory); err != nil {
+		if remoteBackups, err := GetBackups(ctx, &pod, cassdc, r.Client, r.ClientFactory); err != nil {
 			logger.Error(err, "failed to list backups", "CassandraPod", pod.Name)
 			return nil, err
 		} else {
@@ -318,18 +315,12 @@ func (r *MedusaBackupJobReconciler) createMedusaBackup(ctx context.Context, back
 	return nil
 }
 
-func doMedusaBackup(ctx context.Context, name string, backupType shared.BackupType, pod *corev1.Pod, clientFactory medusa.ClientFactory, logger logr.Logger) (string, error) {
-	medusaPort := shared.BackupSidecarPort
-	explicitPort, found := cassandra.FindContainerPort(pod, "medusa", "grpc")
-	if found {
-		medusaPort = explicitPort
-	}
-	addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(medusaPort))
-	logger.Info("connecting to backup sidecar", "Pod", pod.Name, "Address", addr)
-	if medusaClient, err := clientFactory.NewClient(addr); err != nil {
+func doMedusaBackup(ctx context.Context, name string, backupType shared.BackupType, pod *corev1.Pod, cassdc *cassdcapi.CassandraDatacenter, c client.Client, clientFactory medusa.ClientFactory, logger logr.Logger) (string, error) {
+	logger.Info("connecting to backup sidecar", "Pod", pod.Name)
+	if medusaClient, err := newClient(ctx, c, cassdc, pod, clientFactory); err != nil {
 		return "", err
 	} else {
-		logger.Info("successfully connected to backup sidecar", "Pod", pod.Name, "Address", addr)
+		logger.Info("successfully connected to backup sidecar", "Pod", pod.Name)
 		defer medusaClient.Close()
 		resp, err := medusaClient.CreateBackup(ctx, name, string(backupType))
 		if err != nil {
@@ -340,15 +331,9 @@ func doMedusaBackup(ctx context.Context, name string, backupType shared.BackupTy
 	}
 }
 
-func backupStatus(ctx context.Context, name string, pod *corev1.Pod, clientFactory medusa.ClientFactory, logger logr.Logger) (medusa.StatusType, error) {
-	medusaPort := shared.BackupSidecarPort
-	explicitPort, found := cassandra.FindContainerPort(pod, "medusa", "grpc")
-	if found {
-		medusaPort = explicitPort
-	}
-	addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(medusaPort))
-	logger.Info("connecting to backup sidecar", "Pod", pod.Name, "Address", addr)
-	if medusaClient, err := clientFactory.NewClient(addr); err != nil {
+func backupStatus(ctx context.Context, name string, pod *corev1.Pod, cassdc *cassdcapi.CassandraDatacenter, c client.Client, clientFactory medusa.ClientFactory, logger logr.Logger) (medusa.StatusType, error) {
+	logger.Info("connecting to backup sidecar", "Pod", pod.Name)
+	if medusaClient, err := newClient(ctx, c, cassdc, pod, clientFactory); err != nil {
 		logger.Error(err, "Could not make a new medusa client")
 		return medusa.StatusType_UNKNOWN, err
 	} else {

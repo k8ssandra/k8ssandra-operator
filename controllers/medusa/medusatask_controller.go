@@ -22,8 +22,6 @@ import (
 	"net"
 	"sync"
 
-	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -150,31 +148,31 @@ func (r *MedusaTaskReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	if task.Spec.Operation == medusav1alpha1.OperationTypePurge {
-		return r.purgeOperation(ctx, task, pods, logger)
+		return r.purgeOperation(ctx, task, pods, cassdc, logger)
 	} else if task.Spec.Operation == medusav1alpha1.OperationTypeSync {
-		return r.syncOperation(ctx, task, pods, logger)
+		return r.syncOperation(ctx, task, pods, cassdc, logger)
 	} else if task.Spec.Operation == medusav1alpha1.OperationTypePrepareRestore {
-		return r.prepareRestoreOperation(ctx, task, pods, logger)
+		return r.prepareRestoreOperation(ctx, task, pods, cassdc, logger)
 	} else {
 		return ctrl.Result{}, fmt.Errorf("unsupported operation %s", task.Spec.Operation)
 	}
 }
 
-func (r *MedusaTaskReconciler) prepareRestoreOperation(ctx context.Context, task *medusav1alpha1.MedusaTask, pods []corev1.Pod, logger logr.Logger) (reconcile.Result, error) {
+func (r *MedusaTaskReconciler) prepareRestoreOperation(ctx context.Context, task *medusav1alpha1.MedusaTask, pods []corev1.Pod, cassdc *cassdcapi.CassandraDatacenter, logger logr.Logger) (reconcile.Result, error) {
 	logger.Info("Starting prepare restore operations", "cassdc", task.Spec.CassandraDatacenter)
 
 	op := func(ctx context.Context, task *medusav1alpha1.MedusaTask, pod corev1.Pod) (*medusa.PurgeBackupsResponse, error) {
-		return prepareRestore(ctx, task, &pod, r.ClientFactory)
+		return prepareRestore(ctx, task, &pod, cassdc, r.Client, r.ClientFactory)
 	}
 
 	return r.executePodOperations(ctx, task, pods, "prepare restore", op, logger)
 }
 
-func (r *MedusaTaskReconciler) purgeOperation(ctx context.Context, task *medusav1alpha1.MedusaTask, pods []corev1.Pod, logger logr.Logger) (reconcile.Result, error) {
+func (r *MedusaTaskReconciler) purgeOperation(ctx context.Context, task *medusav1alpha1.MedusaTask, pods []corev1.Pod, cassdc *cassdcapi.CassandraDatacenter, logger logr.Logger) (reconcile.Result, error) {
 	logger.Info("Starting purge operations", "cassdc", task.Spec.CassandraDatacenter)
 
 	op := func(ctx context.Context, task *medusav1alpha1.MedusaTask, pod corev1.Pod) (*medusa.PurgeBackupsResponse, error) {
-		return doPurge(ctx, task, &pod, r.ClientFactory)
+		return doPurge(ctx, task, &pod, cassdc, r.Client, r.ClientFactory)
 	}
 
 	return r.executePodOperations(ctx, task, pods, "purge", op, logger)
@@ -259,7 +257,7 @@ func (r *MedusaTaskReconciler) executePodOperations(
 	return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 }
 
-func (r *MedusaTaskReconciler) syncOperation(ctx context.Context, task *medusav1alpha1.MedusaTask, pods []corev1.Pod, logger logr.Logger) (reconcile.Result, error) {
+func (r *MedusaTaskReconciler) syncOperation(ctx context.Context, task *medusav1alpha1.MedusaTask, pods []corev1.Pod, cassdc *cassdcapi.CassandraDatacenter, logger logr.Logger) (reconcile.Result, error) {
 	logger.Info("Starting sync operation")
 	patch := client.MergeFrom(task.DeepCopy())
 	task.Status.StartTime = metav1.Now()
@@ -269,7 +267,7 @@ func (r *MedusaTaskReconciler) syncOperation(ctx context.Context, task *medusav1
 	}
 	for _, pod := range pods {
 		logger.Info("Listing Backups...", "CassandraPod", pod.Name)
-		if remoteBackups, err := GetBackups(ctx, &pod, r.ClientFactory); err != nil {
+		if remoteBackups, err := GetBackups(ctx, &pod, cassdc, r.Client, r.ClientFactory); err != nil {
 			logger.Error(err, "failed to list backups", "CassandraPod", pod.Name)
 		} else {
 			for _, backup := range remoteBackups {
@@ -416,14 +414,8 @@ func (r *MedusaTaskReconciler) scheduleSyncForPurge(task *medusav1alpha1.MedusaT
 	return nil
 }
 
-func doPurge(ctx context.Context, task *medusav1alpha1.MedusaTask, pod *corev1.Pod, clientFactory medusa.ClientFactory) (*medusa.PurgeBackupsResponse, error) {
-	medusaPort := shared.BackupSidecarPort
-	explicitPort, found := cassandra.FindContainerPort(pod, "medusa", "grpc")
-	if found {
-		medusaPort = explicitPort
-	}
-	addr := makeMedusaAddress(pod, medusaPort)
-	if medusaClient, err := clientFactory.NewClient(addr); err != nil {
+func doPurge(ctx context.Context, task *medusav1alpha1.MedusaTask, pod *corev1.Pod, cassdc *cassdcapi.CassandraDatacenter, c client.Client, clientFactory medusa.ClientFactory) (*medusa.PurgeBackupsResponse, error) {
+	if medusaClient, err := newClient(ctx, c, cassdc, pod, clientFactory); err != nil {
 		return nil, err
 	} else {
 		defer medusaClient.Close()
@@ -431,14 +423,8 @@ func doPurge(ctx context.Context, task *medusav1alpha1.MedusaTask, pod *corev1.P
 	}
 }
 
-func prepareRestore(ctx context.Context, task *medusav1alpha1.MedusaTask, pod *corev1.Pod, clientFactory medusa.ClientFactory) (*medusa.PurgeBackupsResponse, error) {
-	medusaPort := shared.BackupSidecarPort
-	explicitPort, found := cassandra.FindContainerPort(pod, "medusa", "grpc")
-	if found {
-		medusaPort = explicitPort
-	}
-	addr := makeMedusaAddress(pod, medusaPort)
-	if medusaClient, err := clientFactory.NewClient(addr); err != nil {
+func prepareRestore(ctx context.Context, task *medusav1alpha1.MedusaTask, pod *corev1.Pod, cassdc *cassdcapi.CassandraDatacenter, c client.Client, clientFactory medusa.ClientFactory) (*medusa.PurgeBackupsResponse, error) {
+	if medusaClient, err := newClient(ctx, c, cassdc, pod, clientFactory); err != nil {
 		return nil, err
 	} else {
 		defer medusaClient.Close()
@@ -447,14 +433,8 @@ func prepareRestore(ctx context.Context, task *medusav1alpha1.MedusaTask, pod *c
 	}
 }
 
-func GetBackups(ctx context.Context, pod *corev1.Pod, clientFactory medusa.ClientFactory) ([]*medusa.BackupSummary, error) {
-	medusaPort := shared.BackupSidecarPort
-	explicitPort, found := cassandra.FindContainerPort(pod, "medusa", "grpc")
-	if found {
-		medusaPort = explicitPort
-	}
-	addr := makeMedusaAddress(pod, medusaPort)
-	if medusaClient, err := clientFactory.NewClient(addr); err != nil {
+func GetBackups(ctx context.Context, pod *corev1.Pod, cassdc *cassdcapi.CassandraDatacenter, c client.Client, clientFactory medusa.ClientFactory) ([]*medusa.BackupSummary, error) {
+	if medusaClient, err := newClient(ctx, c, cassdc, pod, clientFactory); err != nil {
 		return nil, err
 	} else {
 		defer medusaClient.Close()
