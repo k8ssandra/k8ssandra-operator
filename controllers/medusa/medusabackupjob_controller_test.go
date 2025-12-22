@@ -410,6 +410,7 @@ func (f *fakeMedusaClientFactory) NewClient(address string) (medusa.Client, erro
 }
 
 func (f *fakeMedusaClientFactory) NewClientWithTLS(address string, secret *corev1.Secret) (medusa.Client, error) {
+	f.tls = true
 	return f.NewClient(address)
 }
 

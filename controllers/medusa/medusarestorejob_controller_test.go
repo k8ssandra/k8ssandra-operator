@@ -620,6 +620,10 @@ func (f *fakeMedusaRestoreClientFactory) NewClient(address string) (medusa.Clien
 	return f.clients[address], nil
 }
 
+func (f *fakeMedusaRestoreClientFactory) NewClientWithTLS(address string, secret *corev1.Secret) (medusa.Client, error) {
+	return f.NewClient(address)
+}
+
 type fakeMedusaRestoreClient struct {
 }
 

@@ -19,7 +19,6 @@ package medusa
 import (
 	"context"
 	"fmt"
-	"net"
 	"sync"
 
 	corev1 "k8s.io/api/core/v1"
@@ -460,8 +459,4 @@ func (r *MedusaTaskReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&medusav1alpha1.MedusaTask{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Complete(r)
-}
-
-func makeMedusaAddress(medusaPod *corev1.Pod, medusaPort int) string {
-	return net.JoinHostPort(medusaPod.Status.PodIP, fmt.Sprint(medusaPort))
 }
