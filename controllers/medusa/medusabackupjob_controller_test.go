@@ -373,9 +373,12 @@ func getPodIpAddress(index int, dcName string) string {
 	}
 }
 
+var _ medusa.ClientFactory = &fakeMedusaClientFactory{}
+
 type fakeMedusaClientFactory struct {
 	clientsMutex sync.Mutex
 	clients      map[string]*fakeMedusaClient
+	tls          bool
 }
 
 func NewMedusaClientFactory() *fakeMedusaClientFactory {
@@ -404,6 +407,10 @@ func (f *fakeMedusaClientFactory) NewClient(address string) (medusa.Client, erro
 		}
 	}
 	return f.clients[address], nil
+}
+
+func (f *fakeMedusaClientFactory) NewClientWithTLS(address string, secret *corev1.Secret) (medusa.Client, error) {
+	return f.NewClient(address)
 }
 
 func (f *fakeMedusaClientFactory) GetRequestedBackups(dc string) map[string][]string {
