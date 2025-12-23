@@ -21,6 +21,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	testutils "github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert/yaml"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -402,15 +403,27 @@ func testCreateReaperWithAutoSchedulingEnabled(t *testing.T, ctx context.Context
 	assert.Len(t, deployment.Spec.Template.Spec.InitContainers, 1)
 
 	// reaper with cassandra-storage backend and this config has just one volume - for configuration
-	assert.Len(t, deployment.Spec.Template.Spec.Containers[0].VolumeMounts, 2)
+	assert.Len(t, deployment.Spec.Template.Spec.Containers[0].VolumeMounts, 3)
 
-	autoSchedulingEnabled := false
-	for _, env := range deployment.Spec.Template.Spec.Containers[0].Env {
-		if env.Name == "REAPER_AUTO_SCHEDULING_ENABLED" && env.Value == "true" {
-			autoSchedulingEnabled = true
-		}
-	}
-	assert.True(t, autoSchedulingEnabled)
+	// autoSchedulingEnabled := false
+	// Read the configuration
+	reaperConfig := &corev1.ConfigMap{}
+	configKey := types.NamespacedName{Namespace: testNamespace, Name: rpr.Name + "-config"}
+	require.NoError(t, k8sClient.Get(ctx, configKey, reaperConfig))
+
+	data, found := reaperConfig.Data["cassandra-reaper.yml"]
+	require.True(t, found)
+	require.NotEmpty(t, data)
+	var config reaper.ReaperConfig
+	require.NoError(t, yaml.Unmarshal([]byte(data), &config))
+	assert.NotNil(t, config.AutoScheduling)
+	assert.True(t, config.AutoScheduling.Enabled)
+	// for _, env := range deployment.Spec.Template.Spec.Containers[0].Env {
+	// 	if env.Name == "REAPER_AUTO_SCHEDULING_ENABLED" && env.Value == "true" {
+	// 		autoSchedulingEnabled = true
+	// 	}
+	// }
+	// assert.True(t, autoSchedulingEnabled)
 }
 
 func testCreateReaperWithAuthEnabled(t *testing.T, ctx context.Context, k8sClient client.Client, testNamespace string) {
@@ -622,11 +635,14 @@ func testCreateReaperWithLocalStorageType(t *testing.T, ctx context.Context, k8s
 	assert.Equal(t, ptr.To[int32](1), sts.Spec.Replicas)
 
 	// In this configuration, we expect Reaper to have a config volume mount, and a data volume mount
-	assert.Len(t, sts.Spec.Template.Spec.Containers[0].VolumeMounts, 3)
+	// and with v4, also the cassandra-reaper.yaml
+	assert.Len(t, sts.Spec.Template.Spec.Containers[0].VolumeMounts, 4)
 	confVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[0].DeepCopy()
 	assert.Equal(t, "conf", confVolumeMount.Name)
-	dataVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[2].DeepCopy()
+	dataVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[3].DeepCopy()
 	assert.Equal(t, "reaper-data", dataVolumeMount.Name)
+	assert.Equal(t, "/etc/cassandra-reaper/cassandra-reaper.yml", sts.Spec.Template.Spec.Containers[0].VolumeMounts[2].MountPath)
+	assert.Equal(t, "reaper-config", sts.Spec.Template.Spec.Containers[0].VolumeMounts[2].Name)
 }
 
 // Check if env var exists

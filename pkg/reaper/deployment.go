@@ -9,6 +9,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	goalesceutils "github.com/k8ssandra/k8ssandra-operator/pkg/goalesce"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
+	"gopkg.in/yaml.v2"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -41,30 +42,107 @@ const (
 )
 
 func computeEnvVars(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, registry cassimages.ImageRegistry) []corev1.EnvVar {
-	var storageType string
-	if reaper.Spec.StorageType == api.StorageTypeLocal {
-		storageType = "memory"
-	} else {
-		storageType = "cassandra"
-	}
-	envVars := []corev1.EnvVar{
-		{
-			Name:  "REAPER_STORAGE_TYPE",
-			Value: storageType,
-		},
-		{
-			Name:  "REAPER_ENABLE_DYNAMIC_SEED_LIST",
-			Value: "false",
-		},
-		{
-			Name:  "REAPER_DATACENTER_AVAILABILITY",
-			Value: reaper.Spec.DatacenterAvailability,
-		},
+	envVars := []corev1.EnvVar{}
+
+	// For Reaper v3 and below, we will use the old env variables as configuration. For v4 and above, we use the YAML config file.
+	if !isReaperPostV4(reaper, registry) {
+		var storageType string
+		if reaper.Spec.StorageType == api.StorageTypeLocal {
+			storageType = "memory"
+		} else {
+			storageType = "cassandra"
+		}
+		envVars = append(envVars, []corev1.EnvVar{
+			{
+				Name:  "REAPER_STORAGE_TYPE",
+				Value: storageType,
+			},
+			{
+				Name:  "REAPER_ENABLE_DYNAMIC_SEED_LIST",
+				Value: "false",
+			},
+			{
+				Name:  "REAPER_DATACENTER_AVAILABILITY",
+				Value: reaper.Spec.DatacenterAvailability,
+			},
+		}...)
+
+		if reaper.Spec.AutoScheduling.Enabled {
+			envVars = append(envVars, corev1.EnvVar{
+				Name:  "REAPER_AUTO_SCHEDULING_ENABLED",
+				Value: "true",
+			})
+			serverVersion := ""
+			if dc != nil && dc.Spec.ServerVersion != "" {
+				serverVersion = dc.Spec.ServerVersion
+			}
+			adaptive, incremental := getAdaptiveIncremental(reaper, serverVersion)
+			envVars = append(envVars, corev1.EnvVar{
+				Name:  "REAPER_AUTO_SCHEDULING_ADAPTIVE",
+				Value: fmt.Sprintf("%v", adaptive),
+			})
+			envVars = append(envVars, corev1.EnvVar{
+				Name:  "REAPER_AUTO_SCHEDULING_INCREMENTAL",
+				Value: fmt.Sprintf("%v", incremental),
+			})
+			envVars = append(envVars, corev1.EnvVar{
+				Name:  "REAPER_AUTO_SCHEDULING_PERCENT_UNREPAIRED_THRESHOLD",
+				Value: fmt.Sprintf("%v", reaper.Spec.AutoScheduling.PercentUnrepairedThreshold),
+			})
+			envVars = append(envVars, corev1.EnvVar{
+				Name:  "REAPER_AUTO_SCHEDULING_INITIAL_DELAY_PERIOD",
+				Value: reaper.Spec.AutoScheduling.InitialDelay,
+			})
+			envVars = append(envVars, corev1.EnvVar{
+				Name:  "REAPER_AUTO_SCHEDULING_PERIOD_BETWEEN_POLLS",
+				Value: reaper.Spec.AutoScheduling.PeriodBetweenPolls,
+			})
+			envVars = append(envVars, corev1.EnvVar{
+				Name:  "REAPER_AUTO_SCHEDULING_TIME_BEFORE_FIRST_SCHEDULE",
+				Value: reaper.Spec.AutoScheduling.TimeBeforeFirstSchedule,
+			})
+			envVars = append(envVars, corev1.EnvVar{
+				Name:  "REAPER_AUTO_SCHEDULING_SCHEDULE_SPREAD_PERIOD",
+				Value: reaper.Spec.AutoScheduling.ScheduleSpreadPeriod,
+			})
+			if reaper.Spec.AutoScheduling.ExcludedClusters != nil {
+				envVars = append(envVars, corev1.EnvVar{
+					Name:  "REAPER_AUTO_SCHEDULING_EXCLUDED_CLUSTERS",
+					Value: fmt.Sprintf("[%s]", strings.Join(reaper.Spec.AutoScheduling.ExcludedClusters, ", ")),
+				})
+			}
+			if reaper.Spec.AutoScheduling.ExcludedKeyspaces != nil {
+				envVars = append(envVars, corev1.EnvVar{
+					Name:  "REAPER_AUTO_SCHEDULING_EXCLUDED_KEYSPACES",
+					Value: fmt.Sprintf("[%s]", strings.Join(reaper.Spec.AutoScheduling.ExcludedKeyspaces, ", ")),
+				})
+			}
+		}
+
+		if reaper.Spec.HttpManagement.Enabled {
+			envVars = append(envVars, corev1.EnvVar{
+				Name:  "REAPER_HTTP_MANAGEMENT_ENABLE",
+				Value: "true",
+			})
+
+			if reaper.Spec.HttpManagement.Keystores != nil {
+				envVars = append(envVars, corev1.EnvVar{
+					Name:  "REAPER_HTTP_MANAGEMENT_KEYSTORE_PATH",
+					Value: "/etc/encryption/mgmt/keystore.jks",
+				})
+				envVars = append(envVars, corev1.EnvVar{
+					Name:  "REAPER_HTTP_MANAGEMENT_TRUSTSTORE_PATH",
+					Value: "/etc/encryption/mgmt/truststore.jks",
+				})
+			}
+		}
+
 	}
 
+	// These settings are not in the cassandra-reaper.yaml
 	// env vars used to interact with Cassandra cluster used for storage (not the one to repair) are only needed
-	// when we actually have a cass-dc available
-	if dc.DatacenterName() != "" {
+	// when we actually have a cass-dc available and we are using Cassandra storage
+	if dc.DatacenterName() != "" && reaper.Spec.StorageType == api.StorageTypeCassandra {
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  "REAPER_CASS_LOCAL_DC",
 			Value: dc.DatacenterName(),
@@ -88,58 +166,6 @@ func computeEnvVars(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, regis
 		}
 	}
 
-	if reaper.Spec.AutoScheduling.Enabled {
-		envVars = append(envVars, corev1.EnvVar{
-			Name:  "REAPER_AUTO_SCHEDULING_ENABLED",
-			Value: "true",
-		})
-		serverVersion := ""
-		if dc != nil && dc.Spec.ServerVersion != "" {
-			serverVersion = dc.Spec.ServerVersion
-		}
-		adaptive, incremental := getAdaptiveIncremental(reaper, serverVersion)
-		envVars = append(envVars, corev1.EnvVar{
-			Name:  "REAPER_AUTO_SCHEDULING_ADAPTIVE",
-			Value: fmt.Sprintf("%v", adaptive),
-		})
-		envVars = append(envVars, corev1.EnvVar{
-			Name:  "REAPER_AUTO_SCHEDULING_INCREMENTAL",
-			Value: fmt.Sprintf("%v", incremental),
-		})
-		envVars = append(envVars, corev1.EnvVar{
-			Name:  "REAPER_AUTO_SCHEDULING_PERCENT_UNREPAIRED_THRESHOLD",
-			Value: fmt.Sprintf("%v", reaper.Spec.AutoScheduling.PercentUnrepairedThreshold),
-		})
-		envVars = append(envVars, corev1.EnvVar{
-			Name:  "REAPER_AUTO_SCHEDULING_INITIAL_DELAY_PERIOD",
-			Value: reaper.Spec.AutoScheduling.InitialDelay,
-		})
-		envVars = append(envVars, corev1.EnvVar{
-			Name:  "REAPER_AUTO_SCHEDULING_PERIOD_BETWEEN_POLLS",
-			Value: reaper.Spec.AutoScheduling.PeriodBetweenPolls,
-		})
-		envVars = append(envVars, corev1.EnvVar{
-			Name:  "REAPER_AUTO_SCHEDULING_TIME_BEFORE_FIRST_SCHEDULE",
-			Value: reaper.Spec.AutoScheduling.TimeBeforeFirstSchedule,
-		})
-		envVars = append(envVars, corev1.EnvVar{
-			Name:  "REAPER_AUTO_SCHEDULING_SCHEDULE_SPREAD_PERIOD",
-			Value: reaper.Spec.AutoScheduling.ScheduleSpreadPeriod,
-		})
-		if reaper.Spec.AutoScheduling.ExcludedClusters != nil {
-			envVars = append(envVars, corev1.EnvVar{
-				Name:  "REAPER_AUTO_SCHEDULING_EXCLUDED_CLUSTERS",
-				Value: fmt.Sprintf("[%s]", strings.Join(reaper.Spec.AutoScheduling.ExcludedClusters, ", ")),
-			})
-		}
-		if reaper.Spec.AutoScheduling.ExcludedKeyspaces != nil {
-			envVars = append(envVars, corev1.EnvVar{
-				Name:  "REAPER_AUTO_SCHEDULING_EXCLUDED_KEYSPACES",
-				Value: fmt.Sprintf("[%s]", strings.Join(reaper.Spec.AutoScheduling.ExcludedKeyspaces, ", ")),
-			})
-		}
-	}
-
 	if reaper.Spec.SkipSchemaMigration {
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  "REAPER_SKIP_SCHEMA_MIGRATION",
@@ -153,30 +179,261 @@ func computeEnvVars(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, regis
 			Value: fmt.Sprintf("%d", reaper.Spec.HeapSize.Value()),
 		})
 	}
-	if reaper.Spec.HttpManagement.Enabled {
-		envVars = append(envVars, corev1.EnvVar{
-			Name:  "REAPER_HTTP_MANAGEMENT_ENABLE",
-			Value: "true",
-		})
-
-		if reaper.Spec.HttpManagement.Keystores != nil {
-			envVars = append(envVars, corev1.EnvVar{
-				Name:  "REAPER_HTTP_MANAGEMENT_KEYSTORE_PATH",
-				Value: "/etc/encryption/mgmt/keystore.jks",
-			})
-			envVars = append(envVars, corev1.EnvVar{
-				Name:  "REAPER_HTTP_MANAGEMENT_TRUSTSTORE_PATH",
-				Value: "/etc/encryption/mgmt/truststore.jks",
-			})
-		}
-	}
 
 	envVars = goalesceutils.MergeCRs(reaper.Spec.AdditionalEnvVars, envVars)
 
 	return envVars
 }
 
-func computeVolumes(reaper *api.Reaper) ([]corev1.Volume, []corev1.VolumeMount) {
+// ReaperConfig represents the complete Reaper configuration structure
+type ReaperConfig struct {
+	SegmentCountPerNode                    int                  `yaml:"segmentCountPerNode"`
+	RepairParallelism                      string               `yaml:"repairParallelism"`
+	RepairIntensity                        float64              `yaml:"repairIntensity"`
+	MaxPendingCompactions                  int                  `yaml:"maxPendingCompactions"`
+	ScheduleDaysBetween                    int                  `yaml:"scheduleDaysBetween"`
+	RepairRunThreadCount                   int                  `yaml:"repairRunThreadCount"`
+	HangingRepairTimeoutMins               int                  `yaml:"hangingRepairTimeoutMins"`
+	StorageType                            string               `yaml:"storageType"`
+	EnableCrossOrigin                      bool                 `yaml:"enableCrossOrigin"`
+	IncrementalRepair                      bool                 `yaml:"incrementalRepair"`
+	SubrangeIncrementalRepair              bool                 `yaml:"subrangeIncrementalRepair"`
+	BlacklistTwcsTables                    bool                 `yaml:"blacklistTwcsTables"`
+	EnableDynamicSeedList                  bool                 `yaml:"enableDynamicSeedList"`
+	RepairManagerSchedulingIntervalSeconds int                  `yaml:"repairManagerSchedulingIntervalSeconds"`
+	JmxConnectionTimeoutInSeconds          int                  `yaml:"jmxConnectionTimeoutInSeconds"`
+	UseAddressTranslator                   bool                 `yaml:"useAddressTranslator"`
+	MaxParallelRepairs                     int                  `yaml:"maxParallelRepairs"`
+	ScheduleRetryOnError                   bool                 `yaml:"scheduleRetryOnError"`
+	ScheduleRetryDelay                     string               `yaml:"scheduleRetryDelay"`
+	PurgeRecordsAfterInDays                int                  `yaml:"purgeRecordsAfterInDays"`
+	DatacenterAvailability                 string               `yaml:"datacenterAvailability"`
+	AutoScheduling                         AutoSchedulingConfig `yaml:"autoScheduling"`
+	JmxPorts                               map[string]int       `yaml:"jmxPorts"`
+	Logging                                LoggingConfig        `yaml:"logging"`
+	Server                                 ServerConfig         `yaml:"server"`
+	HttpManagement                         HttpManagementConfig `yaml:"httpManagement"`
+	AccessControl                          AccessControlConfig  `yaml:"accessControl"`
+}
+
+type AutoSchedulingConfig struct {
+	Enabled                    bool     `yaml:"enabled"`
+	InitialDelayPeriod         string   `yaml:"initialDelayPeriod,omitempty"`
+	PeriodBetweenPolls         string   `yaml:"periodBetweenPolls,omitempty"`
+	TimeBeforeFirstSchedule    string   `yaml:"timeBeforeFirstSchedule,omitempty"`
+	ScheduleSpreadPeriod       string   `yaml:"scheduleSpreadPeriod,omitempty"`
+	Adaptive                   bool     `yaml:"adaptive,omitempty"`
+	Incremental                bool     `yaml:"incremental,omitempty"`
+	PercentUnrepairedThreshold int      `yaml:"percentUnrepairedThreshold,omitempty"`
+	ExcludedKeyspaces          []string `yaml:"excludedKeyspaces,omitempty"`
+	ExcludedClusters           []string `yaml:"excludedClusters,omitempty"`
+}
+
+type LoggingConfig struct {
+	Level     string                  `yaml:"level"`
+	Loggers   map[string]string       `yaml:"loggers"`
+	Appenders []LoggingAppenderConfig `yaml:"appenders"`
+}
+
+type LoggingAppenderConfig struct {
+	Type      string `yaml:"type"`
+	LogFormat string `yaml:"logFormat"`
+	Threshold string `yaml:"threshold"`
+}
+
+type ServerConfig struct {
+	Type                  string            `yaml:"type"`
+	ApplicationConnectors []ConnectorConfig `yaml:"applicationConnectors"`
+	AdminConnectors       []ConnectorConfig `yaml:"adminConnectors"`
+	RequestLog            RequestLogConfig  `yaml:"requestLog"`
+}
+
+type ConnectorConfig struct {
+	Type     string `yaml:"type"`
+	Port     int    `yaml:"port"`
+	BindHost string `yaml:"bindHost"`
+}
+
+type RequestLogConfig struct {
+	Appenders []interface{} `yaml:"appenders"`
+}
+
+type HttpManagementConfig struct {
+	Enabled            bool   `yaml:"enabled"`
+	MgmtApiMetricsPort int    `yaml:"mgmtApiMetricsPort,omitempty"`
+	Keystore           string `yaml:"keystore,omitempty"`
+	Truststore         string `yaml:"truststore,omitempty"`
+	TruststoresDir     string `yaml:"truststoresDir,omitempty"`
+}
+
+type AccessControlConfig struct {
+	Enabled        string       `yaml:"enabled"`
+	SessionTimeout string       `yaml:"sessionTimeout"`
+	JWT            JWTConfig    `yaml:"jwt"`
+	Users          []UserConfig `yaml:"users"`
+}
+
+type JWTConfig struct {
+	Secret string `yaml:"secret"`
+}
+
+type UserConfig struct {
+	Username string   `yaml:"username"`
+	Password string   `yaml:"password"`
+	Roles    []string `yaml:"roles"`
+}
+
+// computeConfigYAML generates the complete Reaper configuration YAML content
+// This replaces the template-based approach where environment variables were substituted
+func computeConfigYAML(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, registry cassimages.ImageRegistry) (string, error) {
+	// Determine storage type
+	storageType := "cassandra"
+	if reaper.Spec.StorageType == api.StorageTypeLocal {
+		storageType = "memory"
+	}
+
+	// Build auto-scheduling config
+	autoScheduling := AutoSchedulingConfig{
+		Enabled: reaper.Spec.AutoScheduling.Enabled,
+	}
+
+	if reaper.Spec.AutoScheduling.Enabled {
+		serverVersion := ""
+		if dc != nil && dc.Spec.ServerVersion != "" {
+			serverVersion = dc.Spec.ServerVersion
+		}
+		adaptive, incremental := getAdaptiveIncremental(reaper, serverVersion)
+
+		autoScheduling.InitialDelayPeriod = reaper.Spec.AutoScheduling.InitialDelay
+		autoScheduling.PeriodBetweenPolls = reaper.Spec.AutoScheduling.PeriodBetweenPolls
+		autoScheduling.TimeBeforeFirstSchedule = reaper.Spec.AutoScheduling.TimeBeforeFirstSchedule
+		autoScheduling.ScheduleSpreadPeriod = reaper.Spec.AutoScheduling.ScheduleSpreadPeriod
+		autoScheduling.Adaptive = adaptive
+		autoScheduling.Incremental = incremental
+		autoScheduling.PercentUnrepairedThreshold = reaper.Spec.AutoScheduling.PercentUnrepairedThreshold
+		autoScheduling.ExcludedKeyspaces = reaper.Spec.AutoScheduling.ExcludedKeyspaces
+		autoScheduling.ExcludedClusters = reaper.Spec.AutoScheduling.ExcludedClusters
+	}
+
+	// Build HTTP management config
+	httpManagement := HttpManagementConfig{
+		Enabled: reaper.Spec.HttpManagement.Enabled,
+	}
+
+	if reaper.Spec.HttpManagement.Enabled {
+		httpManagement.MgmtApiMetricsPort = 8081
+		if reaper.Spec.HttpManagement.Keystores != nil {
+			httpManagement.Keystore = "/etc/encryption/mgmt/keystore.jks"
+			httpManagement.Truststore = "/etc/encryption/mgmt/truststore.jks"
+			httpManagement.TruststoresDir = "/etc/encryption/mgmt"
+		}
+	}
+
+	// Build the complete config
+	config := ReaperConfig{
+		SegmentCountPerNode:                    16,
+		RepairParallelism:                      "PARALLEL",
+		RepairIntensity:                        0.9,
+		MaxPendingCompactions:                  20,
+		ScheduleDaysBetween:                    7,
+		RepairRunThreadCount:                   15,
+		HangingRepairTimeoutMins:               30,
+		StorageType:                            storageType,
+		EnableCrossOrigin:                      true,
+		IncrementalRepair:                      false,
+		SubrangeIncrementalRepair:              false,
+		BlacklistTwcsTables:                    false,
+		EnableDynamicSeedList:                  false,
+		RepairManagerSchedulingIntervalSeconds: 30,
+		JmxConnectionTimeoutInSeconds:          20,
+		UseAddressTranslator:                   false,
+		MaxParallelRepairs:                     2,
+		ScheduleRetryOnError:                   false,
+		ScheduleRetryDelay:                     "PT1H",
+		PurgeRecordsAfterInDays:                15,
+		DatacenterAvailability:                 reaper.Spec.DatacenterAvailability,
+		AutoScheduling:                         autoScheduling,
+		JmxPorts:                               make(map[string]int),
+		Logging: LoggingConfig{
+			Level: "INFO",
+			Loggers: map[string]string{
+				"io.cassandrareaper": "INFO",
+			},
+			Appenders: []LoggingAppenderConfig{
+				{
+					Type:      "console",
+					LogFormat: "%-6level [%d] [%t] %logger{5} - %msg %n",
+					Threshold: "INFO",
+				},
+			},
+		},
+		Server: ServerConfig{
+			Type: "default",
+			ApplicationConnectors: []ConnectorConfig{
+				{
+					Type:     "http",
+					Port:     8080,
+					BindHost: "0.0.0.0",
+				},
+			},
+			AdminConnectors: []ConnectorConfig{
+				{
+					Type:     "http",
+					Port:     8081,
+					BindHost: "0.0.0.0",
+				},
+			},
+			RequestLog: RequestLogConfig{
+				Appenders: []interface{}{},
+			},
+		},
+		HttpManagement: httpManagement,
+		AccessControl: AccessControlConfig{
+			Enabled:        "${REAPER_AUTH_ENABLED}",
+			SessionTimeout: "PT10M",
+			JWT: JWTConfig{
+				Secret: "${JWT_SECRET:-MySecretKeyForJWTWhichMustBeLongEnoughForHS256Algorithm}",
+			},
+			Users: []UserConfig{
+				{
+					Username: "${REAPER_AUTH_USER}",
+					Password: "${REAPER_AUTH_PASSWORD}",
+					Roles:    []string{"operator"},
+				},
+			},
+		},
+	}
+
+	// Marshal to YAML
+	yamlBytes, err := yaml.Marshal(&config)
+	if err != nil {
+		return "", err
+	}
+
+	return string(yamlBytes), nil
+}
+
+// CreateReaperConfigMap creates a ConfigMap containing the Reaper configuration YAML
+func CreateReaperConfigMap(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, registry cassimages.ImageRegistry) (*corev1.ConfigMap, error) {
+	yamlContent, err := computeConfigYAML(reaper, dc, registry)
+	if err != nil {
+		return nil, err
+	}
+
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-config", reaper.Name),
+			Namespace: reaper.Namespace,
+		},
+		Data: map[string]string{
+			"cassandra-reaper.yml": yamlContent,
+		},
+	}
+
+	return configMap, nil
+}
+
+func computeVolumes(reaper *api.Reaper, registry cassimages.ImageRegistry) ([]corev1.Volume, []corev1.VolumeMount) {
 	volumes := []corev1.Volume{
 		{
 			Name: "conf",
@@ -201,6 +458,26 @@ func computeVolumes(reaper *api.Reaper) ([]corev1.Volume, []corev1.VolumeMount) 
 			Name:      "temp-dir",
 			MountPath: "/tmp",
 		},
+	}
+
+	if isReaperPostV4(reaper, registry) {
+		volumes = append(volumes, corev1.Volume{
+			Name: "reaper-config",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: fmt.Sprintf("%s-config", reaper.Name),
+					},
+				},
+			},
+		})
+
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "reaper-config",
+			MountPath: "/etc/cassandra-reaper/cassandra-reaper.yml",
+			SubPath:   "cassandra-reaper.yml",
+			ReadOnly:  true,
+		})
 	}
 
 	if reaper.Spec.HttpManagement.Enabled && reaper.Spec.HttpManagement.Keystores != nil {
@@ -304,7 +581,7 @@ func configureClientEncryption(reaper *api.Reaper, envVars []corev1.EnvVar, volu
 
 func computePodSpec(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, initContainerResources *corev1.ResourceRequirements, keystorePassword *string, truststorePassword *string, registry cassimages.ImageRegistry) corev1.PodSpec {
 	envVars := computeEnvVars(reaper, dc, registry)
-	volumes, volumeMounts := computeVolumes(reaper)
+	volumes, volumeMounts := computeVolumes(reaper, registry)
 	mainImage := registry.Image("reaper")
 	mainImageOverride := reaper.Spec.ContainerImage
 	if mainImageOverride != nil {

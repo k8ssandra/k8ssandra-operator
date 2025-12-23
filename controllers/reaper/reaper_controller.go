@@ -24,12 +24,15 @@ import (
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassimages "github.com/k8ssandra/cass-operator/pkg/images"
+	api "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
+	reaperpkg "github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/reconciliation"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -210,6 +213,13 @@ func (r *ReaperReconciler) reconcileDeployment(
 	}
 
 	logger.Info("Reconciling reaper deployment", "actualReaper", actualReaper)
+
+	reconcileReaperConfig, err := r.reconcileReaperConfig(ctx, *actualReaper, actualDc, r.Client, logger)
+	if err != nil {
+		return ctrl.Result{}, err
+	} else if reconcileReaperConfig.RequeueAfter > 0 {
+		return reconcileReaperConfig, nil
+	}
 
 	// work out how to deploy Reaper
 	actualDeployment, err := reaper.MakeActualDeploymentType(actualReaper)
@@ -473,6 +483,27 @@ func (r *ReaperReconciler) collectAuthVarsForType(ctx context.Context, actualRea
 	}
 	logger.Info("No authentication secret found", "authType", authType)
 	return nil, nil
+}
+
+func (r *ReaperReconciler) reconcileReaperConfig(
+	ctx context.Context,
+	reaper api.Reaper,
+	actualDc *cassdcapi.CassandraDatacenter,
+	remoteClient client.Client,
+	dcLogger logr.Logger,
+) (ctrl.Result, error) {
+	configMap, err := reaperpkg.CreateReaperConfigMap(&reaper, actualDc, r.ImageRegistry)
+	if err != nil {
+		dcLogger.Error(err, "Failed to create Reaper configmap")
+		return ctrl.Result{}, err
+	}
+
+	if recRes := reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *configMap); recRes.Completed() {
+		return recRes.Output()
+	}
+
+	dcLogger.Info("Reaper ConfigMap reconciliation complete")
+	return ctrl.Result{}, nil
 }
 
 func (r *ReaperReconciler) getSecret(ctx context.Context, secretKey types.NamespacedName) (*corev1.Secret, error) {
