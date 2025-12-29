@@ -492,7 +492,7 @@ func (r *ReaperReconciler) reconcileReaperConfig(
 	remoteClient client.Client,
 	dcLogger logr.Logger,
 ) (ctrl.Result, error) {
-	configMap, err := reaperpkg.CreateReaperConfigMap(&reaper, actualDc, r.ImageRegistry)
+	configMap, err := reaperpkg.CreateReaperConfigMap(&reaper, actualDc)
 	if err != nil {
 		dcLogger.Error(err, "Failed to create Reaper configmap")
 		return ctrl.Result{}, err

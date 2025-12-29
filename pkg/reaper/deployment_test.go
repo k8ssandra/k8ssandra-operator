@@ -344,6 +344,10 @@ func TestNewStatefulSetForControlPlane(t *testing.T) {
 	container := podSpec.Containers[0]
 	assert.ElementsMatch(t, container.Env, []corev1.EnvVar{
 		{
+			Name:  "REAPER_STORAGE_TYPE",
+			Value: "memory",
+		},
+		{
 			Name:  "REAPER_SKIP_SCHEMA_MIGRATION",
 			Value: "true",
 		},
@@ -1166,9 +1170,7 @@ func TestComputeConfigYAML(t *testing.T) {
 		},
 	}
 
-	registry := getTestImageRegistry(t)
-
-	yamlContent, err := computeConfigYAML(reaper, dc, registry)
+	yamlContent, err := computeConfigYAML(reaper, dc)
 	require.NoError(err)
 	require.NotEmpty(yamlContent)
 
