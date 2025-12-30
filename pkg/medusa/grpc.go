@@ -65,11 +65,48 @@ func (f *DefaultFactory) transportCredentials(secret *corev1.Secret) (credential
 	}
 
 	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{cert},
-		RootCAs:      caCertPool,
+		Certificates:          []tls.Certificate{cert},
+		InsecureSkipVerify:    true,
+		VerifyPeerCertificate: buildVerifyPeerCertificateNoHostCheck(caCertPool),
+		RootCAs:               caCertPool,
 	}
 
 	return credentials.NewTLS(tlsConfig), nil
+}
+
+// Below implementation modified from:
+//
+// https://go-review.googlesource.com/c/go/+/193620/5/src/crypto/tls/example_test.go#210
+func buildVerifyPeerCertificateNoHostCheck(rootCAs *x509.CertPool) func([][]byte, [][]*x509.Certificate) error {
+	f := func(certificates [][]byte, _ [][]*x509.Certificate) error {
+		certs := make([]*x509.Certificate, len(certificates))
+		for i, asn1Data := range certificates {
+			cert, err := x509.ParseCertificate(asn1Data)
+			if err != nil {
+				return err
+			}
+			certs[i] = cert
+		}
+
+		_, err := verifyPeerCertificateNoHostCheck(certs, rootCAs)
+		return err
+	}
+	return f
+}
+
+func verifyPeerCertificateNoHostCheck(certificates []*x509.Certificate, rootCAs *x509.CertPool) ([][]*x509.Certificate, error) {
+	opts := x509.VerifyOptions{
+		Roots: rootCAs,
+		// Setting the DNSName to the empty string will cause
+		// Certificate.Verify() to skip hostname checking
+		DNSName:       "",
+		Intermediates: x509.NewCertPool(),
+	}
+	for _, cert := range certificates[1:] {
+		opts.Intermediates.AddCert(cert)
+	}
+	chains, err := certificates[0].Verify(opts)
+	return chains, err
 }
 
 type Client interface {
