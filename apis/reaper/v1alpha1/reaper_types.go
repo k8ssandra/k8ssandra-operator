@@ -169,6 +169,10 @@ type ReaperTemplate struct {
 	// AdditionalEnvVars is a list of additional environment variables to set in the Reaper container.
 	// +optional
 	AdditionalEnvVars []corev1.EnvVar `json:"additionalEnvVars,omitempty"`
+
+	// ReaperConfig allows customizing additional Reaper configuration options.
+	// +optional
+	ReaperConfig *ReaperConfig `json:"reaperConfig,omitempty"`
 }
 
 // UseExternalSecrets defines whether the user has specified if credentials and
@@ -238,6 +242,66 @@ type AutoScheduling struct {
 	// ExcludedKeyspaces are the keyspaces that are to be excluded from the repair schedule.
 	// +optional
 	ExcludedKeyspaces []string `json:"excludedKeyspaces,omitempty"`
+}
+
+// ReaperConfig holds additional Reaper configuration options that can be customized
+type ReaperConfig struct {
+	// +optional
+	SegmentCountPerNode *int `json:"segmentCountPerNode,omitempty"`
+
+	// +optional
+	RepairParallelism *string `json:"repairParallelism,omitempty"`
+
+	// +optional
+	RepairIntensity *float64 `json:"repairIntensity,omitempty"`
+
+	// +optional
+	MaxPendingCompactions *int `json:"maxPendingCompactions,omitempty"`
+
+	// +optional
+	ScheduleDaysBetween *int `json:"scheduleDaysBetween,omitempty"`
+
+	// +optional
+	RepairRunThreadCount *int `json:"repairRunThreadCount,omitempty"`
+
+	// +optional
+	HangingRepairTimeoutMins *int `json:"hangingRepairTimeoutMins,omitempty"`
+
+	// +optional
+	EnableCrossOrigin *bool `json:"enableCrossOrigin,omitempty"`
+
+	// +optional
+	IncrementalRepair *bool `json:"incrementalRepair,omitempty"`
+
+	// +optional
+	SubrangeIncrementalRepair *bool `json:"subrangeIncrementalRepair,omitempty"`
+
+	// +optional
+	BlacklistTwcsTables *bool `json:"blacklistTwcsTables,omitempty"`
+
+	// +optional
+	EnableDynamicSeedList *bool `json:"enableDynamicSeedList,omitempty"`
+
+	// +optional
+	RepairManagerSchedulingIntervalSeconds *int `json:"repairManagerSchedulingIntervalSeconds,omitempty"`
+
+	// +optional
+	JmxConnectionTimeoutInSeconds *int `json:"jmxConnectionTimeoutInSeconds,omitempty"`
+
+	// +optional
+	UseAddressTranslator *bool `json:"useAddressTranslator,omitempty"`
+
+	// +optional
+	MaxParallelRepairs *int `json:"maxParallelRepairs,omitempty"`
+
+	// +optional
+	ScheduleRetryOnError *bool `json:"scheduleRetryOnError,omitempty"`
+
+	// +optional
+	ScheduleRetryDelay *string `json:"scheduleRetryDelay,omitempty"`
+
+	// +optional
+	PurgeRecordsAfterInDays *int `json:"purgeRecordsAfterInDays,omitempty"`
 }
 
 type ReaperClusterTemplate struct {

@@ -7,17 +7,20 @@ import (
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
+	"sigs.k8s.io/yaml"
 
 	testlogr "github.com/go-logr/logr/testing"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassimages "github.com/k8ssandra/cass-operator/pkg/images"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	api "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,7 +29,7 @@ import (
 )
 
 func TestNewDeployment(t *testing.T) {
-	mainImage := &images.Image{Repository: "test", Name: "reaper", Tag: "latest", PullPolicy: corev1.PullAlways}
+	mainImage := &images.Image{Repository: "test", Name: "reaper", Tag: "3.6.0", PullPolicy: corev1.PullAlways} // We want to test 3.6.0 behavior here
 	reaper := newTestReaper()
 	reaper.Spec.ContainerImage = mainImage
 	reaper.Spec.AutoScheduling = reaperapi.AutoScheduling{Enabled: false}
@@ -86,7 +89,7 @@ func TestNewDeployment(t *testing.T) {
 
 	container := podSpec.Containers[0]
 
-	assert.Equal(t, "docker.io/test/reaper:latest", container.Image)
+	assert.Equal(t, "docker.io/test/reaper:3.6.0", container.Image)
 	assert.Equal(t, corev1.PullAlways, container.ImagePullPolicy)
 
 	// Verify temp directory volume
@@ -134,7 +137,7 @@ func TestNewDeployment(t *testing.T) {
 		},
 		{
 			Name:  "REAPER_CASS_CONTACT_POINTS",
-			Value: "[{\"host\": \"cluster1-dc1-service\", \"port\": 9042}]",
+			Value: "[cluster1-dc1-service]",
 		},
 		{
 			Name:  "REAPER_SKIP_SCHEMA_MIGRATION",
@@ -169,7 +172,7 @@ func TestNewDeployment(t *testing.T) {
 	assert.Len(t, podSpec.InitContainers, 1)
 
 	initContainer := podSpec.InitContainers[0]
-	assert.Equal(t, "docker.io/test/reaper:latest", initContainer.Image)
+	assert.Equal(t, "docker.io/test/reaper:3.6.0", initContainer.Image)
 	assert.Equal(t, corev1.PullAlways, initContainer.ImagePullPolicy)
 	assert.ElementsMatch(t, initContainer.Env, []corev1.EnvVar{
 		{
@@ -182,7 +185,7 @@ func TestNewDeployment(t *testing.T) {
 		},
 		{
 			Name:  "REAPER_CASS_CONTACT_POINTS",
-			Value: "[{\"host\": \"cluster1-dc1-service\", \"port\": 9042}]",
+			Value: "[cluster1-dc1-service]",
 		},
 		{
 			Name:  "REAPER_DATACENTER_AVAILABILITY",
@@ -300,6 +303,8 @@ func TestNewStatefulSet(t *testing.T) {
 	reaper := newTestReaper()
 	reaper.Spec.StorageType = reaperapi.StorageTypeLocal
 	reaper.Spec.StorageConfig = newTestStorageConfig()
+	mainImage := &images.Image{Repository: "test", Name: "reaper", Tag: "3.6.0", PullPolicy: corev1.PullAlways} // We want to test 3.6.0 behavior here
+	reaper.Spec.ContainerImage = mainImage
 
 	logger := testlogr.NewTestLogger(t)
 
@@ -320,24 +325,12 @@ func TestNewStatefulSet(t *testing.T) {
 			Value: "false",
 		},
 		{
-			Name:  "REAPER_CASS_CONTACT_POINTS",
-			Value: "[{\"host\": \"cluster1-dc1-service\", \"port\": 9042}]",
-		},
-		{
 			Name:  "REAPER_DATACENTER_AVAILABILITY",
 			Value: "",
 		},
 		{
 			Name:  "REAPER_SKIP_SCHEMA_MIGRATION",
 			Value: "true",
-		},
-		{
-			Name:  "REAPER_CASS_LOCAL_DC",
-			Value: "dc1",
-		},
-		{
-			Name:  "REAPER_CASS_KEYSPACE",
-			Value: "reaper_db",
 		},
 	})
 }
@@ -355,14 +348,6 @@ func TestNewStatefulSetForControlPlane(t *testing.T) {
 			Value: "memory",
 		},
 		{
-			Name:  "REAPER_ENABLE_DYNAMIC_SEED_LIST",
-			Value: "false",
-		},
-		{
-			Name:  "REAPER_DATACENTER_AVAILABILITY",
-			Value: "",
-		},
-		{
 			Name:  "REAPER_SKIP_SCHEMA_MIGRATION",
 			Value: "true",
 		},
@@ -372,6 +357,8 @@ func TestNewStatefulSetForControlPlane(t *testing.T) {
 
 func TestHttpManagementConfiguration(t *testing.T) {
 	reaper := newTestReaper()
+	mainImage := &images.Image{Repository: "test", Name: "reaper", Tag: "3.6.0", PullPolicy: corev1.PullAlways} // We want to test 3.6.0 behavior here
+	reaper.Spec.ContainerImage = mainImage
 	reaper.Spec.HttpManagement.Enabled = true
 	reaper.Spec.HttpManagement.Keystores = &corev1.LocalObjectReference{Name: "test-dc1-c-mgmt-ks"}
 	logger := testlogr.NewTestLogger(t)
@@ -636,9 +623,11 @@ func TestSkipSchemaMigration(t *testing.T) {
 
 func TestDeploymentTypes(t *testing.T) {
 	logger := testlogr.NewTestLogger(t)
+	mainImage := &images.Image{Repository: "test", Name: "reaper", Tag: "3.6.0", PullPolicy: corev1.PullAlways} // We want to test 3.6.0 behavior here
 
 	// reaper with cassandra backend becomes a deployment
 	reaper := newTestReaper()
+	reaper.Spec.ContainerImage = mainImage
 	reaper.Spec.ReaperTemplate.StorageType = reaperapi.StorageTypeCassandra
 	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
 	assert.Len(t, deployment.Spec.Template.Spec.Containers, 1)
@@ -652,6 +641,7 @@ func TestDeploymentTypes(t *testing.T) {
 
 	// reaper with memory backend becomes a stateful set
 	reaper = newTestReaper()
+	reaper.Spec.ContainerImage = mainImage
 	reaper.Spec.ReaperTemplate.StorageType = reaperapi.StorageTypeLocal
 	reaper.Spec.ReaperTemplate.StorageConfig = &corev1.PersistentVolumeClaimSpec{
 		StorageClassName: func() *string { s := "test"; return &s }(),
@@ -964,6 +954,8 @@ func TestGetAdaptiveIncremental(t *testing.T) {
 
 func TestComputeEnvVarsAdditionalEnvVars(t *testing.T) {
 	reaper := newTestReaper()
+	mainImage := &images.Image{Repository: "test", Name: "reaper", Tag: "3.6.0", PullPolicy: corev1.PullAlways} // We want to test 3.6.0 behavior here
+	reaper.Spec.ContainerImage = mainImage
 	reaper.Spec.AdditionalEnvVars = []corev1.EnvVar{
 		{Name: "CUSTOM_VAR", Value: "custom_value"},
 		{Name: "REAPER_STORAGE_TYPE", Value: "should_be_overridden"},
@@ -1114,6 +1106,7 @@ func TestDefaultReaperContactPointsFormat(t *testing.T) {
 	}
 
 	assert.NotNil(t, contactPointsEnvVar, "REAPER_CASS_CONTACT_POINTS environment variable not found")
+
 	assert.Equal(t, "[{\"host\": \"cluster1-dc1-service\", \"port\": 9042}]", contactPointsEnvVar.Value,
 		"REAPER_CASS_CONTACT_POINTS should be formatted as an array of hosts for Reaper v3 and below")
 }
@@ -1138,4 +1131,64 @@ func getTestImageRegistry(t testing.TB) cassimages.ImageRegistry {
 		imageRegistryTest = r
 	})
 	return imageRegistryTest
+}
+
+func TestComputeConfigYAML(t *testing.T) {
+	require := require.New(t)
+	reaper := &api.Reaper{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-reaper",
+			Namespace: "test-ns",
+		},
+		Spec: api.ReaperSpec{
+			ReaperTemplate: api.ReaperTemplate{
+				StorageType: api.StorageTypeLocal,
+				AutoScheduling: api.AutoScheduling{
+					Enabled:                    true,
+					RepairType:                 "AUTO",
+					InitialDelay:               "PT15S",
+					PeriodBetweenPolls:         "PT10M",
+					TimeBeforeFirstSchedule:    "PT5M",
+					ScheduleSpreadPeriod:       "PT6H",
+					PercentUnrepairedThreshold: 10,
+					ExcludedKeyspaces:          []string{"system", "system_schema"},
+					ExcludedClusters:           []string{"test-cluster"},
+				},
+				HttpManagement: api.HttpManagement{
+					Enabled: true,
+					Keystores: &corev1.LocalObjectReference{
+						Name: "test-keystore",
+					},
+				},
+			},
+		},
+	}
+
+	dc := &cassdcapi.CassandraDatacenter{
+		Spec: cassdcapi.CassandraDatacenterSpec{
+			ServerVersion: "5.0.6",
+		},
+	}
+
+	yamlContent, err := computeConfigYAML(reaper, dc)
+	require.NoError(err)
+	require.NotEmpty(yamlContent)
+
+	// Verify it's valid YAML by unmarshaling
+	var config ReaperConfig
+	err = yaml.Unmarshal([]byte(yamlContent), &config)
+	require.NoError(err)
+
+	// Verify key fields
+	assert.Equal(t, "memory", config.StorageType)
+	assert.True(t, config.AutoScheduling.Enabled)
+	assert.Equal(t, "PT15S", config.AutoScheduling.InitialDelayPeriod)
+	assert.Equal(t, 10, config.AutoScheduling.PercentUnrepairedThreshold)
+	assert.Contains(t, config.AutoScheduling.ExcludedKeyspaces, "system")
+	assert.Contains(t, config.AutoScheduling.ExcludedClusters, "test-cluster")
+	assert.True(t, config.HttpManagement.Enabled)
+	assert.Equal(t, "/etc/encryption/mgmt/keystore.jks", config.HttpManagement.Keystore)
+	assert.Equal(t, 16, config.SegmentCountPerNode)
+	assert.Equal(t, "PARALLEL", config.RepairParallelism)
+	assert.Equal(t, 0.9, config.RepairIntensity)
 }

@@ -16,6 +16,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 ## unreleased
 
 * [CHANGE] [#1646](https://github.com/k8ssandra/k8ssandra-operator/issues/1646) Disable MCAC by default. It must be enabled by the user if one still wishes to use it. Support will be removed entirely in the future
+* [ENHANCEMENT] [#1658](https://github.com/k8ssandra/k8ssandra-operator/issues/1658) For Reaper v4, configure Reaper by mounting the configuration file directly instead of using envVariables
 * [ENHANCEMENT] [#1643](https://github.com/k8ssandra/k8ssandra-operator/issues/1643) Allow configuration of Endpoint in the agent config for metrics endpoint and use that information when creating the Vector output
 * [BUGFIX] [#1644](https://github.com/k8ssandra/k8ssandra-operator/issues/1644) Fix failures when decommissioning DCs with Cassandra 4.1/5.x
 * [BUGFIX] [#1645](https://github.com/k8ssandra/k8ssandra-operator/issues/1645) Modify the VRL program parsing the Cassandra log to output the original logline if parsing fails
