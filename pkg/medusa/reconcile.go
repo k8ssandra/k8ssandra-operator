@@ -118,9 +118,9 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster, dcConfig *cassandra.DatacenterCo
     port = {{ .Spec.Medusa.ServiceProperties.GrpcPort }}
     {{- end }}
 	{{- if .Spec.Medusa.ServiceProperties.Encryption }}
-	ca_cert = /etc/certificates/grpc-server-certs/ca.crt
-	tls_cert = /etc/certificates/grpc-server-certs/tls.crt
-	tls_key = /etc/certificates/grpc-server-certs/tls.key
+    ca_cert = /etc/certificates/grpc-server-certs/ca.crt
+    tls_cert = /etc/certificates/grpc-server-certs/tls.crt
+    tls_key = /etc/certificates/grpc-server-certs/tls.key
 	{{- end }}
 
     [logging]
