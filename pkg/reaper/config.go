@@ -104,6 +104,35 @@ type UserConfig struct {
 	Roles    []string `yaml:"roles"`
 }
 
+// Helper functions to get config values with defaults
+func getIntOrDefault(val *int, defaultVal int) int {
+	if val != nil {
+		return *val
+	}
+	return defaultVal
+}
+
+func getStringOrDefault(val *string, defaultVal string) string {
+	if val != nil {
+		return *val
+	}
+	return defaultVal
+}
+
+func getBoolOrDefault(val *bool, defaultVal bool) bool {
+	if val != nil {
+		return *val
+	}
+	return defaultVal
+}
+
+func getFloat64OrDefault(val *float64, defaultVal float64) float64 {
+	if val != nil {
+		return *val
+	}
+	return defaultVal
+}
+
 // computeConfigYAML generates the complete Reaper configuration YAML content
 // This replaces the template-based approach where environment variables were substituted
 func computeConfigYAML(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter) (string, error) {
@@ -112,6 +141,9 @@ func computeConfigYAML(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter) (s
 	if reaper.Spec.StorageType == api.StorageTypeLocal {
 		storageType = "memory"
 	}
+
+	// Get custom config or use nil
+	customConfig := reaper.Spec.ReaperConfig
 
 	// Build auto-scheduling config
 	autoScheduling := AutoSchedulingConfig{
@@ -150,80 +182,126 @@ func computeConfigYAML(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter) (s
 		}
 	}
 
-	// Build the complete config
+	// Build the complete config - only set values that are provided in customConfig
 	config := ReaperConfig{
-		SegmentCountPerNode:                    16,
-		RepairParallelism:                      "PARALLEL",
-		RepairIntensity:                        0.9,
-		MaxPendingCompactions:                  20,
-		ScheduleDaysBetween:                    7,
-		RepairRunThreadCount:                   15,
-		HangingRepairTimeoutMins:               30,
-		StorageType:                            storageType,
-		EnableCrossOrigin:                      true,
-		IncrementalRepair:                      false,
-		SubrangeIncrementalRepair:              false,
-		BlacklistTwcsTables:                    false,
-		EnableDynamicSeedList:                  false,
-		RepairManagerSchedulingIntervalSeconds: 30,
-		JmxConnectionTimeoutInSeconds:          20,
-		UseAddressTranslator:                   false,
-		MaxParallelRepairs:                     2,
-		ScheduleRetryOnError:                   false,
-		ScheduleRetryDelay:                     "PT1H",
-		PurgeRecordsAfterInDays:                15,
-		DatacenterAvailability:                 reaper.Spec.DatacenterAvailability,
-		AutoScheduling:                         autoScheduling,
-		JmxPorts:                               make(map[string]int),
-		Logging: LoggingConfig{
-			Level: "INFO",
-			Loggers: map[string]string{
-				"io.cassandrareaper": "INFO",
-			},
-			Appenders: []LoggingAppenderConfig{
-				{
-					Type:      "console",
-					LogFormat: "%-6level [%d] [%t] %logger{5} - %msg %n",
-					Threshold: "INFO",
-				},
+		StorageType:            storageType,
+		DatacenterAvailability: reaper.Spec.DatacenterAvailability,
+		AutoScheduling:         autoScheduling,
+		JmxPorts:               make(map[string]int),
+	}
+
+	// Apply custom config values if provided
+	if customConfig != nil {
+		if customConfig.SegmentCountPerNode != nil {
+			config.SegmentCountPerNode = *customConfig.SegmentCountPerNode
+		}
+		if customConfig.RepairParallelism != nil {
+			config.RepairParallelism = *customConfig.RepairParallelism
+		}
+		if customConfig.RepairIntensity != nil {
+			config.RepairIntensity = *customConfig.RepairIntensity
+		}
+		if customConfig.MaxPendingCompactions != nil {
+			config.MaxPendingCompactions = *customConfig.MaxPendingCompactions
+		}
+		if customConfig.ScheduleDaysBetween != nil {
+			config.ScheduleDaysBetween = *customConfig.ScheduleDaysBetween
+		}
+		if customConfig.RepairRunThreadCount != nil {
+			config.RepairRunThreadCount = *customConfig.RepairRunThreadCount
+		}
+		if customConfig.HangingRepairTimeoutMins != nil {
+			config.HangingRepairTimeoutMins = *customConfig.HangingRepairTimeoutMins
+		}
+		if customConfig.EnableCrossOrigin != nil {
+			config.EnableCrossOrigin = *customConfig.EnableCrossOrigin
+		}
+		if customConfig.IncrementalRepair != nil {
+			config.IncrementalRepair = *customConfig.IncrementalRepair
+		}
+		if customConfig.SubrangeIncrementalRepair != nil {
+			config.SubrangeIncrementalRepair = *customConfig.SubrangeIncrementalRepair
+		}
+		if customConfig.BlacklistTwcsTables != nil {
+			config.BlacklistTwcsTables = *customConfig.BlacklistTwcsTables
+		}
+		if customConfig.EnableDynamicSeedList != nil {
+			config.EnableDynamicSeedList = *customConfig.EnableDynamicSeedList
+		}
+		if customConfig.RepairManagerSchedulingIntervalSeconds != nil {
+			config.RepairManagerSchedulingIntervalSeconds = *customConfig.RepairManagerSchedulingIntervalSeconds
+		}
+		if customConfig.JmxConnectionTimeoutInSeconds != nil {
+			config.JmxConnectionTimeoutInSeconds = *customConfig.JmxConnectionTimeoutInSeconds
+		}
+		if customConfig.UseAddressTranslator != nil {
+			config.UseAddressTranslator = *customConfig.UseAddressTranslator
+		}
+		if customConfig.MaxParallelRepairs != nil {
+			config.MaxParallelRepairs = *customConfig.MaxParallelRepairs
+		}
+		if customConfig.ScheduleRetryOnError != nil {
+			config.ScheduleRetryOnError = *customConfig.ScheduleRetryOnError
+		}
+		if customConfig.ScheduleRetryDelay != nil {
+			config.ScheduleRetryDelay = *customConfig.ScheduleRetryDelay
+		}
+		if customConfig.PurgeRecordsAfterInDays != nil {
+			config.PurgeRecordsAfterInDays = *customConfig.PurgeRecordsAfterInDays
+		}
+	}
+
+	// Continue with the rest of the config
+	config.Logging = LoggingConfig{
+		Level: "INFO",
+		Loggers: map[string]string{
+			"io.cassandrareaper": "INFO",
+		},
+		Appenders: []LoggingAppenderConfig{
+			{
+				Type:      "console",
+				LogFormat: "%-6level [%d] [%t] %logger{5} - %msg %n",
+				Threshold: "INFO",
 			},
 		},
-		Server: ServerConfig{
-			Type: "default",
-			ApplicationConnectors: []ConnectorConfig{
-				{
-					Type:     "http",
-					Port:     8080,
-					BindHost: "0.0.0.0",
-				},
-			},
-			AdminConnectors: []ConnectorConfig{
-				{
-					Type:     "http",
-					Port:     8081,
-					BindHost: "0.0.0.0",
-				},
-			},
-			RequestLog: RequestLogConfig{
-				Appenders: []interface{}{},
+	}
+
+	config.Server = ServerConfig{
+		Type: "default",
+		ApplicationConnectors: []ConnectorConfig{
+			{
+				Type:     "http",
+				Port:     8080,
+				BindHost: "0.0.0.0",
 			},
 		},
-		HttpManagement: httpManagement,
-
-		AccessControl: AccessControlConfig{
-			Enabled:        "${REAPER_AUTH_ENABLED}",
-			SessionTimeout: "PT10M",
-
-			// TODO These env variables below were never generated in k8ssandra-operator. Could they be removed entirely from the generated YAML?
-			JWT: JWTConfig{
-				Secret: "${JWT_SECRET:-MySecretKeyForJWTWhichMustBeLongEnoughForHS256Algorithm}",
+		AdminConnectors: []ConnectorConfig{
+			{
+				Type:     "http",
+				Port:     8081,
+				BindHost: "0.0.0.0",
 			},
-			Users: []UserConfig{
-				{
-					Username: "${REAPER_AUTH_USER}",
-					Password: "${REAPER_AUTH_PASSWORD}",
-					Roles:    []string{"operator"},
-				},
+		},
+		RequestLog: RequestLogConfig{
+			Appenders: []interface{}{},
+		},
+	}
+
+	config.HttpManagement = httpManagement
+
+	config.AccessControl = AccessControlConfig{
+		Enabled:        "${REAPER_AUTH_ENABLED}",
+		SessionTimeout: "PT10M",
+
+		// TODO These env variables below were never generated in k8ssandra-operator. Could they be removed entirely from the generated YAML?
+		JWT: JWTConfig{
+			Secret: "${JWT_SECRET:-MySecretKeyForJWTWhichMustBeLongEnoughForHS256Algorithm}",
+		},
+		Users: []UserConfig{
+			{
+				Username: "${REAPER_AUTH_USER}",
+				Password: "${REAPER_AUTH_PASSWORD}",
+				Roles:    []string{"operator"},
 			},
 		},
 	}
