@@ -29179,6 +29179,24 @@ spec:
                     - SINGLE
                     - CONTROL_PLANE
                     type: string
+                  encryption:
+                    description: Encryption configures TLS encryption between Reaper
+                      and the operator. If not set, plain text communication is used.
+                    properties:
+                      clientCertName:
+                        description: |-
+                          ClientCertName is the name of the secret containing the client certificates in case mutual TLS is enabled.
+                          If set, the server is automatically configured with mutual TLS.
+
+                          ClientCertName must contain "tls.crt", "tls.key, and "ca.crt" entries with the client certificate,
+                          private key, and CA certificate respectively.
+                        type: string
+                      serverCertName:
+                        description: |-
+                          ServerCertName is the name of the secret containing the server certificates.
+                          Secret must contain "keystore.jks" and "truststore.jks" entries with the JKS files using password "changeit"
+                        type: string
+                    type: object
                   heapSize:
                     anyOf:
                     - type: integer

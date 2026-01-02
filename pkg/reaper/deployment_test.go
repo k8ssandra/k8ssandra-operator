@@ -1020,6 +1020,91 @@ func TestComputeEnvVarsAdditionalEnvVars(t *testing.T) {
 	}
 	assert.True(t, found)
 }
+func TestComputeEnvVarsEncryption(t *testing.T) {
+	tests := []struct {
+		name               string
+		serverCertName     string
+		clientCertName     string
+		expectedEnvVars    map[string]string
+		notExpectedEnvVars []string
+	}{
+		{
+			name:            "no encryption",
+			serverCertName:  "",
+			clientCertName:  "",
+			expectedEnvVars: map[string]string{},
+			notExpectedEnvVars: []string{
+				"REAPER_SERVER_TLS_ENABLE",
+				"REAPER_SERVER_TLS_KEYSTORE_PATH",
+				"REAPER_SERVER_TLS_TRUSTSTORE_PATH",
+				"REAPER_SERVER_TLS_CLIENT_AUTH",
+				"REAPER_SERVER_TLS_DISABLE_SNI",
+			},
+		},
+		{
+			name:           "server encryption only",
+			serverCertName: "server-cert",
+			clientCertName: "",
+			expectedEnvVars: map[string]string{
+				"REAPER_SERVER_TLS_ENABLE":          "true",
+				"REAPER_SERVER_TLS_KEYSTORE_PATH":   "/etc/encryption/server/keystore.jks",
+				"REAPER_SERVER_TLS_TRUSTSTORE_PATH": "/etc/encryption/server/truststore.jks",
+				"REAPER_SERVER_TLS_DISABLE_SNI":     "true",
+			},
+			notExpectedEnvVars: []string{
+				"REAPER_SERVER_TLS_CLIENT_AUTH",
+			},
+		},
+		{
+			name:           "mutual TLS encryption",
+			serverCertName: "server-cert",
+			clientCertName: "client-cert",
+			expectedEnvVars: map[string]string{
+				"REAPER_SERVER_TLS_ENABLE":          "true",
+				"REAPER_SERVER_TLS_KEYSTORE_PATH":   "/etc/encryption/server/keystore.jks",
+				"REAPER_SERVER_TLS_TRUSTSTORE_PATH": "/etc/encryption/server/truststore.jks",
+				"REAPER_SERVER_TLS_CLIENT_AUTH":     "true",
+				"REAPER_SERVER_TLS_DISABLE_SNI":     "true",
+			},
+			notExpectedEnvVars: []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reaper := newTestReaper()
+			if tt.serverCertName != "" {
+				reaper.Spec.Encryption = &reaperapi.ReaperEncryption{
+					ServerCertName: tt.serverCertName,
+					ClientCertName: tt.clientCertName,
+				}
+			}
+			dc := newTestDatacenter()
+
+			envVars := computeEnvVars(reaper, dc, getTestImageRegistry(t))
+
+			// Check expected env vars are present with correct values
+			for expectedName, expectedValue := range tt.expectedEnvVars {
+				found := false
+				for _, env := range envVars {
+					if env.Name == expectedName {
+						assert.Equal(t, expectedValue, env.Value, "env var %s should have value %s", expectedName, expectedValue)
+						found = true
+						break
+					}
+				}
+				assert.True(t, found, "expected env var %s not found", expectedName)
+			}
+
+			// Check that not expected env vars are absent
+			for _, notExpectedName := range tt.notExpectedEnvVars {
+				for _, env := range envVars {
+					assert.NotEqual(t, notExpectedName, env.Name, "env var %s should not be present", notExpectedName)
+				}
+			}
+		})
+	}
+}
 
 func TestIsReaperPostV4(t *testing.T) {
 	tests := []struct {

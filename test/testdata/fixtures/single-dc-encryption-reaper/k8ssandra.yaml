@@ -17,6 +17,9 @@ spec:
     autoScheduling:
       enabled: false
     heapSize: 256Mi
+    encryption:
+      serverCertName: reaper-server-encryption-stores
+      clientCertName: reaper-client-cert-secret
   cassandra:
     serverVersion: 4.1.8
     datacenters:
