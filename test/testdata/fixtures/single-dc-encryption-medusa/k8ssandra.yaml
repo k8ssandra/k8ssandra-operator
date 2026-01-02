@@ -37,8 +37,8 @@ spec:
       runAsNonRoot: true
     serviceProperties:
       encryption:
-        clientSecretName: mgmt-api-client-credentials
-        serverSecretName: mgmt-api-server-credentials
+        clientSecretName: medusa-client-cert
+        serverSecretName: medusa-server-cert
   cassandra:
     clusterName: "First Cluster"
     serverVersion: 4.1.8
