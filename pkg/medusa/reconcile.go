@@ -283,11 +283,11 @@ func CreateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 		},
 	}
 
-	readinessProbe, err := generateMedusaProbe(medusaSpec.ReadinessProbe, grpcPort)
+	readinessProbe, err := generateMedusaProbe(medusaSpec.ReadinessProbe, grpcPort, medusaSpec.ServiceProperties.Encryption)
 	if err != nil {
 		return nil, err
 	}
-	livenessProbe, err := generateMedusaProbe(medusaSpec.LivenessProbe, grpcPort)
+	livenessProbe, err := generateMedusaProbe(medusaSpec.LivenessProbe, grpcPort, medusaSpec.ServiceProperties.Encryption)
 	if err != nil {
 		return nil, err
 	}
@@ -639,9 +639,9 @@ func MedusaPurgeScheduleName(clusterName string, dcName string) string {
 	return fmt.Sprintf("%s-%s-medusa-purge", clusterName, dcName)
 }
 
-func generateMedusaProbe(configuredProbe *corev1.Probe, grpcPort int) (*corev1.Probe, error) {
+func generateMedusaProbe(configuredProbe *corev1.Probe, grpcPort int, encryption *api.GRPCEncryption) (*corev1.Probe, error) {
 	// Goalesce the custom probe with the default probe,
-	defaultProbe := defaultMedusaProbe(grpcPort)
+	defaultProbe := defaultMedusaProbe(grpcPort, encryption)
 	if configuredProbe == nil {
 		return defaultProbe, nil
 	}
@@ -655,12 +655,24 @@ func generateMedusaProbe(configuredProbe *corev1.Probe, grpcPort int) (*corev1.P
 	return &mergedProbe, nil
 }
 
-func defaultMedusaProbe(grpcPort int) *corev1.Probe {
-	// Goalesce the custom probe with the default probe,
+func defaultMedusaProbe(grpcPort int, encryption *api.GRPCEncryption) *corev1.Probe {
+	// Build the command for grpc_health_probe
+	command := []string{"/bin/grpc_health_probe", fmt.Sprintf("--addr=:%d", grpcPort)}
+
+	// Add TLS flags if encryption is configured
+	if encryption != nil {
+		command = append(command,
+			"--tls",
+			"--tls-ca-cert=/etc/certificates/grpc-server-certs/ca.crt",
+			"--tls-client-cert=/etc/certificates/grpc-server-certs/tls.crt",
+			"--tls-client-key=/etc/certificates/grpc-server-certs/tls.key",
+		)
+	}
+
 	probe := &corev1.Probe{
 		ProbeHandler: corev1.ProbeHandler{
 			Exec: &corev1.ExecAction{
-				Command: []string{"/bin/grpc_health_probe", fmt.Sprintf("--addr=:%d", grpcPort)},
+				Command: command,
 			},
 		},
 		InitialDelaySeconds: DefaultProbeInitialDelay,

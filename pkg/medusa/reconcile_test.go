@@ -701,7 +701,7 @@ func TestGenerateMedusaProbe(t *testing.T) {
 		FailureThreshold:    500,
 	}
 
-	customProbe, err := generateMedusaProbe(customProbeSettings, 55055)
+	customProbe, err := generateMedusaProbe(customProbeSettings, 55055, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, int32(100), customProbe.InitialDelaySeconds)
 	assert.Equal(t, int32(200), customProbe.TimeoutSeconds)
@@ -710,7 +710,7 @@ func TestGenerateMedusaProbe(t *testing.T) {
 	assert.Equal(t, int32(500), customProbe.FailureThreshold)
 	assert.Contains(t, customProbe.Exec.Command[1], "55055")
 
-	defaultProbe, err := generateMedusaProbe(nil, 55155)
+	defaultProbe, err := generateMedusaProbe(nil, 55155, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, int32(DefaultProbeInitialDelay), defaultProbe.InitialDelaySeconds)
 	assert.Equal(t, int32(DefaultProbeTimeout), defaultProbe.TimeoutSeconds)
@@ -732,9 +732,23 @@ func TestGenerateMedusaProbe(t *testing.T) {
 			},
 		},
 	}
-	probe, err := generateMedusaProbe(rejectedProbe, 55055)
+	probe, err := generateMedusaProbe(rejectedProbe, 55055, nil)
 	assert.Error(t, err)
 	assert.Nil(t, probe)
+
+	// Test that TLS flags are added when encryption is configured
+	encryption := &medusaapi.GRPCEncryption{
+		ClientSecretName: "medusa-client-cert",
+		ServerSecretName: "medusa-server-cert",
+	}
+	tlsProbe, err := generateMedusaProbe(nil, 55255, encryption)
+	assert.NoError(t, err)
+	assert.Equal(t, int32(DefaultProbeInitialDelay), tlsProbe.InitialDelaySeconds)
+	assert.Contains(t, tlsProbe.Exec.Command[1], "55255")
+	assert.Contains(t, tlsProbe.Exec.Command, "--tls")
+	assert.Contains(t, tlsProbe.Exec.Command, "--tls-ca-cert=/etc/certificates/grpc-server-certs/ca.crt")
+	assert.Contains(t, tlsProbe.Exec.Command, "--tls-client-cert=/etc/certificates/grpc-server-certs/tls.crt")
+	assert.Contains(t, tlsProbe.Exec.Command, "--tls-client-key=/etc/certificates/grpc-server-certs/tls.key")
 }
 
 var (
