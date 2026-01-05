@@ -1729,6 +1729,7 @@ func checkReaperApiReachable(t *testing.T, ctx context.Context, reaperHostAndPor
 	checkReaperApiReachableWithEncryption(t, ctx, reaperHostAndPort, nil, "")
 }
 
+// TODO Merge with connectReaperApiWithEncryption
 func checkReaperApiReachableWithEncryption(t *testing.T, ctx context.Context, reaperHostAndPort framework.HostAndPort, f *framework.E2eFramework, namespace string) {
 	timeout := 2 * time.Minute
 	interval := 1 * time.Second
