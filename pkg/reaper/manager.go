@@ -31,7 +31,7 @@ func createHTTPClientWithTLS() *http.Client {
 	}
 }
 
-func createHTTPClientWithMutualTLS(tlsCert, tlsKey, caCert []byte) (*http.Client, error) {
+func CreateHTTPClientWithMutualTLS(tlsCert, tlsKey, caCert []byte) (*http.Client, error) {
 	cert, err := tls.X509KeyPair(tlsCert, tlsKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load client certificate: %w", err)
@@ -182,7 +182,7 @@ func (r *restReaperManager) httpClientOption(ctx context.Context, namespace stri
 		}
 
 		// Create HTTP client with mutual TLS
-		httpClient, err := createHTTPClientWithMutualTLS(tlsCert, tlsKey, caCert)
+		httpClient, err := CreateHTTPClientWithMutualTLS(tlsCert, tlsKey, caCert)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create HTTP client with mutual TLS: %w", err)
 		}

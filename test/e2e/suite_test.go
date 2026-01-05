@@ -20,6 +20,7 @@ import (
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	k8ssandrapkg "github.com/k8ssandra/k8ssandra-operator/pkg/k8ssandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 
@@ -1725,15 +1726,55 @@ func assertCassandraDatacenterK8cStatusReady(
 }
 
 func checkReaperApiReachable(t *testing.T, ctx context.Context, reaperHostAndPort framework.HostAndPort) {
+	checkReaperApiReachableWithEncryption(t, ctx, reaperHostAndPort, nil, "")
+}
+
+func checkReaperApiReachableWithEncryption(t *testing.T, ctx context.Context, reaperHostAndPort framework.HostAndPort, f *framework.E2eFramework, namespace string) {
 	timeout := 2 * time.Minute
 	interval := 1 * time.Second
-	reaperHttp := fmt.Sprintf("http://%s", reaperHostAndPort)
+
+	// Default to HTTP
+	protocol := "http"
+	var opts []reaperclient.ClientCreateOption
+
+	// Check if we need to use TLS by looking up the K8ssandraCluster
+	if f != nil && namespace != "" {
+		kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
+		kc := &api.K8ssandraCluster{}
+		if err := f.Client.Get(ctx, kcKey, kc); err == nil && kc.Spec.Reaper != nil && kc.Spec.Reaper.Encryption != nil {
+			protocol = "https"
+
+			// If client certificate is specified, use mutual TLS
+			if kc.Spec.Reaper.Encryption.ClientCertName != "" {
+				secretKey := types.NamespacedName{
+					Namespace: namespace,
+					Name:      kc.Spec.Reaper.Encryption.ClientCertName,
+				}
+
+				secret := &corev1.Secret{}
+				if err := f.Client.Get(ctx, secretKey, secret); err == nil {
+					tlsCert := secret.Data["tls.crt"]
+					tlsKey := secret.Data["tls.key"]
+					caCert := secret.Data["ca.crt"]
+					require.NotNil(t, tlsCert, "tls.crt not found in secret %s", secretKey)
+					require.NotNil(t, tlsKey, "tls.key not found in secret %s", secretKey)
+					require.NotNil(t, caCert, "ca.crt not found in secret %s", secretKey)
+
+					httpClient, err := reaper.CreateHTTPClientWithMutualTLS(tlsCert, tlsKey, caCert)
+					require.NoError(t, err)
+					opts = append(opts, reaperclient.WithHttpClient(httpClient))
+				}
+			}
+		}
+	}
+
+	reaperURL := fmt.Sprintf("%s://%s", protocol, reaperHostAndPort)
 	require.Eventually(t, func() bool {
-		reaperURL, _ := url.Parse(reaperHttp)
-		reaperClient := reaperclient.NewClient(reaperURL)
+		parsedURL, _ := url.Parse(reaperURL)
+		reaperClient := reaperclient.NewClient(parsedURL, opts...)
 		up, err := reaperClient.IsReaperUp(ctx)
 		return up && err == nil
-	}, timeout, interval, "Address is unreachable: %s", reaperHttp)
+	}, timeout, interval, "Address is unreachable: %s", reaperURL)
 }
 
 func configureZeroLog() {

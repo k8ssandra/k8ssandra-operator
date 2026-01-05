@@ -259,6 +259,21 @@ func computeVolumes(reaper *api.Reaper) ([]corev1.Volume, []corev1.VolumeMount) 
 		})
 	}
 
+	if reaper.Spec.Encryption != nil && reaper.Spec.Encryption.ServerCertName != "" {
+		volumes = append(volumes, corev1.Volume{
+			Name: "server-tls-keystore",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: reaper.Spec.Encryption.ServerCertName,
+				},
+			},
+		})
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "server-tls-keystore",
+			MountPath: "/etc/encryption/server",
+		})
+	}
+
 	return volumes, volumeMounts
 }
 

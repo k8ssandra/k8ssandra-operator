@@ -64,8 +64,8 @@ metadata:
   name: reaper-client-cert
 spec:
   secretName: reaper-client-cert-secret
-  duration: 2160h # 90 days
-  renewBefore: 360h # 15 days
+  duration: 2160h
+  renewBefore: 360h
   commonName: reaper-client
   isCA: false
   privateKey:
