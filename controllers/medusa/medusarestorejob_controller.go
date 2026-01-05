@@ -20,14 +20,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net"
 	"time"
 
 	"k8s.io/utils/ptr"
 
 	"github.com/go-logr/logr"
 	cassimages "github.com/k8ssandra/cass-operator/pkg/images"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/shared"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -278,14 +276,8 @@ func (r *MedusaRestoreJobReconciler) prepareRestore(ctx context.Context, request
 	}
 
 	for _, pod := range pods {
-		medusaPort := shared.BackupSidecarPort
-		explicitPort, found := cassandra.FindContainerPort(ptr.To(pod), "medusa", "grpc")
-		if found {
-			medusaPort = explicitPort
-		}
-		addr := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(medusaPort))
-		if medusaClient, err := r.ClientFactory.NewClient(addr); err != nil {
-			logger.Error(err, "Failed to create Medusa client", "address", addr)
+		if medusaClient, err := newClient(ctx, r.Client, request.Datacenter, ptr.To(pod), r.ClientFactory); err != nil {
+			logger.Error(err, "Failed to create Medusa client", "Pod", pod.Name)
 		} else {
 			restoreHostMap, err := medusa.GetHostMap(request.Datacenter, *request.RestoreJob, medusaClient, ctx)
 			if err != nil {

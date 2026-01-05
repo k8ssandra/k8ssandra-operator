@@ -26,7 +26,7 @@ data:
         medusa:
             repository: "k8ssandra"
             name: "medusa"
-            tag: "0.25.0"
+            tag: "21fe8b3b"
         reaper:
             repository: "thelastpickle"
             name: "cassandra-reaper"

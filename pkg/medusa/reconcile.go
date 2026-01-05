@@ -38,6 +38,9 @@ const (
 	MedusaBackupsMountPath  = "/mnt/backups"
 
 	CredentialsTypeRoleBased = "role-based"
+
+	MedusaClientSecretNameAnnotation = "medusa.k8ssandra.io/grpc-client-secret-name"
+	MedusaGRPCPortAnnotation         = "medusa.k8ssandra.io/grpc-port"
 )
 
 func CreateMedusaIni(kc *k8ss.K8ssandraCluster, dcConfig *cassandra.DatacenterConfig) string {
@@ -114,6 +117,11 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster, dcConfig *cassandra.DatacenterCo
     {{- if .Spec.Medusa.ServiceProperties.GrpcPort }}
     port = {{ .Spec.Medusa.ServiceProperties.GrpcPort }}
     {{- end }}
+	{{- if .Spec.Medusa.ServiceProperties.Encryption }}
+    ca_cert = /etc/certificates/grpc-server-certs/ca.crt
+    tls_cert = /etc/certificates/grpc-server-certs/tls.crt
+    tls_key = /etc/certificates/grpc-server-certs/tls.key
+	{{- end }}
 
     [logging]
     level = DEBUG
@@ -148,6 +156,10 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster, dcConfig *cassandra.DatacenterCo
 	} else {
 		medusaConfig += `
     cassandra_url = http://127.0.0.1:8080/api/v0/ops/node/snapshots`
+	}
+
+	if kc.Spec.Medusa.ServiceProperties.Encryption != nil && kc.Spec.Medusa.ServiceProperties.Encryption.ClientSecretName != "" {
+		dcConfig.Meta.Annotations = goalesce.MustDeepMerge(dcConfig.Meta.Annotations, map[string]string{MedusaClientSecretNameAnnotation: kc.Spec.Medusa.ServiceProperties.Encryption.ClientSecretName})
 	}
 
 	return medusaConfig
@@ -261,6 +273,7 @@ func CreateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 	var grpcPort = DefaultMedusaPort
 	if medusaSpec.ServiceProperties.GrpcPort != 0 {
 		grpcPort = medusaSpec.ServiceProperties.GrpcPort
+		dcConfig.Meta.Annotations = goalesce.MustDeepMerge(dcConfig.Meta.Annotations, map[string]string{MedusaGRPCPortAnnotation: fmt.Sprintf("%d", grpcPort)})
 	}
 	medusaContainer.Ports = []corev1.ContainerPort{
 		{
@@ -270,11 +283,11 @@ func CreateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 		},
 	}
 
-	readinessProbe, err := generateMedusaProbe(medusaSpec.ReadinessProbe, grpcPort)
+	readinessProbe, err := generateMedusaProbe(medusaSpec.ReadinessProbe, grpcPort, medusaSpec.ServiceProperties.Encryption)
 	if err != nil {
 		return nil, err
 	}
-	livenessProbe, err := generateMedusaProbe(medusaSpec.LivenessProbe, grpcPort)
+	livenessProbe, err := generateMedusaProbe(medusaSpec.LivenessProbe, grpcPort, medusaSpec.ServiceProperties.Encryption)
 	if err != nil {
 		return nil, err
 	}
@@ -363,6 +376,14 @@ func medusaVolumeMounts(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.Me
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      "userkey",
 			MountPath: "/etc/certificates/userkey",
+		})
+	}
+
+	// Mount gRPC server encryption certificates if secretName is provided
+	if medusaSpec.ServiceProperties.Encryption != nil && medusaSpec.ServiceProperties.Encryption.ServerSecretName != "" {
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "grpc-server-certs",
+			MountPath: "/etc/certificates/grpc-server-certs",
 		})
 	}
 
@@ -546,6 +567,23 @@ func GenerateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *api
 		Exists:      found,
 	})
 
+	if medusaSpec.ServiceProperties.Encryption != nil && medusaSpec.ServiceProperties.Encryption.ServerSecretName != "" {
+		grpcServerCertsVolumeIndex, found := cassandra.FindVolume(&dcConfig.PodTemplateSpec, "grpc-server-certs")
+		grpcServerCertsVolume := &corev1.Volume{
+			Name: "grpc-server-certs",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: medusaSpec.ServiceProperties.Encryption.ServerSecretName,
+				},
+			},
+		}
+		newVolumes = append(newVolumes, medusaVolume{
+			Volume:      grpcServerCertsVolume,
+			VolumeIndex: grpcServerCertsVolumeIndex,
+			Exists:      found,
+		})
+	}
+
 	return newVolumes
 }
 
@@ -601,9 +639,9 @@ func MedusaPurgeScheduleName(clusterName string, dcName string) string {
 	return fmt.Sprintf("%s-%s-medusa-purge", clusterName, dcName)
 }
 
-func generateMedusaProbe(configuredProbe *corev1.Probe, grpcPort int) (*corev1.Probe, error) {
+func generateMedusaProbe(configuredProbe *corev1.Probe, grpcPort int, encryption *api.GRPCEncryption) (*corev1.Probe, error) {
 	// Goalesce the custom probe with the default probe,
-	defaultProbe := defaultMedusaProbe(grpcPort)
+	defaultProbe := defaultMedusaProbe(grpcPort, encryption)
 	if configuredProbe == nil {
 		return defaultProbe, nil
 	}
@@ -617,12 +655,24 @@ func generateMedusaProbe(configuredProbe *corev1.Probe, grpcPort int) (*corev1.P
 	return &mergedProbe, nil
 }
 
-func defaultMedusaProbe(grpcPort int) *corev1.Probe {
-	// Goalesce the custom probe with the default probe,
+func defaultMedusaProbe(grpcPort int, encryption *api.GRPCEncryption) *corev1.Probe {
+	// Build the command for grpc_health_probe
+	command := []string{"/bin/grpc_health_probe", fmt.Sprintf("--addr=:%d", grpcPort)}
+
+	// Add TLS flags if encryption is configured
+	if encryption != nil {
+		command = append(command,
+			"--tls",
+			"--tls-ca-cert=/etc/certificates/grpc-server-certs/ca.crt",
+			"--tls-client-cert=/etc/certificates/grpc-server-certs/tls.crt",
+			"--tls-client-key=/etc/certificates/grpc-server-certs/tls.key",
+		)
+	}
+
 	probe := &corev1.Probe{
 		ProbeHandler: corev1.ProbeHandler{
 			Exec: &corev1.ExecAction{
-				Command: []string{"/bin/grpc_health_probe", fmt.Sprintf("--addr=:%d", grpcPort)},
+				Command: command,
 			},
 		},
 		InitialDelaySeconds: DefaultProbeInitialDelay,

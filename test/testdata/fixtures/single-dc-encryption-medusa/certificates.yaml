@@ -1,0 +1,84 @@
+---
+# Self-signed CA Issuer
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: selfsigned-issuer
+spec:
+  selfSigned: {}
+---
+# CA Certificate
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: mtls-ca
+spec:
+  isCA: true
+  commonName: mtls-ca
+  secretName: mtls-ca-secret
+  privateKey:
+    algorithm: RSA
+    size: 2048
+  issuerRef:
+    name: selfsigned-issuer
+    kind: Issuer
+    group: cert-manager.io
+---
+# CA Issuer (uses the CA certificate created above)
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: mtls-ca-issuer
+spec:
+  ca:
+    secretName: mtls-ca-secret
+---
+# Server Certificate
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: medusa-server-cert
+spec:
+  secretName: medusa-server-cert
+  duration: 8760h # 1 year
+  renewBefore: 720h # 30 days
+  commonName: medusa-server
+  isCA: false
+  privateKey:
+    algorithm: RSA
+    encoding: PKCS1
+    size: 2048
+  dnsNames:
+    - localhost
+  ipAddresses:
+    - "127.0.0.1"
+    - "::1"
+  issuerRef:
+    name: mtls-ca-issuer
+    kind: Issuer
+    group: cert-manager.io
+---
+# Client Certificate
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: medusa-client-cert
+spec:
+  secretName: medusa-client-cert
+  duration: 8760h # 1 year
+  renewBefore: 720h # 30 days
+  commonName: medusa-client
+  isCA: false
+  privateKey:
+    algorithm: RSA
+    encoding: PKCS1
+    size: 2048
+  dnsNames:
+    - localhost
+  ipAddresses:
+    - "127.0.0.1"
+    - "::1"
+  issuerRef:
+    name: mtls-ca-issuer
+    kind: Issuer
+    group: cert-manager.io

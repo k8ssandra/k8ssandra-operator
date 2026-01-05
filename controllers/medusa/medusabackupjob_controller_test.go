@@ -145,7 +145,7 @@ func testMedusaBackupDatacenter(t *testing.T, ctx context.Context, f *framework.
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 
 	dc1 := &cassdcapi.CassandraDatacenter{}
-	err = f.Get(ctx, dc1Key, dc1)
+	require.NoError(f.Get(ctx, dc1Key, dc1))
 
 	t.Log("update dc1 status to ready")
 	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {
@@ -373,9 +373,12 @@ func getPodIpAddress(index int, dcName string) string {
 	}
 }
 
+var _ medusa.ClientFactory = &fakeMedusaClientFactory{}
+
 type fakeMedusaClientFactory struct {
 	clientsMutex sync.Mutex
 	clients      map[string]*fakeMedusaClient
+	tls          bool
 }
 
 func NewMedusaClientFactory() *fakeMedusaClientFactory {
@@ -404,6 +407,11 @@ func (f *fakeMedusaClientFactory) NewClient(address string) (medusa.Client, erro
 		}
 	}
 	return f.clients[address], nil
+}
+
+func (f *fakeMedusaClientFactory) NewClientWithTLS(address string, secret *corev1.Secret) (medusa.Client, error) {
+	f.tls = true
+	return f.NewClient(address)
 }
 
 func (f *fakeMedusaClientFactory) GetRequestedBackups(dc string) map[string][]string {
