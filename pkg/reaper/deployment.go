@@ -415,6 +415,9 @@ func computeVolumeClaims(reaper *api.Reaper) []corev1.PersistentVolumeClaim {
 		},
 		Spec: *volumeClaimsPec,
 	}
+	labels.AddCommonLabelsFromReaper(pvc, reaper)
+	annotations.AddCommonAnnotationsFromReaper(pvc, reaper)
+
 	vcs = append(vcs, *pvc)
 
 	return vcs
@@ -447,7 +450,9 @@ func NewStatefulSet(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, logge
 	addAuthEnvVars(&statefulSet.Spec.Template, authVars)
 	configureVector(reaper, &statefulSet.Spec.Template, dc, logger, registry)
 	labels.AddCommonLabelsFromReaper(statefulSet, reaper)
+	labels.AddCommonLabelsFromReaper(&statefulSet.Spec.Template, reaper)
 	annotations.AddCommonAnnotationsFromReaper(statefulSet, reaper)
+	annotations.AddCommonAnnotationsFromReaper(&statefulSet.Spec.Template, reaper)
 	annotations.AddHashAnnotation(statefulSet)
 	return statefulSet
 }
@@ -474,7 +479,9 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 	addAuthEnvVars(&deployment.Spec.Template, authVars)
 	configureVector(reaper, &deployment.Spec.Template, dc, logger, registry)
 	labels.AddCommonLabelsFromReaper(deployment, reaper)
+	labels.AddCommonLabelsFromReaper(&deployment.Spec.Template, reaper)
 	annotations.AddCommonAnnotationsFromReaper(deployment, reaper)
+	annotations.AddCommonAnnotationsFromReaper(&deployment.Spec.Template, reaper)
 	annotations.AddHashAnnotation(deployment)
 	return deployment
 }

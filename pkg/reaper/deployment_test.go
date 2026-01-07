@@ -16,7 +16,6 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -42,10 +41,11 @@ func TestNewDeployment(t *testing.T) {
 		}},
 	}
 	reaper.Spec.ResourceMeta = &meta.ResourceMeta{
-		CommonLabels: map[string]string{"common": "everywhere", "override": "commonLevel"},
+		CommonLabels:      map[string]string{"common": "everywhere", "override": "commonLevel"},
+		CommonAnnotations: map[string]string{"common-annotation": "common-value", "annotation-override": "commonLevel"},
 		Pods: meta.Tags{
 			Labels:      map[string]string{"pod-label": "pod-label-value", "override": "podLevel"},
-			Annotations: map[string]string{"pod-annotation": "pod-annotation-value"},
+			Annotations: map[string]string{"pod-annotation": "pod-annotation-value", "annotation-override": "podLevel"},
 		},
 		Service: meta.Tags{
 			Labels:      map[string]string{"service-label": "service-label-value"},
@@ -54,7 +54,6 @@ func TestNewDeployment(t *testing.T) {
 	}
 
 	labels := createServiceAndDeploymentLabels(reaper)
-	podLabels := utils.MergeMap(labels, reaper.Spec.ResourceMeta.Pods.Labels)
 	logger := testlogr.NewTestLogger(t)
 	deployment := NewDeployment(reaper, newTestDatacenter(), ptr.To("keystore-password"), ptr.To("truststore-password"), logger, getTestImageRegistry(t))
 
@@ -78,8 +77,26 @@ func TestNewDeployment(t *testing.T) {
 		},
 	})
 
-	assert.Equal(t, podLabels, deployment.Spec.Template.Labels)
-	assert.Equal(t, reaper.Spec.ResourceMeta.Pods.Annotations, deployment.Spec.Template.Annotations)
+	// Verify labels and annotations are there. PodLevel is always overriding the common ones
+	assert.Contains(t, deployment.Spec.Template.Labels, "pod-label")
+	assert.Equal(t, "pod-label-value", deployment.Spec.Template.Labels["pod-label"])
+	assert.Contains(t, deployment.Spec.Template.Labels, "common")
+	assert.Equal(t, "everywhere", deployment.Spec.Template.Labels["common"])
+
+	assert.Contains(t, deployment.Spec.Template.Labels, "override")
+	assert.Equal(t, "podLevel", deployment.Spec.Template.Labels["override"])
+
+	assert.Contains(t, deployment.Annotations, "common-annotation")
+	assert.Equal(t, "common-value", deployment.Annotations["common-annotation"])
+	assert.Contains(t, deployment.Annotations, k8ssandraapi.ResourceHashAnnotation)
+	assert.NotEmpty(t, deployment.Annotations[k8ssandraapi.ResourceHashAnnotation])
+
+	assert.Contains(t, deployment.Spec.Template.Annotations, "pod-annotation")
+	assert.Equal(t, "pod-annotation-value", deployment.Spec.Template.Annotations["pod-annotation"])
+	assert.Contains(t, deployment.Spec.Template.Annotations, "common-annotation")
+	assert.Equal(t, "common-value", deployment.Spec.Template.Annotations["common-annotation"])
+	assert.Contains(t, deployment.Spec.Template.Annotations, "annotation-override")
+	assert.Equal(t, "podLevel", deployment.Spec.Template.Annotations["annotation-override"])
 
 	podSpec := deployment.Spec.Template.Spec
 	assert.Len(t, podSpec.Containers, 1)
@@ -787,7 +804,8 @@ func newTestReaper() *reaperapi.Reaper {
 				Keyspace:    "reaper_db",
 				StorageType: "cassandra",
 				ResourceMeta: &meta.ResourceMeta{
-					CommonLabels: map[string]string{"common": "everywhere", "override": "commonLevel"},
+					CommonLabels:      map[string]string{"common": "everywhere", "override": "commonLevel"},
+					CommonAnnotations: map[string]string{"common-annotation": "common-annotation-value"},
 					Pods: meta.Tags{
 						Labels:      map[string]string{"pod-label": "pod-label-value", "override": "podLevel"},
 						Annotations: map[string]string{"pod-annotation": "pod-annotation-value"},
@@ -920,12 +938,22 @@ func TestLabelsAnnotations(t *testing.T) {
 		k8ssandraapi.ManagedByLabel: k8ssandraapi.NameLabelValue,
 		reaperapi.ReaperLabel:       reaper.Name,
 		"common":                    "everywhere",
-		"override":                  "podLevel",
+		"override":                  "podLevel", // Pod-level labels override CommonLabels
 		"pod-label":                 "pod-label-value",
 	}
 
 	assert.Equal(t, deploymentLabels, deployment.Labels)
 	assert.Equal(t, podLabels, deployment.Spec.Template.Labels)
+
+	assert.Contains(t, deployment.Annotations, "common-annotation")
+	assert.Equal(t, "common-annotation-value", deployment.Annotations["common-annotation"])
+	assert.Contains(t, deployment.Annotations, k8ssandraapi.ResourceHashAnnotation)
+	assert.NotEmpty(t, deployment.Annotations[k8ssandraapi.ResourceHashAnnotation])
+
+	assert.Contains(t, deployment.Spec.Template.Annotations, "pod-annotation")
+	assert.Equal(t, "pod-annotation-value", deployment.Spec.Template.Annotations["pod-annotation"])
+	assert.Contains(t, deployment.Spec.Template.Annotations, "common-annotation")
+	assert.Equal(t, "common-annotation-value", deployment.Spec.Template.Annotations["common-annotation"])
 }
 
 func TestGetAdaptiveIncremental(t *testing.T) {

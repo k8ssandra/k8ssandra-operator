@@ -115,12 +115,12 @@ func IsOwnedByK8ssandraController(component Labeled) bool {
 
 func AddCommonLabels(component Labeled, k8c *k8ssandraapi.K8ssandraCluster) {
 	if k8c.Spec.Cassandra != nil && k8c.Spec.Cassandra.Meta.CommonLabels != nil {
-		component.SetLabels(goalesce.MustDeepMerge(component.GetLabels(), k8c.Spec.Cassandra.Meta.CommonLabels))
+		component.SetLabels(goalesce.MustDeepMerge(k8c.Spec.Cassandra.Meta.CommonLabels, component.GetLabels()))
 	}
 }
 
 func AddCommonLabelsFromReaper(component Labeled, reaper *reaperapi.Reaper) {
 	if reaper.Spec.ResourceMeta != nil && reaper.Spec.ResourceMeta.CommonLabels != nil {
-		component.SetLabels(goalesce.MustDeepMerge(component.GetLabels(), reaper.Spec.ResourceMeta.CommonLabels))
+		component.SetLabels(goalesce.MustDeepMerge(reaper.Spec.ResourceMeta.CommonLabels, component.GetLabels()))
 	}
 }
