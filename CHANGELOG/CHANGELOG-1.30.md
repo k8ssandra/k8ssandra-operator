@@ -20,3 +20,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [BUGFIX] [#1644](https://github.com/k8ssandra/k8ssandra-operator/issues/1644) Fix failures when decommissioning DCs with Cassandra 4.1/5.x
 * [BUGFIX] [#1645](https://github.com/k8ssandra/k8ssandra-operator/issues/1645) Modify the VRL program parsing the Cassandra log to output the original logline if parsing fails
 * [CHANGE] Upgrade cassandra-medusa to 0.27.0
+* [CHANGE] Upgrade cassandra-reaper to 4.1.0
