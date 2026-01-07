@@ -35,7 +35,7 @@ func TestAddCommonAnnotationsExistingAnnotations(t *testing.T) {
 	assert.Equal(t, len(cm.Annotations), 3)
 	assert.Equal(t, cm.Annotations["newAnnotation"], "newValue")
 	assert.Equal(t, cm.Annotations["existingAnnotation"], "existingValue")
-	assert.Equal(t, cm.Annotations["overwrittenAnnotation"], "valueFromK8ssandraSpec")
+	assert.Equal(t, cm.Annotations["overwrittenAnnotation"], "valueFromConfigMap")
 }
 
 func TestAddCommonAnnotations(t *testing.T) {

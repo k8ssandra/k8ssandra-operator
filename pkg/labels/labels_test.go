@@ -36,7 +36,7 @@ func TestAddCommonLabelsExistingLabels(t *testing.T) {
 	assert.Equal(t, len(cm.Labels), 3)
 	assert.Equal(t, cm.Labels["existingLabel"], "existingValue")
 	assert.Equal(t, cm.Labels["newLabel"], "newValue")
-	assert.Equal(t, cm.Labels["overwrittenLabel"], "valueFromK8ssandraSpec")
+	assert.Equal(t, cm.Labels["overwrittenLabel"], "valueFromConfigMap")
 }
 
 func TestAddCommonLabels(t *testing.T) {

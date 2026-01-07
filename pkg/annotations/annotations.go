@@ -49,12 +49,12 @@ func CompareHashAnnotations(r1, r2 Annotated) bool {
 
 func AddCommonAnnotations(component Annotated, k8c *k8ssandraapi.K8ssandraCluster) {
 	if k8c.Spec.Cassandra != nil && k8c.Spec.Cassandra.Meta.CommonAnnotations != nil {
-		component.SetAnnotations(goalesce.MustDeepMerge(component.GetAnnotations(), k8c.Spec.Cassandra.Meta.CommonAnnotations))
+		component.SetAnnotations(goalesce.MustDeepMerge(k8c.Spec.Cassandra.Meta.CommonAnnotations, component.GetAnnotations()))
 	}
 }
 
 func AddCommonAnnotationsFromReaper(component Annotated, reaper *reaperapi.Reaper) {
 	if reaper.Spec.ResourceMeta != nil && reaper.Spec.ResourceMeta.CommonAnnotations != nil {
-		component.SetAnnotations(goalesce.MustDeepMerge(component.GetAnnotations(), reaper.Spec.ResourceMeta.CommonAnnotations))
+		component.SetAnnotations(goalesce.MustDeepMerge(reaper.Spec.ResourceMeta.CommonAnnotations, component.GetAnnotations()))
 	}
 }
