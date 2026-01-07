@@ -169,6 +169,25 @@ type ReaperTemplate struct {
 	// AdditionalEnvVars is a list of additional environment variables to set in the Reaper container.
 	// +optional
 	AdditionalEnvVars []corev1.EnvVar `json:"additionalEnvVars,omitempty"`
+
+	// Encryption configures TLS encryption between Reaper and the operator. If not set, plain text communication is used.
+	// +optional
+	Encryption *ReaperEncryption `json:"encryption,omitempty"`
+}
+
+// ReaperEncryption defines the TLS encryption settings for Reaper server/client (TLS or mTLS)
+type ReaperEncryption struct {
+	// ServerCertName is the name of the secret containing the server certificates.
+	// Secret must contain "keystore.jks" and "truststore.jks" entries with the JKS files using password "changeit"
+	ServerCertName string `json:"serverCertName,omitempty"`
+
+	// ClientCertName is the name of the secret containing the client certificates in case mutual TLS is enabled.
+	// If set, the server is automatically configured with mutual TLS.
+	//
+	// ClientCertName must contain "tls.crt", "tls.key, and "ca.crt" entries with the client certificate,
+	// private key, and CA certificate respectively.
+	// +optional
+	ClientCertName string `json:"clientCertName,omitempty"`
 }
 
 // UseExternalSecrets defines whether the user has specified if credentials and

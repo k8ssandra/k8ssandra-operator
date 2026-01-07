@@ -171,6 +171,31 @@ func computeEnvVars(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, regis
 		}
 	}
 
+	if reaper.Spec.Encryption != nil && reaper.Spec.Encryption.ServerCertName != "" {
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  "REAPER_SERVER_TLS_ENABLE",
+			Value: "true",
+		})
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  "REAPER_SERVER_TLS_KEYSTORE_PATH",
+			Value: "/etc/encryption/server/keystore.jks",
+		})
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  "REAPER_SERVER_TLS_TRUSTSTORE_PATH",
+			Value: "/etc/encryption/server/truststore.jks",
+		})
+		if reaper.Spec.Encryption.ClientCertName != "" {
+			envVars = append(envVars, corev1.EnvVar{
+				Name:  "REAPER_SERVER_TLS_CLIENT_AUTH",
+				Value: "true",
+			})
+		}
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  "REAPER_SERVER_TLS_DISABLE_SNI",
+			Value: "true",
+		})
+	}
+
 	envVars = goalesceutils.MergeCRs(reaper.Spec.AdditionalEnvVars, envVars)
 
 	return envVars
@@ -231,6 +256,21 @@ func computeVolumes(reaper *api.Reaper) ([]corev1.Volume, []corev1.VolumeMount) 
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      "reaper-data",
 			MountPath: "/var/lib/cassandra-reaper/storage",
+		})
+	}
+
+	if reaper.Spec.Encryption != nil && reaper.Spec.Encryption.ServerCertName != "" {
+		volumes = append(volumes, corev1.Volume{
+			Name: "server-tls-keystore",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: reaper.Spec.Encryption.ServerCertName,
+				},
+			},
+		})
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "server-tls-keystore",
+			MountPath: "/etc/encryption/server",
 		})
 	}
 

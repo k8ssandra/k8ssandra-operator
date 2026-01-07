@@ -1,0 +1,85 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: reaper-ca-issuer
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: reaper-ca
+spec:
+  isCA: true
+  commonName: reaper-ca
+  secretName: reaper-ca-secret
+  privateKey:
+    algorithm: RSA
+    size: 2048
+  issuerRef:
+    name: reaper-ca-issuer
+    kind: Issuer
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: reaper-issuer
+spec:
+  ca:
+    secretName: reaper-ca-secret
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: reaper-server-cert
+spec:
+  secretName: reaper-server-encryption-stores
+  duration: 2160h # 90 days
+  renewBefore: 360h # 15 days
+  subject:
+    organizations:
+      - k8ssandra
+  commonName: reaper-server
+  isCA: false
+  privateKey:
+    algorithm: RSA
+    encoding: PKCS1
+    size: 2048
+  dnsNames:
+    - reaper-service
+  keystores:
+    jks:
+      create: true
+      passwordSecretRef:
+        name: reaper-jks-password
+        key: password
+  issuerRef:
+    name: reaper-issuer
+    kind: Issuer
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: reaper-client-cert
+spec:
+  secretName: reaper-client-cert-secret
+  duration: 2160h
+  renewBefore: 360h
+  commonName: reaper-client
+  isCA: false
+  privateKey:
+    algorithm: RSA
+    encoding: PKCS1
+    size: 2048
+  issuerRef:
+    name: reaper-issuer
+    kind: Issuer
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: reaper-jks-password
+type: Opaque
+stringData:
+  password: changeit
