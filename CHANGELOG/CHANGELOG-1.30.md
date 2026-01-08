@@ -13,6 +13,10 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 
 When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
 
+## v1.30.1 - 2026-01-08
+
+This is an update of Helm chart dependency.
+
 ## v1.30.0 - 2026-01-08
 
 * [CHANGE] Upgrade cassandra-medusa to 0.27.0
