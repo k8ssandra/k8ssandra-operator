@@ -28559,7 +28559,7 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Sta
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstargateracksindextelemetrymcac">mcac</a></b></td>
         <td>object</td>
         <td>
-          <br/>
+          DEPRECATED MCAC has been deprecated in favor of the new metrics endpoint<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -28639,6 +28639,54 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Sta
         <td>false</td>
       </tr><tr>
         <td><b>port</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstargateracksindextelemetrycassandraendpointtls">tls</a></b></td>
+        <td>object</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### K8ssandraCluster.spec.cassandra.datacenters[index].stargate.racks[index].telemetry.cassandra.endpoint.tls
+<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindexstargateracksindextelemetrycassandraendpoint)</sup></sup>
+
+
+
+
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>ca.crt</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>tls.crt</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>tls.key</b></td>
         <td>string</td>
         <td>
           <br/>
@@ -28730,7 +28778,7 @@ It is mandatory for replace actions. Regex capture groups are available.<br/>
 
 
 
-
+DEPRECATED MCAC has been deprecated in favor of the new metrics endpoint
 
 <table>
     <thead>
@@ -28746,7 +28794,7 @@ It is mandatory for replace actions. Regex capture groups are available.<br/>
         <td>boolean</td>
         <td>
           enabled sets whether MCAC (legacy metrics endpoint) is enabled.
-This is considered true by default.<br/>
+This is considered false by default.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -28845,8 +28893,7 @@ Enabling the vector agent will inject a sidecar container into the pod.<br/>
         <td><b>image</b></td>
         <td>string</td>
         <td>
-          Image is the name of the Vector image to use. If not set, the default image will be used.
-kube:default="timberio/vector:0.26.0-alpine"<br/>
+          Image is the name of the Vector image to use. If not set, the default image will be used.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -29640,7 +29687,7 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Sta
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstargatetelemetrymcac">mcac</a></b></td>
         <td>object</td>
         <td>
-          <br/>
+          DEPRECATED MCAC has been deprecated in favor of the new metrics endpoint<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -29720,6 +29767,54 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Sta
         <td>false</td>
       </tr><tr>
         <td><b>port</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindexstargatetelemetrycassandraendpointtls">tls</a></b></td>
+        <td>object</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### K8ssandraCluster.spec.cassandra.datacenters[index].stargate.telemetry.cassandra.endpoint.tls
+<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindexstargatetelemetrycassandraendpoint)</sup></sup>
+
+
+
+
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>ca.crt</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>tls.crt</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>tls.key</b></td>
         <td>string</td>
         <td>
           <br/>
@@ -29811,7 +29906,7 @@ It is mandatory for replace actions. Regex capture groups are available.<br/>
 
 
 
-
+DEPRECATED MCAC has been deprecated in favor of the new metrics endpoint
 
 <table>
     <thead>
@@ -29827,7 +29922,7 @@ It is mandatory for replace actions. Regex capture groups are available.<br/>
         <td>boolean</td>
         <td>
           enabled sets whether MCAC (legacy metrics endpoint) is enabled.
-This is considered true by default.<br/>
+This is considered false by default.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -29926,8 +30021,7 @@ Enabling the vector agent will inject a sidecar container into the pod.<br/>
         <td><b>image</b></td>
         <td>string</td>
         <td>
-          Image is the name of the Vector image to use. If not set, the default image will be used.
-kube:default="timberio/vector:0.26.0-alpine"<br/>
+          Image is the name of the Vector image to use. If not set, the default image will be used.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -34853,7 +34947,7 @@ a user-provided monitoring solution (at present, only support for Prometheus is 
         <td><b><a href="#k8ssandraclusterspeccassandradatacentersindextelemetrymcac">mcac</a></b></td>
         <td>object</td>
         <td>
-          <br/>
+          DEPRECATED MCAC has been deprecated in favor of the new metrics endpoint<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -34933,6 +35027,54 @@ a user-provided monitoring solution (at present, only support for Prometheus is 
         <td>false</td>
       </tr><tr>
         <td><b>port</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b><a href="#k8ssandraclusterspeccassandradatacentersindextelemetrycassandraendpointtls">tls</a></b></td>
+        <td>object</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### K8ssandraCluster.spec.cassandra.datacenters[index].telemetry.cassandra.endpoint.tls
+<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandradatacentersindextelemetrycassandraendpoint)</sup></sup>
+
+
+
+
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>ca.crt</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>tls.crt</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>tls.key</b></td>
         <td>string</td>
         <td>
           <br/>
@@ -35024,7 +35166,7 @@ It is mandatory for replace actions. Regex capture groups are available.<br/>
 
 
 
-
+DEPRECATED MCAC has been deprecated in favor of the new metrics endpoint
 
 <table>
     <thead>
@@ -35040,7 +35182,7 @@ It is mandatory for replace actions. Regex capture groups are available.<br/>
         <td>boolean</td>
         <td>
           enabled sets whether MCAC (legacy metrics endpoint) is enabled.
-This is considered true by default.<br/>
+This is considered false by default.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -35139,8 +35281,7 @@ Enabling the vector agent will inject a sidecar container into the pod.<br/>
         <td><b>image</b></td>
         <td>string</td>
         <td>
-          Image is the name of the Vector image to use. If not set, the default image will be used.
-kube:default="timberio/vector:0.26.0-alpine"<br/>
+          Image is the name of the Vector image to use. If not set, the default image will be used.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -53899,7 +54040,7 @@ a user-provided monitoring solution (at present, only support for Prometheus is 
         <td><b><a href="#k8ssandraclusterspeccassandratelemetrymcac">mcac</a></b></td>
         <td>object</td>
         <td>
-          <br/>
+          DEPRECATED MCAC has been deprecated in favor of the new metrics endpoint<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -53979,6 +54120,54 @@ a user-provided monitoring solution (at present, only support for Prometheus is 
         <td>false</td>
       </tr><tr>
         <td><b>port</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b><a href="#k8ssandraclusterspeccassandratelemetrycassandraendpointtls">tls</a></b></td>
+        <td>object</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### K8ssandraCluster.spec.cassandra.telemetry.cassandra.endpoint.tls
+<sup><sup>[↩ Parent](#k8ssandraclusterspeccassandratelemetrycassandraendpoint)</sup></sup>
+
+
+
+
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>ca.crt</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>tls.crt</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>tls.key</b></td>
         <td>string</td>
         <td>
           <br/>
@@ -54070,7 +54259,7 @@ It is mandatory for replace actions. Regex capture groups are available.<br/>
 
 
 
-
+DEPRECATED MCAC has been deprecated in favor of the new metrics endpoint
 
 <table>
     <thead>
@@ -54086,7 +54275,7 @@ It is mandatory for replace actions. Regex capture groups are available.<br/>
         <td>boolean</td>
         <td>
           enabled sets whether MCAC (legacy metrics endpoint) is enabled.
-This is considered true by default.<br/>
+This is considered false by default.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -54185,8 +54374,7 @@ Enabling the vector agent will inject a sidecar container into the pod.<br/>
         <td><b>image</b></td>
         <td>string</td>
         <td>
-          Image is the name of the Vector image to use. If not set, the default image will be used.
-kube:default="timberio/vector:0.26.0-alpine"<br/>
+          Image is the name of the Vector image to use. If not set, the default image will be used.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -56367,6 +56555,13 @@ Provides all service related properties for Medusa.
         </tr>
     </thead>
     <tbody><tr>
+        <td><b><a href="#k8ssandraclusterspecmedusaservicepropertiesencryption">encryption</a></b></td>
+        <td>object</td>
+        <td>
+          gRPC allows modifying the gRPC server settings in Medusa. Settings these values enables mTLS in the gRPC server.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>grpcPort</b></td>
         <td>integer</td>
         <td>
@@ -56374,6 +56569,40 @@ Provides all service related properties for Medusa.
 Included grpc in the field name to avoid misunderstanding with storage.port<br/>
         </td>
         <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### K8ssandraCluster.spec.medusa.serviceProperties.encryption
+<sup><sup>[↩ Parent](#k8ssandraclusterspecmedusaserviceproperties)</sup></sup>
+
+
+
+gRPC allows modifying the gRPC server settings in Medusa. Settings these values enables mTLS in the gRPC server.
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>clientSecretName</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>true</td>
+      </tr><tr>
+        <td><b>serverSecretName</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>true</td>
       </tr></tbody>
 </table>
 
@@ -56704,6 +56933,13 @@ and must contain two keys: "username" and "password".<br/>
           <br/>
             <i>Enum</i>: PER_DC, SINGLE, CONTROL_PLANE<br/>
             <i>Default</i>: PER_DC<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b><a href="#k8ssandraclusterspecreaperencryption">encryption</a></b></td>
+        <td>object</td>
+        <td>
+          Encryption configures TLS encryption between Reaper and the operator. If not set, plain text communication is used.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -59025,6 +59261,45 @@ almost certainly wrong.
 More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names<br/>
           <br/>
             <i>Default</i>: <br/>
+        </td>
+        <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### K8ssandraCluster.spec.reaper.encryption
+<sup><sup>[↩ Parent](#k8ssandraclusterspecreaper)</sup></sup>
+
+
+
+Encryption configures TLS encryption between Reaper and the operator. If not set, plain text communication is used.
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>clientCertName</b></td>
+        <td>string</td>
+        <td>
+          ClientCertName is the name of the secret containing the client certificates in case mutual TLS is enabled.
+If set, the server is automatically configured with mutual TLS.
+
+ClientCertName must contain "tls.crt", "tls.key, and "ca.crt" entries with the client certificate,
+private key, and CA certificate respectively.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>serverCertName</b></td>
+        <td>string</td>
+        <td>
+          ServerCertName is the name of the secret containing the server certificates.
+Secret must contain "keystore.jks" and "truststore.jks" entries with the JKS files using password "changeit"<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -61874,7 +62149,7 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Rea
         <td><b><a href="#k8ssandraclusterspecreapertelemetrymcac">mcac</a></b></td>
         <td>object</td>
         <td>
-          <br/>
+          DEPRECATED MCAC has been deprecated in favor of the new metrics endpoint<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -61954,6 +62229,54 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Rea
         <td>false</td>
       </tr><tr>
         <td><b>port</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b><a href="#k8ssandraclusterspecreapertelemetrycassandraendpointtls">tls</a></b></td>
+        <td>object</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### K8ssandraCluster.spec.reaper.telemetry.cassandra.endpoint.tls
+<sup><sup>[↩ Parent](#k8ssandraclusterspecreapertelemetrycassandraendpoint)</sup></sup>
+
+
+
+
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>ca.crt</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>tls.crt</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>tls.key</b></td>
         <td>string</td>
         <td>
           <br/>
@@ -62045,7 +62368,7 @@ It is mandatory for replace actions. Regex capture groups are available.<br/>
 
 
 
-
+DEPRECATED MCAC has been deprecated in favor of the new metrics endpoint
 
 <table>
     <thead>
@@ -62061,7 +62384,7 @@ It is mandatory for replace actions. Regex capture groups are available.<br/>
         <td>boolean</td>
         <td>
           enabled sets whether MCAC (legacy metrics endpoint) is enabled.
-This is considered true by default.<br/>
+This is considered false by default.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -62160,8 +62483,7 @@ Enabling the vector agent will inject a sidecar container into the pod.<br/>
         <td><b>image</b></td>
         <td>string</td>
         <td>
-          Image is the name of the Vector image to use. If not set, the default image will be used.
-kube:default="timberio/vector:0.26.0-alpine"<br/>
+          Image is the name of the Vector image to use. If not set, the default image will be used.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -65425,7 +65747,7 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Sta
         <td><b><a href="#k8ssandraclusterspecstargatetelemetrymcac">mcac</a></b></td>
         <td>object</td>
         <td>
-          <br/>
+          DEPRECATED MCAC has been deprecated in favor of the new metrics endpoint<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -65505,6 +65827,54 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Sta
         <td>false</td>
       </tr><tr>
         <td><b>port</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b><a href="#k8ssandraclusterspecstargatetelemetrycassandraendpointtls">tls</a></b></td>
+        <td>object</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### K8ssandraCluster.spec.stargate.telemetry.cassandra.endpoint.tls
+<sup><sup>[↩ Parent](#k8ssandraclusterspecstargatetelemetrycassandraendpoint)</sup></sup>
+
+
+
+
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>ca.crt</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>tls.crt</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>tls.key</b></td>
         <td>string</td>
         <td>
           <br/>
@@ -65596,7 +65966,7 @@ It is mandatory for replace actions. Regex capture groups are available.<br/>
 
 
 
-
+DEPRECATED MCAC has been deprecated in favor of the new metrics endpoint
 
 <table>
     <thead>
@@ -65612,7 +65982,7 @@ It is mandatory for replace actions. Regex capture groups are available.<br/>
         <td>boolean</td>
         <td>
           enabled sets whether MCAC (legacy metrics endpoint) is enabled.
-This is considered true by default.<br/>
+This is considered false by default.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -65711,8 +66081,7 @@ Enabling the vector agent will inject a sidecar container into the pod.<br/>
         <td><b>image</b></td>
         <td>string</td>
         <td>
-          Image is the name of the Vector image to use. If not set, the default image will be used.
-kube:default="timberio/vector:0.26.0-alpine"<br/>
+          Image is the name of the Vector image to use. If not set, the default image will be used.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -87213,6 +87582,13 @@ default) and the CQL port (9042 by default) on this DC.<br/>
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b><a href="#reaperspecencryption">encryption</a></b></td>
+        <td>object</td>
+        <td>
+          Encryption configures TLS encryption between Reaper and the operator. If not set, plain text communication is used.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>heapSize</b></td>
         <td>int or string</td>
         <td>
@@ -89780,6 +90156,45 @@ default) and the CQL port (9042 by default) on this DC.
         <td>
           The datacenter namespace. If empty, the datacenter will be assumed to reside in the same namespace as the Reaper
 instance.<br/>
+        </td>
+        <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### Reaper.spec.encryption
+<sup><sup>[↩ Parent](#reaperspec)</sup></sup>
+
+
+
+Encryption configures TLS encryption between Reaper and the operator. If not set, plain text communication is used.
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>clientCertName</b></td>
+        <td>string</td>
+        <td>
+          ClientCertName is the name of the secret containing the client certificates in case mutual TLS is enabled.
+If set, the server is automatically configured with mutual TLS.
+
+ClientCertName must contain "tls.crt", "tls.key, and "ca.crt" entries with the client certificate,
+private key, and CA certificate respectively.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>serverCertName</b></td>
+        <td>string</td>
+        <td>
+          ServerCertName is the name of the secret containing the server certificates.
+Secret must contain "keystore.jks" and "truststore.jks" entries with the JKS files using password "changeit"<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -92548,7 +92963,7 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Rea
         <td><b><a href="#reaperspectelemetrymcac">mcac</a></b></td>
         <td>object</td>
         <td>
-          <br/>
+          DEPRECATED MCAC has been deprecated in favor of the new metrics endpoint<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -92628,6 +93043,54 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Rea
         <td>false</td>
       </tr><tr>
         <td><b>port</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b><a href="#reaperspectelemetrycassandraendpointtls">tls</a></b></td>
+        <td>object</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### Reaper.spec.telemetry.cassandra.endpoint.tls
+<sup><sup>[↩ Parent](#reaperspectelemetrycassandraendpoint)</sup></sup>
+
+
+
+
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>ca.crt</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>tls.crt</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>tls.key</b></td>
         <td>string</td>
         <td>
           <br/>
@@ -92719,7 +93182,7 @@ It is mandatory for replace actions. Regex capture groups are available.<br/>
 
 
 
-
+DEPRECATED MCAC has been deprecated in favor of the new metrics endpoint
 
 <table>
     <thead>
@@ -92735,7 +93198,7 @@ It is mandatory for replace actions. Regex capture groups are available.<br/>
         <td>boolean</td>
         <td>
           enabled sets whether MCAC (legacy metrics endpoint) is enabled.
-This is considered true by default.<br/>
+This is considered false by default.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -92834,8 +93297,7 @@ Enabling the vector agent will inject a sidecar container into the pod.<br/>
         <td><b>image</b></td>
         <td>string</td>
         <td>
-          Image is the name of the Vector image to use. If not set, the default image will be used.
-kube:default="timberio/vector:0.26.0-alpine"<br/>
+          Image is the name of the Vector image to use. If not set, the default image will be used.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -99531,7 +99993,7 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Sta
         <td><b><a href="#stargatespecracksindextelemetrymcac">mcac</a></b></td>
         <td>object</td>
         <td>
-          <br/>
+          DEPRECATED MCAC has been deprecated in favor of the new metrics endpoint<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -99611,6 +100073,54 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Sta
         <td>false</td>
       </tr><tr>
         <td><b>port</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b><a href="#stargatespecracksindextelemetrycassandraendpointtls">tls</a></b></td>
+        <td>object</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### Stargate.spec.racks[index].telemetry.cassandra.endpoint.tls
+<sup><sup>[↩ Parent](#stargatespecracksindextelemetrycassandraendpoint)</sup></sup>
+
+
+
+
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>ca.crt</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>tls.crt</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>tls.key</b></td>
         <td>string</td>
         <td>
           <br/>
@@ -99702,7 +100212,7 @@ It is mandatory for replace actions. Regex capture groups are available.<br/>
 
 
 
-
+DEPRECATED MCAC has been deprecated in favor of the new metrics endpoint
 
 <table>
     <thead>
@@ -99718,7 +100228,7 @@ It is mandatory for replace actions. Regex capture groups are available.<br/>
         <td>boolean</td>
         <td>
           enabled sets whether MCAC (legacy metrics endpoint) is enabled.
-This is considered true by default.<br/>
+This is considered false by default.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -99817,8 +100327,7 @@ Enabling the vector agent will inject a sidecar container into the pod.<br/>
         <td><b>image</b></td>
         <td>string</td>
         <td>
-          Image is the name of the Vector image to use. If not set, the default image will be used.
-kube:default="timberio/vector:0.26.0-alpine"<br/>
+          Image is the name of the Vector image to use. If not set, the default image will be used.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -100612,7 +101121,7 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Sta
         <td><b><a href="#stargatespectelemetrymcac">mcac</a></b></td>
         <td>object</td>
         <td>
-          <br/>
+          DEPRECATED MCAC has been deprecated in favor of the new metrics endpoint<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -100692,6 +101201,54 @@ Telemetry defines the desired telemetry integrations to deploy targeting the Sta
         <td>false</td>
       </tr><tr>
         <td><b>port</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b><a href="#stargatespectelemetrycassandraendpointtls">tls</a></b></td>
+        <td>object</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### Stargate.spec.telemetry.cassandra.endpoint.tls
+<sup><sup>[↩ Parent](#stargatespectelemetrycassandraendpoint)</sup></sup>
+
+
+
+
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>ca.crt</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>tls.crt</b></td>
+        <td>string</td>
+        <td>
+          <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>tls.key</b></td>
         <td>string</td>
         <td>
           <br/>
@@ -100783,7 +101340,7 @@ It is mandatory for replace actions. Regex capture groups are available.<br/>
 
 
 
-
+DEPRECATED MCAC has been deprecated in favor of the new metrics endpoint
 
 <table>
     <thead>
@@ -100799,7 +101356,7 @@ It is mandatory for replace actions. Regex capture groups are available.<br/>
         <td>boolean</td>
         <td>
           enabled sets whether MCAC (legacy metrics endpoint) is enabled.
-This is considered true by default.<br/>
+This is considered false by default.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -100898,8 +101455,7 @@ Enabling the vector agent will inject a sidecar container into the pod.<br/>
         <td><b>image</b></td>
         <td>string</td>
         <td>
-          Image is the name of the Vector image to use. If not set, the default image will be used.
-kube:default="timberio/vector:0.26.0-alpine"<br/>
+          Image is the name of the Vector image to use. If not set, the default image will be used.<br/>
         </td>
         <td>false</td>
       </tr><tr>
