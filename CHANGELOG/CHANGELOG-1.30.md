@@ -15,6 +15,12 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+## v1.30.1 - 2026-01-08
+
+This is an update of Helm chart dependency.
+
+## v1.30.0 - 2026-01-08
+
 * [CHANGE] Upgrade cassandra-medusa to 0.27.0
 * [CHANGE] Upgrade cassandra-reaper to 4.1.0
 * [CHANGE] [#1646](https://github.com/k8ssandra/k8ssandra-operator/issues/1646) Disable MCAC by default. It must be enabled by the user if one still wishes to use it. Support will be removed entirely in the future
