@@ -19,7 +19,7 @@ global:
       reaper:
         repository: "thelastpickle"
         name: "cassandra-reaper"
-        tag: "4.1.0"
+        tag: "4.1.1"
       medusa:
         repository: "k8ssandra"
         name: "medusa"
@@ -97,7 +97,7 @@ client:
     # -- Image repository for the client
     repository: k8ssandra/k8ssandra-client
     # -- Tag of the client image to pull from
-    tag: v0.8.5
+    tag: v0.8.6
     # -- Pull policy for the client container
     pullPolicy: IfNotPresent
   # -- HTTPS proxy address to use for communication to helm.k8ssandra.io

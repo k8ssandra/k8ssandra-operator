@@ -30,7 +30,7 @@ data:
         reaper:
             repository: "thelastpickle"
             name: "cassandra-reaper"
-            tag: "4.1.0"
+            tag: "4.1.1"
     # -- defaults are used when other no override is present for the configured image or image type. All these values can be overridden under any image or image type.
     defaults:
         registry: "docker.io"

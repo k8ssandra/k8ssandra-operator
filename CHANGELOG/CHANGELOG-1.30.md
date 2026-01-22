@@ -15,6 +15,9 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [CHANGE] Upgrade cassandra-reaper to 4.1.1
+* [CHANGE] Upgrade cass-operator to v1.28.1
+
 ## v1.30.1 - 2026-01-08
 
 This is an update of Helm chart dependency.
