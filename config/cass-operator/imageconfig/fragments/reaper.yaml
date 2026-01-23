@@ -2,5 +2,5 @@ images:
   reaper:
     repository: "thelastpickle"
     name: "cassandra-reaper"
-    tag: "4.1.0"
+    tag: "4.1.1"
 
