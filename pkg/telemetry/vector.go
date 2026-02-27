@@ -370,6 +370,13 @@ Clean:
 
 func BuildCustomVectorToml(telemetrySpec *telemetry.TelemetrySpec) string {
 	vectorConfigToml := ""
+	if telemetrySpec.Vector.CustomConfig != "" {
+		vectorConfigToml += telemetrySpec.Vector.CustomConfig
+		if !strings.HasSuffix(vectorConfigToml, "\n") {
+			vectorConfigToml += "\n"
+		}
+	}
+
 	for _, source := range telemetrySpec.Vector.Components.Sources {
 		vectorConfigToml += fmt.Sprintf("\n[sources.%s]\n", source.Name)
 		vectorConfigToml += fmt.Sprintf("type = \"%s\"\n", source.Type)
