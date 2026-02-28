@@ -9822,12 +9822,20 @@ spec:
                               - IfNotPresent
                               - Never
                               type: string
+                            pullSecret:
+                              description: |-
+                                The secret to use when pulling the image from private repositories. If specified, this secret will be passed to
+                                individual puller implementations for them to use. For example, in the case of Docker, only DockerConfig type
+                                secrets are honored. More info:
+                                https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
+                              type: string
                             pullSecretRef:
                               description: |-
                                 The secret to use when pulling the image from private repositories. If specified, this secret will be passed to
                                 individual puller implementations for them to use. For example, in the case of Docker, only DockerConfig type
                                 secrets are honored. More info:
                                 https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
+                                DEPRECATED Use pullSecret instead
                               properties:
                                 name:
                                   default: ""
@@ -12347,12 +12355,20 @@ spec:
                                   - IfNotPresent
                                   - Never
                                   type: string
+                                pullSecret:
+                                  description: |-
+                                    The secret to use when pulling the image from private repositories. If specified, this secret will be passed to
+                                    individual puller implementations for them to use. For example, in the case of Docker, only DockerConfig type
+                                    secrets are honored. More info:
+                                    https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
+                                  type: string
                                 pullSecretRef:
                                   description: |-
                                     The secret to use when pulling the image from private repositories. If specified, this secret will be passed to
                                     individual puller implementations for them to use. For example, in the case of Docker, only DockerConfig type
                                     secrets are honored. More info:
                                     https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
+                                    DEPRECATED Use pullSecret instead
                                   properties:
                                     name:
                                       default: ""
@@ -13643,12 +13659,20 @@ spec:
                                         - IfNotPresent
                                         - Never
                                         type: string
+                                      pullSecret:
+                                        description: |-
+                                          The secret to use when pulling the image from private repositories. If specified, this secret will be passed to
+                                          individual puller implementations for them to use. For example, in the case of Docker, only DockerConfig type
+                                          secrets are honored. More info:
+                                          https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
+                                        type: string
                                       pullSecretRef:
                                         description: |-
                                           The secret to use when pulling the image from private repositories. If specified, this secret will be passed to
                                           individual puller implementations for them to use. For example, in the case of Docker, only DockerConfig type
                                           secrets are honored. More info:
                                           https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
+                                          DEPRECATED Use pullSecret instead
                                         properties:
                                           name:
                                             default: ""
@@ -22936,12 +22960,20 @@ spec:
                         - IfNotPresent
                         - Never
                         type: string
+                      pullSecret:
+                        description: |-
+                          The secret to use when pulling the image from private repositories. If specified, this secret will be passed to
+                          individual puller implementations for them to use. For example, in the case of Docker, only DockerConfig type
+                          secrets are honored. More info:
+                          https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
+                        type: string
                       pullSecretRef:
                         description: |-
                           The secret to use when pulling the image from private repositories. If specified, this secret will be passed to
                           individual puller implementations for them to use. For example, in the case of Docker, only DockerConfig type
                           secrets are honored. More info:
                           https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
+                          DEPRECATED Use pullSecret instead
                         properties:
                           name:
                             default: ""
@@ -27207,12 +27239,20 @@ spec:
                         - IfNotPresent
                         - Never
                         type: string
+                      pullSecret:
+                        description: |-
+                          The secret to use when pulling the image from private repositories. If specified, this secret will be passed to
+                          individual puller implementations for them to use. For example, in the case of Docker, only DockerConfig type
+                          secrets are honored. More info:
+                          https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
+                        type: string
                       pullSecretRef:
                         description: |-
                           The secret to use when pulling the image from private repositories. If specified, this secret will be passed to
                           individual puller implementations for them to use. For example, in the case of Docker, only DockerConfig type
                           secrets are honored. More info:
                           https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
+                          DEPRECATED Use pullSecret instead
                         properties:
                           name:
                             default: ""
@@ -29207,12 +29247,20 @@ spec:
                         - IfNotPresent
                         - Never
                         type: string
+                      pullSecret:
+                        description: |-
+                          The secret to use when pulling the image from private repositories. If specified, this secret will be passed to
+                          individual puller implementations for them to use. For example, in the case of Docker, only DockerConfig type
+                          secrets are honored. More info:
+                          https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
+                        type: string
                       pullSecretRef:
                         description: |-
                           The secret to use when pulling the image from private repositories. If specified, this secret will be passed to
                           individual puller implementations for them to use. For example, in the case of Docker, only DockerConfig type
                           secrets are honored. More info:
                           https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
+                          DEPRECATED Use pullSecret instead
                         properties:
                           name:
                             default: ""
@@ -29313,12 +29361,20 @@ spec:
                         - IfNotPresent
                         - Never
                         type: string
+                      pullSecret:
+                        description: |-
+                          The secret to use when pulling the image from private repositories. If specified, this secret will be passed to
+                          individual puller implementations for them to use. For example, in the case of Docker, only DockerConfig type
+                          secrets are honored. More info:
+                          https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
+                        type: string
                       pullSecretRef:
                         description: |-
                           The secret to use when pulling the image from private repositories. If specified, this secret will be passed to
                           individual puller implementations for them to use. For example, in the case of Docker, only DockerConfig type
                           secrets are honored. More info:
                           https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
+                          DEPRECATED Use pullSecret instead
                         properties:
                           name:
                             default: ""
@@ -32066,12 +32122,20 @@ spec:
                         - IfNotPresent
                         - Never
                         type: string
+                      pullSecret:
+                        description: |-
+                          The secret to use when pulling the image from private repositories. If specified, this secret will be passed to
+                          individual puller implementations for them to use. For example, in the case of Docker, only DockerConfig type
+                          secrets are honored. More info:
+                          https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
+                        type: string
                       pullSecretRef:
                         description: |-
                           The secret to use when pulling the image from private repositories. If specified, this secret will be passed to
                           individual puller implementations for them to use. For example, in the case of Docker, only DockerConfig type
                           secrets are honored. More info:
                           https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
+                          DEPRECATED Use pullSecret instead
                         properties:
                           name:
                             default: ""
@@ -35674,12 +35738,20 @@ spec:
                     - IfNotPresent
                     - Never
                     type: string
+                  pullSecret:
+                    description: |-
+                      The secret to use when pulling the image from private repositories. If specified, this secret will be passed to
+                      individual puller implementations for them to use. For example, in the case of Docker, only DockerConfig type
+                      secrets are honored. More info:
+                      https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
+                    type: string
                   pullSecretRef:
                     description: |-
                       The secret to use when pulling the image from private repositories. If specified, this secret will be passed to
                       individual puller implementations for them to use. For example, in the case of Docker, only DockerConfig type
                       secrets are honored. More info:
                       https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
+                      DEPRECATED Use pullSecret instead
                     properties:
                       name:
                         default: ""
@@ -35801,12 +35873,20 @@ spec:
                     - IfNotPresent
                     - Never
                     type: string
+                  pullSecret:
+                    description: |-
+                      The secret to use when pulling the image from private repositories. If specified, this secret will be passed to
+                      individual puller implementations for them to use. For example, in the case of Docker, only DockerConfig type
+                      secrets are honored. More info:
+                      https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
+                    type: string
                   pullSecretRef:
                     description: |-
                       The secret to use when pulling the image from private repositories. If specified, this secret will be passed to
                       individual puller implementations for them to use. For example, in the case of Docker, only DockerConfig type
                       secrets are honored. More info:
                       https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
+                      DEPRECATED Use pullSecret instead
                     properties:
                       name:
                         default: ""
@@ -38927,12 +39007,20 @@ spec:
                     - IfNotPresent
                     - Never
                     type: string
+                  pullSecret:
+                    description: |-
+                      The secret to use when pulling the image from private repositories. If specified, this secret will be passed to
+                      individual puller implementations for them to use. For example, in the case of Docker, only DockerConfig type
+                      secrets are honored. More info:
+                      https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
+                    type: string
                   pullSecretRef:
                     description: |-
                       The secret to use when pulling the image from private repositories. If specified, this secret will be passed to
                       individual puller implementations for them to use. For example, in the case of Docker, only DockerConfig type
                       secrets are honored. More info:
                       https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
+                      DEPRECATED Use pullSecret instead
                     properties:
                       name:
                         default: ""
@@ -40201,12 +40289,20 @@ spec:
                           - IfNotPresent
                           - Never
                           type: string
+                        pullSecret:
+                          description: |-
+                            The secret to use when pulling the image from private repositories. If specified, this secret will be passed to
+                            individual puller implementations for them to use. For example, in the case of Docker, only DockerConfig type
+                            secrets are honored. More info:
+                            https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
+                          type: string
                         pullSecretRef:
                           description: |-
                             The secret to use when pulling the image from private repositories. If specified, this secret will be passed to
                             individual puller implementations for them to use. For example, in the case of Docker, only DockerConfig type
                             secrets are honored. More info:
                             https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod
+                            DEPRECATED Use pullSecret instead
                           properties:
                             name:
                               default: ""
