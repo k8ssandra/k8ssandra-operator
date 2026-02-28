@@ -14344,9 +14344,9 @@ spec:
                                                   type: object
                                                 type: array
                                             type: object
-                                          customConfig:
+                                          config:
                                             description: |-
-                                              CustomConfig is raw TOML merged into the generated Vector configuration.
+                                              Config is raw TOML merged into the generated Vector configuration.
                                               This can be used to set global Vector options or anything that does not fit the components model.
                                             type: string
                                           enabled:
@@ -14914,9 +14914,9 @@ spec:
                                             type: object
                                           type: array
                                       type: object
-                                    customConfig:
+                                    config:
                                       description: |-
-                                        CustomConfig is raw TOML merged into the generated Vector configuration.
+                                        Config is raw TOML merged into the generated Vector configuration.
                                         This can be used to set global Vector options or anything that does not fit the components model.
                                       type: string
                                     enabled:
@@ -17511,9 +17511,9 @@ spec:
                                         type: object
                                       type: array
                                   type: object
-                                customConfig:
+                                config:
                                   description: |-
-                                    CustomConfig is raw TOML merged into the generated Vector configuration.
+                                    Config is raw TOML merged into the generated Vector configuration.
                                     This can be used to set global Vector options or anything that does not fit the components model.
                                   type: string
                                 enabled:
@@ -26948,9 +26948,9 @@ spec:
                                   type: object
                                 type: array
                             type: object
-                          customConfig:
+                          config:
                             description: |-
-                              CustomConfig is raw TOML merged into the generated Vector configuration.
+                              Config is raw TOML merged into the generated Vector configuration.
                               This can be used to set global Vector options or anything that does not fit the components model.
                             type: string
                           enabled:
@@ -30939,9 +30939,9 @@ spec:
                                   type: object
                                 type: array
                             type: object
-                          customConfig:
+                          config:
                             description: |-
-                              CustomConfig is raw TOML merged into the generated Vector configuration.
+                              Config is raw TOML merged into the generated Vector configuration.
                               This can be used to set global Vector options or anything that does not fit the components model.
                             type: string
                           enabled:
@@ -32769,9 +32769,9 @@ spec:
                                   type: object
                                 type: array
                             type: object
-                          customConfig:
+                          config:
                             description: |-
-                              CustomConfig is raw TOML merged into the generated Vector configuration.
+                              Config is raw TOML merged into the generated Vector configuration.
                               This can be used to set global Vector options or anything that does not fit the components model.
                             type: string
                           enabled:
@@ -37388,9 +37388,9 @@ spec:
                               type: object
                             type: array
                         type: object
-                      customConfig:
+                      config:
                         description: |-
-                          CustomConfig is raw TOML merged into the generated Vector configuration.
+                          Config is raw TOML merged into the generated Vector configuration.
                           This can be used to set global Vector options or anything that does not fit the components model.
                         type: string
                       enabled:
@@ -40915,9 +40915,9 @@ spec:
                                     type: object
                                   type: array
                               type: object
-                            customConfig:
+                            config:
                               description: |-
-                                CustomConfig is raw TOML merged into the generated Vector configuration.
+                                Config is raw TOML merged into the generated Vector configuration.
                                 This can be used to set global Vector options or anything that does not fit the components model.
                               type: string
                             enabled:
@@ -41470,9 +41470,9 @@ spec:
                               type: object
                             type: array
                         type: object
-                      customConfig:
+                      config:
                         description: |-
-                          CustomConfig is raw TOML merged into the generated Vector configuration.
+                          Config is raw TOML merged into the generated Vector configuration.
                           This can be used to set global Vector options or anything that does not fit the components model.
                         type: string
                       enabled:

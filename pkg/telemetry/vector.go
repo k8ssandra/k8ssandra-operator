@@ -370,8 +370,8 @@ Clean:
 
 func BuildCustomVectorToml(telemetrySpec *telemetry.TelemetrySpec) string {
 	vectorConfigToml := ""
-	if telemetrySpec.Vector.CustomConfig != "" {
-		vectorConfigToml += telemetrySpec.Vector.CustomConfig
+	if telemetrySpec.Vector.Config != "" {
+		vectorConfigToml += telemetrySpec.Vector.Config
 		if !strings.HasSuffix(vectorConfigToml, "\n") {
 			vectorConfigToml += "\n"
 		}

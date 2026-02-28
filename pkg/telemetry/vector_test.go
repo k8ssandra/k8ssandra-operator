@@ -119,7 +119,7 @@ inputs = ["test", "test2"]
 			&telemetry.TelemetrySpec{
 				Vector: &telemetry.VectorSpec{
 					Enabled: ptr.To(true),
-					CustomConfig: `data_dir = "/data-dir"
+					Config: `data_dir = "/data-dir"
 
 [api]
 enabled = true`,
@@ -289,7 +289,7 @@ func TestCustomConfig(t *testing.T) {
 	telemetrySpec := &telemetry.TelemetrySpec{
 		Vector: &telemetry.VectorSpec{
 			Enabled: ptr.To(true),
-			CustomConfig: `data_dir = "/data-dir"
+			Config: `data_dir = "/data-dir"
 
 [api]
 enabled = true`,
