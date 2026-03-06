@@ -180,7 +180,7 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 			Users:                  template.Users,
 			Networking:             template.Networking,
 			PodTemplateSpec:        &template.PodTemplateSpec,
-			CDC:                    template.CDC,
+			DeprecatedCDC:          template.CDC,
 			DseWorkloads:           template.DseWorkloads,
 			ServiceAccountName:     template.ServiceAccount,
 			ReadOnlyRootFilesystem: template.ReadOnlyRootFilesystem,

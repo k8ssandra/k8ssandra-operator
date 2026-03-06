@@ -1454,7 +1454,7 @@ func TestCDC(t *testing.T) {
 		&template,
 	)
 	assert.NoError(t, err)
-	assert.Equal(t, cassDC.Spec.CDC, template.CDC)
+	assert.Equal(t, cassDC.Spec.DeprecatedCDC, template.CDC)
 }
 
 func TestDatacentersReplication(t *testing.T) {

@@ -780,7 +780,7 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 	// assert.Equal(*kc.Spec.Cassandra.Datacenters[1].DatacenterOptions.StorageConfig, dc2.Spec.StorageConfig)
 	assert.Equal(kc.Spec.Cassandra.Datacenters[1].Networking.ToCassNetworkingConfig(), dc2.Spec.Networking)
 	assert.Equal(dc2Size, dc2.Spec.Size)
-	assert.Equal(*dc2.Spec.CDC.PulsarServiceUrl, "pulsar://test-url")
+	assert.Equal(*dc2.Spec.DeprecatedCDC.PulsarServiceUrl, "pulsar://test-url")
 
 	t.Log("deleting K8ssandraCluster")
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
