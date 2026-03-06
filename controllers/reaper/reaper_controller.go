@@ -91,7 +91,6 @@ func (r *ReaperReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 }
 
 func (r *ReaperReconciler) reconcile(ctx context.Context, actualReaper *reaperapi.Reaper, logger logr.Logger) (ctrl.Result, error) {
-
 	actualReaper.Status.Progress = reaperapi.ReaperProgressPending
 	actualReaper.Status.SetNotReady()
 
@@ -170,7 +169,6 @@ func (r *ReaperReconciler) reconcileDeployment(
 	actualDc *cassdcapi.CassandraDatacenter,
 	logger logr.Logger,
 ) (ctrl.Result, error) {
-
 	deploymentKey := types.NamespacedName{Namespace: actualReaper.Namespace, Name: actualReaper.Name}
 	logger = logger.WithValues("Deployment", deploymentKey)
 	logger.Info(fmt.Sprintf("Reconciling reaper deployment, req was %#v", actualReaper))
@@ -346,7 +344,7 @@ func (r *ReaperReconciler) reconcileService(
 	logger.Info("Reconciling Reaper Service")
 	desiredService := reaper.NewService(serviceKey, actualReaper)
 	actualService := &corev1.Service{}
-	if err := r.Client.Get(ctx, serviceKey, actualService); err != nil {
+	if err := r.Get(ctx, serviceKey, actualService); err != nil {
 		if errors.IsNotFound(err) {
 			// create the service
 			if err = controllerutil.SetControllerReference(actualReaper, desiredService, r.Scheme); err != nil {
@@ -354,7 +352,7 @@ func (r *ReaperReconciler) reconcileService(
 				return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
 			}
 			logger.Info("Creating Reaper service")
-			if err = r.Client.Create(ctx, desiredService); err != nil {
+			if err = r.Create(ctx, desiredService); err != nil {
 				if errors.IsAlreadyExists(err) {
 					// the read from the local cache didn't catch that the resource was created
 					// already; simply requeue until the cache is up-to-date

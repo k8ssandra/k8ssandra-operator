@@ -395,7 +395,7 @@ func (s *SecretSyncController) SetupWithManager(mgr ctrl.Manager, clusters []clu
 	}
 
 	// We should only reconcile objects that match the rules
-	toMatchingReplicates := func(ctx context.Context, secret client.Object) []reconcile.Request {
+	toMatchingReplicates := func(_ context.Context, secret client.Object) []reconcile.Request {
 		requests := []reconcile.Request{}
 		s.selectorMutex.RLock()
 		for k, v := range s.selectors {

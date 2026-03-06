@@ -77,7 +77,7 @@ func TestK8ssandraTask(t *testing.T) {
 func executeParallelK8ssandraTask(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
 
-	kc := newCluster(namespace, "kc",
+	kc := newCluster(namespace,
 		newDc("dc1", f.DataPlaneContexts[0]),
 		newDc("dc2", f.DataPlaneContexts[1]))
 	require.NoError(f.Client.Create(ctx, kc), "failed to create K8ssandraCluster")
@@ -172,7 +172,7 @@ func executeParallelK8ssandraTask(t *testing.T, ctx context.Context, f *framewor
 func executeSequentialK8ssandraTask(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
 
-	kc := newCluster(namespace, "kc",
+	kc := newCluster(namespace,
 		newDc("dc1", f.DataPlaneContexts[0]),
 		newDc("dc2", f.DataPlaneContexts[1]))
 	require.NoError(f.Client.Create(ctx, kc), "failed to create K8ssandraCluster")
@@ -278,7 +278,7 @@ func executeSequentialK8ssandraTask(t *testing.T, ctx context.Context, f *framew
 func deleteK8ssandraTask(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
 
-	kc := newCluster(namespace, "kc",
+	kc := newCluster(namespace,
 		newDc("dc1", f.DataPlaneContexts[0]),
 		newDc("dc2", f.DataPlaneContexts[1]))
 	require.NoError(f.Client.Create(ctx, kc), "failed to create K8ssandraCluster")
@@ -323,7 +323,7 @@ func deleteK8ssandraTask(t *testing.T, ctx context.Context, f *framework.Framewo
 func expireK8ssandraTask(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
 
-	kc := newCluster(namespace, "kc",
+	kc := newCluster(namespace,
 		newDc("dc1", f.DataPlaneContexts[0]),
 		newDc("dc2", f.DataPlaneContexts[1]))
 	require.NoError(f.Client.Create(ctx, kc), "failed to create K8ssandraCluster")
@@ -378,11 +378,11 @@ func expireK8ssandraTask(t *testing.T, ctx context.Context, f *framework.Framewo
 	require.Eventually(func() bool { return !f.K8ssandraTaskExists(ctx, k8TaskKey)() }, timeout, interval)
 }
 
-func newCluster(namespace, name string, dcs ...k8capi.CassandraDatacenterTemplate) *k8capi.K8ssandraCluster {
+func newCluster(namespace string, dcs ...k8capi.CassandraDatacenterTemplate) *k8capi.K8ssandraCluster {
 	return &k8capi.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
-			Name:      name,
+			Name:      "kc",
 		},
 		Spec: k8capi.K8ssandraClusterSpec{
 			Cassandra: &k8capi.CassandraClusterTemplate{

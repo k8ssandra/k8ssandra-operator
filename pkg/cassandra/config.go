@@ -20,7 +20,6 @@ const (
 // createJsonConfig parses a CassandraConfig into raw JSON bytes as required by the
 // CassandraDatacenter.Spec.Config field, which is processed by cass-config-builder.
 func createJsonConfig(config api.CassandraConfig, serverVersion *semver.Version, serverType api.ServerDistribution) ([]byte, error) {
-
 	out := make(unstructured.Unstructured)
 
 	// cassandra.yaml is an unstructured map, we simply append it to the output

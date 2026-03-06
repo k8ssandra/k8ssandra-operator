@@ -59,7 +59,7 @@ func (p *podSecretsInjector) Handle(ctx context.Context, req admission.Request) 
 
 	copy := pod.DeepCopy()
 
-	err = p.mutatePods(ctx, copy, logger)
+	err = p.mutatePods(copy, logger)
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
@@ -73,7 +73,7 @@ func (p *podSecretsInjector) Handle(ctx context.Context, req admission.Request) 
 }
 
 // mutatePods injects the secret mounting configuration into the pod
-func (p *podSecretsInjector) mutatePods(ctx context.Context, pod *corev1.Pod, logger logr.Logger) error {
+func (p *podSecretsInjector) mutatePods(pod *corev1.Pod, logger logr.Logger) error {
 	if pod.Annotations == nil {
 		logger.Info("no annotations exist", "podName", pod.Name, "namespace", pod.Namespace)
 		return nil
@@ -187,5 +187,4 @@ func injectVolumeMount(pod *corev1.Pod, volumeMount corev1.VolumeMount, containe
 			}
 		}
 	}
-
 }

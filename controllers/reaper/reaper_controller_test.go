@@ -299,7 +299,6 @@ func testCreateReaper(t *testing.T, ctx context.Context, k8sClient client.Client
 // deployment already exists. This could happen after a failed reconciliation and
 // the request gets requeued.
 func testCreateReaperWithExistingObjects(t *testing.T, ctx context.Context, k8sClient client.Client, testNamespace string) {
-
 	t.Log("create the service")
 	serviceKey := types.NamespacedName{Namespace: testNamespace, Name: reaper.GetServiceName(reaperName)}
 	// We can use a fake service here with only the required properties set. Since the service already
@@ -653,7 +652,7 @@ func envVarHasValue(envVars []corev1.EnvVar, name string, value string) bool {
 func envVarSecretHasName(envVars []corev1.EnvVar, name string, secretName string) bool {
 	for _, envVar := range envVars {
 		if envVar.Name == name {
-			return envVar.ValueFrom.SecretKeyRef.LocalObjectReference.Name == secretName
+			return envVar.ValueFrom.SecretKeyRef.Name == secretName
 		}
 	}
 	return false

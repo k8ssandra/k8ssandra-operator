@@ -100,8 +100,8 @@ func mustLabels(klusterName string, klusterNamespace string, dcName string, addi
 
 // MergeTelemetrySpecs merges the cluster and dc level telemetry specs, prioritizing the dc level spec.
 func MergeTelemetrySpecs(kc *k8ssandraapi.K8ssandraCluster, dcTemplate k8ssandraapi.CassandraDatacenterTemplate) *v1alpha1.TelemetrySpec {
-	clusterSpec := kc.Spec.Cassandra.DatacenterOptions.Telemetry
-	dcSpec := dcTemplate.DatacenterOptions.Telemetry
+	clusterSpec := kc.Spec.Cassandra.Telemetry
+	dcSpec := dcTemplate.Telemetry
 	mergedSpec := dcSpec.MergeWith(clusterSpec)
 	return mergedSpec
 }

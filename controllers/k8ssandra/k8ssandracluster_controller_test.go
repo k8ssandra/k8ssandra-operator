@@ -305,7 +305,7 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 
 	// Test that prometheus servicemonitor comes up when it is requested in the CassandraDatacenter.
 	kcPatch := client.MergeFrom(kc.DeepCopy())
-	kc.Spec.Cassandra.Datacenters[0].DatacenterOptions.Telemetry = &telemetryapi.TelemetrySpec{
+	kc.Spec.Cassandra.Datacenters[0].Telemetry = &telemetryapi.TelemetrySpec{
 		Prometheus: &telemetryapi.PrometheusTelemetrySpec{
 			Enabled: ptr.To(true),
 		},
@@ -338,7 +338,7 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 	assert.NotNil(t, sm.Spec.Endpoints)
 	// Ensure that removing the telemetry spec does delete the ServiceMonitor
 	kcPatch = client.MergeFrom(kc.DeepCopy())
-	kc.Spec.Cassandra.Datacenters[0].DatacenterOptions.Telemetry = nil
+	kc.Spec.Cassandra.Datacenters[0].Telemetry = nil
 	if err := f.Client.Patch(ctx, kc, kcPatch); err != nil {
 		assert.Fail(t, "failed to patch stargate", "error", err)
 	}
@@ -446,7 +446,7 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 	require.NoError(err, "failed to get dc1")
 
 	assert.Equal(kc.Name, dc1.Spec.ClusterName)
-	assert.Equal(kc.Spec.Cassandra.DatacenterOptions.ServerVersion, dc1.Spec.ServerVersion)
+	assert.Equal(kc.Spec.Cassandra.ServerVersion, dc1.Spec.ServerVersion)
 	// assert.Equal(*kc.Spec.Cassandra.DatacenterOptions.StorageConfig, dc1.Spec.StorageConfig)
 	assert.Equal(dc1Size, dc1.Spec.Size)
 	assert.Equal(dc1.Spec.SuperuserSecretName, superUserSecretName)
@@ -465,7 +465,7 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 	require.NoError(err, "failed to get dc2")
 
 	assert.Equal(kc.Name, dc2.Spec.ClusterName)
-	assert.Equal(kc.Spec.Cassandra.DatacenterOptions.ServerVersion, dc2.Spec.ServerVersion)
+	assert.Equal(kc.Spec.Cassandra.ServerVersion, dc2.Spec.ServerVersion)
 	// assert.Equal(*kc.Spec.Cassandra.DatacenterOptions.StorageConfig, dc2.Spec.StorageConfig)
 	assert.Equal(dc2Size, dc2.Spec.Size)
 	assert.Equal(dc1.Spec.SuperuserSecretName, superUserSecretName)
@@ -609,12 +609,12 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 	assert.Equal(kc.Name, dc1.Spec.ClusterName)
 	assert.Equal(serverVersion, dc1.Spec.ServerVersion)
 	// assert.Equal(*kc.Spec.Cassandra.Datacenters[0].DatacenterOptions.StorageConfig, dc1.Spec.StorageConfig)
-	assert.Equal(kc.Spec.Cassandra.Datacenters[0].DatacenterOptions.Networking.ToCassNetworkingConfig(), dc1.Spec.Networking)
+	assert.Equal(kc.Spec.Cassandra.Datacenters[0].Networking.ToCassNetworkingConfig(), dc1.Spec.Networking)
 	assert.Equal(dc1Size, dc1.Spec.Size)
-	assert.Equal(dc1.Spec.ConfigBuilderResources.Limits.Cpu(), kc.Spec.Cassandra.DatacenterOptions.InitContainers[0].Resources.Limits.Cpu())
-	assert.Equal(dc1.Spec.ConfigBuilderResources.Limits.Memory(), kc.Spec.Cassandra.DatacenterOptions.InitContainers[0].Resources.Limits.Memory())
-	assert.Equal(dc1.Spec.ConfigBuilderResources.Requests.Cpu(), kc.Spec.Cassandra.DatacenterOptions.InitContainers[0].Resources.Requests.Cpu())
-	assert.Equal(dc1.Spec.ConfigBuilderResources.Requests.Memory(), kc.Spec.Cassandra.DatacenterOptions.InitContainers[0].Resources.Requests.Memory())
+	assert.Equal(dc1.Spec.ConfigBuilderResources.Limits.Cpu(), kc.Spec.Cassandra.InitContainers[0].Resources.Limits.Cpu())
+	assert.Equal(dc1.Spec.ConfigBuilderResources.Limits.Memory(), kc.Spec.Cassandra.InitContainers[0].Resources.Limits.Memory())
+	assert.Equal(dc1.Spec.ConfigBuilderResources.Requests.Cpu(), kc.Spec.Cassandra.InitContainers[0].Resources.Requests.Cpu())
+	assert.Equal(dc1.Spec.ConfigBuilderResources.Requests.Memory(), kc.Spec.Cassandra.InitContainers[0].Resources.Requests.Memory())
 
 	t.Log("update dc1 status to ready")
 	err = f.SetDatacenterStatusReady(ctx, dc1Key)
@@ -632,7 +632,7 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 	assert.Equal(kc.Name, dc2.Spec.ClusterName)
 	assert.Equal(serverVersion, dc2.Spec.ServerVersion)
 	// assert.Equal(*kc.Spec.Cassandra.Datacenters[1].DatacenterOptions.StorageConfig, dc2.Spec.StorageConfig)
-	assert.Equal(kc.Spec.Cassandra.Datacenters[1].DatacenterOptions.Networking.ToCassNetworkingConfig(), dc2.Spec.Networking)
+	assert.Equal(kc.Spec.Cassandra.Datacenters[1].Networking.ToCassNetworkingConfig(), dc2.Spec.Networking)
 	assert.Equal(dc2Size, dc2.Spec.Size)
 
 	t.Log("deleting K8ssandraCluster")
@@ -759,7 +759,7 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 	assert.Equal(kc.Name, dc1.Spec.ClusterName)
 	assert.Equal(serverVersion, dc1.Spec.ServerVersion)
 	// assert.Equal(*kc.Spec.Cassandra.DatacenterOptions.StorageConfig, dc1.Spec.StorageConfig)
-	assert.Equal(kc.Spec.Cassandra.DatacenterOptions.Networking.ToCassNetworkingConfig(), dc1.Spec.Networking)
+	assert.Equal(kc.Spec.Cassandra.Networking.ToCassNetworkingConfig(), dc1.Spec.Networking)
 	assert.Equal(dc1Size, dc1.Spec.Size)
 
 	t.Log("update dc1 status to ready")
@@ -778,7 +778,7 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 	assert.Equal(kc.Name, dc2.Spec.ClusterName)
 	assert.Equal(serverVersion, dc2.Spec.ServerVersion)
 	// assert.Equal(*kc.Spec.Cassandra.Datacenters[1].DatacenterOptions.StorageConfig, dc2.Spec.StorageConfig)
-	assert.Equal(kc.Spec.Cassandra.Datacenters[1].DatacenterOptions.Networking.ToCassNetworkingConfig(), dc2.Spec.Networking)
+	assert.Equal(kc.Spec.Cassandra.Datacenters[1].Networking.ToCassNetworkingConfig(), dc2.Spec.Networking)
 	assert.Equal(dc2Size, dc2.Spec.Size)
 	assert.Equal(*dc2.Spec.CDC.PulsarServiceUrl, "pulsar://test-url")
 
@@ -873,10 +873,10 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 			t.Logf("failed to get contact-points Service: %v", err)
 			return false
 		}
-		if service.ObjectMeta.Labels["testLabel"] != "testValue" {
+		if service.Labels["testLabel"] != "testValue" {
 			return false
 		}
-		if service.ObjectMeta.Annotations["testAnnotation"] != "testValue" {
+		if service.Annotations["testAnnotation"] != "testValue" {
 			return false
 		}
 
@@ -1146,7 +1146,7 @@ func createSingleDcCassandra4ClusterWithStargate(t *testing.T, ctx context.Conte
 		}
 
 		condition := FindDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
-		return !(condition == nil && condition.Status == corev1.ConditionFalse)
+		return condition != nil || condition.Status != corev1.ConditionFalse
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 
 	t.Log("update dc1 status to ready")
@@ -1374,16 +1374,17 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 	var serverKeystoreMount *corev1.VolumeMount
 	var serverTruststoreMount *corev1.VolumeMount
 	for _, mount := range cassContainer.VolumeMounts {
-		if mount.Name == "client-keystore" {
+		switch mount.Name {
+		case "client-keystore":
 			clientKeystoreMount = &mount
 			assert.Equal("/mnt/client-keystore", clientKeystoreMount.MountPath, "client-keystore isn't mounted correctly")
-		} else if mount.Name == "client-truststore" {
+		case "client-truststore":
 			clientTruststoreMount = &mount
 			assert.Equal("/mnt/client-truststore", clientTruststoreMount.MountPath, "client-truststore isn't mounted correctly")
-		} else if mount.Name == "server-keystore" {
+		case "server-keystore":
 			serverKeystoreMount = &mount
 			assert.Equal("/mnt/server-keystore", serverKeystoreMount.MountPath, "server-keystore isn't mounted correctly")
-		} else if mount.Name == "server-truststore" {
+		case "server-truststore":
 			serverTruststoreMount = &mount
 			assert.Equal("/mnt/server-truststore", serverTruststoreMount.MountPath, "server-truststore isn't mounted correctly")
 		}
@@ -1763,16 +1764,17 @@ func applyClusterWithEncryptionOptionsExternalSecrets(t *testing.T, ctx context.
 	var serverKeystoreMount *corev1.VolumeMount
 	var serverTruststoreMount *corev1.VolumeMount
 	for _, mount := range cassContainer.VolumeMounts {
-		if mount.Name == "client-keystore" {
+		switch mount.Name {
+		case "client-keystore":
 			clientKeystoreMount = &mount
 			assert.Equal("/mnt/client-keystore", clientKeystoreMount.MountPath, "client-keystore isn't mounted correctly")
-		} else if mount.Name == "client-truststore" {
+		case "client-truststore":
 			clientTruststoreMount = &mount
 			assert.Equal("/mnt/client-truststore", clientTruststoreMount.MountPath, "client-truststore isn't mounted correctly")
-		} else if mount.Name == "server-keystore" {
+		case "server-keystore":
 			serverKeystoreMount = &mount
 			assert.Equal("/mnt/server-keystore", serverKeystoreMount.MountPath, "server-keystore isn't mounted correctly")
-		} else if mount.Name == "server-truststore" {
+		case "server-truststore":
 			serverTruststoreMount = &mount
 			assert.Equal("/mnt/server-truststore", serverTruststoreMount.MountPath, "server-truststore isn't mounted correctly")
 		}
@@ -1995,7 +1997,7 @@ func verifyClusterReconcileFinished(ctx context.Context, t *testing.T, f *framew
 			t.Logf("failed to get K8ssandraCluster: %v", err)
 			return false
 		}
-		return kc.ObjectMeta.Generation == kc.Status.ObservedGeneration
+		return kc.Generation == kc.Status.ObservedGeneration
 	}, timeout, interval, "cluster hasn't finished reconciliation")
 }
 

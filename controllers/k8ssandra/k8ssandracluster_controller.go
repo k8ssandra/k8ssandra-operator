@@ -88,7 +88,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		if errors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
-		return ctrl.Result{RequeueAfter: r.ReconcilerConfig.DefaultDelay}, err
+		return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
 	}
 
 	kc = kc.DeepCopy()
@@ -194,7 +194,7 @@ func updateStatus(ctx context.Context, r client.Client, kc *api.K8ssandraCluster
 	if AllowUpdate(kc) {
 		if metav1.HasAnnotation(kc.ObjectMeta, api.AutomatedUpdateAnnotation) {
 			if kc.Annotations[api.AutomatedUpdateAnnotation] == string(api.AllowUpdateOnce) {
-				delete(kc.ObjectMeta.Annotations, api.AutomatedUpdateAnnotation)
+				delete(kc.Annotations, api.AutomatedUpdateAnnotation)
 				if err := r.Update(ctx, kc); err != nil {
 					return result.Error(err)
 				}
@@ -216,7 +216,7 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters
 	cb := ctrl.NewControllerManagedBy(mgr).
 		For(&api.K8ssandraCluster{}, builder.WithPredicates(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})))
 
-	clusterLabelFilter := func(ctx context.Context, mapObj client.Object) []reconcile.Request {
+	clusterLabelFilter := func(_ context.Context, mapObj client.Object) []reconcile.Request {
 		requests := make([]reconcile.Request, 0)
 
 		kcName := labels.GetLabel(mapObj, api.K8ssandraClusterNameLabel)

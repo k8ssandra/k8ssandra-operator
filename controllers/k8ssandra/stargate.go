@@ -26,7 +26,6 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 	logger logr.Logger,
 	remoteClient client.Client,
 ) result.ReconcileResult {
-
 	kcKey := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
 	stargateKey := types.NamespacedName{
 		Namespace: actualDc.Namespace,
@@ -63,10 +62,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 				return result.Error(err)
 			}
 		} else {
-			if err = r.setStatusForStargate(kc, actualStargate, dcTemplate.Meta.Name); err != nil {
-				logger.Error(err, "Failed to update status for stargate")
-				return result.Error(err)
-			}
+			r.setStatusForStargate(kc, actualStargate, dcTemplate.Meta.Name)
 			if !annotations.CompareHashAnnotations(desiredStargate, actualStargate) {
 				logger.Info("Updating Stargate")
 				resourceVersion := actualStargate.GetResourceVersion()
@@ -111,7 +107,7 @@ func (r *K8ssandraClusterReconciler) reconcileStargate(
 	return result.Continue()
 }
 
-func (r *K8ssandraClusterReconciler) setStatusForStargate(kc *api.K8ssandraCluster, stargate *stargateapi.Stargate, dcName string) error {
+func (r *K8ssandraClusterReconciler) setStatusForStargate(kc *api.K8ssandraCluster, stargate *stargateapi.Stargate, dcName string) {
 	if len(kc.Status.Datacenters) == 0 {
 		kc.Status.Datacenters = make(map[string]api.K8ssandraStatus)
 	}
@@ -134,7 +130,6 @@ func (r *K8ssandraClusterReconciler) setStatusForStargate(kc *api.K8ssandraClust
 	if kc.Status.Datacenters[dcName].Stargate.Progress == "" {
 		kc.Status.Datacenters[dcName].Stargate.Progress = stargateapi.StargateProgressPending
 	}
-	return nil
 }
 
 func (r *K8ssandraClusterReconciler) reconcileStargateAuthSchema(
@@ -142,7 +137,6 @@ func (r *K8ssandraClusterReconciler) reconcileStargateAuthSchema(
 	kc *api.K8ssandraCluster,
 	mgmtApi cassandra.ManagementApiFacade,
 	logger logr.Logger) result.ReconcileResult {
-
 	if !kc.HasStargates() {
 		return result.Continue()
 	}

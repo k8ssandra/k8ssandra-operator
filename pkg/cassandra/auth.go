@@ -10,7 +10,6 @@ import (
 
 // ApplyAuth modifies the dc config depending on whether auth is enabled in the cluster or not.
 func ApplyAuth(dcConfig *DatacenterConfig, authEnabled bool, useExternalSecrets bool, reaperRequiresJmx bool) {
-
 	dcConfig.CassandraConfig = ApplyAuthSettings(dcConfig.CassandraConfig, authEnabled, dcConfig.ServerType)
 
 	// By default, the Cassandra process will be started with LOCAL_JMX=yes, see cassandra-env.sh. This means that the

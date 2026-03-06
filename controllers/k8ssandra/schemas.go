@@ -35,7 +35,6 @@ func (r *K8ssandraClusterReconciler) checkSchemas(
 	dc *cassdcapi.CassandraDatacenter,
 	remoteClient client.Client,
 	logger logr.Logger) result.ReconcileResult {
-
 	mgmtApi, err := r.ManagementApi.NewManagementApiFacade(ctx, dc, remoteClient, logger)
 	if err != nil {
 		return result.Error(err)
@@ -80,7 +79,7 @@ func (r *K8ssandraClusterReconciler) checkSchemas(
 			}
 		}
 
-		dc, _, err = r.findDcForDeletion(ctx, kcKey, decommCassDcName, dcRemoteClient)
+		dc, err = r.findDcForDeletion(ctx, kcKey, decommCassDcName, dcRemoteClient)
 		if err != nil {
 			return result.Error(err)
 		}
@@ -113,7 +112,6 @@ func (r *K8ssandraClusterReconciler) checkInitialSystemReplication(
 	ctx context.Context,
 	kc *api.K8ssandraCluster,
 	logger logr.Logger) (cassandra.SystemReplication, error) {
-
 	replication := make(map[string]int)
 	if val := annotations.GetAnnotation(kc, api.InitialSystemReplicationAnnotation); val != "" {
 		if err := json.Unmarshal([]byte(val), &replication); err == nil {
@@ -168,7 +166,6 @@ func (r *K8ssandraClusterReconciler) updateReplicationOfSystemKeyspaces(
 	kc *api.K8ssandraCluster,
 	mgmtApi cassandra.ManagementApiFacade,
 	logger logr.Logger) result.ReconcileResult {
-
 	if recResult := r.versionCheck(ctx, kc); recResult.Completed() {
 		return recResult
 	}
@@ -223,7 +220,6 @@ func (r *K8ssandraClusterReconciler) updateUserKeyspacesReplication(
 	dc *cassdcapi.CassandraDatacenter,
 	mgmtApi cassandra.ManagementApiFacade,
 	logger logr.Logger) result.ReconcileResult {
-
 	jsonReplication := annotations.GetAnnotation(kc, api.DcReplicationAnnotation)
 	if jsonReplication == "" {
 		logger.Info(api.DcReplicationAnnotation + " not set. Replication for user keyspaces will not be updated")
@@ -289,7 +285,6 @@ func (r *K8ssandraClusterReconciler) checkUserKeyspacesReplicationForDecommissio
 	decommDc string,
 	mgmtApi cassandra.ManagementApiFacade,
 	logger logr.Logger) result.ReconcileResult {
-
 	logger.Info("Updating replication for user keyspaces for decommission")
 
 	userKeyspaces, err := getUserKeyspaces(mgmtApi, kc)

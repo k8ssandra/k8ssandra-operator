@@ -96,7 +96,7 @@ func (v *K8ssandraClusterCustomValidator) ValidateCreate(ctx context.Context, ob
 }
 
 func validateK8ssandraCluster(r *K8ssandraCluster) error {
-	hasClusterStorageConfig := r.Spec.Cassandra.DatacenterOptions.StorageConfig != nil
+	hasClusterStorageConfig := r.Spec.Cassandra.StorageConfig != nil
 	for _, dc := range r.Spec.Cassandra.Datacenters {
 		dns1035Errs := validation.IsDNS1035Label(dc.Meta.Name)
 		if len(dns1035Errs) > 0 {
@@ -113,12 +113,12 @@ func validateK8ssandraCluster(r *K8ssandraCluster) error {
 		}
 
 		// StorageConfig must be set at DC or Cluster level
-		if dc.DatacenterOptions.StorageConfig == nil && !hasClusterStorageConfig {
+		if dc.StorageConfig == nil && !hasClusterStorageConfig {
 			return ErrNoStorageConfig
 		}
 		// From cass-operator, if AllowMultipleWorkersPerNode is set, Resources must be defined or cass-operator will reject this Datacenter
-		if dc.DatacenterOptions.SoftPodAntiAffinity != nil && *dc.DatacenterOptions.SoftPodAntiAffinity {
-			if dc.DatacenterOptions.Resources == nil {
+		if dc.SoftPodAntiAffinity != nil && *dc.SoftPodAntiAffinity {
+			if dc.Resources == nil {
 				return ErrNoResourcesSet
 			}
 		}
@@ -126,7 +126,7 @@ func validateK8ssandraCluster(r *K8ssandraCluster) error {
 
 	if metav1.HasAnnotation(r.ObjectMeta, AutomatedUpdateAnnotation) {
 		// Allow only always and once in the annotation
-		annotationValue := r.ObjectMeta.GetAnnotations()[AutomatedUpdateAnnotation]
+		annotationValue := r.GetAnnotations()[AutomatedUpdateAnnotation]
 		if annotationValue != string(AllowUpdateAlways) && annotationValue != string(AllowUpdateOnce) {
 			return fmt.Errorf("invalid value for %s annotation: %s", AutomatedUpdateAnnotation, annotationValue)
 		}
@@ -148,7 +148,7 @@ func validateK8ssandraCluster(r *K8ssandraCluster) error {
 }
 
 func validateStatefulsetNameSize(r *K8ssandraCluster) error {
-	clusterName := r.ObjectMeta.Name
+	clusterName := r.Name
 	if r.Spec.Cassandra.ClusterName != "" {
 		clusterName = r.Spec.Cassandra.ClusterName
 	}
@@ -257,7 +257,7 @@ func validateUpdateNumTokens(
 
 func numTokensPerDc(cassandra *CassandraClusterTemplate) (map[string]interface{}, error) {
 	var globalNumTokens interface{}
-	globalConfig := cassandra.DatacenterOptions.CassandraConfig
+	globalConfig := cassandra.CassandraConfig
 	if globalConfig != nil {
 		globalNumTokens = globalConfig.CassandraYaml["num_tokens"]
 	}
@@ -266,7 +266,7 @@ func numTokensPerDc(cassandra *CassandraClusterTemplate) (map[string]interface{}
 	for _, dc := range cassandra.Datacenters {
 		var numTokens interface{}
 		// Try to set from DC config
-		config := dc.DatacenterOptions.CassandraConfig
+		config := dc.CassandraConfig
 		if config != nil {
 			numTokens = config.CassandraYaml["num_tokens"]
 		}

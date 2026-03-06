@@ -55,7 +55,6 @@ func Test_ReconcileObject_CreateSuccess(t *testing.T) {
 	assert.NoError(t, err)
 }
 func Test_ReconcileObject_CreateFailed(t *testing.T) {
-
 	kClient := testutils.NewCreateFailingFakeClient() // Reset the Client
 	recRes := ReconcileObject(ctx, kClient, requeueDelay, desiredObject)
 	assert.True(t, recRes.IsError())

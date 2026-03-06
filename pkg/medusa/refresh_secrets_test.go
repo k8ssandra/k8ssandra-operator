@@ -33,11 +33,11 @@ func TestRefreshSecrets_defaultSUSecret(t *testing.T) {
 	assert.True(t, recRes.IsDone())
 	suSecret := &corev1.Secret{}
 	assert.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{Name: "test-cluster-superuser", Namespace: "test"}, suSecret))
-	_, exists := suSecret.ObjectMeta.Annotations["k8ssandra.io/refresh"]
+	_, exists := suSecret.Annotations["k8ssandra.io/refresh"]
 	assert.True(t, exists)
 	userSecret := &corev1.Secret{}
 	assert.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{Name: "custom-user", Namespace: "test"}, userSecret))
-	_, exists = userSecret.ObjectMeta.Annotations["k8ssandra.io/refresh"]
+	_, exists = userSecret.Annotations["k8ssandra.io/refresh"]
 	assert.True(t, exists)
 }
 
@@ -62,11 +62,10 @@ func TestRefreshSecrets_customSecrets(t *testing.T) {
 	assert.True(t, recRes.IsDone())
 	suSecret := &corev1.Secret{}
 	assert.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{Name: "cass-custom-superuser", Namespace: "test"}, suSecret))
-	_, exists := suSecret.ObjectMeta.Annotations["k8ssandra.io/refresh"]
+	_, exists := suSecret.Annotations["k8ssandra.io/refresh"]
 	assert.True(t, exists)
 	userSecret := &corev1.Secret{}
 	assert.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{Name: "custom-user", Namespace: "test"}, userSecret))
-	_, exists = userSecret.ObjectMeta.Annotations["k8ssandra.io/refresh"]
+	_, exists = userSecret.Annotations["k8ssandra.io/refresh"]
 	assert.True(t, exists)
-
 }

@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/uuid"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
-	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
@@ -31,7 +30,7 @@ func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *
 	require.NoError(f.CreateCassandraEncryptionStoresSecret(namespace), "Failed to create the encryption secrets")
 
 	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
-	kc := &api.K8ssandraCluster{}
+	kc := &k8ssandraapi.K8ssandraCluster{}
 	require.NoError(f.Client.Get(ctx, kcKey, kc), "Failed to get K8ssandraCluster")
 	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 
@@ -182,7 +181,7 @@ func createMultiReaper(t *testing.T, ctx context.Context, namespace string, f *f
 
 	uiSecretKey := types.NamespacedName{Namespace: namespace, Name: "reaper-ui-secret"}
 	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
-	kc := &api.K8ssandraCluster{}
+	kc := &k8ssandraapi.K8ssandraCluster{}
 	require.NoError(f.Client.Get(ctx, kcKey, kc), "Failed to get K8ssandraCluster")
 
 	dc1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
@@ -290,7 +289,6 @@ func createMultiReaperWithEncryption(t *testing.T, ctx context.Context, namespac
 }
 
 func createReaperAndDatacenter(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
-
 	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	reaperKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "reaper1"}}
 
@@ -364,7 +362,7 @@ func checkReaperK8cStatusReady(
 ) {
 	t.Log("check k8ssandra cluster status updated for Reaper")
 	assert.Eventually(t, func() bool {
-		k8ssandra := &api.K8ssandraCluster{}
+		k8ssandra := &k8ssandraapi.K8ssandraCluster{}
 		if err := f.Client.Get(ctx, kcKey, k8ssandra); err != nil {
 			return false
 		}
@@ -406,7 +404,7 @@ func testRemoveReaperFromK8ssandraCluster(
 	reaperKey framework.ClusterKey,
 ) {
 	t.Log("delete Reaper in k8ssandracluster CRD")
-	k8ssandra := &api.K8ssandraCluster{}
+	k8ssandra := &k8ssandraapi.K8ssandraCluster{}
 	err := f.Client.Get(ctx, kcKey, k8ssandra)
 	require.NoError(t, err, "failed to get K8ssandraCluster in namespace %s", kcKey.Namespace)
 	patch := client.MergeFromWithOptions(k8ssandra.DeepCopy(), client.MergeFromWithOptimisticLock{})
@@ -426,7 +424,7 @@ func testRemoveReaperFromK8ssandraCluster(
 
 	t.Log("check Reaper status deleted in k8ssandracluster resource")
 	require.Eventually(t, func() bool {
-		k8ssandra := &api.K8ssandraCluster{}
+		k8ssandra := &k8ssandraapi.K8ssandraCluster{}
 		if err := f.Client.Get(ctx, kcKey, k8ssandra); err != nil {
 			return false
 		}
@@ -463,7 +461,7 @@ func connectReaperApiWithEncryption(t *testing.T, ctx context.Context, k8sContex
 	// Check if we need to use TLS by looking up the K8ssandraCluster
 	if f != nil && namespace != "" {
 		kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
-		kc := &api.K8ssandraCluster{}
+		kc := &k8ssandraapi.K8ssandraCluster{}
 		if err := f.Client.Get(ctx, kcKey, kc); err == nil && kc.Spec.Reaper != nil && kc.Spec.Reaper.Encryption != nil {
 			protocol = "https"
 
@@ -559,11 +557,11 @@ func checkReaperResourcesHaveCorrectMetadata(t *testing.T, f *framework.E2eFrame
 		sts := &appsv1.StatefulSet{}
 		err = f.Client.Get(ctx, types.NamespacedName{Namespace: kc.Namespace, Name: dName}, sts)
 		require.NoError(t, err, "failed to get StatefulSet %s in namespace %s", dName, kc.Namespace)
-		assert.True(t, sts.ObjectMeta.Labels["testLabel"] == "testValue", "StatefulSet %s in namespace %s has incorrect labels", dName, kc.Namespace)
-		assert.True(t, sts.ObjectMeta.Annotations["testAnnotation"] == "testValue", "StatefulSet %s in namespace %s has incorrect annotations", dName, kc.Namespace)
+		assert.True(t, sts.Labels["testLabel"] == "testValue", "StatefulSet %s in namespace %s has incorrect labels", dName, kc.Namespace)
+		assert.True(t, sts.Annotations["testAnnotation"] == "testValue", "StatefulSet %s in namespace %s has incorrect annotations", dName, kc.Namespace)
 	} else {
-		assert.True(t, deployment.ObjectMeta.Labels["testLabel"] == "testValue", "Deployment %s in namespace %s has incorrect labels", dName, kc.Namespace)
-		assert.True(t, deployment.ObjectMeta.Annotations["testAnnotation"] == "testValue", "Deployment %s in namespace %s has incorrect annotations", dName, kc.Namespace)
+		assert.True(t, deployment.Labels["testLabel"] == "testValue", "Deployment %s in namespace %s has incorrect labels", dName, kc.Namespace)
+		assert.True(t, deployment.Annotations["testAnnotation"] == "testValue", "Deployment %s in namespace %s has incorrect annotations", dName, kc.Namespace)
 	}
 }
 

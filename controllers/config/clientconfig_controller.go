@@ -20,7 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/go-logr/logr"
 	configapi "github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
@@ -143,7 +142,7 @@ func (r *ClientConfigReconciler) InitClientConfigs(ctx context.Context, mgr ctrl
 
 	for _, cCfg := range clientConfigs {
 		logger.V(1).Info(fmt.Sprintf("Initializing client config %s namespaces %s", cCfg.Name, namespaces))
-		c, err := r.initAdditionalClusterConfig(ctx, cCfg, mgr, namespaces, logger)
+		c, err := r.initAdditionalClusterConfig(ctx, cCfg, mgr, namespaces)
 		if err != nil {
 			return nil, err
 		}
@@ -170,7 +169,7 @@ func calculateHashes(ctx context.Context, anyClient client.Client, clientCfg con
 }
 
 // initAdditionalCLusterConfig fetches the clientConfigs for additional clusters
-func (r *ClientConfigReconciler) initAdditionalClusterConfig(ctx context.Context, cCfg configapi.ClientConfig, mgr ctrl.Manager, namespaces []string, logger logr.Logger) (cluster.Cluster, error) {
+func (r *ClientConfigReconciler) initAdditionalClusterConfig(ctx context.Context, cCfg configapi.ClientConfig, mgr ctrl.Manager, namespaces []string) (cluster.Cluster, error) {
 	uncachedClient := r.ClientCache.GetLocalNonCacheClient()
 
 	// Calculate hashes

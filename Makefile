@@ -344,7 +344,7 @@ VECTOR ?= $(LOCALBIN)/bin/vector
 CERT_MANAGER_VERSION ?= v1.12.2
 KUSTOMIZE_VERSION ?= v5.6.0
 CONTROLLER_TOOLS_VERSION ?= v0.16.4
-GOLINT_VERSION ?= 1.64.8
+GOLINT_VERSION ?= 2.7.2
 
 cert-manager: ## Install cert-manager to the cluster
 	kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/$(CERT_MANAGER_VERSION)/cert-manager.yaml

@@ -41,10 +41,10 @@ func RefreshSecrets(dc *cassdcapi.CassandraDatacenter, ctx context.Context, clie
 			logger.Error(err, fmt.Sprintf("Failed to get secret %s", i))
 			return result.Error(err)
 		}
-		if secret.ObjectMeta.Annotations == nil {
-			secret.ObjectMeta.Annotations = make(map[string]string)
+		if secret.Annotations == nil {
+			secret.Annotations = make(map[string]string)
 		}
-		secret.ObjectMeta.Annotations[k8ssandraapi.RefreshAnnotation] = restoreTimestamp.String()
+		secret.Annotations[k8ssandraapi.RefreshAnnotation] = restoreTimestamp.String()
 		recRes := reconciliation.ReconcileObject(ctx, client, requeueDelay, *secret)
 		switch {
 		case recRes.IsError():

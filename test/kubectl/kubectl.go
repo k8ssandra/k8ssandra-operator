@@ -148,7 +148,6 @@ func DeleteAllOf(opts Options, kind string) error {
 }
 
 func WaitForCondition(opts Options, condition string, args ...string) error {
-
 	cmd := exec.Command("kubectl")
 
 	if len(opts.Context) > 0 {

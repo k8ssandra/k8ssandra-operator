@@ -437,8 +437,8 @@ func volumeExists(volumes []corev1.Volume, name string) bool {
 func volumeHasSecretSource(volumes []corev1.Volume, name, secretName string) bool {
 	for _, volume := range volumes {
 		if volume.Name == name {
-			if volume.VolumeSource.Secret != nil {
-				if volume.VolumeSource.Secret.SecretName == secretName {
+			if volume.Secret != nil {
+				if volume.Secret.SecretName == secretName {
 					return true
 				}
 			}
@@ -450,8 +450,8 @@ func volumeHasSecretSource(volumes []corev1.Volume, name, secretName string) boo
 func keyToPathElemVolumeExist(volumes []corev1.Volume, name, key string) bool {
 	for _, volume := range volumes {
 		if volume.Name == name {
-			if volume.VolumeSource.Secret != nil {
-				for _, mapping := range volume.VolumeSource.Secret.Items {
+			if volume.Secret != nil {
+				for _, mapping := range volume.Secret.Items {
 					if mapping.Key == key {
 						return true
 					}

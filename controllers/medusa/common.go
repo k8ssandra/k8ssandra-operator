@@ -44,7 +44,7 @@ func newClient(ctx context.Context, c client.Client, cassdc *cassdcapi.Cassandra
 
 func medusaClientSecretName(cassdc *cassdcapi.CassandraDatacenter) string {
 	if metav1.HasAnnotation(cassdc.ObjectMeta, medusa.MedusaClientSecretNameAnnotation) {
-		return cassdc.ObjectMeta.Annotations[medusa.MedusaClientSecretNameAnnotation]
+		return cassdc.Annotations[medusa.MedusaClientSecretNameAnnotation]
 	}
 	return ""
 }

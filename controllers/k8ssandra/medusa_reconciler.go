@@ -119,10 +119,6 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaPurgeSchedule(ctx context.Co
 	if kc.Spec.Medusa == nil {
 		return result.Continue()
 	}
-	namespace := dc.Namespace
-	if namespace == "" {
-		namespace = kc.Namespace
-	}
 	medusaSpec := kc.Spec.Medusa
 	if medusaSpec.PurgeBackups == nil || *medusaSpec.PurgeBackups {
 		logger.Info("Creating Medusa purge schedule")
@@ -132,7 +128,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaPurgeSchedule(ctx context.Co
 		}
 	} else {
 		logger.Info("Deleting Medusa purge schedule if it exists")
-		err := r.maybeCleanupPurgeSchedule(ctx, dc, kc, namespace, logger, remoteClient)
+		err := r.maybeCleanupPurgeSchedule(ctx, dc, kc, logger, remoteClient)
 		if err != nil {
 			return result.Error(err)
 		}
@@ -163,7 +159,7 @@ func (*K8ssandraClusterReconciler) cleanupPurgeCronJob(ctx context.Context, dcCo
 	return nil
 }
 
-func (*K8ssandraClusterReconciler) maybeCleanupPurgeSchedule(ctx context.Context, dc *cassdcapi.CassandraDatacenter, kc *api.K8ssandraCluster, operatorNamespace string, logger logr.Logger, remoteClient client.Client) error {
+func (*K8ssandraClusterReconciler) maybeCleanupPurgeSchedule(ctx context.Context, dc *cassdcapi.CassandraDatacenter, kc *api.K8ssandraCluster, logger logr.Logger, remoteClient client.Client) error {
 	purgeScheduleName := medusa.MedusaPurgeScheduleName(kc.SanitizedName(), dc.DatacenterName())
 	dcNamespace := dc.Namespace
 	if dcNamespace == "" {
@@ -283,7 +279,6 @@ func (r *K8ssandraClusterReconciler) getOperatorNamespace() string {
 }
 
 func (r *K8ssandraClusterReconciler) validateStorageCredentials(medusaSpec *medusaapi.MedusaClusterTemplate) error {
-
 	// we must specify either storage secret or role-based credentials
 	if medusaSpec.StorageProperties.StorageSecretRef.Name == "" && medusaSpec.StorageProperties.CredentialsType != medusa.CredentialsTypeRoleBased {
 		return fmt.Errorf("must specify either a storge secret or use role-based credentials")

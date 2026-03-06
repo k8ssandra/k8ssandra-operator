@@ -105,7 +105,6 @@ func TestK8ssandraClusterReconciler_DeleteDeployments(t *testing.T) {
 	if err == nil || !errors.IsNotFound(err) {
 		t.Errorf("Deployment was not deleted: %v", err)
 	}
-
 }
 
 func TestK8ssandraClusterReconciler_CheckDeletion(t *testing.T) {
@@ -274,7 +273,6 @@ func TestK8ssandraClusterReconciler_CheckDeletion(t *testing.T) {
 }
 
 func testCheckDeletion(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
-
 	// Create a K8ssandraCluster with deletion timestamp and finalizer
 	kc := &k8ssandraapi.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{

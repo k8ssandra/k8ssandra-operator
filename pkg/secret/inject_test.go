@@ -87,14 +87,13 @@ func TestAddInjectionAnnotationNonJson(t *testing.T) {
 
 func TestIsSecretIncluded(t *testing.T) {
 	secrets := []SecretInjection{
-		SecretInjection{SecretName: "test", Path: "/etc/secrets"},
-		SecretInjection{SecretName: "other", Path: "/etc/secrets"},
+		{SecretName: "test", Path: "/etc/secrets"},
+		{SecretName: "other", Path: "/etc/secrets"},
 	}
 
 	assert.True(t, isSecretIncluded(secrets, "test"))
 	assert.True(t, isSecretIncluded(secrets, "other"))
 	assert.False(t, isSecretIncluded(secrets, "nothing"))
-
 }
 
 func TestIsSecretIncludedNilSlice(t *testing.T) {

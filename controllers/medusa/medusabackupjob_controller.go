@@ -120,16 +120,17 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		for _, podName := range backupJob.Status.InProgress {
 			for _, pod := range pods {
 				if podName == pod.Name {
-					status, err := backupStatus(ctx, backupJob.ObjectMeta.Name, &pod, cassdc, r.Client, r.ClientFactory, logger)
+					status, err := backupStatus(ctx, backupJob.Name, &pod, cassdc, r.Client, r.ClientFactory, logger)
 					if err != nil {
 						return ctrl.Result{}, err
 					}
 
-					if status == medusa.StatusType_IN_PROGRESS {
+					switch status {
+					case medusa.StatusType_IN_PROGRESS:
 						progress = append(progress, podName)
-					} else if status == medusa.StatusType_SUCCESS {
+					case medusa.StatusType_SUCCESS:
 						backupJob.Status.Finished = append(backupJob.Status.Finished, podName)
-					} else if status == medusa.StatusType_FAILED || status == medusa.StatusType_UNKNOWN {
+					case medusa.StatusType_FAILED, medusa.StatusType_UNKNOWN:
 						backupJob.Status.Failed = append(backupJob.Status.Failed, podName)
 					}
 
@@ -205,8 +206,8 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// Make sure that Medusa is deployed
 	if !shared.IsMedusaDeployed(pods) {
 		// TODO generate event and/or update status to indicate error condition
-		logger.Error(medusa.BackupSidecarNotFound, "medusa is not deployed", "CassandraDatacenter", cassdcKey)
-		return ctrl.Result{}, medusa.BackupSidecarNotFound
+		logger.Error(medusa.ErrBackupSidecarNotFound, "medusa is not deployed", "CassandraDatacenter", cassdcKey)
+		return ctrl.Result{}, medusa.ErrBackupSidecarNotFound
 	}
 
 	patch := client.MergeFromWithOptions(backupJob.DeepCopy(), client.MergeFromWithOptimisticLock{})
@@ -224,7 +225,7 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	for _, p := range pods {
 		logger.Info("starting backup", "CassandraPod", p.Name)
-		_, err := doMedusaBackup(ctx, backupJob.ObjectMeta.Name, backupJob.Spec.Type, &p, cassdc, r.Client, r.ClientFactory, logger)
+		_, err := doMedusaBackup(ctx, backupJob.Name, backupJob.Spec.Type, &p, cassdc, r.Client, r.ClientFactory, logger)
 		if err != nil {
 			logger.Error(err, "backup failed", "CassandraPod", p.Name)
 		}
@@ -241,7 +242,7 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 func (r *MedusaBackupJobReconciler) getBackupSummary(ctx context.Context, backup *medusav1alpha1.MedusaBackupJob, pods []corev1.Pod, cassdc *cassdcapi.CassandraDatacenter, logger logr.Logger) (*medusa.BackupSummary, error) {
 	for _, pod := range pods {
-		if remoteBackups, err := GetBackups(ctx, &pod, cassdc, r.Client, r.ClientFactory); err != nil {
+		if remoteBackups, err := GetBackups(ctx, &pod, cassdc, r.Client, r.ClientFactory, logger); err != nil {
 			logger.Error(err, "failed to list backups", "CassandraPod", pod.Name)
 			return nil, err
 		} else {
@@ -252,7 +253,7 @@ func (r *MedusaBackupJobReconciler) getBackupSummary(ctx context.Context, backup
 					return nil, err
 				}
 				logger.Info("found backup", "CassandraPod", pod.Name, "Backup", remoteBackup.BackupName)
-				if backup.ObjectMeta.Name == remoteBackup.BackupName {
+				if backup.Name == remoteBackup.BackupName {
 					return remoteBackup, nil
 				}
 				logger.Info("backup name does not match", "CassandraPod", pod.Name, "Backup", remoteBackup.BackupName)
@@ -265,7 +266,7 @@ func (r *MedusaBackupJobReconciler) getBackupSummary(ctx context.Context, backup
 func (r *MedusaBackupJobReconciler) createMedusaBackup(ctx context.Context, backup *medusav1alpha1.MedusaBackupJob, backupSummary *medusa.BackupSummary, logger logr.Logger) error {
 	// Create a MedusaBackup object after a successful MedusaBackupJob execution.
 	logger.Info("Creating MedusaBackup object", "MedusaBackup", backup.Name)
-	backupKey := types.NamespacedName{Namespace: backup.ObjectMeta.Namespace, Name: backup.Name}
+	backupKey := types.NamespacedName{Namespace: backup.Namespace, Name: backup.Name}
 	backupResource := &medusav1alpha1.MedusaBackup{}
 	if err := r.Get(ctx, backupKey, backupResource); err != nil {
 		if apiErrors.IsNotFound(err) {
@@ -275,8 +276,8 @@ func (r *MedusaBackupJobReconciler) createMedusaBackup(ctx context.Context, back
 			logger.Info("Creating Cassandra Backup", "Backup", backup.Name)
 			backupResource := &medusav1alpha1.MedusaBackup{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      backup.ObjectMeta.Name,
-					Namespace: backup.ObjectMeta.Namespace,
+					Name:      backup.Name,
+					Namespace: backup.Namespace,
 				},
 				Spec: medusav1alpha1.MedusaBackupSpec{
 					CassandraDatacenter: backup.Spec.CassandraDatacenter,
@@ -321,7 +322,11 @@ func doMedusaBackup(ctx context.Context, name string, backupType shared.BackupTy
 		return "", err
 	} else {
 		logger.Info("successfully connected to backup sidecar", "Pod", pod.Name)
-		defer medusaClient.Close()
+		defer func() {
+			if err := medusaClient.Close(); err != nil {
+				logger.Error(err, ErrFailedCloseMedusaClient)
+			}
+		}()
 		resp, err := medusaClient.CreateBackup(ctx, name, string(backupType))
 		if err != nil {
 			return "", err

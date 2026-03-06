@@ -2,9 +2,10 @@ package unstructured
 
 import (
 	"encoding/json"
+	"strings"
+
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"k8s.io/apimachinery/pkg/runtime"
-	"strings"
 )
 
 // Unstructured is a map[string]interface{} that can be used to represent unstructured JSON content.

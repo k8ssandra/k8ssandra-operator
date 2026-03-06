@@ -136,11 +136,10 @@ func createSingleDseSearchDatacenterCluster(t *testing.T, ctx context.Context, n
 		return testSolrEndpoint(t, solrHostAndPort, username, password)
 	}, 2*time.Minute, 10*time.Second, "failed to reach solr endpoint")
 
-	kc := &api.K8ssandraCluster{}
 	backupKey := types.NamespacedName{Namespace: namespace, Name: backupName}
 
 	checkDatacenterReady(t, ctx, dcKey, f)
-	checkMedusaContainersExist(t, ctx, namespace, dcKey, f, kc)
+	checkMedusaContainersExist(t, ctx, dcKey, f)
 	createBackupJob(t, ctx, namespace, f, dcKey)
 	verifyBackupJobFinished(t, ctx, f, dcKey, backupKey)
 	restoreBackupJob(t, ctx, namespace, f, dcKey)
@@ -149,7 +148,6 @@ func createSingleDseSearchDatacenterCluster(t *testing.T, ctx context.Context, n
 	require.Eventually(t, func() bool {
 		return testSolrEndpoint(t, solrHostAndPort, username, password)
 	}, 2*time.Minute, 10*time.Second, "failed to reach solr endpoint")
-
 }
 
 func basicAuth(username, password string) string {

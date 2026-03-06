@@ -213,7 +213,7 @@ func TestGenerationChanged(t *testing.T) {
 	assert.True(kc.GenerationChanged())
 	kc.Status.ObservedGeneration = 2
 	assert.False(kc.GenerationChanged())
-	kc.ObjectMeta.Generation = 3
+	kc.Generation = 3
 	assert.True(kc.GenerationChanged())
 }
 

@@ -70,7 +70,6 @@ var (
 // NewDeployments compute the Deployments to create for the given Stargate and CassandraDatacenter
 // resources.
 func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter, logger logr.Logger, registry cassimages.ImageRegistry) map[string]appsv1.Deployment {
-
 	clusterVersion := computeClusterVersion(dc)
 	seedService := computeSeedServiceUrl(dc)
 
@@ -80,7 +79,6 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter, l
 
 	var deployments = make(map[string]appsv1.Deployment)
 	for i, rack := range racks {
-
 		replicas := int32(replicasByRack[i])
 		if replicas == 0 {
 			break
@@ -94,10 +92,10 @@ func NewDeployments(stargate *api.Stargate, dc *cassdcapi.CassandraDatacenter, l
 		livenessProbe := computeLivenessProbe(template)
 		readinessProbe := computeReadinessProbe(template)
 		jvmOptions := computeJvmOptions(template)
-		volumes := computeVolumes(template, dc)
+		volumes := computeVolumes(dc)
 		encryptionVolumes, encryptionVolumesMounts := computeEncryptionVolumes(stargate.Spec)
 		volumes = append(volumes, encryptionVolumes...)
-		volumeMounts := computeVolumeMounts(template, encryptionVolumesMounts)
+		volumeMounts := computeVolumeMounts(encryptionVolumesMounts)
 		serviceAccountName := computeServiceAccount(template)
 		nodeSelector := computeNodeSelector(template, dc)
 		tolerations := template.Tolerations
@@ -342,7 +340,7 @@ func computeHeapSize(template *api.StargateTemplate) resource.Quantity {
 
 // This config map will always be created by the k8ssandra controller.
 // It will augment the user provided config map with encryption settings if enabled.
-func computeVolumes(template *api.StargateTemplate, dc *cassdcapi.CassandraDatacenter) []corev1.Volume {
+func computeVolumes(dc *cassdcapi.CassandraDatacenter) []corev1.Volume {
 	var volumes []corev1.Volume
 	volumes = append(volumes, corev1.Volume{
 		Name: "cassandra-config",
@@ -382,7 +380,7 @@ func computeEncryptionVolumes(spec api.StargateSpec) ([]corev1.Volume, []corev1.
 	return volumes, mounts
 }
 
-func computeVolumeMounts(template *api.StargateTemplate, encryptionVolumesMounts []corev1.VolumeMount) []corev1.VolumeMount {
+func computeVolumeMounts(encryptionVolumesMounts []corev1.VolumeMount) []corev1.VolumeMount {
 	mounts := []corev1.VolumeMount{}
 	mounts = append(mounts, corev1.VolumeMount{
 		Name:      "cassandra-config",

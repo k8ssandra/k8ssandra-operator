@@ -23,12 +23,10 @@ func (r *K8ssandraClusterReconciler) createDatacenterConfigs(
 	logger logr.Logger,
 	systemReplication cassandra.SystemReplication,
 ) ([]*cassandra.DatacenterConfig, error) {
-
 	kcKey := utils.GetKey(kc)
 	var dcConfigs []*cassandra.DatacenterConfig
 
 	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
-
 		dcConfig := cassandra.Coalesce(kc.CassClusterName(), kc.Spec.Cassandra.DeepCopy(), dcTemplate.DeepCopy())
 		dcConfig.ExternalSecrets = kc.Spec.UseExternalSecrets()
 		dcConfig.SuperuserSecretRef.Name = SuperuserSecretName(kc)

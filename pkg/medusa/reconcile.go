@@ -649,7 +649,7 @@ func generateMedusaProbe(configuredProbe *corev1.Probe, grpcPort int, encryption
 	if !reflect.DeepEqual(defaultProbe.ProbeHandler, mergedProbe.ProbeHandler) {
 		// If the user has configured a custom probe, use it
 		// Otherwise, use the default probe
-		return nil, fmt.Errorf("invalid probe configuration. You should not modify the probe handler.")
+		return nil, fmt.Errorf("invalid probe configuration. You should not modify the probe handler")
 	}
 
 	return &mergedProbe, nil

@@ -1,9 +1,10 @@
 package stargate
 
 import (
+	"strings"
+
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandra "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"

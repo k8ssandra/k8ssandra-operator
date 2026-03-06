@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+
 	"github.com/datastax/go-cassandra-native-protocol/client"
 	"github.com/datastax/go-cassandra-native-protocol/primitive"
 	"github.com/square/certigo/jceks"
@@ -26,7 +27,6 @@ func (f *E2eFramework) GetCqlClientConnection(
 	username, password string,
 	ssl bool,
 ) (*client.CqlClientConnection, error) {
-
 	var credentials *client.AuthCredentials
 	if username != "" {
 		credentials = &client.AuthCredentials{Username: username, Password: password}

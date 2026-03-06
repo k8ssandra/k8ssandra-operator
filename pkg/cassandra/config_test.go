@@ -304,7 +304,6 @@ func TestCreateJsonConfig(t *testing.T) {
 			assert.Equal(t, expected, actual)
 		})
 	}
-
 }
 
 func parseQuantity(quantity string) *resource.Quantity {

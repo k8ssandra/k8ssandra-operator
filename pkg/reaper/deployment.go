@@ -443,7 +443,6 @@ func computePodSpec(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, initC
 }
 
 func computeVolumeClaims(reaper *api.Reaper) []corev1.PersistentVolumeClaim {
-
 	vcs := make([]corev1.PersistentVolumeClaim, 0)
 
 	volumeClaimsPec := reaper.Spec.StorageConfig.DeepCopy()
@@ -464,13 +463,12 @@ func computeVolumeClaims(reaper *api.Reaper) []corev1.PersistentVolumeClaim {
 }
 
 func NewStatefulSet(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, logger logr.Logger, registry cassimages.ImageRegistry, authVars ...*corev1.EnvVar) *appsv1.StatefulSet {
-
-	if reaper.Spec.ReaperTemplate.StorageType != api.StorageTypeLocal {
+	if reaper.Spec.StorageType != api.StorageTypeLocal {
 		logger.Error(fmt.Errorf("cannot be creating a Reaper statefulset with storage type other than Memory"), "bad storage type", "storageType", reaper.Spec.StorageType)
 		return nil
 	}
 
-	if reaper.Spec.ReaperTemplate.StorageConfig == nil {
+	if reaper.Spec.StorageConfig == nil {
 		logger.Error(fmt.Errorf("reaper spec needs storage config when using memory sotrage type"), "missing storage config")
 		return nil
 	}
@@ -498,9 +496,8 @@ func NewStatefulSet(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, logge
 }
 
 func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keystorePassword *string, truststorePassword *string, logger logr.Logger, registry cassimages.ImageRegistry, authVars ...*corev1.EnvVar) *appsv1.Deployment {
-
-	if reaper.Spec.ReaperTemplate.StorageType != api.StorageTypeCassandra {
-		logger.Error(fmt.Errorf("cannot be creating a Reaper deployment with storage type other than Cassandra"), "bad storage type", "storageType", reaper.Spec.ReaperTemplate.StorageType)
+	if reaper.Spec.StorageType != api.StorageTypeCassandra {
+		logger.Error(fmt.Errorf("cannot be creating a Reaper deployment with storage type other than Cassandra"), "bad storage type", "storageType", reaper.Spec.StorageType)
 		return nil
 	}
 
@@ -655,7 +652,6 @@ func getPodMeta(reaper *api.Reaper) meta.Tags {
 	var podAnnotations map[string]string
 	if meta := reaper.Spec.ResourceMeta; meta != nil {
 		podAnnotations = meta.Pods.Annotations
-
 	}
 
 	return meta.Tags{
@@ -665,20 +661,22 @@ func getPodMeta(reaper *api.Reaper) meta.Tags {
 }
 
 func MakeActualDeploymentType(actualReaper *api.Reaper) (client.Object, error) {
-	if actualReaper.Spec.StorageType == api.StorageTypeCassandra {
+	switch actualReaper.Spec.StorageType {
+	case api.StorageTypeCassandra:
 		return &appsv1.Deployment{}, nil
-	} else if actualReaper.Spec.StorageType == api.StorageTypeLocal {
+	case api.StorageTypeLocal:
 		return &appsv1.StatefulSet{}, nil
-	} else {
+	default:
 		err := fmt.Errorf("invalid storage type %s", actualReaper.Spec.StorageType)
 		return nil, err
 	}
 }
 
 func MakeDesiredDeploymentType(actualReaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keystorePassword *string, truststorePassword *string, logger logr.Logger, registry cassimages.ImageRegistry, authVars ...*corev1.EnvVar) (client.Object, error) {
-	if actualReaper.Spec.StorageType == api.StorageTypeCassandra {
+	switch actualReaper.Spec.StorageType {
+	case api.StorageTypeCassandra:
 		return NewDeployment(actualReaper, dc, keystorePassword, truststorePassword, logger, registry, authVars...), nil
-	} else if actualReaper.Spec.StorageType == api.StorageTypeLocal {
+	case api.StorageTypeLocal:
 		// we're checking for this same thing in the k8ssandra-cluster webohooks
 		// but in tests (and in the future) we'll be creating reaper directly (not through k8ssandra-cluster)
 		// so we need to double-check
@@ -687,7 +685,7 @@ func MakeDesiredDeploymentType(actualReaper *api.Reaper, dc *cassdcapi.Cassandra
 			return nil, err
 		}
 		return NewStatefulSet(actualReaper, dc, logger, registry, authVars...), nil
-	} else {
+	default:
 		err := fmt.Errorf("invalid storage type %s", actualReaper.Spec.StorageType)
 		return nil, err
 	}

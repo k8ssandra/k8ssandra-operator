@@ -111,7 +111,7 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	if !kTask.ObjectMeta.DeletionTimestamp.IsZero() && controllerutil.ContainsFinalizer(kTask, k8ssandraTaskFinalizer) {
+	if !kTask.DeletionTimestamp.IsZero() && controllerutil.ContainsFinalizer(kTask, k8ssandraTaskFinalizer) {
 		// The task is getting deleted, and it's the first time we've noticed it.
 		// Clean up dependents and remove the finalizer.
 		if err := r.deleteCassandraTasks(ctx, kTask, kc, kcExists, logger); err != nil {
@@ -244,8 +244,8 @@ func (r *K8ssandraTaskReconciler) deleteCassandraTasks(
 			if err := remoteClient.Delete(ctx, actualCTask); err != nil {
 				if !k8serrors.IsNotFound(err) {
 					return errors.Wrapf(err, "deleting CassandraTask %s.%s in context %s",
-						actualCTask.ObjectMeta.Namespace,
-						actualCTask.ObjectMeta.Name,
+						actualCTask.Namespace,
+						actualCTask.Name,
 						dc.K8sContext)
 				}
 			}
@@ -255,7 +255,6 @@ func (r *K8ssandraTaskReconciler) deleteCassandraTasks(
 }
 
 func filterDcs(kc *k8capi.K8ssandraCluster, dcNames []string) ([]k8capi.CassandraDatacenterTemplate, error) {
-
 	if len(dcNames) == 0 {
 		return kc.Spec.Cassandra.Datacenters, nil
 	}
@@ -356,7 +355,7 @@ func (r *K8ssandraTaskReconciler) SetupWithManager(mgr ctrl.Manager, clusters []
 	cb := ctrl.NewControllerManagedBy(mgr).
 		For(&api.K8ssandraTask{}, builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 
-	kTaskLabelFilter := func(ctx context.Context, obj client.Object) []reconcile.Request {
+	kTaskLabelFilter := func(_ context.Context, obj client.Object) []reconcile.Request {
 		requests := make([]reconcile.Request, 0)
 
 		taskName := labels.GetLabel(obj, api.K8ssandraTaskNameLabel)
