@@ -14,3 +14,14 @@ patchesStrategicMerge:
   metadata:
     name: cass-operator
   $patch: delete
+
+patches:
+  - target:
+      kind: Deployment
+      name: cass-operator-controller-manager
+    patch: |-
+      - op: replace
+        path: /spec/selector/matchLabels
+        value:
+          control-plane: controller-manager
+          name: cass-operator
