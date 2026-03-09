@@ -115,6 +115,36 @@ inputs = ["test", "test2"]
 `,
 		},
 		{
+			"Custom config with components",
+			&telemetry.TelemetrySpec{
+				Vector: &telemetry.VectorSpec{
+					Enabled: ptr.To(true),
+					Config: `data_dir = "/data-dir"
+
+[api]
+enabled = true`,
+					Components: &telemetry.VectorComponentsSpec{
+						Sinks: []telemetry.VectorSinkSpec{
+							{
+								Name:   "console",
+								Type:   "console",
+								Inputs: []string{"test"},
+							},
+						},
+					},
+				},
+			},
+			`data_dir = "/data-dir"
+
+[api]
+enabled = true
+
+[sinks.console]
+type = "console"
+inputs = ["test"]
+`,
+		},
+		{
 			"Source, sink and transform",
 			&telemetry.TelemetrySpec{
 				Vector: &telemetry.VectorSpec{
@@ -253,6 +283,35 @@ encoding.codec = "text"
 	output, err := CreateCassandraVectorToml(telemetrySpec, false)
 	assert.NoError(err)
 	assert.Equal(expectedOutput, output)
+}
+
+func TestCustomConfig(t *testing.T) {
+	telemetrySpec := &telemetry.TelemetrySpec{
+		Vector: &telemetry.VectorSpec{
+			Enabled: ptr.To(true),
+			Config: `data_dir = "/data-dir"
+
+[api]
+enabled = true`,
+			Components: &telemetry.VectorComponentsSpec{
+				Sinks: []telemetry.VectorSinkSpec{
+					{
+						Name:   "console",
+						Type:   "console",
+						Inputs: []string{"cassandra_metrics"},
+					},
+				},
+			},
+		},
+	}
+
+	output, err := CreateCassandraVectorToml(telemetrySpec, false)
+	require.NoError(t, err)
+
+	assert.Contains(t, output, "data_dir = \"/data-dir\"")
+	assert.Contains(t, output, "[api]\nenabled = true")
+	assert.Contains(t, output, "[sources.cassandra_metrics_raw]")
+	assert.Contains(t, output, "[sinks.console]")
 }
 
 func TestDefaultRemoveUnusedSources(t *testing.T) {

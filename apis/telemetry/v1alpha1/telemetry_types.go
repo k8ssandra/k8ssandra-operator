@@ -41,6 +41,11 @@ type VectorSpec struct {
 	// kube:default=30s
 	ScrapeInterval *metav1.Duration `json:"scrapeInterval,omitempty"`
 
+	// Config is raw TOML merged into the generated Vector configuration.
+	// This can be used to set global Vector options or anything that does not fit the components model.
+	// +optional
+	Config string `json:"config,omitempty"`
+
 	Components *VectorComponentsSpec `json:"components,omitempty"`
 }
 

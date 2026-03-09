@@ -2964,6 +2964,11 @@ spec:
                               type: object
                             type: array
                         type: object
+                      config:
+                        description: |-
+                          Config is raw TOML merged into the generated Vector configuration.
+                          This can be used to set global Vector options or anything that does not fit the components model.
+                        type: string
                       enabled:
                         description: |-
                           Enabled enables the Vector agent for this resource (Cassandra, Reaper or Stargate).
