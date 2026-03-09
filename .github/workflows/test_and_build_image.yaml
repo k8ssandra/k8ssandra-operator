@@ -40,7 +40,6 @@ jobs:
           skip-build-cache: true
       - name: Run unit and integration tests
         run: |
-          export PATH=$GOROOT/bin:$GOPATH/bin:$PATH
           make envtest test
       - name: Check that the build did not generate additional git changes
         run: |
