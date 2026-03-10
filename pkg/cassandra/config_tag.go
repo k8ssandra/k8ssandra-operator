@@ -3,8 +3,9 @@ package cassandra
 import (
 	"errors"
 	"fmt"
-	"github.com/Masterminds/semver/v3"
 	"strings"
+
+	"github.com/Masterminds/semver/v3"
 )
 
 const (

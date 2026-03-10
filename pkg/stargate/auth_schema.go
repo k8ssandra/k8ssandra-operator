@@ -2,6 +2,7 @@ package stargate
 
 import (
 	"fmt"
+
 	"github.com/go-logr/logr"
 	"github.com/k8ssandra/cass-operator/pkg/httphelper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"

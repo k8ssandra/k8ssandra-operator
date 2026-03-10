@@ -48,7 +48,7 @@ func AddInjectionAnnotation(t *meta.Tags, secretName string, containers []string
 		return err
 	}
 
-	t.Annotations[SecretInjectionAnnotation] = string(secretsStr)
+	t.Annotations[SecretInjectionAnnotation] = secretsStr
 	return nil
 }
 

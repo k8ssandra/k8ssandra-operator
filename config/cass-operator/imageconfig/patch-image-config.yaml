@@ -12,7 +12,7 @@ data:
         system-logger:
             repository: "k8ssandra"
             name: "system-logger"
-            tag: "v1.28.0"
+            tag: "v1.29.0"
         config-builder:
             repository: "datastax"
             name: "cass-config-builder"
@@ -20,7 +20,7 @@ data:
         k8ssandra-client:
             repository: "k8ssandra"
             name: "k8ssandra-client"
-            tag: "v0.8.3"
+            tag: "v0.8.8"
             # pullSecret: "k8ssandra-client-pull-secret" # Use of pullSecret removes the default pullSecrets for this image
             # pullPolicy: Always
         medusa:

@@ -12,7 +12,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -21,7 +20,7 @@ func (r *StargateReconciler) reconcileStargateTelemetry(
 	thisStargate *stargateapi.Stargate,
 	logger logr.Logger,
 	remoteClient client.Client,
-) (ctrl.Result, error) {
+) error {
 	logger.Info("reconciling telemetry", "stargate", thisStargate.Name)
 	var commonLabels map[string]string
 	if thisStargate.Spec.Telemetry == nil {
@@ -46,15 +45,15 @@ func (r *StargateReconciler) reconcileStargateTelemetry(
 	// Confirm telemetry config is valid (e.g. Prometheus is installed if it is requested.)
 	promInstalled, err := telemetry.IsPromInstalled(remoteClient, logger)
 	if err != nil {
-		return ctrl.Result{}, err
+		return err
 	}
 	validConfig := telemetry.SpecIsValid(thisStargate.Spec.Telemetry, promInstalled)
 	if !validConfig {
-		return ctrl.Result{}, errors.New("telemetry spec was invalid for this cluster - is Prometheus installed if you have requested it")
+		return errors.New("telemetry spec was invalid for this cluster - is Prometheus installed if you have requested it")
 	}
 	// If Prometheus not installed bail here.
 	if !promInstalled {
-		return ctrl.Result{}, nil
+		return nil
 	}
 	// If Stargate is attached
 	// Determine if we want a cleanup or a resource update.
@@ -62,18 +61,18 @@ func (r *StargateReconciler) reconcileStargateTelemetry(
 		logger.Info("Prometheus config found", "TelemetrySpec", thisStargate.Spec.Telemetry)
 		desiredSM, err := cfg.NewStargateServiceMonitor()
 		if err != nil {
-			return ctrl.Result{}, err
+			return err
 		}
 		if err := cfg.UpdateResources(ctx, remoteClient, thisStargate, &desiredSM); err != nil {
-			return ctrl.Result{}, err
+			return err
 		}
 	} else {
 		logger.Info("Telemetry not present for Stargate, will delete resources", "TelemetrySpec", thisStargate.Spec.Telemetry)
 		if err := cfg.CleanupResources(ctx, remoteClient); err != nil {
-			return ctrl.Result{}, err
+			return err
 		}
 	}
-	return ctrl.Result{}, nil
+	return nil
 }
 
 // mustLabels() returns the set of labels essential to managing the Prometheus resources. These should not be overwritten by the user.
@@ -86,7 +85,6 @@ func mustLabels(stargateName string, additionalLabels map[string]string) map[str
 	additionalLabels[stargateapi.StargateLabel] = stargateName
 	additionalLabels[k8ssandraapi.ComponentLabel] = k8ssandraapi.ComponentLabelTelemetry
 	return additionalLabels
-
 }
 
 // GetStargatePromSMName gets the name for our ServiceMonitors based on cluster and DC name.

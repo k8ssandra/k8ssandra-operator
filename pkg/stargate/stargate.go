@@ -35,7 +35,6 @@ func NewStargate(
 	dcTemplate api.CassandraDatacenterTemplate,
 	logger logr.Logger,
 ) *stargateapi.Stargate {
-
 	cassandraEncryption := stargateapi.CassandraEncryption{}
 	dcConfig := cassandra.Coalesce(kc.SanitizedName(), kc.Spec.Cassandra, &dcTemplate)
 

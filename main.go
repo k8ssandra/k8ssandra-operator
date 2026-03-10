@@ -333,7 +333,6 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
-
 }
 
 func setupImageRegistry(ctx context.Context, uncachedClient client.Client) (cassimages.ImageRegistry, error) {

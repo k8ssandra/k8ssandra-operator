@@ -2,8 +2,9 @@ package nodeconfig
 
 import (
 	"fmt"
-	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"strings"
+
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 
@@ -18,7 +19,6 @@ import (
 // NewDefaultPerNodeConfigMap generates a ConfigMap that contains default per-node configuration
 // files for this DC. It returns nil if this DC does not require any per-node configuration.
 func NewDefaultPerNodeConfigMap(kcKey types.NamespacedName, kc *k8ssandraapi.K8ssandraCluster, dcConfig *cassandra.DatacenterConfig) *corev1.ConfigMap {
-
 	configKey := NewDefaultPerNodeConfigMapKey(kc, dcConfig)
 	perNodeConfig := newPerNodeConfigMap(kcKey, configKey)
 

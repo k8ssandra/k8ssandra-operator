@@ -286,7 +286,7 @@ encoding.codec = "text"
 	return sources, transformers, sinks
 }
 
-// FilterUnusedPipelines removes sources that have no destination in the sinks. If there are duplicate transformer, source or sink names, only the first occurence wins
+// FilterUnusedPipelines removes sources that have no destination in the sinks. If there are duplicate transformer, source or sink names, only the first occurrence wins
 func FilterUnusedPipelines(sources []telemetry.VectorSourceSpec, transformers []telemetry.VectorTransformSpec, sinks []telemetry.VectorSinkSpec) ([]telemetry.VectorSourceSpec, []telemetry.VectorTransformSpec, []telemetry.VectorSinkSpec) {
 	// Every source must be mapped to at least one transformer or sink
 

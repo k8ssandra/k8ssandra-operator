@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -181,7 +180,7 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 			Users:                  template.Users,
 			Networking:             template.Networking,
 			PodTemplateSpec:        &template.PodTemplateSpec,
-			CDC:                    template.CDC,
+			DeprecatedCDC:          template.CDC,
 			DseWorkloads:           template.DseWorkloads,
 			ServiceAccountName:     template.ServiceAccount,
 			ReadOnlyRootFilesystem: template.ReadOnlyRootFilesystem,
@@ -227,8 +226,8 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 	}
 
 	m := template.Meta
-	dc.ObjectMeta.Labels = utils.MergeMap(dc.ObjectMeta.Labels, m.Labels)
-	dc.ObjectMeta.Annotations = utils.MergeMap(dc.ObjectMeta.Annotations, m.Annotations)
+	dc.Labels = utils.MergeMap(dc.Labels, m.Labels)
+	dc.Annotations = utils.MergeMap(dc.Annotations, m.Annotations)
 
 	if m.CommonLabels != nil {
 		dc.Spec.AdditionalLabels = m.CommonLabels
@@ -253,7 +252,7 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 
 	if !template.McacEnabled {
 		// MCAC needs to be disabled
-		setMcacDisabled(dc, template)
+		setMcacDisabled(dc)
 	}
 
 	dc.Spec.DatacenterName = template.DatacenterName
@@ -269,7 +268,7 @@ func setMgmtAPIHeap(dc *cassdcapi.CassandraDatacenter, heapSize *resource.Quanti
 	})
 }
 
-func setMcacDisabled(dc *cassdcapi.CassandraDatacenter, template *DatacenterConfig) {
+func setMcacDisabled(dc *cassdcapi.CassandraDatacenter) {
 	UpdateCassandraContainer(dc.Spec.PodTemplateSpec, func(c *corev1.Container) {
 		c.Env = append(
 			c.Env,
@@ -465,7 +464,6 @@ func AddPodTemplateSpecMeta(dcConfig *DatacenterConfig, m api.EmbeddedObjectMeta
 		Annotations: m.Pods.Annotations,
 		Labels:      m.Pods.Labels,
 	}
-
 }
 
 func FindContainer(dcPodTemplateSpec *corev1.PodTemplateSpec, containerName string) (int, bool) {
@@ -612,9 +610,9 @@ func AddOrUpdateVolumeToSpec(templateSpec *corev1.PodTemplateSpec, volume *corev
 	}
 }
 
-func AddOrUpdateAdditionalVolume(dcConfig *DatacenterConfig, volume *v1beta1.AdditionalVolumes, volumeIndex int, found bool) {
+func AddOrUpdateAdditionalVolume(dcConfig *DatacenterConfig, volume *cassdcapi.AdditionalVolumes, volumeIndex int, found bool) {
 	if dcConfig.StorageConfig.AdditionalVolumes == nil {
-		dcConfig.StorageConfig.AdditionalVolumes = make(v1beta1.AdditionalVolumesSlice, 0)
+		dcConfig.StorageConfig.AdditionalVolumes = make(cassdcapi.AdditionalVolumesSlice, 0)
 	}
 	if !found {
 		// volume doesn't exist, we need to add it

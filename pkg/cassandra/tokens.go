@@ -142,7 +142,6 @@ func checkPartitioner(infos []*tokenAllocationInfo) (*utils.Partitioner, error) 
 
 func assignInitialTokens(dcConfigs []*DatacenterConfig, infos []*tokenAllocationInfo, allInitialTokens [][]string) {
 	for dcIndex, dcConfig := range dcConfigs {
-
 		racks := dcConfig.Racks
 		if len(racks) == 0 {
 			racks = []cassdcapi.Rack{{Name: "default"}}

@@ -81,7 +81,7 @@ type K8ssandraClusterSpec struct {
 }
 
 // IsAuthEnabled returns true if auth is not specified by the user (auth by default)
-// or if the user has explicilty set Auth to true in the cluster spec
+// or if the user has explicitly set Auth to true in the cluster spec
 func (in K8ssandraClusterSpec) IsAuthEnabled() bool {
 	return in.Auth == nil || *in.Auth
 }
@@ -591,7 +591,6 @@ func DcAdded(oldSpec K8ssandraClusterSpec, newSpec K8ssandraClusterSpec) bool {
 		}
 	}
 	return wasAdded
-
 }
 
 func DcRemoved(oldSpec K8ssandraClusterSpec, newSpec K8ssandraClusterSpec) bool {

@@ -52,7 +52,6 @@ func NewK8ssandraCluster(name string, namespace string) k8ssandraapi.K8ssandraCl
 			},
 		},
 	}
-
 }
 
 func NewCassandraDatacenter(name string, namespace string) cassdcapi.CassandraDatacenter {

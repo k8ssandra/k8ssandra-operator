@@ -1,8 +1,9 @@
 package k8ssandra
 
 import (
+	"slices"
+
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
-	"k8s.io/utils/strings/slices"
 )
 
 const (

@@ -96,5 +96,4 @@ func Test_InjectCassandraTelemetryFilters_Empty(t *testing.T) {
 	assert.Equal(t, 1, len(cassandraEnvVariables), "Expected 1 env variable to be injected")
 	assert.Equal(t, cassandraEnvVariables[0].Name, "METRIC_FILTERS", "Expected METRIC_FILTERS env variable to be injected")
 	assert.Equal(t, cassandraEnvVariables[0].Value, "", "Expected empty METRIC_FILTERS env variable to be injected")
-
 }

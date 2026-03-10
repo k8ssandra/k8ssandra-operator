@@ -65,7 +65,6 @@ func (f *FakeManagementApiFactory) NewManagementApiFacade(
 	dc *cassdcapi.CassandraDatacenter,
 	client client.Client,
 	logger logr.Logger) (cassandra.ManagementApiFacade, error) {
-
 	if f.t == nil {
 		return nil, fmt.Errorf("testing.T instance not set")
 	}

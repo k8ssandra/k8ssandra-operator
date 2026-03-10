@@ -531,7 +531,6 @@ func addDcToCluster(ctx context.Context, t *testing.T, f *framework.Framework, k
 		}
 		return err == nil
 	}, timeout, interval)
-
 }
 
 func verifyReplicationOfSystemKeyspacesUpdated(t *testing.T, mockMgmtApi *testutils.FakeManagementApiFacade, replication, updatedReplication map[string]int) {
@@ -540,7 +539,6 @@ func verifyReplicationOfSystemKeyspacesUpdated(t *testing.T, mockMgmtApi *testut
 			if mockMgmtApi.GetFirstCall(testutils.EnsureKeyspaceReplication, ks, updatedReplication) < 0 {
 				return false
 			}
-
 		}
 		return true
 	}, timeout, interval, "Failed to verify system keyspaces replication updated")

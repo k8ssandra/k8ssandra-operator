@@ -10,7 +10,6 @@ import (
 )
 
 func Test_computeNodeAffinityLabels(t *testing.T) {
-
 	t.Run("no labels", func(t *testing.T) {
 		actual := computeNodeAffinityLabels(&cassdcapi.CassandraDatacenter{}, "default")
 		assert.Len(t, actual, 0)
@@ -71,7 +70,6 @@ func Test_computeNodeAffinityLabels(t *testing.T) {
 }
 
 func Test_computeNodeAffinity(t *testing.T) {
-
 	t.Run("no labels", func(t *testing.T) {
 		actual := computeNodeAffinity(&cassdcapi.CassandraDatacenter{}, "default")
 		assert.Nil(t, actual)
@@ -145,7 +143,6 @@ func Test_computeNodeAffinity(t *testing.T) {
 }
 
 func Test_computePodAntiAffinity(t *testing.T) {
-
 	t.Run("multiple workers forbidden", func(t *testing.T) {
 		//goland:noinspection GoDeprecation
 		actual := computePodAntiAffinity(false, &cassdcapi.CassandraDatacenter{

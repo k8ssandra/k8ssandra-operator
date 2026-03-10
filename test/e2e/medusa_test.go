@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
-	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusa "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
@@ -36,15 +35,15 @@ func createSingleMedusaJob(t *testing.T, ctx context.Context, namespace string, 
 	require := require.New(t)
 	require.NoError(f.CreateCassandraEncryptionStoresSecret(namespace), "Failed to create the encryption secrets")
 	kcKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: clusterName}}
-	kc := &api.K8ssandraCluster{}
+	kc := &k8ssandraapi.K8ssandraCluster{}
 	err := f.Get(ctx, kcKey, kc)
 	require.NoError(err, "Error getting the K8ssandraCluster")
 	dcKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	backupKey := types.NamespacedName{Namespace: namespace, Name: backupName}
 
 	checkDatacenterReady(t, ctx, dcKey, f)
-	checkMedusaContainersExist(t, ctx, namespace, dcKey, f, kc)
-	checkPurgeBackupScheduleExists(t, ctx, namespace, dcKey, f, kc)
+	checkMedusaContainersExist(t, ctx, dcKey, f)
+	checkPurgeBackupScheduleExists(t, ctx, dcKey, f, kc)
 	checkDatacenterReadOnlyRootFS(t, ctx, dcKey, f, kc)
 
 	// Disable purges
@@ -54,7 +53,7 @@ func createSingleMedusaJob(t *testing.T, ctx context.Context, namespace string, 
 	kc.Spec.Medusa.PurgeBackups = ptr.To(false)
 	err = f.Client.Patch(ctx, kc, medusaPurgePatch)
 	require.NoError(err, "failed to patch K8ssandraCluster with purge modification in namespace %s", namespace)
-	checkPurgeBackupScheduleDeleted(t, ctx, namespace, dcKey, f, kc)
+	checkPurgeBackupScheduleDeleted(t, ctx, dcKey, f, kc)
 
 	createBackupJob(t, ctx, namespace, f, dcKey)
 	verifyBackupJobFinished(t, ctx, f, dcKey, backupKey)
@@ -79,7 +78,7 @@ func createMultiMedusaJob(t *testing.T, ctx context.Context, namespace string, f
 	require := require.New(t)
 	require.NoError(f.CreateCassandraEncryptionStoresSecret(namespace), "Failed to create the encryption secrets")
 	kcKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: clusterName}}
-	kc := &api.K8ssandraCluster{}
+	kc := &k8ssandraapi.K8ssandraCluster{}
 	err := f.Get(ctx, kcKey, kc)
 	require.NoError(err, "Error getting the K8ssandraCluster")
 	backupKey := types.NamespacedName{Namespace: namespace, Name: backupName}
@@ -94,8 +93,8 @@ func createMultiMedusaJob(t *testing.T, ctx context.Context, namespace string, f
 	// Check that both DCs are ready and have Medusa containers
 	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
 		checkDatacenterReady(t, ctx, dcKey, f)
-		checkMedusaContainersExist(t, ctx, namespace, dcKey, f, kc)
-		checkPurgeBackupScheduleExists(t, ctx, namespace, dcKey, f, kc)
+		checkMedusaContainersExist(t, ctx, dcKey, f)
+		checkPurgeBackupScheduleExists(t, ctx, dcKey, f, kc)
 		checkReplicatedSecretMounted(t, ctx, f, dcKey, localBucketSecretName)
 	}
 
@@ -118,17 +117,17 @@ func createMultiDcSingleMedusaJob(t *testing.T, ctx context.Context, namespace s
 	require := require.New(t)
 	cluster2Name := "cluster2"
 	kc2Key := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: cluster2Name}}
-	kc := &api.K8ssandraCluster{}
+	kc := &k8ssandraapi.K8ssandraCluster{}
 	err := f.Get(ctx, kc2Key, kc)
 	require.NoError(err, "Error getting the K8ssandraCluster")
 	dcKey := framework.ClusterKey{K8sContext: "kind-k8ssandra-0", NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster2-dc1"}}
 	backupKey := types.NamespacedName{Namespace: namespace, Name: backupName}
 
 	checkDatacenterReady(t, ctx, dcKey, f)
-	checkMedusaContainersExist(t, ctx, namespace, dcKey, f, kc)
+	checkMedusaContainersExist(t, ctx, dcKey, f)
 	createBackupJob(t, ctx, namespace, f, dcKey)
 	verifyBackupJobFinished(t, ctx, f, dcKey, backupKey)
-	checkNoPurgeBackupSchedule(t, ctx, namespace, dcKey, f, kc)
+	checkNoPurgeBackupSchedule(t, ctx, dcKey, f, kc)
 }
 
 func verifyBucketKeyPresent(t *testing.T, f *framework.E2eFramework, ctx context.Context, kc *k8ssandraapi.K8ssandraCluster, namespace, k8sContext, secretName string) {
@@ -155,7 +154,7 @@ func checkReplicatedSecretMounted(t *testing.T, ctx context.Context, f *framewor
 	assert.True(t, hasMount, "Missing Volume Mount for Medusa bucket key")
 }
 
-func checkMedusaContainersExist(t *testing.T, ctx context.Context, namespace string, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
+func checkMedusaContainersExist(t *testing.T, ctx context.Context, dcKey framework.ClusterKey, f *framework.E2eFramework) {
 	require := require.New(t)
 	// Get the Cassandra pod
 	dc1 := &cassdcapi.CassandraDatacenter{}
@@ -173,7 +172,7 @@ func checkMedusaContainersExist(t *testing.T, ctx context.Context, namespace str
 	require.True(found, fmt.Sprintf("%s doesn't have medusa container", dc1.Name))
 }
 
-func checkPurgeBackupScheduleExists(t *testing.T, ctx context.Context, namespace string, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
+func checkPurgeBackupScheduleExists(t *testing.T, ctx context.Context, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *k8ssandraapi.K8ssandraCluster) {
 	require := require.New(t)
 	dcNamespace := dcKey.Namespace
 	if dcNamespace == "" {
@@ -190,7 +189,7 @@ func checkPurgeBackupScheduleExists(t *testing.T, ctx context.Context, namespace
 	require.NoErrorf(err, "Error getting the Medusa purge schedule. ClusterName: %s, DatacenterName: %s", kc.SanitizedName(), dcKey.Name)
 }
 
-func checkNoPurgeBackupSchedule(t *testing.T, ctx context.Context, namespace string, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
+func checkNoPurgeBackupSchedule(t *testing.T, ctx context.Context, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *k8ssandraapi.K8ssandraCluster) {
 	require := require.New(t)
 	dcNamespace := dcKey.Namespace
 	if dcNamespace == "" {
@@ -206,7 +205,7 @@ func checkNoPurgeBackupSchedule(t *testing.T, ctx context.Context, namespace str
 	require.Error(err, "MedusaBackupSchedule for purge should not exist for datacenter %s", dcKey.Name)
 }
 
-func checkPurgeBackupScheduleDeleted(t *testing.T, ctx context.Context, namespace string, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
+func checkPurgeBackupScheduleDeleted(t *testing.T, ctx context.Context, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *k8ssandraapi.K8ssandraCluster) {
 	require := require.New(t)
 	dcNamespace := dcKey.Namespace
 	if dcNamespace == "" {
@@ -352,7 +351,6 @@ func verifyRestoreJobFinished(t *testing.T, ctx context.Context, f *framework.E2
 		_, exists := secret.Annotations[k8ssandraapi.RefreshAnnotation]
 		return exists
 	}, polling.medusaRestoreDone.timeout, polling.medusaRestoreDone.interval, "superuser secret wasn't updated with refresh annotation")
-
 }
 
 func createMedusaConfiguration(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {

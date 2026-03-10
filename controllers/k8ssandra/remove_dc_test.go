@@ -79,7 +79,6 @@ func deleteDcWithUserKeyspacesFails(ctx context.Context, t *testing.T, f *framew
 		}
 		return strings.Contains(kc.Status.Error, "cannot decommission DC dc2")
 	}, timeout, interval, "expected error on dc2 removal not found")
-
 }
 
 func deleteDcWithUserKeyspacesSucceeds(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {

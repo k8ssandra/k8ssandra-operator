@@ -489,7 +489,11 @@ func (f *E2eFramework) CreateExternalDc(namespace string, seedIp string) error {
 	if err != nil {
 		return err
 	}
-	defer os.Remove(tempFile.Name())
+	defer func() {
+		if err := os.Remove(tempFile.Name()); err != nil {
+			f.logger.Error(err, "Failed to remove temporal file", "Name", tempFile.Name())
+		}
+	}()
 
 	_, err = tempFile.Write([]byte(updatedContent))
 	if err != nil {
@@ -726,7 +730,11 @@ func (f *E2eFramework) storeOutput(outputDir, subdirectory, objectType, ext, out
 		f.logger.Error(err, "failed to create output file")
 		return err
 	}
-	defer outputFile.Close()
+	defer func() {
+		if err := outputFile.Close(); err != nil {
+			f.logger.Error(err, "Failed to close output file")
+		}
+	}()
 	if _, err := outputFile.WriteString(output); err != nil {
 		return err
 	}

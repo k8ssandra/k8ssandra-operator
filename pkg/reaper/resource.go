@@ -126,13 +126,13 @@ func transformCassandraClusterMeta(kc *k8ssandraapi.K8ssandraCluster) *meta.Reso
 	// we use Cassandra's common labels for reaper's CRD labels
 	// we use the same labels for ALL resources reaper will create
 	if cassMeta.CommonLabels != nil {
-		reaperMeta.Tags.Labels = cassMeta.CommonLabels
+		reaperMeta.Labels = cassMeta.CommonLabels
 		reaperMeta.CommonLabels = cassMeta.CommonLabels
 		reaperMeta.Pods.Labels = cassMeta.CommonLabels
 		reaperMeta.Service.Labels = cassMeta.CommonLabels
 	}
 	if cassMeta.CommonAnnotations != nil {
-		reaperMeta.Tags.Annotations = cassMeta.CommonAnnotations
+		reaperMeta.Annotations = cassMeta.CommonAnnotations
 		reaperMeta.CommonAnnotations = cassMeta.CommonAnnotations
 		reaperMeta.Pods.Annotations = cassMeta.CommonAnnotations
 		reaperMeta.Service.Annotations = cassMeta.CommonAnnotations

@@ -384,7 +384,6 @@ func TestNewStatefulSetForControlPlane(t *testing.T) {
 			Value: "true",
 		},
 	})
-
 }
 
 func TestHttpManagementConfiguration(t *testing.T) {
@@ -656,21 +655,21 @@ func TestDeploymentTypes(t *testing.T) {
 
 	// reaper with cassandra backend becomes a deployment
 	reaper := newTestReaper()
-	reaper.Spec.ReaperTemplate.StorageType = reaperapi.StorageTypeCassandra
+	reaper.Spec.StorageType = reaperapi.StorageTypeCassandra
 	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
 	assert.Len(t, deployment.Spec.Template.Spec.Containers, 1)
 	assert.Equal(t, reaperapi.StorageTypeCassandra, deployment.Spec.Template.Spec.Containers[0].Env[0].Value)
 
 	// asking for a deployment with memory backend does not work
 	reaper = newTestReaper()
-	reaper.Spec.ReaperTemplate.StorageType = reaperapi.StorageTypeLocal
+	reaper.Spec.StorageType = reaperapi.StorageTypeLocal
 	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
 	assert.Nil(t, deployment)
 
 	// reaper with memory backend becomes a stateful set
 	reaper = newTestReaper()
-	reaper.Spec.ReaperTemplate.StorageType = reaperapi.StorageTypeLocal
-	reaper.Spec.ReaperTemplate.StorageConfig = &corev1.PersistentVolumeClaimSpec{
+	reaper.Spec.StorageType = reaperapi.StorageTypeLocal
+	reaper.Spec.StorageConfig = &corev1.PersistentVolumeClaimSpec{
 		StorageClassName: func() *string { s := "test"; return &s }(),
 		AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 		Resources: corev1.VolumeResourceRequirements{
@@ -685,7 +684,7 @@ func TestDeploymentTypes(t *testing.T) {
 
 	// asking for a stateful set with cassandra backend does not work
 	reaper = newTestReaper()
-	reaper.Spec.ReaperTemplate.StorageType = reaperapi.StorageTypeCassandra
+	reaper.Spec.StorageType = reaperapi.StorageTypeCassandra
 	sts = NewStatefulSet(reaper, newTestDatacenter(), logger, getTestImageRegistry(t))
 	assert.Nil(t, sts)
 }

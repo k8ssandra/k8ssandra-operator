@@ -141,14 +141,14 @@ func testNewDeploymentsDefaultRackSingleReplica(t *testing.T) {
 	assert.EqualValues(t, 10, container.LivenessProbe.TimeoutSeconds)
 	assert.EqualValues(t, 30, container.LivenessProbe.InitialDelaySeconds)
 	assert.EqualValues(t, 5, container.LivenessProbe.FailureThreshold)
-	assert.Equal(t, "/checker/liveness", container.LivenessProbe.ProbeHandler.HTTPGet.Path)
-	assert.Equal(t, "health", container.LivenessProbe.ProbeHandler.HTTPGet.Port.String())
+	assert.Equal(t, "/checker/liveness", container.LivenessProbe.HTTPGet.Path)
+	assert.Equal(t, "health", container.LivenessProbe.HTTPGet.Port.String())
 
 	assert.EqualValues(t, 10, container.ReadinessProbe.TimeoutSeconds)
 	assert.EqualValues(t, 30, container.ReadinessProbe.InitialDelaySeconds)
 	assert.EqualValues(t, 5, container.ReadinessProbe.FailureThreshold)
-	assert.Equal(t, "/checker/readiness", container.ReadinessProbe.ProbeHandler.HTTPGet.Path)
-	assert.Equal(t, "health", container.ReadinessProbe.ProbeHandler.HTTPGet.Port.String())
+	assert.Equal(t, "/checker/readiness", container.ReadinessProbe.HTTPGet.Path)
+	assert.Equal(t, "health", container.ReadinessProbe.HTTPGet.Port.String())
 
 	clusterVersion := utils.FindEnvVarInContainer(container, "CLUSTER_VERSION")
 	require.NotNil(t, clusterVersion, "failed to find CLUSTER_VERSION env var")
@@ -184,7 +184,6 @@ func testNewDeploymentsDefaultRackSingleReplica(t *testing.T) {
 }
 
 func testNewDeploymentsSingleRackManyReplicas(t *testing.T) {
-
 	dc := dc.DeepCopy()
 	dc.Spec.Size = 3
 	dc.Spec.Racks = []cassdcapi.Rack{{Name: "rack1"}}
@@ -230,11 +229,9 @@ func testNewDeploymentsSingleRackManyReplicas(t *testing.T) {
 	seed := utils.FindEnvVarInContainer(container, "SEED")
 	require.NotNil(t, seed, "failed to find SEED env var")
 	assert.Equal(t, "cluster1-seed-service.namespace1.svc", seed.Value)
-
 }
 
 func testNewDeploymentsManyRacksManyReplicas(t *testing.T) {
-
 	dc := dc.DeepCopy()
 	dc.Spec.Size = 9
 	dc.Spec.Racks = []cassdcapi.Rack{
@@ -322,7 +319,6 @@ func testNewDeploymentsManyRacksManyReplicas(t *testing.T) {
 }
 
 func testNewDeploymentsManyRacksCustomAffinityDc(t *testing.T) {
-
 	dc := dc.DeepCopy()
 	dc.Spec.Size = 9
 	//goland:noinspection GoDeprecation
@@ -405,7 +401,6 @@ func testNewDeploymentsManyRacksCustomAffinityDc(t *testing.T) {
 }
 
 func testNewDeploymentsManyRacksCustomAffinityStargate(t *testing.T) {
-
 	dc := dc.DeepCopy()
 	dc.Spec.Size = 9
 	//goland:noinspection GoDeprecation
@@ -519,7 +514,6 @@ func testNewDeploymentsManyRacksCustomAffinityStargate(t *testing.T) {
 }
 
 func testNewDeploymentsManyRacksFewReplicas(t *testing.T) {
-
 	dc := dc.DeepCopy()
 	dc.Spec.Size = 9
 	dc.Spec.Racks = []cassdcapi.Rack{
@@ -583,7 +577,6 @@ func testNewDeploymentsCassandraConfigMap(t *testing.T) {
 }
 
 func testNewDeploymentsEncryption(t *testing.T) {
-
 	stargate := stargate.DeepCopy()
 
 	logger := testlogr.NewTestLogger(t)
@@ -731,7 +724,6 @@ func testNewDeploymentsAuthentication(t *testing.T) {
 		assert.Contains(t, javaOpts.Value, "-Dstargate.auth_id=AuthJwtService")
 		assert.Contains(t, javaOpts.Value, "-Dstargate.auth.jwt_provider_url=https://auth.example.com/auth/realms/stargate/protocol/openid-connect/token")
 	})
-
 }
 
 func testImages(t *testing.T) {

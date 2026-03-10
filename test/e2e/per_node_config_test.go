@@ -16,7 +16,6 @@ import (
 )
 
 func multiDcInitialTokens(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
-
 	t.Log("check that the K8ssandraCluster was created")
 	kc := &api.K8ssandraCluster{}
 	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
@@ -126,11 +125,9 @@ func multiDcInitialTokens(t *testing.T, ctx context.Context, namespace string, f
 		err := f.Get(ctx, perNodeConfigMapKey2, perNodeConfigMap)
 		return errors.IsNotFound(err)
 	}, time.Minute, time.Second)
-
 }
 
 func userDefinedPerNodeConfig(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
-
 	t.Log("check that the K8ssandraCluster was created")
 	kc := &api.K8ssandraCluster{}
 	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}

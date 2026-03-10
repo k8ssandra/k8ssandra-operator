@@ -192,7 +192,6 @@ func (r *restReaperManager) httpClientOption(ctx context.Context, namespace stri
 		httpClient := createHTTPClientWithTLS()
 		return reaperclient.WithHttpClient(httpClient), nil
 	}
-
 }
 
 func (r *restReaperManager) connect(ctx context.Context, reaperSvc, username, password string, useTLS bool, opts ...reaperclient.ClientCreateOption) error {

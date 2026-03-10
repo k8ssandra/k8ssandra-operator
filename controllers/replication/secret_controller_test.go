@@ -95,21 +95,21 @@ func copySecretsFromClusterToCluster(t *testing.T, ctx context.Context, f *frame
 
 	t.Log("check that the secrets were copied to other cluster(s)")
 	require.Eventually(func() bool {
-		return verifySecretsMatch(t, ctx, f.Client, []string{f.DataPlaneContexts[targetCopyToCluster]}, map[string]struct{}{
+		return verifySecretsMatch(ctx, f.Client, []string{f.DataPlaneContexts[targetCopyToCluster]}, map[string]struct{}{
 			generatedSecrets[0].Name: empty,
 		}, generatedSecrets[0].Namespace)
 	}, timeout, interval)
 
 	t.Log("check that secret not match by replicated secret was not copied")
 	require.Never(func() bool {
-		return verifySecretsMatch(t, ctx, f.Client, []string{f.DataPlaneContexts[targetCopyToCluster]}, map[string]struct{}{
+		return verifySecretsMatch(ctx, f.Client, []string{f.DataPlaneContexts[targetCopyToCluster]}, map[string]struct{}{
 			generatedSecrets[1].Name: empty,
 		}, generatedSecrets[0].Namespace)
 	}, 200*time.Millisecond, interval)
 
 	t.Log("check that nothing was copied to cluster not match by replicated secret")
 	require.Never(func() bool {
-		return verifySecretsMatch(t, ctx, f.Client, []string{f.DataPlaneContexts[targetNoCopyCluster]}, map[string]struct{}{
+		return verifySecretsMatch(ctx, f.Client, []string{f.DataPlaneContexts[targetNoCopyCluster]}, map[string]struct{}{
 			generatedSecrets[0].Name: empty,
 			generatedSecrets[1].Name: empty,
 		}, generatedSecrets[0].Namespace)
@@ -125,7 +125,7 @@ func copySecretsFromClusterToCluster(t *testing.T, ctx context.Context, f *frame
 
 	t.Log("verify it was modified in the target cluster also")
 	require.Eventually(func() bool {
-		return verifySecretsMatch(t, ctx, f.Client, []string{f.DataPlaneContexts[targetCopyToCluster]}, map[string]struct{}{
+		return verifySecretsMatch(ctx, f.Client, []string{f.DataPlaneContexts[targetCopyToCluster]}, map[string]struct{}{
 			generatedSecrets[0].Name: empty,
 		}, generatedSecrets[0].Namespace)
 	}, timeout, interval)
@@ -151,7 +151,7 @@ func copySecretsFromClusterToCluster(t *testing.T, ctx context.Context, f *frame
 
 	t.Log("verify it was returned to original form")
 	require.Eventually(func() bool {
-		return verifySecretsMatch(t, ctx, f.Client, []string{f.DataPlaneContexts[targetCopyToCluster]}, map[string]struct{}{
+		return verifySecretsMatch(ctx, f.Client, []string{f.DataPlaneContexts[targetCopyToCluster]}, map[string]struct{}{
 			generatedSecrets[0].Name: empty,
 		}, generatedSecrets[0].Namespace)
 	}, timeout, interval)
@@ -171,9 +171,9 @@ func copySecretsFromClusterToCluster(t *testing.T, ctx context.Context, f *frame
 			return false
 		}
 		for _, cond := range updatedRSec.Status.Conditions {
-			if !(cond.Cluster != "" &&
-				cond.Type == api.ReplicationDone &&
-				cond.Status == corev1.ConditionTrue) {
+			if cond.Cluster == "" ||
+				cond.Type != api.ReplicationDone ||
+				cond.Status != corev1.ConditionTrue {
 				t.Logf("Condition not set correctly: %v, startTime: %v", cond, startTime)
 				return false
 			}
@@ -221,7 +221,7 @@ func verifySecretIsDeleted(t *testing.T, ctx context.Context, f *framework.Frame
 
 	t.Log("check that the secret was copied to other cluster(s)")
 	require.Eventually(func() bool {
-		return verifySecretsMatch(t, ctx, f.Client, []string{f.DataPlaneContexts[targetCopyToCluster]}, map[string]struct{}{
+		return verifySecretsMatch(ctx, f.Client, []string{f.DataPlaneContexts[targetCopyToCluster]}, map[string]struct{}{
 			generatedSecrets[0].Name: empty,
 		}, generatedSecrets[0].Namespace)
 	}, timeout, interval)
@@ -470,7 +470,6 @@ func generateReplicatedSecret(k8sContext, namespace string) *api.ReplicatedSecre
 
 // verifySecretCopied checks that the same key is copied to other clusters
 func verifySecretCopied(t *testing.T, ctx context.Context, origCluster string, originalSecret *corev1.Secret, verify func(*testing.T, *corev1.Secret, *corev1.Secret)) bool {
-
 	secretKey := types.NamespacedName{Namespace: originalSecret.Namespace, Name: originalSecret.Name}
 	for clusterKey, testClient := range testEnv.Clients {
 		if clusterKey == origCluster {
@@ -492,7 +491,7 @@ func verifySecretCopied(t *testing.T, ctx context.Context, origCluster string, o
 }
 
 // verifySecretsMatch checks that the same secret is copied to other clusters
-func verifySecretsMatch(t *testing.T, ctx context.Context, localClient client.Client, remoteClusters []string, secrets map[string]struct{}, namespace string) bool {
+func verifySecretsMatch(ctx context.Context, localClient client.Client, remoteClusters []string, secrets map[string]struct{}, namespace string) bool {
 	secretList := &corev1.SecretList{}
 	err := localClient.List(ctx, secretList, client.InNamespace(namespace))
 	if err != nil {
@@ -688,7 +687,6 @@ func prefixedSecret(t *testing.T, ctx context.Context, f *framework.Framework, n
 		}
 		return string(remoteSecret.Data["modifiedKey"]) == string(localSecret.Data["modifiedKey"])
 	}, timeout, interval)
-
 }
 
 func guardInfiniteReplication(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
@@ -716,5 +714,4 @@ func guardInfiniteReplication(t *testing.T, ctx context.Context, f *framework.Fr
 		}
 		return true
 	}, timeout/2, interval)
-
 }

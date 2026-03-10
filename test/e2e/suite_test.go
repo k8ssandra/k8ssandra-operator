@@ -367,7 +367,6 @@ func TestOperator(t *testing.T) {
 }
 
 func beforeSuite(t *testing.T) {
-
 	processFlags(t)
 	applyPollingDefaults()
 
@@ -433,7 +432,6 @@ type e2eTestFunc func(t *testing.T, ctx context.Context, namespace string, f *fr
 
 func e2eTest(ctx context.Context, opts *e2eTestOpts) func(*testing.T) {
 	return func(t *testing.T) {
-
 		f, err := framework.NewE2eFramework(t, kubeconfigFile, controlPlane, dataPlanes...)
 		if err != nil {
 			t.Fatalf("failed to initialize test framework: %v", err)
@@ -576,7 +574,7 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) erro
 	return nil
 }
 
-func upgradeToLatest(t *testing.T, ctx context.Context, f *framework.E2eFramework, namespace, dcPrefix string) error {
+func upgradeToLatest(t *testing.T, ctx context.Context, f *framework.E2eFramework, namespace string) error {
 	deploymentConfig := framework.OperatorDeploymentConfig{
 		Namespace:     namespace,
 		ClusterScoped: false,
@@ -757,7 +755,8 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 		if err != nil {
 			return false
 		}
-		return "{\"dc1\":3}" == k8ssandra.ObjectMeta.Annotations["k8ssandra.io/initial-system-replication"]
+		expectedAnnotationVal := "{\"dc1\":3}"
+		return expectedAnnotationVal == k8ssandra.Annotations["k8ssandra.io/initial-system-replication"]
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "initial-system-replication annotation not set correctly according to dc name override")
 
 	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
@@ -823,7 +822,6 @@ func createSingleDatacenterCluster(t *testing.T, ctx context.Context, namespace 
 		err := f.Client.Get(ctx, kcKey, k8ssandra)
 		assert.True(c, errors.IsNotFound(err), "K8ssandraCluster should be deleted")
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "K8ssandraCluster should be deleted")
-
 }
 
 // createSingleDatacenterClusterMgmtAuth creates a K8ssandraCluster with one CassandraDatacenter that is deployed in the local cluster.
@@ -880,7 +878,6 @@ func createSingleDatacenterClusterMgmtAuth(t *testing.T, ctx context.Context, na
 		err := f.Client.Get(ctx, kcKey, k8ssandra)
 		assert.True(c, errors.IsNotFound(err), "K8ssandraCluster should be deleted")
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "K8ssandraCluster should be deleted")
-
 }
 
 func checkDatacenterReadOnlyRootFS(t *testing.T, ctx context.Context, key framework.ClusterKey, f *framework.E2eFramework, kc *api.K8ssandraCluster) {
@@ -914,10 +911,9 @@ func createSingleDatacenterClusterWithUpgrade(t *testing.T, ctx context.Context,
 	}), polling.datacenterReady.timeout, polling.datacenterReady.interval, fmt.Sprintf("timed out waiting for datacenter %s to become ready", dcKey.Name))
 
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
-	dcPrefix := DcPrefix(t, f, dcKey)
 
 	// Perform the upgrade
-	err = upgradeToLatest(t, ctx, f, namespace, dcPrefix)
+	err = upgradeToLatest(t, ctx, f, namespace)
 	require.NoError(err, "failed to upgrade to latest version")
 
 	// Verify old endpoints were deleted
@@ -1136,7 +1132,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 			t.Logf("failed to add DC: failed to get dc2-rebuild task: %v", err)
 			return false
 		}
-		return rebuildDc2CassandraTask.Spec.CassandraTaskTemplate.Jobs[0].Arguments.SourceDatacenter == DcName(t, f, dc1Key)
+		return rebuildDc2CassandraTask.Spec.Jobs[0].Arguments.SourceDatacenter == DcName(t, f, dc1Key)
 	}, 3*time.Minute, 10*time.Second, "timed out waiting for CassandraTask to be created with the right source DC")
 
 	t.Log("retrieve database credentials")
@@ -1291,7 +1287,7 @@ func addExternalDcToCluster(t *testing.T, ctx context.Context, namespace string,
 
 	t.Log("add dc2 to cluster")
 	// Get the IP address of the first Cassandra pod
-	pods, err := f.GetCassandraDatacenterPods(t, ctx, dc1Key, dc1Key.NamespacedName.Name)
+	pods, err := f.GetCassandraDatacenterPods(t, ctx, dc1Key, dc1Key.Name)
 	require.NoError(err, "failed to get Cassandra pods")
 
 	kcKey := client.ObjectKey{Namespace: namespace, Name: "test"}
@@ -1922,7 +1918,7 @@ func findContainerInPod(t *testing.T, pod corev1.Pod, containerName string) (ind
 }
 
 func checkCassandraClusterName(t *testing.T, ctx context.Context, k8ssandra *api.K8ssandraCluster, dcKey framework.ClusterKey, f *framework.E2eFramework) {
-	t.Logf("check that the cassdc object has the right overriden cluster name, without any modification: %s", k8ssandra.Spec.Cassandra.ClusterName)
+	t.Logf("check that the cassdc object has the right overridden cluster name, without any modification: %s", k8ssandra.Spec.Cassandra.ClusterName)
 	cassdc := &cassdcapi.CassandraDatacenter{}
 	err := f.Get(ctx, dcKey, cassdc)
 	require.NoError(t, err, "failed to get cassdc object")
@@ -1949,7 +1945,6 @@ func checkVectorConfigMapDeleted(t *testing.T, ctx context.Context, f *framework
 		}
 		return false
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "Vector configmap was not deleted")
-
 }
 
 func getPodTemplateSpec(t *testing.T, ctx context.Context, f *framework.E2eFramework, appKey framework.ClusterKey, kc *api.K8ssandraCluster) *corev1.PodTemplateSpec {
@@ -2062,7 +2057,7 @@ func verifyClusterReconcileFinished(ctx context.Context, t *testing.T, f *framew
 			t.Logf("failed to get K8ssandraCluster: %v", err)
 			return false
 		}
-		return kc.ObjectMeta.Generation == kc.Status.ObservedGeneration
+		return kc.Generation == kc.Status.ObservedGeneration
 	}, polling.k8ssandraClusterStatus.timeout*5, polling.k8ssandraClusterStatus.interval, "cluster hasn't finished reconciliation")
 }
 

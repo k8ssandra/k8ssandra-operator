@@ -140,7 +140,7 @@ func testMedusaBackupDatacenter(t *testing.T, ctx context.Context, f *framework.
 			return false
 		}
 
-		condition := findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
+		condition := findDatacenterScalingUpCondition(k8ssandraStatus.Cassandra)
 		return condition != nil && condition.Status == corev1.ConditionTrue
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 
@@ -223,7 +223,7 @@ func createAndVerifyMedusaBackup(dcKey framework.ClusterKey, dc *cassdcapi.Cassa
 
 	dcCopy := dc.DeepCopy()
 	dcKeyCopy := framework.NewClusterKey(f.DataPlaneContexts[0], dcKey.Namespace+"-copy", dcKey.Name)
-	dcCopy.ObjectMeta.Namespace = dc.Namespace + "-copy"
+	dcCopy.Namespace = dc.Namespace + "-copy"
 
 	createDatacenterPods(t, f, ctx, dcKeyCopy, dcCopy)
 
@@ -455,11 +455,9 @@ func (c *fakeMedusaClient) CreateBackup(ctx context.Context, name string, backup
 }
 
 func (c *fakeMedusaClient) GetBackups(ctx context.Context) ([]*medusa.BackupSummary, error) {
-
 	backups := make([]*medusa.BackupSummary, 0)
 
 	for _, name := range c.RequestedBackups {
-
 		// return status based on the backup name
 		// since we're implementing altogether different method of the Medusa client, we cannot reuse the BackupStatus logic
 		// but we still want to "mock" failing backups
@@ -563,9 +561,9 @@ func (c *fakeMedusaClient) PrepareRestore(ctx context.Context, datacenter, backu
 	return nil, nil
 }
 
-func findDatacenterCondition(status *cassdcapi.CassandraDatacenterStatus, condType cassdcapi.DatacenterConditionType) *cassdcapi.DatacenterCondition {
+func findDatacenterScalingUpCondition(status *cassdcapi.CassandraDatacenterStatus) *cassdcapi.DatacenterCondition {
 	for _, condition := range status.Conditions {
-		if condition.Type == condType {
+		if condition.Type == cassdcapi.DatacenterScalingUp {
 			return &condition
 		}
 	}
@@ -574,7 +572,6 @@ func findDatacenterCondition(status *cassdcapi.CassandraDatacenterStatus, condTy
 
 func deleteDatacenterPods(t *testing.T, f *framework.Framework, ctx context.Context, dcKey framework.ClusterKey, dc *cassdcapi.CassandraDatacenter) {
 	for i := 0; i < int(dc.Spec.Size); i++ {
-
 		podName := fmt.Sprintf("%s-%s-%d", dc.Spec.ClusterName, dc.DatacenterName(), i)
 		podKey := framework.NewClusterKey(dcKey.K8sContext, dcKey.Namespace, podName)
 		pod := &corev1.Pod{

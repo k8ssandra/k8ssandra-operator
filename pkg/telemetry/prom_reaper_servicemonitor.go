@@ -2,8 +2,9 @@ package telemetry
 
 import (
 	"fmt"
-	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"os"
+
+	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"

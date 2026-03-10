@@ -141,7 +141,7 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 			return false
 		}
 
-		condition := findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
+		condition := findDatacenterScalingUpCondition(k8ssandraStatus.Cassandra)
 		return condition != nil && condition.Status == corev1.ConditionTrue
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 
@@ -159,7 +159,7 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 	dc1 := &cassdcapi.CassandraDatacenter{}
 	require.NoError(f.Get(ctx, dc1Key, dc1))
 	require.True(metav1.HasAnnotation(dc1.ObjectMeta, medusa.MedusaClientSecretNameAnnotation))
-	require.Equal("medusa-client-secret", dc1.ObjectMeta.Annotations[medusa.MedusaClientSecretNameAnnotation])
+	require.Equal("medusa-client-secret", dc1.Annotations[medusa.MedusaClientSecretNameAnnotation])
 
 	err = createCassandraPods(t, f, ctx, dc1Key, dc1)
 	require.NoError(err)
@@ -212,7 +212,7 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 		},
 	}
 
-	restoreKey := framework.NewClusterKey(dc1Key.K8sContext, dc1Key.Namespace, restore.ObjectMeta.Name)
+	restoreKey := framework.NewClusterKey(dc1Key.K8sContext, dc1Key.Namespace, restore.Name)
 	err = f.Create(ctx, restoreKey, restore)
 	require.NoError(err, "failed to create MedusaRestoreJob")
 
@@ -231,7 +231,7 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 	err = f.Get(ctx, restoreKey, restore)
 	require.NoError(err, "failed to get MedusaRestoreJob")
 
-	dcStoppedTime := restore.Status.StartTime.Time.Add(1 * time.Second)
+	dcStoppedTime := restore.Status.StartTime.Add(1 * time.Second)
 
 	t.Log("set datacenter status to stopped")
 	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {
@@ -454,7 +454,7 @@ func testValidationErrorStopsRestore(t *testing.T, ctx context.Context, f *frame
 			return false
 		}
 
-		condition := findDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
+		condition := findDatacenterScalingUpCondition(k8ssandraStatus.Cassandra)
 		return condition != nil && condition.Status == corev1.ConditionTrue
 	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
 
@@ -520,7 +520,7 @@ func testValidationErrorStopsRestore(t *testing.T, ctx context.Context, f *frame
 		},
 	}
 
-	restoreKey := framework.NewClusterKey(dc1Key.K8sContext, dc1Key.Namespace, restore.ObjectMeta.Name)
+	restoreKey := framework.NewClusterKey(dc1Key.K8sContext, dc1Key.Namespace, restore.Name)
 	err = f.Create(ctx, restoreKey, restore)
 	require.NoError(err, "failed to create MedusaRestoreJob")
 

@@ -97,7 +97,7 @@ func (r *K8ssandraClusterReconciler) createContactPointsService(
 	actualService := &corev1.Service{}
 	key := contactPointsServiceKey(kc, dc)
 	create := false
-	if err := r.Client.Get(ctx, key, actualService); client.IgnoreNotFound(err) != nil {
+	if err := r.Get(ctx, key, actualService); client.IgnoreNotFound(err) != nil {
 		logger.Error(err, "Failed to fetch Service", "key", key)
 		return err
 	} else if errors.IsNotFound(err) {
@@ -120,7 +120,7 @@ func (r *K8ssandraClusterReconciler) createContactPointsService(
 	}
 
 	if create {
-		if err = r.Client.Create(ctx, desiredService); err != nil {
+		if err = r.Create(ctx, desiredService); err != nil {
 			logger.Error(err, "Failed to create Service", "key", key)
 			return err
 		}
@@ -128,7 +128,7 @@ func (r *K8ssandraClusterReconciler) createContactPointsService(
 		resourceVersion := actualService.GetResourceVersion()
 		desiredService.DeepCopyInto(actualService)
 		actualService.SetResourceVersion(resourceVersion)
-		if err = r.Client.Update(ctx, actualService); err != nil {
+		if err = r.Update(ctx, actualService); err != nil {
 			logger.Error(err, "Failed to update contact-points Service")
 			return err
 		}
@@ -221,11 +221,11 @@ func (r *K8ssandraClusterReconciler) reconcileContactPointsServiceEndpoints(
 
 	// Cleanup old endpoints object, it's not used anymore
 	oldEndpoints := &corev1.Endpoints{} //nolint:staticcheck // Endpoints is deprecated, but we still need to clean it up.
-	if err := r.Client.Get(ctx, key, oldEndpoints); client.IgnoreNotFound(err) != nil {
+	if err := r.Get(ctx, key, oldEndpoints); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 
-	if err := r.Client.Delete(ctx, oldEndpoints); client.IgnoreNotFound(err) != nil {
+	if err := r.Delete(ctx, oldEndpoints); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 
@@ -241,7 +241,7 @@ func (r *K8ssandraClusterReconciler) deleteContactPointsService(
 	key := contactPointsServiceKey(kc, dc)
 	// We just need to delete the Service, Kubernetes automatically cleans up the Endpoints.
 	service := corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: key.Namespace, Name: key.Name}}
-	if err := r.Client.Delete(ctx, &service); err != nil && !errors.IsNotFound(err) {
+	if err := r.Delete(ctx, &service); err != nil && !errors.IsNotFound(err) {
 		logger.Error(err, "Failed to delete Service", "key", key)
 		return err
 	}

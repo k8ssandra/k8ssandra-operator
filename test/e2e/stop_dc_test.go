@@ -18,7 +18,6 @@ import (
 // accessible. Then it stops dc2 as well and verifies that the entire cluster is down. Then it starts dc1 and verifies
 // that it becomes accessible again. Then it starts dc2 and verifies that the whole cluster is back to normal.
 func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
-
 	t.Log("check that the K8ssandraCluster was created")
 	kcKey := client.ObjectKey{Namespace: namespace, Name: "cluster1"}
 	kc := &api.K8ssandraCluster{}

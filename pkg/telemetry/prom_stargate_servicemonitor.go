@@ -2,8 +2,9 @@ package telemetry
 
 import (
 	"fmt"
-	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"os"
+
+	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"

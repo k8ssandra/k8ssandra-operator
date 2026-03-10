@@ -202,12 +202,12 @@ func testNumTokensInUpdate(t *testing.T) {
 	createNamespace(require, "numtokensupdate-namespace")
 	cluster := createMinimalClusterObj("numtokens-test-update", "numtokensupdate-namespace")
 	cluster.Spec.Cassandra.ServerVersion = "3.11.10"
-	cluster.Spec.Cassandra.DatacenterOptions.CassandraConfig = &CassandraConfig{}
+	cluster.Spec.Cassandra.CassandraConfig = &CassandraConfig{}
 	err := k8sClient.Create(ctx, cluster)
 	require.NoError(err)
 
 	// Now update to 4.1.3
-	cluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml = unstructured.Unstructured{"num_tokens": 256}
+	cluster.Spec.Cassandra.CassandraConfig.CassandraYaml = unstructured.Unstructured{"num_tokens": 256}
 	cluster.Spec.Cassandra.ServerVersion = "4.1.8"
 
 	// This should be acceptable change, since 3.11.10 defaulted to 256 and so it is the same value
@@ -229,7 +229,7 @@ func testReaperKeyspaceValidation(t *testing.T) {
 	err := k8sClient.Create(ctx, cluster)
 	required.NoError(err)
 
-	cluster.Spec.Reaper.ReaperTemplate.Keyspace = "modified"
+	cluster.Spec.Reaper.Keyspace = "modified"
 	err = k8sClient.Update(ctx, cluster)
 	required.Error(err)
 }
@@ -238,18 +238,18 @@ func testStorageConfigValidation(t *testing.T) {
 	required := require.New(t)
 	createNamespace(required, "storage-namespace")
 	cluster := createMinimalClusterObj("storage-test", "storage-namespace")
-	cluster.Spec.Cassandra.DatacenterOptions.ServerVersion = "3.11.10"
+	cluster.Spec.Cassandra.ServerVersion = "3.11.10"
 
-	cluster.Spec.Cassandra.DatacenterOptions.StorageConfig = nil
+	cluster.Spec.Cassandra.StorageConfig = nil
 	err := k8sClient.Create(ctx, cluster)
 	required.Error(err)
 
-	cluster.Spec.Cassandra.DatacenterOptions.StorageConfig = &v1beta1.StorageConfig{}
+	cluster.Spec.Cassandra.StorageConfig = &v1beta1.StorageConfig{}
 	err = k8sClient.Create(ctx, cluster)
 	required.NoError(err)
 
-	cluster.Spec.Cassandra.DatacenterOptions.StorageConfig = nil
-	cluster.Spec.Cassandra.Datacenters[0].DatacenterOptions.StorageConfig = &v1beta1.StorageConfig{}
+	cluster.Spec.Cassandra.StorageConfig = nil
+	cluster.Spec.Cassandra.Datacenters[0].StorageConfig = &v1beta1.StorageConfig{}
 	err = k8sClient.Update(ctx, cluster)
 	required.NoError(err)
 
@@ -262,7 +262,7 @@ func testStorageConfigValidation(t *testing.T) {
 	err = k8sClient.Update(ctx, cluster)
 	required.Error(err)
 
-	cluster.Spec.Cassandra.Datacenters[1].DatacenterOptions.StorageConfig = &v1beta1.StorageConfig{}
+	cluster.Spec.Cassandra.Datacenters[1].StorageConfig = &v1beta1.StorageConfig{}
 	err = k8sClient.Update(ctx, cluster)
 	required.NoError(err)
 }
@@ -274,12 +274,12 @@ func testNumTokens(t *testing.T) {
 	cluster := createMinimalClusterObj("numtokens-test", "numtokens-namespace")
 
 	// Create without token definition
-	cluster.Spec.Cassandra.DatacenterOptions.CassandraConfig = &CassandraConfig{}
+	cluster.Spec.Cassandra.CassandraConfig = &CassandraConfig{}
 	err := k8sClient.Create(ctx, cluster)
 	required.NoError(err)
 
 	tokens := 256
-	cluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml = unstructured.Unstructured{"num_tokens": tokens}
+	cluster.Spec.Cassandra.CassandraConfig.CassandraYaml = unstructured.Unstructured{"num_tokens": tokens}
 	err = k8sClient.Update(ctx, cluster)
 	required.Error(err)
 
@@ -292,11 +292,11 @@ func testNumTokens(t *testing.T) {
 	required.NoError(err)
 
 	newTokens := 16
-	cluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml["num_tokens"] = newTokens
+	cluster.Spec.Cassandra.CassandraConfig.CassandraYaml["num_tokens"] = newTokens
 	err = k8sClient.Update(ctx, cluster)
 	required.Error(err)
 
-	delete(cluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml, "num_tokens")
+	delete(cluster.Spec.Cassandra.CassandraConfig.CassandraYaml, "num_tokens")
 	err = k8sClient.Update(ctx, cluster)
 	required.Error(err)
 
@@ -307,11 +307,11 @@ func testNumTokens(t *testing.T) {
 	oldCluster := createClusterObjWithCassandraConfig("numtokens-test-1", "numtokens-namespace-1")
 	newCluster := createClusterObjWithCassandraConfig("numtokens-test-2", "numtokens-namespace-2")
 
-	delete(oldCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml, "num_tokens")
-	newCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml["num_tokens"] = newTokens
+	delete(oldCluster.Spec.Cassandra.CassandraConfig.CassandraYaml, "num_tokens")
+	newCluster.Spec.Cassandra.CassandraConfig.CassandraYaml["num_tokens"] = newTokens
 
-	var oldCassConfig = oldCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig
-	var newCassConfig = newCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig
+	var oldCassConfig = oldCluster.Spec.Cassandra.CassandraConfig
+	var newCassConfig = newCluster.Spec.Cassandra.CassandraConfig
 
 	validator := K8ssandraClusterCustomValidator{}
 
@@ -320,11 +320,11 @@ func testNumTokens(t *testing.T) {
 	var _, errorWhenNew = validator.ValidateUpdate(context.TODO(), oldCluster, newCluster)
 	required.Error(errorWhenNew, "expected error having new num_token value different from previous specified as nil")
 
-	oldCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml["num_tokens"] = tokens
-	newCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml["num_tokens"] = newTokens
+	oldCluster.Spec.Cassandra.CassandraConfig.CassandraYaml["num_tokens"] = tokens
+	newCluster.Spec.Cassandra.CassandraConfig.CassandraYaml["num_tokens"] = newTokens
 
-	oldCassConfig = oldCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig
-	newCassConfig = newCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig
+	oldCassConfig = oldCluster.Spec.Cassandra.CassandraConfig
+	newCassConfig = newCluster.Spec.Cassandra.CassandraConfig
 
 	// Handle new num_token value different from previously specified as an actual value
 	required.NotEqual(oldCassConfig.CassandraYaml["num_tokens"], newCassConfig.CassandraYaml["num_tokens"])
@@ -360,19 +360,19 @@ func testNumTokens(t *testing.T) {
 	intervalInMins := 9035768
 	enabled := true
 
-	oldCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml["num_tokens"] = sameNumTokens
-	newCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml["num_tokens"] = sameNumTokens
-	newCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml["cdc_enabled"] = enabled
-	newCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml["index_summary_resize_interval_in_minutes"] = intervalInMins
+	oldCluster.Spec.Cassandra.CassandraConfig.CassandraYaml["num_tokens"] = sameNumTokens
+	newCluster.Spec.Cassandra.CassandraConfig.CassandraYaml["num_tokens"] = sameNumTokens
+	newCluster.Spec.Cassandra.CassandraConfig.CassandraYaml["cdc_enabled"] = enabled
+	newCluster.Spec.Cassandra.CassandraConfig.CassandraYaml["index_summary_resize_interval_in_minutes"] = intervalInMins
 
 	_, errorOnValidate := validator.ValidateUpdate(context.TODO(), oldCluster, newCluster)
 	required.NoError(errorOnValidate)
 
 	// Expected failure for validation with token change while changes to other config values are being made
-	oldCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml["num_tokens"] = sameNumTokens
-	newCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml["num_tokens"] = diffNumTokens
-	newCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml["cdc_enabled"] = enabled
-	newCluster.Spec.Cassandra.DatacenterOptions.CassandraConfig.CassandraYaml["index_summary_resize_interval_in_minutes"] = intervalInMins
+	oldCluster.Spec.Cassandra.CassandraConfig.CassandraYaml["num_tokens"] = sameNumTokens
+	newCluster.Spec.Cassandra.CassandraConfig.CassandraYaml["num_tokens"] = diffNumTokens
+	newCluster.Spec.Cassandra.CassandraConfig.CassandraYaml["cdc_enabled"] = enabled
+	newCluster.Spec.Cassandra.CassandraConfig.CassandraYaml["index_summary_resize_interval_in_minutes"] = intervalInMins
 
 	_, errorOnValidate = validator.ValidateUpdate(context.TODO(), oldCluster, newCluster)
 	required.Error(errorOnValidate, "expected error when changing the value of num tokens while also changing other field values")

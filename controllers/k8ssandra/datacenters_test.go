@@ -268,7 +268,6 @@ func TestGetSourceDatacenterName_Conflict(t *testing.T) {
 	if err == nil {
 		t.Errorf("An error was expected as src dc and target dc should be different")
 	}
-
 }
 
 func TestAllowUpdate(t *testing.T) {

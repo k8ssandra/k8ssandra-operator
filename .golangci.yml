@@ -1,0 +1,104 @@
+version: "2"
+run:
+  timeout: 10m
+  allow-parallel-runners: true
+linters:
+  default: none
+  enable:
+    - asciicheck
+    - bidichk
+    - copyloopvar
+    # - dupl
+    - errcheck
+    - ginkgolinter
+    # - goconst
+    - gocyclo
+    # - govet
+    - ineffassign
+    # - lll
+    - misspell
+    - nakedret
+    - nolintlint
+    # - prealloc
+    # - revive
+    - staticcheck
+    - unconvert
+    - unparam
+    - unused
+    # - wrapcheck
+    - whitespace
+  settings:
+    ginkgolinter:
+      forbid-focus-container: true
+      forbid-spec-pollution: true
+    govet:
+      disable:
+        - fieldalignment
+      enable-all: true
+    gocyclo:
+      min-complexity: 60
+    nolintlint:
+      allow-unused: false
+    revive:
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+          arguments:
+            - allowedPackages:
+                - github.com/onsi/ginkgo/v2
+                - github.com/onsi/gomega
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: exported
+        - name: if-return
+        - name: import-shadowing
+        - name: increment-decrement
+        - name: var-naming
+        - name: var-declaration
+        - name: package-comments
+          disabled: true
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: unexported-return
+        - name: indent-error-flow
+        - name: errorf
+        - name: empty-block
+        - name: superfluous-else
+        - name: unused-parameter
+        - name: unreachable-code
+        - name: redefines-builtin-id
+        - name: bool-literal-in-expr
+        - name: constant-logical-expr
+        - name: comment-spacings
+  exclusions:
+    generated: lax
+    rules:
+      - linters:
+          - gosec
+        path: tests/*
+      - linters:
+          - gosec
+          - lll
+        path: hack/docs/*
+      - linters:
+          - revive
+        text: 'should have comment or be unexported'
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+    # - gofumpt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

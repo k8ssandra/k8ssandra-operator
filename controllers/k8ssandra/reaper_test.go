@@ -233,7 +233,6 @@ func createMultiDcClusterWithReaper(t *testing.T, ctx context.Context, f *framew
 		return kc.Status.Datacenters[dc1Key.Name].Reaper == nil &&
 			kc.Status.Datacenters[dc2Key.Name].Reaper == nil
 	}, timeout, interval)
-
 }
 
 func createMultiDcClusterWithControlPlaneReaper(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {

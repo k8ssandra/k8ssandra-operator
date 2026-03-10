@@ -2,9 +2,10 @@ package medusa
 
 import (
 	"context"
-	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"testing"
 	"time"
+
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 
 	medusav1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	"github.com/stretchr/testify/require"
@@ -98,8 +99,8 @@ func TestScheduler(t *testing.T) {
 	err = fakeClient.Get(context.TODO(), nsName, backupScheduleLive)
 	require.NoError(err)
 
-	require.Equal(fClock.currentTime, backupScheduleLive.Status.LastExecution.Time.UTC())
-	require.Equal(time.Time{}.Add(2*time.Minute), backupScheduleLive.Status.NextSchedule.Time.UTC())
+	require.Equal(fClock.currentTime, backupScheduleLive.Status.LastExecution.UTC())
+	require.Equal(time.Time{}.Add(2*time.Minute), backupScheduleLive.Status.NextSchedule.UTC())
 
 	// Test that next invocation also works
 	fClock.currentTime = fClock.currentTime.Add(1 * time.Minute)
@@ -253,8 +254,8 @@ func TestPurgeScheduler(t *testing.T) {
 	err = fakeClient.Get(context.TODO(), nsName, backupScheduleLive)
 	require.NoError(err)
 
-	require.Equal(fClock.currentTime, backupScheduleLive.Status.LastExecution.Time.UTC())
-	require.Equal(time.Time{}.Add(2*time.Minute), backupScheduleLive.Status.NextSchedule.Time.UTC())
+	require.Equal(fClock.currentTime, backupScheduleLive.Status.LastExecution.UTC())
+	require.Equal(time.Time{}.Add(2*time.Minute), backupScheduleLive.Status.NextSchedule.UTC())
 
 	// Test that next invocation also works
 	fClock.currentTime = fClock.currentTime.Add(1 * time.Minute)
