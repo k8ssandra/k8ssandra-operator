@@ -10349,8 +10349,8 @@ spec:
                           type: object
                         maxConcurrentRebuilds:
                           description: |-
-                            MaxConcurrentRebuilds specifies the maximum number of pods to rebuild concurrently within each rack.
-                            If not set or set to 0 defaults to 1.
+                            MaxConcurrentRebuilds specifies the maximum number of pods to rebuild concurrently
+                            per rack during datacenter rebuild operations. Defaults to 1 if not set.
                           minimum: 1
                           type: integer
                         metadata:
@@ -23869,8 +23869,8 @@ spec:
                     type: object
                   maxConcurrentRebuilds:
                     description: |-
-                      MaxConcurrentRebuilds specifies the maximum number of pods to rebuild concurrently within each rack.
-                      If not set or set to 0 defaults to 1.
+                      MaxConcurrentRebuilds specifies the maximum number of pods to rebuild concurrently
+                      per rack during datacenter rebuild operations. Defaults to 1 if not set.
                     minimum: 1
                     type: integer
                   metadata:
