@@ -10347,6 +10347,12 @@ spec:
                               - serverSecretName
                               type: object
                           type: object
+                        maxConcurrentRebuilds:
+                          description: |-
+                            MaxConcurrentRebuilds specifies the maximum number of pods to rebuild concurrently within each rack.
+                            If not set or set to 0 defaults to 1.
+                          minimum: 1
+                          type: integer
                         metadata:
                           properties:
                             annotations:
@@ -23861,6 +23867,12 @@ spec:
                         - serverSecretName
                         type: object
                     type: object
+                  maxConcurrentRebuilds:
+                    description: |-
+                      MaxConcurrentRebuilds specifies the maximum number of pods to rebuild concurrently within each rack.
+                      If not set or set to 0 defaults to 1.
+                    minimum: 1
+                    type: integer
                   metadata:
                     description: Struct to hold labels and annotations for the top-level
                       Cassandra cluster definition.

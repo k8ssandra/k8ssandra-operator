@@ -404,7 +404,7 @@ func (r *K8ssandraClusterReconciler) reconcileDcRebuild(
 		return result.Error(err)
 	}
 
-	desiredTask := newRebuildTask(dc.Name, dc.Namespace, srcDc, int(dc.Spec.Size))
+	desiredTask := newRebuildTask(dc.Name, dc.Namespace, srcDc, int(dc.Spec.Size), kc.Spec.Cassandra.MaxConcurrentRebuilds)
 	taskKey := client.ObjectKey{Namespace: desiredTask.Namespace, Name: desiredTask.Name}
 	task := &cassctlapi.CassandraTask{}
 
@@ -448,7 +448,7 @@ func taskFinished(task *cassctlapi.CassandraTask) (bool, error) {
 	return numNodes == task.Status.Succeeded+task.Status.Failed, nil
 }
 
-func newRebuildTask(targetDc, namespace, srcDc string, numNodes int) *cassctlapi.CassandraTask {
+func newRebuildTask(targetDc, namespace, srcDc string, numNodes int, maxConcurrentRebuilds *int) *cassctlapi.CassandraTask {
 	now := metav1.Now()
 	task := &cassctlapi.CassandraTask{
 		ObjectMeta: metav1.ObjectMeta{
@@ -474,6 +474,7 @@ func newRebuildTask(targetDc, namespace, srcDc string, numNodes int) *cassctlapi
 						},
 					},
 				},
+				MaxConcurrentPods: maxConcurrentRebuilds,
 			},
 		},
 	}
