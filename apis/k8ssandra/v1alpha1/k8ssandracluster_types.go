@@ -453,6 +453,12 @@ type DatacenterOptions struct {
 	// ReadOnlyRootFilesystem makes the cassandra container to be run with a read-only root filesystem. Currently only functional when used with the
 	// new k8ssandra-client config builder (Cassandra 4.1 and newer and HCD)
 	ReadOnlyRootFilesystem *bool `json:"readOnlyRootFilesystem,omitempty"`
+
+	// MaxConcurrentRebuilds specifies the maximum number of pods to rebuild concurrently
+	// per rack during datacenter rebuild operations. Defaults to 1 if not set.
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	MaxConcurrentRebuilds *int `json:"maxConcurrentRebuilds,omitempty"`
 }
 
 // NetworkingConfig is a copy of cass-operator's NetworkingConfig struct. It is copied here to

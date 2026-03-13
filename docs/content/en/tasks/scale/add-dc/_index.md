@@ -54,7 +54,8 @@ After we create this K8ssandraCluster, K8ssandra Operator creates the following 
 
 Let's also assume we create some user-defined keyspaces, `ks1` and `ks2`.
 
-Some time after the cluster has been up and running we decide that we want a second 3-node DC in `west`. Stargate and Reaper should be deployed as well. Lastly, we want replicas for user-defined keyspaces in the new DC.
+Some time after the cluster has been up and running we decide that we want a second 3-node DC in `west`. Stargate and Reaper should be deployed as well. Also, we want replicas for user-defined keyspaces in the new DC.
+By default, rebuilds process one node at a time per rack. Set `maxConcurrentRebuilds` to increase parallelism and speed up large datacenter rebuilds. For example, with 2 racks and `maxConcurrentRebuilds: 2`, up to 2 nodes per rack rebuild concurrently (4 total).
 
 We can update the manifest as follows:
 
@@ -80,6 +81,7 @@ spec:
     config:
       jvmOptions:
         heapSize: 512Mi
+    maxConcurrentRebuilds: 2
     datacenters:
       - metadata:
           name: dc1
