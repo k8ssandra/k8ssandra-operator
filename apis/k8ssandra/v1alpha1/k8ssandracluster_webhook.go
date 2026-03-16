@@ -101,7 +101,8 @@ func validateK8ssandraCluster(r *K8ssandraCluster) error {
 		dns1035Errs := validation.IsDNS1035Label(dc.Meta.Name)
 		if len(dns1035Errs) > 0 {
 			return fmt.Errorf(
-				"invalid DC name (you might want to use datacenterName to override the name used in Cassandra): %s",
+				"invalid DC name '%s' (you might want to use datacenterName to override the name used in Cassandra): %s",
+				dc.Meta.Name,
 				strings.Join(dns1035Errs, ", "))
 		}
 
