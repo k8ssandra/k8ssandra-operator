@@ -16,6 +16,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 ## unreleased
 
 * [CHANGE] [#1694](https://github.com/k8ssandra/k8ssandra-operator/issues/1694) Upgrade cass-operator to v1.29.0 and fix linter issues
+* [BUGFIX] [#1652](https://github.com/k8ssandra/k8ssandra-operator/issues/1652) Support cluster names with underscores in Reaper
 
 ## v1.30.2 - 2026-01-23
 
