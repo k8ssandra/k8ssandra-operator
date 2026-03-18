@@ -216,7 +216,7 @@ func (r *restReaperManager) connect(ctx context.Context, reaperSvc, username, pa
 
 func (r *restReaperManager) AddClusterToReaper(ctx context.Context, cassdc *cassdcapi.CassandraDatacenter) error {
 	namespacedServiceName := cassdc.GetSeedServiceName() + "." + cassdc.Namespace
-	return r.reaperClient.AddCluster(ctx, cassdcapi.CleanupForKubernetes(cassdc.Spec.ClusterName), namespacedServiceName)
+	return r.reaperClient.AddCluster(ctx, cassdc.Spec.ClusterName, namespacedServiceName)
 }
 
 func (r *restReaperManager) VerifyClusterIsConfigured(ctx context.Context, cassdc *cassdcapi.CassandraDatacenter) (bool, error) {
@@ -224,7 +224,7 @@ func (r *restReaperManager) VerifyClusterIsConfigured(ctx context.Context, cassd
 	if err != nil {
 		return false, err
 	}
-	return utils.SliceContains(clusters, cassdcapi.CleanupForKubernetes(cassdc.Spec.ClusterName)), nil
+	return utils.SliceContains(clusters, cassdc.Spec.ClusterName), nil
 }
 
 func (r *restReaperManager) GetUiCredentials(ctx context.Context, uiUserSecretRef *corev1.LocalObjectReference, namespace string) (string, string, error) {

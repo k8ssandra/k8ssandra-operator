@@ -21,6 +21,7 @@ spec:
       serverCertName: reaper-server-encryption-stores
       clientCertName: reaper-client-cert-secret
   cassandra:
+    clusterName: "test_cluster"
     serverVersion: 4.1.8
     datacenters:
       - metadata:
