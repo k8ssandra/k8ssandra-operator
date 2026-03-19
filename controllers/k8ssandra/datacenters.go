@@ -3,6 +3,7 @@ package k8ssandra
 import (
 	"context"
 	"fmt"
+	"math"
 	"sort"
 	"strconv"
 	"strings"
@@ -404,7 +405,8 @@ func (r *K8ssandraClusterReconciler) reconcileDcRebuild(
 		return result.Error(err)
 	}
 
-	desiredTask := newRebuildTask(dc.Name, dc.Namespace, srcDc, int(dc.Spec.Size), kc.Spec.Cassandra.MaxConcurrentRebuilds)
+	maxConcurrentRebuilds := resolveMaxConcurrentRebuilds(kc.Spec.Cassandra.MaxConcurrentRebuilds)
+	desiredTask := newRebuildTask(dc.Name, dc.Namespace, srcDc, int(dc.Spec.Size), maxConcurrentRebuilds)
 	taskKey := client.ObjectKey{Namespace: desiredTask.Namespace, Name: desiredTask.Name}
 	task := &cassctlapi.CassandraTask{}
 
@@ -433,6 +435,17 @@ func (r *K8ssandraClusterReconciler) reconcileDcRebuild(
 		logger.Error(err, "Failed to get rebuild task", "Task", taskKey)
 		return result.Error(err)
 	}
+}
+
+func resolveMaxConcurrentRebuilds(maxConcurrentRebuilds *int) *int {
+	if maxConcurrentRebuilds == nil {
+		return nil
+	}
+	if *maxConcurrentRebuilds == 0 {
+		maxInt := math.MaxInt
+		return &maxInt
+	}
+	return maxConcurrentRebuilds
 }
 
 func taskFinished(task *cassctlapi.CassandraTask) (bool, error) {

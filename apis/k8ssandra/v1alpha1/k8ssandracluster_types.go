@@ -454,10 +454,13 @@ type DatacenterOptions struct {
 	// new k8ssandra-client config builder (Cassandra 4.1 and newer and HCD)
 	ReadOnlyRootFilesystem *bool `json:"readOnlyRootFilesystem,omitempty"`
 
-	// MaxConcurrentRebuilds specifies the maximum number of pods to rebuild concurrently
-	// per rack during datacenter rebuild operations. Defaults to 1 if not set.
+	// MaxConcurrentRebuilds specifies the maximum number of pods to rebuild
+	// concurrently per rack during datacenter rebuild operations.
+	// Defaults to 1 if not set.
+	// If set to a positive value, at most that many pods per rack will be rebuilt in parallel.
+	// If set to 0, all eligible pods in each rack will be rebuilt in parallel.
 	// +optional
-	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Minimum=0
 	MaxConcurrentRebuilds *int `json:"maxConcurrentRebuilds,omitempty"`
 }
 
