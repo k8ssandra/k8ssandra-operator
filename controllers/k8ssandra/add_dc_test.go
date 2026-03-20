@@ -131,7 +131,7 @@ func addDcSetupForMultiDc(ctx context.Context, t *testing.T, f *framework.Framew
 							StorageClassName: &defaultStorageClass,
 						},
 					},
-					MaxConcurrentRebuilds: ptr.To(2),
+					Rebuild: &api.Rebuild{MaxConcurrentRebuilds: ptr.To(2)},
 				},
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
@@ -345,7 +345,7 @@ func schemaDisagreementOnSystemKeyspaces(ctx context.Context, t *testing.T, f *f
 }
 
 // configureSrcDcForRebuild tests adding a DC to a cluster and setting the
-// api.RebuildSourceDcAnnotation annotation. The test verifies that the rebuild task is
+// api.DeprecatedRebuildSourceDcAnnotation annotation. The test verifies that the rebuild task is
 // configured with the specified source dc.
 func configureSrcDcForRebuild(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
 	require := require.New(t)
@@ -374,9 +374,9 @@ func configureSrcDcForRebuild(ctx context.Context, t *testing.T, f *framework.Fr
 	err := f.Client.Get(ctx, kcKey, kc)
 	require.NoError(err, "failed to get K8ssandraCluster")
 
-	annotations.AddAnnotation(kc, api.RebuildSourceDcAnnotation, "dc2")
+	kc.Spec.Cassandra.Rebuild = &api.Rebuild{SourceDC: ptr.To("dc2")}
 	err = f.Client.Update(ctx, kc)
-	require.NoError(err, "failed to add %s annotation to K8ssandraCluster", api.RebuildSourceDcAnnotation)
+	require.NoError(err, "failed to add rebuild filed to K8ssandraCluster", kc.Spec.Cassandra.Rebuild.SourceDC)
 
 	addDcToCluster(ctx, t, f, kc, dc3Key)
 
@@ -524,7 +524,10 @@ func addDcToCluster(ctx context.Context, t *testing.T, f *framework.Framework, k
 				},
 			},
 		})
-		annotations.AddAnnotation(kc, api.DcReplicationAnnotation, fmt.Sprintf(`{"%s": {"ks1": 3, "ks2": 3}}`, dcKey.Name))
+		if kc.Spec.Cassandra.Rebuild == nil {
+			kc.Spec.Cassandra.Rebuild = &api.Rebuild{}
+		}
+		kc.Spec.Cassandra.Rebuild.DCReplication = ptr.To(fmt.Sprintf(`{"%s": {"ks1": 3, "ks2": 3}}`, dcKey.Name))
 
 		err = f.Client.Update(ctx, kc)
 		if err != nil {
@@ -596,7 +599,11 @@ func verifyRebuildTaskCreated(ctx context.Context, t *testing.T, f *framework.Fr
 	}
 	require.Equal(expectedJobs, task.Spec.Jobs)
 
-	require.Equal(kc.Spec.Cassandra.MaxConcurrentRebuilds, task.Spec.MaxConcurrentPods)
+	var maxConcurrentRebuilds *int
+	if kc.Spec.Cassandra.Rebuild != nil {
+		maxConcurrentRebuilds = kc.Spec.Cassandra.Rebuild.MaxConcurrentRebuilds
+	}
+	require.Equal(maxConcurrentRebuilds, task.Spec.MaxConcurrentPods)
 }
 
 func setRebuildTaskFinished(ctx context.Context, t *testing.T, f *framework.Framework, taskKey framework.ClusterKey, dcKey framework.ClusterKey) {

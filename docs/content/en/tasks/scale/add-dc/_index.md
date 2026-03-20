@@ -8,7 +8,7 @@ K8ssandra Operator supports adding a new datacenter to an existing cluster.
 
 **Note:** See [Adding a datacenter to a cluster](https://docs.datastax.com/en/cassandra-oss/3.0/cassandra/operations/opsAddDCToCluster.html).
 
-Let's say we have 3 Kubernetes clusters - `control-plane`, `east`, and `west`. We want to create a K8ssandraCluster with a 3-node DC in `east`. We also want Stargate and Reaper enabled.
+Let's say we have 3 Kubernetes clusters - `control-plane`, `east`, and `west`. We want to create a K8ssandraCluster with a 3-node DC in `east`. We also want Reaper enabled.
 
 Here is the manifest:
 
@@ -37,9 +37,6 @@ spec:
           name: dc1
         k8sContext: east
         size: 3
-  stargate:
-    size: 1
-    heapSize: 512Mi
   reaper:
     autoScheduling:
       enabled: true
@@ -49,13 +46,13 @@ After we create this K8ssandraCluster, K8ssandra Operator creates the following 
 | Type | Name |
 |------|------|
 | CassandraDatacenter | dc1
-| Stargate | test-dc1-stargate |
 | Reaper | test-dc1-reaper |
 
 Let's also assume we create some user-defined keyspaces, `ks1` and `ks2`.
 
-Some time after the cluster has been up and running we decide that we want a second 3-node DC in `west`. Stargate and Reaper should be deployed as well. Also, we want replicas for user-defined keyspaces in the new DC.
+Some time after the cluster has been up and running we decide that we want a second 3-node DC in `west`. Reaper should be deployed as well. Also, we want replicas for user-defined keyspaces in the new DC.
 By default, rebuilds process one node at a time per rack. Set `maxConcurrentRebuilds` to increase parallelism and speed up large datacenter rebuilds. For example, with 2 racks and `maxConcurrentRebuilds: 2`, up to 2 nodes per rack rebuild concurrently (4 total).
+Set to 0 to rebuild all nodes per rack in parallel.
 
 We can update the manifest as follows:
 
@@ -65,8 +62,6 @@ kind: K8ssandraCluster
 metadata:
   name: test
   namespace: k8ssandra-operator
-  annotations:
-    k8ssandra.io/dc-replication: '{"dc2": {"ks1": 2, "ks2": 2}}'
 spec:
   cassandra:
     serverVersion: "4.0.3"
@@ -78,10 +73,12 @@ spec:
         resources:
           requests:
             storage: 5Gi
+    rebuild:
+      dcReplication: '{"dc2": {"ks1": 2, "ks2": 2}}'
+      maxConcurrentRebuilds: 2
     config:
       jvmOptions:
         heapSize: 512Mi
-    maxConcurrentRebuilds: 2
     datacenters:
       - metadata:
           name: dc1
@@ -91,9 +88,6 @@ spec:
           name: dc2
         k8sContext: west
         size: 3  
-  stargate:
-    size: 1
-    heapSize: 512Mi
   reaper:
     autoScheduling:
       enabled: true
@@ -121,14 +115,14 @@ keyspaces to include replicas in `dc2`. Internal keyspaces includes the followin
 
 ### User Defined Keyspaces
 Next the operator updates the replication strategy of user-defined keyspaces. The 
-`k8ssandra.io/dc-replication` annotation must be set in order for the operator to update 
+`cassandra.rebuild.dcReplication` field must be set in order for the operator to update 
 user-defined keyspaces. The value should be valid JSON. 
 
 Here is what was specified in the updated manifest:
 
 ```yaml
-annotations:
-  k8ssandra.io/dc-replication: '{"dc2": {"ks1": 2, "ks2": 2}}'
+rebuild:
+  dcReplication: '{"dc2": {"ks1": 2, "ks2": 2}}'
 ```
 
 **Note:** All user-defined keyspaces must be specified; otherwise, the operator aborts 
@@ -136,12 +130,12 @@ reconciliation with a validation error.
 
 If you do not want replicas for a particular keyspace, specify a value of zero.
 
-The operator only processes this annotation when a new CassandraDatacenter is added. 
-Let's say at some point after `dc2` is ready we update the annotation as follows:
+The operator only processes this field when a new CassandraDatacenter is added. 
+Let's say at some point after `dc2` is ready we update the field as follows:
 
 ```yaml
-annotations:
-  k8ssandra.io/dc-replication: '{"dc2": {"ks1": 1, "ks2": 3}}'
+rebuild:
+  dcReplication: '{"dc2": {"ks1": 1, "ks2": 3}}'
 ```
 The operator will not update the replication strategies of the keysapces.
 
@@ -149,8 +143,8 @@ Replication settings can be specified for multiple DCs. The operator only applie
 changes for the DC currently being added. For example, we could have:
 
 ```yaml
-annotations:
-  k8ssandra.io/dc-replication: '{"dc2": {"ks1": 2, "ks2": 2}, "dc3": {"ks1": 1, "ks2": 3}}'
+rebuild:
+  dcReplication: '{"dc2": {"ks1": 2, "ks2": 2}, "dc3": {"ks1": 1, "ks2": 3}}'
 ```
 The operator will ignore `dc3`. If we later add `dc3` to the cluster, then the operator 
 will apply the replication changes for it and the settings for `dc2` will be ignored.
@@ -191,7 +185,7 @@ needs to synced across replicas. This is typically done with rebuild operations 
 stream data from nodes in one datacenter to nodes in another datacenter.
 
 By default K8ssandra Operator will choose the first DC as the source for streaming. Set 
-the `k8ssandra.io/rebuild-src-dc` annotation to tell the operator from which DC to stream.
+the `cassandra.rebuild.dcReplication` field to tell the operator from which DC to stream.
 
 If we want to stream from `dc2`, then we would have something like this:
 
@@ -201,16 +195,12 @@ kind: K8ssandraCluster
 metadata:
   name: test
   namespace: k8ssandra-operator
-  annotations:
-    k8ssandra.io/dc-replication: '{"dc3": {"ks1": 2, "ks2": 2}}'
-    k8ssandra.io/rebuild-src-dc: dc2
+spec:
+  cassandra:
+    rebuild:
+      dcReplication: '{"dc3": {"ks1": 2, "ks2": 2}}'
+      sourceDc: 'dc2'
 ```
-
-## Deploy Stargate
-Next K8ssandra Operator creates a Stargate object, `test-dc2-stargate`, in the 
-`k8ssandra-operator` namesapce in the `west` cluster.
-
-The operator requeues reconciliation requests until Stargate is ready.
 
 ## Deploy Reaper
 Lastly, K8ssandra Operator creates a Reaper object, `test-dc2-reaper`, in the 

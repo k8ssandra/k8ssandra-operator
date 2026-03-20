@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 )
 
 var (
@@ -213,14 +214,12 @@ func TestGetSourceDatacenterName_Conflict(t *testing.T) {
 	}
 
 	kc := &api.K8ssandraCluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{
-				api.RebuildSourceDcAnnotation: "dc2",
-			},
-		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
 				DatacenterOptions: api.DatacenterOptions{
+					Rebuild: &api.Rebuild{
+						SourceDC: ptr.To("dc2"),
+					},
 					ServerVersion: "3.11.14",
 				},
 				Datacenters: []api.CassandraDatacenterTemplate{

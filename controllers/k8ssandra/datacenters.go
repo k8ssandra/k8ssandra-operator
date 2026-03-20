@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -356,7 +357,8 @@ func getSourceDatacenterName(targetDc *cassdcapi.CassandraDatacenter, kc *api.K8
 		}
 	}
 
-	if rebuildFrom, found := kc.Annotations[api.RebuildSourceDcAnnotation]; found {
+	rebuildFrom := resolveBuildFrom(kc)
+	if rebuildFrom != "" {
 		if rebuildFrom == targetDc.DatacenterName() {
 			return "", fmt.Errorf("rebuild error: src dc and target dc cannot be the same")
 		}
@@ -405,7 +407,7 @@ func (r *K8ssandraClusterReconciler) reconcileDcRebuild(
 		return result.Error(err)
 	}
 
-	maxConcurrentRebuilds := resolveMaxConcurrentRebuilds(kc.Spec.Cassandra.MaxConcurrentRebuilds)
+	maxConcurrentRebuilds := resolveMaxConcurrentRebuilds(kc)
 	desiredTask := newRebuildTask(dc.Name, dc.Namespace, srcDc, int(dc.Spec.Size), maxConcurrentRebuilds)
 	taskKey := client.ObjectKey{Namespace: desiredTask.Namespace, Name: desiredTask.Name}
 	task := &cassctlapi.CassandraTask{}
@@ -437,15 +439,25 @@ func (r *K8ssandraClusterReconciler) reconcileDcRebuild(
 	}
 }
 
-func resolveMaxConcurrentRebuilds(maxConcurrentRebuilds *int) *int {
-	if maxConcurrentRebuilds == nil {
+func resolveMaxConcurrentRebuilds(kc *api.K8ssandraCluster) *int {
+	if kc.Spec.Cassandra.Rebuild == nil || kc.Spec.Cassandra.Rebuild.MaxConcurrentRebuilds == nil {
 		return nil
 	}
-	if *maxConcurrentRebuilds == 0 {
-		maxInt := math.MaxInt
-		return &maxInt
+	if *kc.Spec.Cassandra.Rebuild.MaxConcurrentRebuilds == 0 {
+		return ptr.To(math.MaxInt)
 	}
-	return maxConcurrentRebuilds
+	return kc.Spec.Cassandra.Rebuild.MaxConcurrentRebuilds
+}
+
+func resolveBuildFrom(kc *api.K8ssandraCluster) string {
+	var rebuildFrom string
+	if kc.Spec.Cassandra.Rebuild != nil && kc.Spec.Cassandra.Rebuild.SourceDC != nil {
+		rebuildFrom = *kc.Spec.Cassandra.Rebuild.SourceDC
+	} else {
+		//nolint:staticcheck // SA1019: Deprecated annotation used for backward compatibility
+		rebuildFrom = kc.Annotations[api.DeprecatedRebuildSourceDcAnnotation]
+	}
+	return rebuildFrom
 }
 
 func taskFinished(task *cassctlapi.CassandraTask) (bool, error) {
