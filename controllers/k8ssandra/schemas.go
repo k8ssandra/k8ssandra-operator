@@ -208,7 +208,7 @@ func (r *K8ssandraClusterReconciler) updateReplicationOfSystemKeyspaces(
 }
 
 // updateUserKeyspacesReplication updates the replication factor of user-defined keyspaces.
-// The K8ssandraCluster must specify the k8ssandra.io/dc-replication in order for any
+// The K8ssandraCluster must specify the dcReplication field in order for any
 // updates to be applied. The annotation can specify multiple DCs but only the DC just
 // added will be considered for replication changes. For example, if dc2 is added to a
 // cluster that has dc1 and if the annotation specifies changes for both dc1 and dc2, only
@@ -220,9 +220,9 @@ func (r *K8ssandraClusterReconciler) updateUserKeyspacesReplication(
 	dc *cassdcapi.CassandraDatacenter,
 	mgmtApi cassandra.ManagementApiFacade,
 	logger logr.Logger) result.ReconcileResult {
-	jsonReplication := annotations.GetAnnotation(kc, api.DcReplicationAnnotation)
+	jsonReplication := resolveJSONReplication(kc)
 	if jsonReplication == "" {
-		logger.Info(api.DcReplicationAnnotation + " not set. Replication for user keyspaces will not be updated")
+		logger.Info("dcReplication field is not set. Replication for user keyspaces will not be updated")
 		return result.Continue()
 	}
 
@@ -250,11 +250,11 @@ func (r *K8ssandraClusterReconciler) updateUserKeyspacesReplication(
 	// non-existent DC.
 
 	// This is validation check to make sure the user specifies all user keyspaces for each
-	// DC listed in the annotation. We want to force the user to be explicit to avoid any
+	// DC listed in the dcReplication field. We want to force the user to be explicit to avoid any
 	// surprises.
 	if !replication.EachDcContainsKeyspaces(userKeyspaces...) {
-		err = fmt.Errorf("the %s annotation must include all user keyspaces for each specified DC", api.DcReplicationAnnotation)
-		logger.Error(err, "Invalid "+api.DcReplicationAnnotation+" annotation")
+		err = fmt.Errorf("the dcReplication field must include all user keyspaces for each specified DC, received: %s", jsonReplication)
+		logger.Error(err, "Invalid dcReplication field")
 		return result.Error(err)
 	}
 
@@ -276,6 +276,17 @@ func (r *K8ssandraClusterReconciler) updateUserKeyspacesReplication(
 	}
 
 	return result.Continue()
+}
+
+func resolveJSONReplication(kc *api.K8ssandraCluster) string {
+	var jsonReplication string
+	if kc.Spec.Cassandra != nil && kc.Spec.Cassandra.Rebuild != nil && kc.Spec.Cassandra.Rebuild.DCReplication != nil {
+		jsonReplication = *kc.Spec.Cassandra.Rebuild.DCReplication
+	} else {
+		//nolint:staticcheck // SA1019: Deprecated annotation used for backward compatibility
+		jsonReplication = annotations.GetAnnotation(kc, api.DeprecatedDcReplicationAnnotation)
+	}
+	return jsonReplication
 }
 
 // checkUserKeyspacesReplicationForDecommission checks if no user keyspace still has replicas

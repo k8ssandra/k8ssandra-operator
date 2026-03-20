@@ -116,7 +116,6 @@ type DatacenterConfig struct {
 	McacEnabled               bool
 	DatacenterName            string
 	ReadOnlyRootFilesystem    *bool
-
 	// InitialTokensByPodName is a list of initial tokens for the RF first pods in the cluster. It
 	// is only populated when num_tokens < 16 in the whole cluster. Used for generating default
 	// per-node configurations; not transferred directly to the CassandraDatacenter CRD but its

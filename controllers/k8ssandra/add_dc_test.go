@@ -22,6 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/rand"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -130,6 +131,7 @@ func addDcSetupForMultiDc(ctx context.Context, t *testing.T, f *framework.Framew
 							StorageClassName: &defaultStorageClass,
 						},
 					},
+					Rebuild: &api.Rebuild{MaxConcurrentRebuilds: ptr.To(2)},
 				},
 				Datacenters: []api.CassandraDatacenterTemplate{
 					{
@@ -193,7 +195,7 @@ func addDcSetupForMultiDc(ctx context.Context, t *testing.T, f *framework.Framew
 	require.NoError(err, "failed to read K8ssandraCluster")
 
 	t.Log("check that dc2 was rebuilt")
-	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key)
+	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key, kc)
 	rebuildTaskKey := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, "dc2-rebuild")
 	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey, dc2Key)
 
@@ -282,7 +284,7 @@ func withUserKeyspaces(ctx context.Context, t *testing.T, f *framework.Framework
 
 	t.Log("check that dc2 was rebuilt")
 	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
-	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key)
+	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key, kc)
 	rebuildTaskKey := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, "dc2-rebuild")
 	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey, dc2Key)
 
@@ -292,7 +294,7 @@ func withUserKeyspaces(ctx context.Context, t *testing.T, f *framework.Framework
 		verifyReplicationOfKeyspaceUpdated(t, mockMgmtApi, ks, updatedReplication)
 	}
 
-	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key)
+	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key, kc)
 }
 
 // schemaDisagreementOnSystemKeyspaces verifies that the rebuild task is not created when the
@@ -343,7 +345,7 @@ func schemaDisagreementOnSystemKeyspaces(ctx context.Context, t *testing.T, f *f
 }
 
 // configureSrcDcForRebuild tests adding a DC to a cluster and setting the
-// api.RebuildSourceDcAnnotation annotation. The test verifies that the rebuild task is
+// api.DeprecatedRebuildSourceDcAnnotation annotation. The test verifies that the rebuild task is
 // configured with the specified source dc.
 func configureSrcDcForRebuild(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
 	require := require.New(t)
@@ -372,9 +374,9 @@ func configureSrcDcForRebuild(ctx context.Context, t *testing.T, f *framework.Fr
 	err := f.Client.Get(ctx, kcKey, kc)
 	require.NoError(err, "failed to get K8ssandraCluster")
 
-	annotations.AddAnnotation(kc, api.RebuildSourceDcAnnotation, "dc2")
+	kc.Spec.Cassandra.Rebuild = &api.Rebuild{SourceDC: ptr.To("dc2")}
 	err = f.Client.Update(ctx, kc)
-	require.NoError(err, "failed to add %s annotation to K8ssandraCluster", api.RebuildSourceDcAnnotation)
+	require.NoError(err, "failed to add rebuild filed to K8ssandraCluster", kc.Spec.Cassandra.Rebuild.SourceDC)
 
 	addDcToCluster(ctx, t, f, kc, dc3Key)
 
@@ -391,7 +393,7 @@ func configureSrcDcForRebuild(ctx context.Context, t *testing.T, f *framework.Fr
 
 	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: f.DataPlaneContexts[1]}
 
-	verifyRebuildTaskCreated(ctx, t, f, dc3Key, dc2Key)
+	verifyRebuildTaskCreated(ctx, t, f, dc3Key, dc2Key, kc)
 
 	rebuildTaskKey := framework.ClusterKey{
 		K8sContext: f.DataPlaneContexts[2],
@@ -522,7 +524,10 @@ func addDcToCluster(ctx context.Context, t *testing.T, f *framework.Framework, k
 				},
 			},
 		})
-		annotations.AddAnnotation(kc, api.DcReplicationAnnotation, fmt.Sprintf(`{"%s": {"ks1": 3, "ks2": 3}}`, dcKey.Name))
+		if kc.Spec.Cassandra.Rebuild == nil {
+			kc.Spec.Cassandra.Rebuild = &api.Rebuild{}
+		}
+		kc.Spec.Cassandra.Rebuild.DCReplication = ptr.To(fmt.Sprintf(`{"%s": {"ks1": 3, "ks2": 3}}`, dcKey.Name))
 
 		err = f.Client.Update(ctx, kc)
 		if err != nil {
@@ -556,7 +561,7 @@ func verifyReplicationOfKeyspaceUpdated(t *testing.T, mockMgmtApi *testutils.Fak
 	}, timeout, interval, fmt.Sprintf("failed to verify replication for keyspace %s updated", keyspace))
 }
 
-func verifyRebuildTaskCreated(ctx context.Context, t *testing.T, f *framework.Framework, targetDcKey, srcDcKey framework.ClusterKey) {
+func verifyRebuildTaskCreated(ctx context.Context, t *testing.T, f *framework.Framework, targetDcKey, srcDcKey framework.ClusterKey, kc *api.K8ssandraCluster) {
 	t.Log("check that rebuild task was created")
 	require := require.New(t)
 	task := &cassctlapi.CassandraTask{}
@@ -593,6 +598,12 @@ func verifyRebuildTaskCreated(ctx context.Context, t *testing.T, f *framework.Fr
 		},
 	}
 	require.Equal(expectedJobs, task.Spec.Jobs)
+
+	var maxConcurrentRebuilds *int
+	if kc.Spec.Cassandra.Rebuild != nil {
+		maxConcurrentRebuilds = kc.Spec.Cassandra.Rebuild.MaxConcurrentRebuilds
+	}
+	require.Equal(maxConcurrentRebuilds, task.Spec.MaxConcurrentPods)
 }
 
 func setRebuildTaskFinished(ctx context.Context, t *testing.T, f *framework.Framework, taskKey framework.ClusterKey, dcKey framework.ClusterKey) {
