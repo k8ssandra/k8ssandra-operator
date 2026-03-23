@@ -374,7 +374,7 @@ func configureSrcDcForRebuild(ctx context.Context, t *testing.T, f *framework.Fr
 	err := f.Client.Get(ctx, kcKey, kc)
 	require.NoError(err, "failed to get K8ssandraCluster")
 
-	kc.Spec.Cassandra.Rebuild = &api.Rebuild{SourceDC: ptr.To("dc2")}
+	kc.Spec.Cassandra.Rebuild = &api.Rebuild{SourceDC: "dc2"}
 	err = f.Client.Update(ctx, kc)
 	require.NoError(err, "failed to add rebuild filed to K8ssandraCluster", kc.Spec.Cassandra.Rebuild.SourceDC)
 

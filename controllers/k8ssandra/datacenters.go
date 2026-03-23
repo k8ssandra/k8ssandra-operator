@@ -451,8 +451,8 @@ func resolveMaxConcurrentRebuilds(kc *api.K8ssandraCluster) *int {
 
 func resolveBuildFrom(kc *api.K8ssandraCluster) string {
 	var rebuildFrom string
-	if kc.Spec.Cassandra.Rebuild != nil && kc.Spec.Cassandra.Rebuild.SourceDC != nil {
-		rebuildFrom = *kc.Spec.Cassandra.Rebuild.SourceDC
+	if kc.Spec.Cassandra.Rebuild != nil && kc.Spec.Cassandra.Rebuild.SourceDC != "" {
+		rebuildFrom = kc.Spec.Cassandra.Rebuild.SourceDC
 	} else {
 		//nolint:staticcheck // SA1019: Deprecated annotation used for backward compatibility
 		rebuildFrom = kc.Annotations[api.DeprecatedRebuildSourceDcAnnotation]
