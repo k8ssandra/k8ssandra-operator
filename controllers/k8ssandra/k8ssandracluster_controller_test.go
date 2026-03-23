@@ -903,7 +903,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	require.NoError(err, "failed to set dc2 status ready")
 
 	t.Log("check that dc2 was rebuilt")
-	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key)
+	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key, kc)
 	rebuildTaskKey := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, "dc2-rebuild")
 	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey, dc2Key)
 

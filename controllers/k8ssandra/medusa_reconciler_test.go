@@ -273,7 +273,7 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 	}, timeout, interval, "failed to update dc2 generation")
 
 	t.Log("check that dc2 was rebuilt")
-	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key)
+	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key, kc)
 	rebuildTaskKey := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, "dc2-rebuild")
 	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey, dc2Key)
 

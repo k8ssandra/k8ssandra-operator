@@ -98,7 +98,7 @@ func stopDcTestSetup(t *testing.T, f *framework.Framework, ctx context.Context, 
 	require.NoError(t, err, "failed to set dc2 status ready")
 
 	t.Log("check that dc2 was rebuilt")
-	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key)
+	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key, kc)
 	rebuildTaskKey := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, "dc2-rebuild")
 	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey, dc2Key)
 
@@ -253,7 +253,7 @@ func addAndStopDc(t *testing.T, f *framework.Framework, ctx context.Context, kc 
 	require.NoError(t, err, "failed to set dc3 status ready")
 
 	t.Log("check that dc3 was rebuilt")
-	verifyRebuildTaskCreated(ctx, t, f, dc3Key, dc1Key)
+	verifyRebuildTaskCreated(ctx, t, f, dc3Key, dc1Key, kc)
 	rebuildTaskKey := framework.NewClusterKey(f.DataPlaneContexts[2], kc.Namespace, "dc3-rebuild")
 	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey, dc3Key)
 
@@ -340,7 +340,7 @@ func addAndStopDc(t *testing.T, f *framework.Framework, ctx context.Context, kc 
 	require.Eventually(t, f.ReaperExists(ctx, reaper2Key), timeout, interval, "failed to verify reaper reaper2 created")
 
 	t.Log("check that dc3 was rebuilt")
-	verifyRebuildTaskCreated(ctx, t, f, dc3Key, dc1Key)
+	verifyRebuildTaskCreated(ctx, t, f, dc3Key, dc1Key, kc)
 	rebuildTaskKey = framework.NewClusterKey(f.DataPlaneContexts[2], kc.Namespace, "dc3-rebuild")
 	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey, dc3Key)
 

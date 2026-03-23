@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 
 	"github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
 
@@ -23,8 +24,6 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
-
-	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 
 	"github.com/k8ssandra/k8ssandra-operator/test/kustomize"
 	"github.com/rs/zerolog"

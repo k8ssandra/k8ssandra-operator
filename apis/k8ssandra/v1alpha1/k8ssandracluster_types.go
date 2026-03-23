@@ -453,6 +453,10 @@ type DatacenterOptions struct {
 	// ReadOnlyRootFilesystem makes the cassandra container to be run with a read-only root filesystem. Currently only functional when used with the
 	// new k8ssandra-client config builder (Cassandra 4.1 and newer and HCD)
 	ReadOnlyRootFilesystem *bool `json:"readOnlyRootFilesystem,omitempty"`
+
+	// Rebuild configures datacenter rebuild operations when adding a new DC to an existing cluster.
+	// +optional
+	Rebuild *Rebuild `json:"rebuild,omitempty"`
 }
 
 // NetworkingConfig is a copy of cass-operator's NetworkingConfig struct. It is copied here to
@@ -485,6 +489,22 @@ type K8ssandraVolumes struct {
 	// Such volumes are automatically mounted by cass-operator into the cassandra containers.
 	// +optional
 	PVCs []cassdcapi.AdditionalVolumes `json:"pvcs,omitempty"`
+}
+
+type Rebuild struct {
+	// SourceDC tells the operation the DC from which to stream when rebuilding a DC. If not set the operator will choose the first DC. The value for
+	// this field must specify the name of a CassandraDatacenter whose Ready condition is true.
+	// +optional
+	SourceDC string `json:"sourceDc,omitempty"`
+
+	// MaxConcurrentRebuilds specifies the maximum number of pods to rebuild
+	// concurrently per rack during datacenter rebuild operations.
+	// Defaults to 1 if not set.
+	// If set to a positive value, at most that many pods per rack will be rebuilt in parallel.
+	// If set to 0, all pods in the rack will be rebuilt in parallel.
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	MaxConcurrentRebuilds *int `json:"maxConcurrentRebuilds,omitempty"`
 }
 
 type EmbeddedObjectMeta struct {

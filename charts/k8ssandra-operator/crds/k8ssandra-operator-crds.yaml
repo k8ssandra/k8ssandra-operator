@@ -11712,6 +11712,25 @@ spec:
                             ReadOnlyRootFilesystem makes the cassandra container to be run with a read-only root filesystem. Currently only functional when used with the
                             new k8ssandra-client config builder (Cassandra 4.1 and newer and HCD)
                           type: boolean
+                        rebuild:
+                          description: Rebuild configures datacenter rebuild operations
+                            when adding a new DC to an existing cluster.
+                          properties:
+                            maxConcurrentRebuilds:
+                              description: |-
+                                MaxConcurrentRebuilds specifies the maximum number of pods to rebuild
+                                concurrently per rack during datacenter rebuild operations.
+                                Defaults to 1 if not set.
+                                If set to a positive value, at most that many pods per rack will be rebuilt in parallel.
+                                If set to 0, all pods in the rack will be rebuilt in parallel.
+                              minimum: 0
+                              type: integer
+                            sourceDc:
+                              description: |-
+                                SourceDC tells the operation the DC from which to stream when rebuilding a DC. If not set the operator will choose the first DC. The value for
+                                this field must specify the name of a CassandraDatacenter whose Ready condition is true.
+                              type: string
+                          type: object
                         resources:
                           description: Resources is the cpu and memory resources for
                             the cassandra container.
@@ -25185,6 +25204,25 @@ spec:
                       ReadOnlyRootFilesystem makes the cassandra container to be run with a read-only root filesystem. Currently only functional when used with the
                       new k8ssandra-client config builder (Cassandra 4.1 and newer and HCD)
                     type: boolean
+                  rebuild:
+                    description: Rebuild configures datacenter rebuild operations
+                      when adding a new DC to an existing cluster.
+                    properties:
+                      maxConcurrentRebuilds:
+                        description: |-
+                          MaxConcurrentRebuilds specifies the maximum number of pods to rebuild
+                          concurrently per rack during datacenter rebuild operations.
+                          Defaults to 1 if not set.
+                          If set to a positive value, at most that many pods per rack will be rebuilt in parallel.
+                          If set to 0, all pods in the rack will be rebuilt in parallel.
+                        minimum: 0
+                        type: integer
+                      sourceDc:
+                        description: |-
+                          SourceDC tells the operation the DC from which to stream when rebuilding a DC. If not set the operator will choose the first DC. The value for
+                          this field must specify the name of a CassandraDatacenter whose Ready condition is true.
+                        type: string
+                    type: object
                   resources:
                     description: Resources is the cpu and memory resources for the
                       cassandra container.

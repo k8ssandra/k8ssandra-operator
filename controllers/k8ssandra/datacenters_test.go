@@ -213,14 +213,12 @@ func TestGetSourceDatacenterName_Conflict(t *testing.T) {
 	}
 
 	kc := &api.K8ssandraCluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{
-				api.RebuildSourceDcAnnotation: "dc2",
-			},
-		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
 				DatacenterOptions: api.DatacenterOptions{
+					Rebuild: &api.Rebuild{
+						SourceDC: "dc2",
+					},
 					ServerVersion: "3.11.14",
 				},
 				Datacenters: []api.CassandraDatacenterTemplate{

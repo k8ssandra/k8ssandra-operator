@@ -16,6 +16,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 ## unreleased
 
 * [CHANGE] [#1694](https://github.com/k8ssandra/k8ssandra-operator/issues/1694) Upgrade cass-operator to v1.29.0 and fix linter issues
+* [ENHANCEMENT] [#1682](https://github.com/k8ssandra/k8ssandra-operator/issues/1682) Allow configuring the number of parallel rebuilds
 
 ## v1.30.2 - 2026-01-23
 
