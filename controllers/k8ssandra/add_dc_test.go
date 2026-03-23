@@ -345,7 +345,7 @@ func schemaDisagreementOnSystemKeyspaces(ctx context.Context, t *testing.T, f *f
 }
 
 // configureSrcDcForRebuild tests adding a DC to a cluster and setting the
-// api.DeprecatedRebuildSourceDcAnnotation annotation. The test verifies that the rebuild task is
+// api.K8ssandraClusterSpec.Cassandra.Rebuild.SourceDC field. The test verifies that the rebuild task is
 // configured with the specified source dc.
 func configureSrcDcForRebuild(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
 	require := require.New(t)
