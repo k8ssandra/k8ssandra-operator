@@ -493,14 +493,14 @@ type K8ssandraVolumes struct {
 
 type Rebuild struct {
 	// SourceDC tells the operation the DC from which to stream when rebuilding a DC. If not set the operator will choose the first DC. The value for
-	// this annotation must specify the name of a CassandraDatacenter whose Ready condition is true.
+	// this field must specify the name of a CassandraDatacenter whose Ready condition is true.
 	SourceDC *string `json:"sourceDc,omitempty"`
 
 	// MaxConcurrentRebuilds specifies the maximum number of pods to rebuild
 	// concurrently per rack during datacenter rebuild operations.
 	// Defaults to 1 if not set.
 	// If set to a positive value, at most that many pods per rack will be rebuilt in parallel.
-	// If set to 0, all eligible pods in each rack will be rebuilt in parallel.
+	// If set to 0, all pods in the rack will be rebuilt in parallel.
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	MaxConcurrentRebuilds *int `json:"maxConcurrentRebuilds,omitempty"`
