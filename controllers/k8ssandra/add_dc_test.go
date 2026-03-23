@@ -524,10 +524,7 @@ func addDcToCluster(ctx context.Context, t *testing.T, f *framework.Framework, k
 				},
 			},
 		})
-		if kc.Spec.Cassandra.Rebuild == nil {
-			kc.Spec.Cassandra.Rebuild = &api.Rebuild{}
-		}
-		kc.Spec.Cassandra.Rebuild.DCReplication = ptr.To(fmt.Sprintf(`{"%s": {"ks1": 3, "ks2": 3}}`, dcKey.Name))
+		annotations.AddAnnotation(kc, api.DcReplicationAnnotation, fmt.Sprintf(`{"%s": {"ks1": 3, "ks2": 3}}`, dcKey.Name))
 
 		err = f.Client.Update(ctx, kc)
 		if err != nil {

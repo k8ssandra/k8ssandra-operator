@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 
 	"github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
 
@@ -1107,10 +1108,7 @@ func addDcToCluster(t *testing.T, ctx context.Context, namespace string, f *fram
 				DatacenterName: "real-dc2",
 			},
 		})
-		if kc.Spec.Cassandra.Rebuild == nil {
-			kc.Spec.Cassandra.Rebuild = &api.Rebuild{}
-		}
-		kc.Spec.Cassandra.Rebuild.DCReplication = ptr.To(fmt.Sprintf("{\"real-dc2\": {\"ks1\": %d, \"ks2\": %d}}", dcSize, dcSize))
+		annotations.AddAnnotation(kc, api.DcReplicationAnnotation, fmt.Sprintf("{\"real-dc2\": {\"ks1\": %d, \"ks2\": %d}}", dcSize, dcSize))
 
 		err = f.Client.Update(ctx, kc)
 		if err != nil {
@@ -1226,10 +1224,7 @@ func addDcToClusterSameDataplane(t *testing.T, ctx context.Context, namespace st
 				DatacenterName: "real-dc2",
 			},
 		})
-		if kc.Spec.Cassandra.Rebuild == nil {
-			kc.Spec.Cassandra.Rebuild = &api.Rebuild{}
-		}
-		kc.Spec.Cassandra.Rebuild.DCReplication = ptr.To(fmt.Sprintf("{\"real-dc2\": {\"ks1\": %d, \"ks2\": %d}}", dcSize, dcSize))
+		annotations.AddAnnotation(kc, api.DcReplicationAnnotation, fmt.Sprintf("{\"real-dc2\": {\"ks1\": %d, \"ks2\": %d}}", dcSize, dcSize))
 
 		err = f.Client.Update(ctx, kc)
 		if err != nil {

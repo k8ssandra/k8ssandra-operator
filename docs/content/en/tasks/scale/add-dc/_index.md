@@ -62,6 +62,8 @@ kind: K8ssandraCluster
 metadata:
   name: test
   namespace: k8ssandra-operator
+  annotations:
+    k8ssandra.io/dc-replication: '{"dc2": {"ks1": 2, "ks2": 2}}'
 spec:
   cassandra:
     serverVersion: "4.0.3"
@@ -74,7 +76,6 @@ spec:
           requests:
             storage: 5Gi
     rebuild:
-      dcReplication: '{"dc2": {"ks1": 2, "ks2": 2}}'
       maxConcurrentRebuilds: 2
     config:
       jvmOptions:
@@ -114,15 +115,15 @@ keyspaces to include replicas in `dc2`. Internal keyspaces includes the followin
 * `reaper_db`
 
 ### User Defined Keyspaces
-Next the operator updates the replication strategy of user-defined keyspaces. The 
-`cassandra.rebuild.dcReplication` field must be set in order for the operator to update 
+Next the operator updates the replication strategy of user-defined keyspaces. The
+`k8ssandra.io/dc-replication` annotation must be set in order for the operator to update 
 user-defined keyspaces. The value should be valid JSON. 
 
 Here is what was specified in the updated manifest:
 
 ```yaml
-rebuild:
-  dcReplication: '{"dc2": {"ks1": 2, "ks2": 2}}'
+annotations:
+  k8ssandra.io/dc-replication: '{"dc2": {"ks1": 2, "ks2": 2}}'
 ```
 
 **Note:** All user-defined keyspaces must be specified; otherwise, the operator aborts 
@@ -130,12 +131,12 @@ reconciliation with a validation error.
 
 If you do not want replicas for a particular keyspace, specify a value of zero.
 
-The operator only processes this field when a new CassandraDatacenter is added. 
-Let's say at some point after `dc2` is ready we update the field as follows:
+The operator only processes this annotation when a new CassandraDatacenter is added.
+Let's say at some point after `dc2` is ready we update the annotation as follows:
 
 ```yaml
-rebuild:
-  dcReplication: '{"dc2": {"ks1": 1, "ks2": 3}}'
+annotations:
+  k8ssandra.io/dc-replication: '{"dc2": {"ks1": 1, "ks2": 3}}'
 ```
 The operator will not update the replication strategies of the keysapces.
 
@@ -143,8 +144,8 @@ Replication settings can be specified for multiple DCs. The operator only applie
 changes for the DC currently being added. For example, we could have:
 
 ```yaml
-rebuild:
-  dcReplication: '{"dc2": {"ks1": 2, "ks2": 2}, "dc3": {"ks1": 1, "ks2": 3}}'
+annotations:
+  k8ssandra.io/dc-replication: '{"dc2": {"ks1": 2, "ks2": 2}, "dc3": {"ks1": 1, "ks2": 3}}'
 ```
 The operator will ignore `dc3`. If we later add `dc3` to the cluster, then the operator 
 will apply the replication changes for it and the settings for `dc2` will be ignored.
@@ -185,7 +186,7 @@ needs to synced across replicas. This is typically done with rebuild operations 
 stream data from nodes in one datacenter to nodes in another datacenter.
 
 By default K8ssandra Operator will choose the first DC as the source for streaming. Set 
-the `cassandra.rebuild.dcReplication` field to tell the operator from which DC to stream.
+the `cassandra.rebuild.sourceDc` field to tell the operator from which DC to stream.
 
 If we want to stream from `dc2`, then we would have something like this:
 
@@ -195,10 +196,11 @@ kind: K8ssandraCluster
 metadata:
   name: test
   namespace: k8ssandra-operator
+  annotations:
+    k8ssandra.io/dc-replication: '{"dc3": {"ks1": 2, "ks2": 2}}'
 spec:
   cassandra:
     rebuild:
-      dcReplication: '{"dc3": {"ks1": 2, "ks2": 2}}'
       sourceDc: 'dc2'
 ```
 

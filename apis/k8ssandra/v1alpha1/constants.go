@@ -15,16 +15,16 @@ const (
 	// regardless of whether the replication of the system keyspaces changes.
 	InitialSystemReplicationAnnotation = "k8ssandra.io/initial-system-replication"
 
-	// Deprecated: Use K8ssandraClusterSpec.Cassandra.Rebuild.DCReplication instead.
-	// DeprecatedDcReplicationAnnotation tells the operator the replication settings to apply to user keyspaces when adding a DC to an existing cluster.
-	// The value should be serialized JSON, e.g., {"dc2": {"ks1": 3, "ks2": 3}}. All user keyspaces must be specified;
+	// DcReplicationAnnotation tells the operator the replication settings to apply to user
+	// keyspaces when adding a DC to an existing cluster. The value should be serialized
+	// JSON, e.g., {"dc2": {"ks1": 3, "ks2": 3}}. All user keyspaces must be specified;
 	// otherwise, reconciliation will fail with a validation error. If you do not want to
 	// replicate a particular keyspace, specify a value of 0. Replication settings can be
 	// specified for multiple DCs; however, existing DCs won't be modified, and only the DC
 	// currently being added will be updated. Specifying multiple DCs can be useful though
 	// if you add multiple DCs to the cluster at once (Note that the CassandraDatacenters
 	// are still deployed serially).
-	DeprecatedDcReplicationAnnotation = "k8ssandra.io/dc-replication"
+	DcReplicationAnnotation = "k8ssandra.io/dc-replication"
 
 	// Deprecated: Use K8ssandraClusterSpec.Cassandra.Rebuild.SourceDC instead.
 	// DeprecatedRebuildSourceDcAnnotation tells the operation the DC from which to stream when rebuilding a DC.
