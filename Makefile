@@ -97,7 +97,7 @@ NUM_CLUSTERS = 2
 NUM_WORKER_NODES = 4
 
 # The version of the Kind image to run end-to-end tests.
-KIND_NODE_VERSION = v1.31.6
+KIND_NODE_VERSION = v1.34.1
 
 ifeq ($(DEPLOYMENT), )
 	DEPLOY_TARGET =

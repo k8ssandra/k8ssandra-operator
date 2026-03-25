@@ -37,6 +37,8 @@ require (
 	sigs.k8s.io/yaml v1.6.0
 )
 
+replace github.com/stretchr/testify => github.com/stretchr/testify v1.10.0 // v1.11.0 will not work in the k8ssandra-operator envtests.
+
 require (
 	github.com/Jeffail/gabs/v2 v2.7.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
