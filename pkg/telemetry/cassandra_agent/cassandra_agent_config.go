@@ -18,6 +18,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 )
@@ -27,79 +28,79 @@ var (
 	defaultAgentConfig  = telemetryapi.CassandraAgentSpec{
 		Relabels: []promapi.RelabelConfig{
 			{
-				SourceLabels: []string{"table"},
+				SourceLabels: []promapi.LabelName{"table"},
 				Regex:        ".+",
 				TargetLabel:  "should_drop",
-				Replacement:  "true",
+				Replacement:  ptr.To("true"),
 			},
 			{
-				SourceLabels: []string{"__name__"},
+				SourceLabels: []promapi.LabelName{"__name__"},
 				Regex:        "org_apache_cassandra_metrics_table_live_ss_table_count",
 				TargetLabel:  "should_drop",
-				Replacement:  "false",
+				Replacement:  ptr.To("false"),
 			},
 			{
-				SourceLabels: []string{"__name__"},
+				SourceLabels: []promapi.LabelName{"__name__"},
 				Regex:        "org_apache_cassandra_metrics_table_live_disk_space_used",
 				TargetLabel:  "should_drop",
-				Replacement:  "false",
+				Replacement:  ptr.To("false"),
 			},
 			{
-				SourceLabels: []string{"__name__"},
+				SourceLabels: []promapi.LabelName{"__name__"},
 				Regex:        "org_apache_cassandra_metrics_table_memtable.*",
 				TargetLabel:  "should_drop",
-				Replacement:  "false",
+				Replacement:  ptr.To("false"),
 			},
 			{
-				SourceLabels: []string{"__name__"},
+				SourceLabels: []promapi.LabelName{"__name__"},
 				Regex:        "org_apache_cassandra_metrics_table_all_memtables.*",
 				TargetLabel:  "should_drop",
-				Replacement:  "false",
+				Replacement:  ptr.To("false"),
 			},
 			{
-				SourceLabels: []string{"__name__"},
+				SourceLabels: []promapi.LabelName{"__name__"},
 				Regex:        "org_apache_cassandra_metrics_table_compaction_bytes_written",
 				TargetLabel:  "should_drop",
-				Replacement:  "false",
+				Replacement:  ptr.To("false"),
 			},
 			{
-				SourceLabels: []string{"__name__"},
+				SourceLabels: []promapi.LabelName{"__name__"},
 				Regex:        "org_apache_cassandra_metrics_table_pending_compactions",
 				TargetLabel:  "should_drop",
-				Replacement:  "false",
+				Replacement:  ptr.To("false"),
 			},
 			{
-				SourceLabels: []string{"__name__"},
+				SourceLabels: []promapi.LabelName{"__name__"},
 				Regex:        "org_apache_cassandra_metrics_table_read_.*",
 				TargetLabel:  "should_drop",
-				Replacement:  "false",
+				Replacement:  ptr.To("false"),
 			},
 			{
-				SourceLabels: []string{"__name__"},
+				SourceLabels: []promapi.LabelName{"__name__"},
 				Regex:        "org_apache_cassandra_metrics_table_write_.*",
 				TargetLabel:  "should_drop",
-				Replacement:  "false",
+				Replacement:  ptr.To("false"),
 			},
 			{
-				SourceLabels: []string{"__name__"},
+				SourceLabels: []promapi.LabelName{"__name__"},
 				Regex:        "org_apache_cassandra_metrics_table_range.*",
 				TargetLabel:  "should_drop",
-				Replacement:  "false",
+				Replacement:  ptr.To("false"),
 			},
 			{
-				SourceLabels: []string{"__name__"},
+				SourceLabels: []promapi.LabelName{"__name__"},
 				Regex:        "org_apache_cassandra_metrics_table_coordinator_.*",
 				TargetLabel:  "should_drop",
-				Replacement:  "false",
+				Replacement:  ptr.To("false"),
 			},
 			{
-				SourceLabels: []string{"__name__"},
+				SourceLabels: []promapi.LabelName{"__name__"},
 				Regex:        "org_apache_cassandra_metrics_table_dropped_mutations",
 				TargetLabel:  "should_drop",
-				Replacement:  "false",
+				Replacement:  ptr.To("false"),
 			},
 			{
-				SourceLabels: []string{"should_drop"},
+				SourceLabels: []promapi.LabelName{"should_drop"},
 				Regex:        "true",
 				Action:       "drop",
 			},

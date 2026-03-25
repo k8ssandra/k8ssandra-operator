@@ -10,6 +10,7 @@ import (
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/ptr"
 )
 
 // Static configuration for ServiceMonitor's endpoints.
@@ -147,7 +148,7 @@ func (cfg PrometheusResourcer) NewStargateServiceMonitor() (promapi.ServiceMonit
 			Endpoints: stargateServiceMonitorTemplate.Spec.Endpoints,
 		},
 	}
-	sm.Spec.Endpoints[0].MetricRelabelConfigs[0].Replacement = cfg.MonitoringTargetName
+	sm.Spec.Endpoints[0].MetricRelabelConfigs[0].Replacement = ptr.To(cfg.MonitoringTargetName)
 	annotations.AddHashAnnotation(&sm)
 	return sm, nil
 }
