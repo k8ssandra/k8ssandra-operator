@@ -42,7 +42,7 @@ registry_name='kind-registry'
 registry_port='5001'
 num_clusters=1
 cluster_prefix="k8ssandra-"
-kind_node_version="v1.27.1"
+kind_node_version="v1.34.3"
 kind_worker_nodes=3
 overwrite_clusters="no"
 output_file="./build/kind-kubeconfig"
@@ -86,8 +86,8 @@ kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 containerdConfigPatches:
 - |-
-  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:${registry_port}"]
-    endpoint = ["http://${registry_name}:${registry_port}"]
+  [plugins."io.containerd.grpc.v1.cri".registry]
+    config_path = "/etc/containerd/certs.d"
 nodes:
 - role: control-plane
   extraPortMappings:

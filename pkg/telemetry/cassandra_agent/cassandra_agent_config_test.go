@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 )
 
@@ -132,8 +133,8 @@ func getExampleTelemetrySpec() telemetryapi.TelemetrySpec {
 	tspec := &cfg.TelemetrySpec
 	tspec.Cassandra.Relabels = []promapi.RelabelConfig{
 		{
-			SourceLabels: []string{"tag1", "tag2"},
-			Separator:    ";",
+			SourceLabels: []promapi.LabelName{"tag1", "tag2"},
+			Separator:    ptr.To(";"),
 			Regex:        "(.*);(b.*)",
 			Action:       "drop",
 		},
@@ -181,8 +182,8 @@ func Test_GetTelemetryAgentConfigMapWithDefinedRelabels(t *testing.T) {
 	cfg.TelemetrySpec = getExampleTelemetrySpec()
 	cfg.TelemetrySpec.Cassandra.Relabels = []promapi.RelabelConfig{
 		{
-			SourceLabels: []string{"tag1", "tag2"},
-			Separator:    ";",
+			SourceLabels: []promapi.LabelName{"tag1", "tag2"},
+			Separator:    ptr.To(";"),
 			Regex:        "(.*);(b.*)",
 			Action:       "drop",
 		},

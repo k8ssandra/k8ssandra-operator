@@ -44,10 +44,9 @@ import (
 )
 
 const (
-	clustersToCreate          = 3
 	clusterProtoName          = "cluster-%d-%s"
 	cassOperatorVersion       = "v1.30.0"
-	prometheusOperatorVersion = "v0.9.0"
+	prometheusOperatorVersion = "v0.17.0"
 )
 
 type TestEnv struct {
