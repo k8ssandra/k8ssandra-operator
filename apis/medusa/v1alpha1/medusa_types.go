@@ -73,6 +73,12 @@ type Storage struct {
 	// +optional
 	TransferMaxBandwidth string `json:"transferMaxBandwidth,omitempty"`
 
+	// Use AWS CRT (Common Runtime) for faster S3 transfers.
+	// Only applicable when storageProvider is s3 or s3_rgw.
+	// Defaults to false.
+	// +optional
+	UseCrt bool `json:"useCrt,omitempty"`
+
 	// Number of concurrent uploads.
 	// Helps maximizing the speed of uploads but puts more pressure on the network.
 	// Defaults to 0.

@@ -15,4 +15,5 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
-* [CHANGE] (#1731)[https://github.com/k8ssandra/k8ssandra-operator/issues/1713] Bump Medusa to 0.28.0
+* [FEATURE] [#1716][https://github.com/k8ssandra/k8ssandra-operator/issues/1716] Add useCrt storageProperty to enable AWS CRT transfer support in Medusa
+* [CHANGE] [#1713][https://github.com/k8ssandra/k8ssandra-operator/issues/1713] Bump Medusa to 0.28.0

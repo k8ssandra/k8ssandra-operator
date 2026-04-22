@@ -105,6 +105,9 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster, dcConfig *cassandra.DatacenterCo
     {{- if .Spec.Medusa.StorageProperties.TransferMaxBandwidth }}
     transfer_max_bandwidth = {{ .Spec.Medusa.StorageProperties.TransferMaxBandwidth }}
     {{- end }}
+    {{- if .Spec.Medusa.StorageProperties.UseCrt }}
+    use_crt = True
+    {{- end }}
     {{- if .Spec.Medusa.StorageProperties.ConcurrentTransfers }}
     concurrent_transfers = {{ .Spec.Medusa.StorageProperties.ConcurrentTransfers }}
     {{- end }}
