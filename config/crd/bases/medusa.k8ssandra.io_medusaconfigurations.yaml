@@ -164,6 +164,12 @@ spec:
                       Max upload bandwidth in MB/s.
                       Defaults to 50 MB/s.
                     type: string
+                  useCrt:
+                    description: |-
+                      Use AWS CRT (Common Runtime) for faster S3 transfers.
+                      Only applicable when storageProvider is s3 or s3_rgw.
+                      Defaults to false.
+                    type: boolean
                 type: object
             type: object
           status:

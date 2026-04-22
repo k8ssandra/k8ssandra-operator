@@ -66,6 +66,10 @@ spec:
       # apiProfile: 
       # transferMaxBandwidth: 50MB/s
 
+      # Use AWS CRT (Common Runtime) for faster S3 transfers.
+      # Only applicable for s3 and s3_rgw storage providers.
+      # useCrt: false
+
       # Number of concurrent uploads.
       # Helps maximizing the speed of uploads but puts more pressure on the network.
       # Defaults to 1.
