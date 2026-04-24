@@ -257,6 +257,16 @@ func computeVolumes(reaper *api.Reaper) ([]corev1.Volume, []corev1.VolumeMount) 
 			Name:      "reaper-data",
 			MountPath: "/var/lib/cassandra-reaper/storage",
 		})
+		volumes = append(volumes, corev1.Volume{
+			Name: "db-temp-dir",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			},
+		})
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "db-temp-dir",
+			MountPath: "/var/tmp/cassandra-reaper",
+		})
 	}
 
 	if reaper.Spec.Encryption != nil && reaper.Spec.Encryption.ServerCertName != "" {
@@ -473,13 +483,15 @@ func NewStatefulSet(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, logge
 		return nil
 	}
 
+	initContainerResources := computeInitContainerResources(reaper.Spec.InitContainerResources)
+
 	statefulSet := &appsv1.StatefulSet{
 		ObjectMeta: makeObjectMeta(reaper),
 		Spec: appsv1.StatefulSetSpec{
 			Selector: makeSelector(reaper),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: computePodMeta(reaper),
-				Spec:       computePodSpec(reaper, dc, nil, nil, nil, registry),
+				Spec:       computePodSpec(reaper, dc, initContainerResources, nil, nil, registry),
 			},
 			VolumeClaimTemplates: computeVolumeClaims(reaper),
 			Replicas:             ptr.To[int32](1),

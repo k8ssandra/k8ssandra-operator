@@ -11,6 +11,7 @@ import (
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	kerrors "github.com/k8ssandra/k8ssandra-operator/pkg/errors"
@@ -51,8 +52,11 @@ func (r *K8ssandraClusterReconciler) checkSchemas(
 	// we only want to reconcile the Reaper schema if we're deploying Reaper together with k8ssandra cluster
 	// otherwise we just register the k8ssandra cluster with an external reaper (happens after reconciling the DCs)
 	if kc.Spec.Reaper != nil && !kc.Spec.Reaper.HasReaperRef() {
-		if recResult := r.reconcileReaperSchema(ctx, kc, mgmtApi, logger); recResult.Completed() {
-			return recResult
+		// and even in this case, we only want to do this if the cluster itself is going to be used for reaper's storage
+		if kc.Spec.Reaper.StorageType == reaperapi.StorageTypeCassandra {
+			if recResult := r.reconcileReaperSchema(ctx, kc, mgmtApi, logger); recResult.Completed() {
+				return recResult
+			}
 		}
 	}
 
