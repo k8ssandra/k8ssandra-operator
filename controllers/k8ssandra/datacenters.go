@@ -109,7 +109,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			desiredDc.Annotations[cassdcapi.SkipUserCreationAnnotation] = "true"
 		}
 
-		mergedTelemetrySpec := kc.Spec.Cassandra.Datacenters[idx].Telemetry.MergeWith(kc.Spec.Cassandra.Telemetry)
+		mergedTelemetrySpec := dcConfig.Telemetry
 		if mergedTelemetrySpec == nil {
 			mergedTelemetrySpec = &telemetryapi.TelemetrySpec{}
 		}

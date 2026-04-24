@@ -8,6 +8,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	goalesceutils "github.com/k8ssandra/k8ssandra-operator/pkg/goalesce"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
@@ -114,6 +115,7 @@ type DatacenterConfig struct {
 	ServiceAccount            string
 	ExternalSecrets           bool
 	McacEnabled               bool
+	Telemetry                 *telemetryapi.TelemetrySpec
 	DatacenterName            string
 	ReadOnlyRootFilesystem    *bool
 	// InitialTokensByPodName is a list of initial tokens for the RF first pods in the cluster. It
@@ -404,7 +406,8 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	// we need to declare at least one container, otherwise the PodTemplateSpec struct will be invalid
 	UpdateCassandraContainer(&dcConfig.PodTemplateSpec, func(c *corev1.Container) {})
 
-	dcConfig.McacEnabled = mergedOptions.Telemetry.IsMcacEnabled()
+	dcConfig.Telemetry = dcTemplate.MergeTelemetry(clusterTemplate)
+	dcConfig.McacEnabled = dcConfig.Telemetry.IsMcacEnabled()
 
 	return dcConfig
 }

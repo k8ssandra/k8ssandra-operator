@@ -9,7 +9,6 @@ import (
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -25,7 +24,7 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 ) result.ReconcileResult {
 	logger.V(1).Info("reconciling telemetry")
 
-	mergedSpec := MergeTelemetrySpecs(kc, dcTemplate)
+	mergedSpec := dcTemplate.MergeTelemetry(kc.Spec.Cassandra)
 	commonLabels := make(map[string]string)
 
 	if mergedSpec != nil && mergedSpec.Prometheus != nil {
@@ -96,12 +95,4 @@ func mustLabels(klusterName string, klusterNamespace string, dcName string, addi
 	additionalLabels[k8ssandraapi.K8ssandraClusterNamespaceLabel] = klusterNamespace
 	additionalLabels[k8ssandraapi.ComponentLabel] = k8ssandraapi.ComponentLabelTelemetry
 	return additionalLabels
-}
-
-// MergeTelemetrySpecs merges the cluster and dc level telemetry specs, prioritizing the dc level spec.
-func MergeTelemetrySpecs(kc *k8ssandraapi.K8ssandraCluster, dcTemplate k8ssandraapi.CassandraDatacenterTemplate) *v1alpha1.TelemetrySpec {
-	clusterSpec := kc.Spec.Cassandra.Telemetry
-	dcSpec := dcTemplate.Telemetry
-	mergedSpec := dcSpec.MergeWith(clusterSpec)
-	return mergedSpec
 }

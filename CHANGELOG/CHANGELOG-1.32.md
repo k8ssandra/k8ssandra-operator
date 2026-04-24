@@ -15,4 +15,5 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
-* [CHANGE] (#1731)[https://github.com/k8ssandra/k8ssandra-operator/issues/1713] Bump Medusa to 0.28.0
+* [CHANGE] [#1731](https://github.com/k8ssandra/k8ssandra-operator/issues/1713) Bump Medusa to 0.28.0
+* [BUGFIX] [#1717](https://github.com/k8ssandra/k8ssandra-operator/issues/1717) When creating Telemetry config for Vector, take into account Datacenter level as well as Cluster level settings

@@ -322,6 +322,22 @@ func (in *CassandraDatacenterTemplate) CassDcName() string {
 	return in.Meta.Name
 }
 
+// MergeTelemetry returns the cluster-level Cassandra telemetry settings merged with the
+// datacenter-level settings with datacenter values taking precedence.
+func (in *CassandraDatacenterTemplate) MergeTelemetry(clusterTemplate *CassandraClusterTemplate) *telemetryapi.TelemetrySpec {
+	var clusterTelemetry *telemetryapi.TelemetrySpec
+	if clusterTemplate != nil {
+		clusterTelemetry = clusterTemplate.Telemetry
+	}
+
+	var dcTelemetry *telemetryapi.TelemetrySpec
+	if in != nil {
+		dcTelemetry = in.Telemetry
+	}
+
+	return dcTelemetry.MergeWith(clusterTelemetry)
+}
+
 // DatacenterOptions are configuration settings that are can be set at the Cluster level and overridden for a single DC
 type DatacenterOptions struct {
 	// ServerVersion is the Cassandra or DSE version. The following versions are supported:
