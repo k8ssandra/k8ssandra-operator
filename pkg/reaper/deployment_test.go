@@ -1253,3 +1253,27 @@ func getTestImageRegistry(t testing.TB) cassimages.ImageRegistry {
 	})
 	return imageRegistryTest
 }
+
+func TestPvcReclaimPolicy(t *testing.T) {
+	reaper := newTestReaper()
+	reaper.Spec.StorageType = reaperapi.StorageTypeLocal
+	reaper.Spec.StorageConfig = newTestStorageConfig()
+	logger := testlogr.NewTestLogger(t)
+
+	// Test that StatefulSet with local storage has PVC retention policy set
+	sts := NewStatefulSet(reaper, newTestDatacenter(), logger, getTestImageRegistry(t))
+	assert.NotNil(t, sts, "expected StatefulSet to be created")
+	assert.NotNil(t, sts.Spec.PersistentVolumeClaimRetentionPolicy, "expected PVC retention policy to be set")
+	assert.Equal(t, appsv1.DeletePersistentVolumeClaimRetentionPolicyType, sts.Spec.PersistentVolumeClaimRetentionPolicy.WhenDeleted, "expected WhenDeleted to be Delete")
+	assert.Equal(t, appsv1.DeletePersistentVolumeClaimRetentionPolicyType, sts.Spec.PersistentVolumeClaimRetentionPolicy.WhenScaled, "expected WhenScaled to be Delete")
+
+	// cannot have STS with something else than local storage
+
+	// Test that Deployment with Cassandra storage does not have PVC retention policy
+	reaper.Spec.StorageType = reaperapi.StorageTypeCassandra
+	reaper.Spec.StorageConfig = nil
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
+	assert.NotNil(t, deployment, "expected Deployment to be created")
+	// Deployments don't have PersistentVolumeClaimRetentionPolicy field, so we just verify it's a Deployment
+	assert.IsType(t, &appsv1.Deployment{}, deployment)
+}

@@ -472,6 +472,15 @@ func computeVolumeClaims(reaper *api.Reaper) []corev1.PersistentVolumeClaim {
 	return vcs
 }
 
+func computePvcRetentionPolicy(sts *appsv1.StatefulSet, reaper *api.Reaper) {
+	if reaper.Spec.StorageType == api.StorageTypeLocal {
+		sts.Spec.PersistentVolumeClaimRetentionPolicy = &appsv1.StatefulSetPersistentVolumeClaimRetentionPolicy{
+			WhenDeleted: appsv1.DeletePersistentVolumeClaimRetentionPolicyType,
+			WhenScaled:  appsv1.DeletePersistentVolumeClaimRetentionPolicyType,
+		}
+	}
+}
+
 func NewStatefulSet(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, logger logr.Logger, registry cassimages.ImageRegistry, authVars ...*corev1.EnvVar) *appsv1.StatefulSet {
 	if reaper.Spec.StorageType != api.StorageTypeLocal {
 		logger.Error(fmt.Errorf("cannot be creating a Reaper statefulset with storage type other than Memory"), "bad storage type", "storageType", reaper.Spec.StorageType)
@@ -497,6 +506,7 @@ func NewStatefulSet(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, logge
 			Replicas:             ptr.To[int32](1),
 		},
 	}
+	computePvcRetentionPolicy(statefulSet, reaper)
 	addAuthEnvVars(&statefulSet.Spec.Template, authVars)
 	configureVector(reaper, &statefulSet.Spec.Template, dc, logger, registry)
 	labels.AddCommonLabelsFromReaper(statefulSet, reaper)
