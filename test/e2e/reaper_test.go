@@ -93,9 +93,6 @@ func createSingleReaper(t *testing.T, ctx context.Context, namespace string, f *
 	t.Log("check Reaper app type")
 	checkReaperAppType(t, ctx, f, reaperKey, kc)
 
-	t.Log("check Reaper keyspace created")
-	checkKeyspaceExists(t, f, ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName(), dcPrefix+"-default-sts-0", "reaper_db")
-
 	testDeleteReaperManually(t, f, ctx, kcKey, dcKey, reaperKey)
 	testRemoveReaperFromK8ssandraCluster(t, f, ctx, kcKey, dcKey, reaperKey)
 

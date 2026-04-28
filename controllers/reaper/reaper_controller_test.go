@@ -613,19 +613,23 @@ func testCreateReaperWithLocalStorageType(t *testing.T, ctx context.Context, k8s
 		return k8sClient.Get(ctx, stsKey, sts) == nil
 	}, timeout, interval, "stateful set creation check failed")
 
-	// when deployed as STS, Reaper has no init container
+	// when deployed as STS, Reaper has an init container to handle sqlitle in case of local storage
 	assert.Len(t, sts.Spec.Template.Spec.Containers, 1)
-	assert.Len(t, sts.Spec.Template.Spec.InitContainers, 0)
+	assert.Len(t, sts.Spec.Template.Spec.InitContainers, 1)
 
 	// Reaper's API does not allow specifying replica count, so we have no easy way to increase this
 	assert.Equal(t, ptr.To[int32](1), sts.Spec.Replicas)
 
 	// In this configuration, we expect Reaper to have a config volume mount, and a data volume mount
-	assert.Len(t, sts.Spec.Template.Spec.Containers[0].VolumeMounts, 3)
+	assert.Len(t, sts.Spec.Template.Spec.Containers[0].VolumeMounts, 4)
 	confVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[0].DeepCopy()
 	assert.Equal(t, "conf", confVolumeMount.Name)
-	dataVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[2].DeepCopy()
-	assert.Equal(t, "reaper-data", dataVolumeMount.Name)
+	tempDirVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[1].DeepCopy()
+	assert.Equal(t, "temp-dir", tempDirVolumeMount.Name)
+	reperDataVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[2].DeepCopy()
+	assert.Equal(t, "reaper-data", reperDataVolumeMount.Name)
+	dbTempDirVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[3].DeepCopy()
+	assert.Equal(t, "db-temp-dir", dbTempDirVolumeMount.Name)
 }
 
 // Check if env var exists
