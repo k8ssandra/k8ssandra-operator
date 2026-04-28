@@ -16,4 +16,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 ## unreleased
 
 * [CHANGE] (#1731)[https://github.com/k8ssandra/k8ssandra-operator/issues/1713] Bump Medusa to 0.28.0
-* [CHANGE] (#1706)[https://github.com/k8ssandra/k8ssandra-operator/issues/1706] Bump Reaper to 4.2.0 (with sqlite-backed local storage)
+* [CHANGE] (#1706)[https://github.com/k8ssandra/k8ssandra-operator/issues/1706] Bump Reaper to 4.2.1 (with sqlite-backed local storage)
