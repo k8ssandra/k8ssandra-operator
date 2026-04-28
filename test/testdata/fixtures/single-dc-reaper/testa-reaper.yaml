@@ -1,8 +1,0 @@
-apiVersion: v1
-kind: Secret
-metadata:
-  name: testa-reaper
-data:
-  password: a1lpUU1xdTkwVnZkQXdBdVljMkw=
-  username: dGVzdGEtcmVhcGVy
-type: Opaque
