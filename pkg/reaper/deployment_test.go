@@ -658,6 +658,7 @@ func TestDeploymentTypes(t *testing.T) {
 	reaper.Spec.StorageType = reaperapi.StorageTypeCassandra
 	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
 	assert.Len(t, deployment.Spec.Template.Spec.Containers, 1)
+	assert.Len(t, deployment.Spec.Template.Spec.InitContainers, 1)
 	assert.Equal(t, reaperapi.StorageTypeCassandra, deployment.Spec.Template.Spec.Containers[0].Env[0].Value)
 
 	// asking for a deployment with memory backend does not work
@@ -680,6 +681,7 @@ func TestDeploymentTypes(t *testing.T) {
 	}
 	sts := NewStatefulSet(reaper, newTestDatacenter(), logger, getTestImageRegistry(t))
 	assert.Len(t, sts.Spec.Template.Spec.Containers, 1)
+	assert.Len(t, sts.Spec.Template.Spec.InitContainers, 1)
 	assert.Equal(t, "memory", sts.Spec.Template.Spec.Containers[0].Env[0].Value)
 
 	// asking for a stateful set with cassandra backend does not work
