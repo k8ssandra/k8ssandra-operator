@@ -16,6 +16,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 ## unreleased
 
 * [CHANGE] [#1731](https://github.com/k8ssandra/k8ssandra-operator/issues/1713) Bump Medusa to 0.28.0
-* [CHANGE] (#1706)[https://github.com/k8ssandra/k8ssandra-operator/issues/1706] Bump Reaper to 4.2.1 (with sqlite-backed local storage)
-* [CHANGE] (#1720)[https://github.com/k8ssandra/k8ssandra-operator/issues/1720] Do not retain Reaper's PVC once if Reaper uses local storage and gets deleted
+* [CHANGE] [1706](https://github.com/k8ssandra/k8ssandra-operator/issues/1706) Bump Reaper to 4.2.1 (with sqlite-backed local storage)
+* [CHANGE] [#1720](https://github.com/k8ssandra/k8ssandra-operator/issues/1720) Do not retain Reaper's PVC once if Reaper uses local storage and gets deleted
+* [CHANGE] [#1725](https://github.com/k8ssandra/k8ssandra-operator/issues/1725) Bump cass-operator helm chart to 0.64.1
 * [BUGFIX] [#1717](https://github.com/k8ssandra/k8ssandra-operator/issues/1717) When creating Telemetry config for Vector, take into account Datacenter level as well as Cluster level settings
