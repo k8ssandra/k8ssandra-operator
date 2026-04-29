@@ -9,6 +9,7 @@ import (
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
+	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -131,6 +132,35 @@ func TestNetworkingConfig_ToCassNetworkingConfig(t *testing.T) {
 			assert.Equal(t, tt.want, tt.in.ToCassNetworkingConfig())
 		})
 	}
+}
+
+func TestCassandraDcAndClusterTelemetryMerging(t *testing.T) {
+	cluster := &CassandraClusterTemplate{
+		DatacenterOptions: DatacenterOptions{
+			Telemetry: &telemetryapi.TelemetrySpec{
+				Vector: &telemetryapi.VectorSpec{
+					Enabled: ptr.To(true),
+				},
+				Mcac: &telemetryapi.McacTelemetrySpec{
+					Enabled: ptr.To(true),
+				},
+			},
+		},
+	}
+	dc := &CassandraDatacenterTemplate{
+		DatacenterOptions: DatacenterOptions{
+			Telemetry: &telemetryapi.TelemetrySpec{
+				Vector: &telemetryapi.VectorSpec{
+					Enabled: ptr.To(false),
+				},
+			},
+		},
+	}
+
+	merged := dc.MergeTelemetry(cluster)
+
+	assert.False(t, merged.IsVectorEnabled())
+	assert.True(t, merged.IsMcacEnabled())
 }
 
 // TestUnmarshallDatacenterMeta checks that user-provided labels and annotations are properly set when unmarshalling

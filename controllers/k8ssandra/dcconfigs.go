@@ -76,19 +76,18 @@ func (r *K8ssandraClusterReconciler) createDatacenterConfigs(
 		}
 
 		// Inject MCAC metrics filters
-		if kc.Spec.Cassandra.Telemetry.IsMcacEnabled() {
-			telemetry.InjectCassandraTelemetryFilters(kc.Spec.Cassandra.Telemetry, dcConfig)
+		if dcConfig.Telemetry.IsMcacEnabled() {
+			telemetry.InjectCassandraTelemetryFilters(dcConfig.Telemetry, dcConfig)
 		}
 
 		// The new metrics endpoint is available since 3.11.13 and 4.0.4.
 		// If MCAC is disabled and the new metrics endpoint is not available then we should return an error.
-		mergedTelemetrySpec := MergeTelemetrySpecs(kc, dcTemplate)
-		if !mergedTelemetrySpec.IsMcacEnabled() && !telemetry.IsNewMetricsEndpointAvailable(dcConfig.ServerVersion.String()) && kc.Spec.Cassandra.ServerType == api.ServerDistributionCassandra {
+		if !dcConfig.Telemetry.IsMcacEnabled() && !telemetry.IsNewMetricsEndpointAvailable(dcConfig.ServerVersion.String()) && kc.Spec.Cassandra.ServerType == api.ServerDistributionCassandra {
 			return dcConfigs, errors.New("new metrics endpoint is only available since Cassandra 3.11.13/4.0.4, so MCAC cannot be disabled")
 		}
 
 		// Inject Vector agent
-		if err = telemetry.InjectCassandraVectorAgentConfig(kc.Spec.Cassandra.Telemetry, dcConfig, kc.SanitizedName(), dcLogger); err != nil {
+		if err = telemetry.InjectCassandraVectorAgentConfig(dcConfig.Telemetry, dcConfig, kc.SanitizedName(), dcLogger); err != nil {
 			return nil, err
 		}
 
