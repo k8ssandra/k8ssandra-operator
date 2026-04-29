@@ -630,6 +630,10 @@ func testCreateReaperWithLocalStorageType(t *testing.T, ctx context.Context, k8s
 	assert.Equal(t, "reaper-data", reperDataVolumeMount.Name)
 	dbTempDirVolumeMount := sts.Spec.Template.Spec.Containers[0].VolumeMounts[3].DeepCopy()
 	assert.Equal(t, "db-temp-dir", dbTempDirVolumeMount.Name)
+
+	// Local-storage Reaper also needs to have its pvc deleted upon release
+	assert.Equal(t, appsv1.DeletePersistentVolumeClaimRetentionPolicyType, sts.Spec.PersistentVolumeClaimRetentionPolicy.WhenDeleted)
+	assert.Equal(t, appsv1.DeletePersistentVolumeClaimRetentionPolicyType, sts.Spec.PersistentVolumeClaimRetentionPolicy.WhenScaled)
 }
 
 // Check if env var exists

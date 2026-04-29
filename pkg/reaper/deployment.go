@@ -472,14 +472,21 @@ func computeVolumeClaims(reaper *api.Reaper) []corev1.PersistentVolumeClaim {
 	return vcs
 }
 
+func makePvcRetentionPolicy() *appsv1.StatefulSetPersistentVolumeClaimRetentionPolicy {
+	return &appsv1.StatefulSetPersistentVolumeClaimRetentionPolicy{
+		WhenDeleted: appsv1.DeletePersistentVolumeClaimRetentionPolicyType,
+		WhenScaled:  appsv1.DeletePersistentVolumeClaimRetentionPolicyType,
+	}
+}
+
 func NewStatefulSet(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, logger logr.Logger, registry cassimages.ImageRegistry, authVars ...*corev1.EnvVar) *appsv1.StatefulSet {
 	if reaper.Spec.StorageType != api.StorageTypeLocal {
-		logger.Error(fmt.Errorf("cannot be creating a Reaper statefulset with storage type other than Memory"), "bad storage type", "storageType", reaper.Spec.StorageType)
+		logger.Error(fmt.Errorf("cannot be creating a Reaper statefulset with storage type other than local"), "bad storage type", "storageType", reaper.Spec.StorageType)
 		return nil
 	}
 
 	if reaper.Spec.StorageConfig == nil {
-		logger.Error(fmt.Errorf("reaper spec needs storage config when using memory sotrage type"), "missing storage config")
+		logger.Error(fmt.Errorf("reaper spec needs storage config when using local sotrage type"), "missing storage config")
 		return nil
 	}
 
@@ -493,10 +500,12 @@ func NewStatefulSet(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, logge
 				ObjectMeta: computePodMeta(reaper),
 				Spec:       computePodSpec(reaper, dc, initContainerResources, nil, nil, registry),
 			},
-			VolumeClaimTemplates: computeVolumeClaims(reaper),
-			Replicas:             ptr.To[int32](1),
+			VolumeClaimTemplates:                 computeVolumeClaims(reaper),
+			Replicas:                             ptr.To[int32](1),
+			PersistentVolumeClaimRetentionPolicy: makePvcRetentionPolicy(),
 		},
 	}
+
 	addAuthEnvVars(&statefulSet.Spec.Template, authVars)
 	configureVector(reaper, &statefulSet.Spec.Template, dc, logger, registry)
 	labels.AddCommonLabelsFromReaper(statefulSet, reaper)
