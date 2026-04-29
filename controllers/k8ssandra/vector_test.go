@@ -4,10 +4,13 @@ import (
 	"context"
 	"testing"
 
+	testlogr "github.com/go-logr/logr/testing"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/telemetry"
+	pkgtest "github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -17,6 +20,98 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+func TestSmokeVectorConfigMerge(t *testing.T) {
+	ctx := context.Background()
+	kc := &api.K8ssandraCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test",
+			Name:      "test",
+		},
+		Spec: api.K8ssandraClusterSpec{
+			Cassandra: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					Telemetry: &telemetryapi.TelemetrySpec{
+						Vector: &telemetryapi.VectorSpec{
+							Enabled: ptr.To(true),
+							Config: `[api]
+enabled = true
+`,
+							Components: &telemetryapi.VectorComponentsSpec{
+								Sinks: []telemetryapi.VectorSinkSpec{
+									{
+										Name:   "metrics_output",
+										Type:   "prometheus_remote_write",
+										Inputs: []string{"cassandra_metrics"},
+										Config: "endpoint = \"http://cluster\"",
+									},
+								},
+							},
+						},
+						Cassandra: &telemetryapi.CassandraAgentSpec{
+							Endpoint: &telemetryapi.Endpoint{
+								Port: "9103",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	dcTemplate := api.CassandraDatacenterTemplate{
+		Meta: api.EmbeddedObjectMeta{
+			Namespace: "test",
+			Name:      "dc1",
+		},
+		DatacenterOptions: api.DatacenterOptions{
+			Telemetry: &telemetryapi.TelemetrySpec{
+				Vector: &telemetryapi.VectorSpec{
+					Config: "data_dir = /var/lib/vector-big",
+					Components: &telemetryapi.VectorComponentsSpec{
+						Sinks: []telemetryapi.VectorSinkSpec{
+							{
+								Name:   "dc_metrics_output",
+								Type:   "console",
+								Inputs: []string{"cassandra_metrics"},
+								Config: "target = \"stdout\"",
+							},
+						},
+					},
+				},
+				Cassandra: &telemetryapi.CassandraAgentSpec{
+					Endpoint: &telemetryapi.Endpoint{
+						Port: "9443",
+					},
+				},
+			},
+		},
+	}
+	dcConfig := &cassandra.DatacenterConfig{
+		Meta:      dcTemplate.Meta,
+		Telemetry: dcTemplate.MergeTelemetry(kc.Spec.Cassandra),
+	}
+	fakeClient := pkgtest.NewFakeClientWRestMapper()
+	r := newDummyK8ssandraClusterReconciler()
+
+	recResult := r.reconcileVector(ctx, kc, dcConfig, fakeClient, testlogr.NewTestLogger(t))
+	require.False(t, recResult.IsError(), "reconcileVector failed: %v", recResult.GetError())
+
+	vectorConfigMap := &corev1.ConfigMap{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{
+		Namespace: "test",
+		Name:      telemetry.VectorAgentConfigMapName(kc.SanitizedName(), "dc1"),
+	}, vectorConfigMap))
+
+	vectorToml := vectorConfigMap.Data["vector.toml"]
+	assert.Contains(t, vectorToml, "[api]\nenabled = true\ndata_dir = /var/lib/vector-big")
+	assert.Contains(t, vectorToml, "http://localhost:9443/metrics")
+	assert.Contains(t, vectorToml, "[sinks.dc_metrics_output]")
+	assert.Contains(t, vectorToml, "type = \"console\"")
+	assert.Contains(t, vectorToml, "target = \"stdout\"")
+	assert.Contains(t, vectorToml, "[sinks.metrics_output]")
+	assert.Contains(t, vectorToml, "prometheus_remote_write")
+	assert.Contains(t, vectorToml, "http://cluster")
+}
 
 // createSingleDcCluster verifies that the CassandraDatacenter is created and that the
 // expected status updates happen on the K8ssandraCluster.
