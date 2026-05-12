@@ -104,7 +104,8 @@ func Test_mergeTelemetrySpecs(t *testing.T) {
 		},
 	}
 
-	merged := MergeTelemetrySpecs(&kc, kc.Spec.Cassandra.Datacenters[0])
+	// This test probably shouldn't be here anymore, but help with PR review, I'll keep it here for now
+	merged := kc.Spec.Cassandra.Datacenters[0].MergeTelemetry(kc.Spec.Cassandra)
 	assert.NotNil(t, merged)
 	assert.False(t, *merged.Mcac.Enabled)
 	assert.True(t, *merged.Prometheus.Enabled)

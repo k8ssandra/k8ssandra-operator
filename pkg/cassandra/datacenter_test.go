@@ -7,7 +7,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
+	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/unstructured"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
@@ -346,8 +346,8 @@ func TestCoalesce(t *testing.T) {
 				Size: 3,
 				DatacenterOptions: api.DatacenterOptions{
 					MgmtAPIHeap: &mgmtAPIHeap,
-					Telemetry: &v1alpha1.TelemetrySpec{
-						Mcac: &v1alpha1.McacTelemetrySpec{
+					Telemetry: &telemetryapi.TelemetrySpec{
+						Mcac: &telemetryapi.McacTelemetrySpec{
 							Enabled: ptr.To(false),
 						},
 					},
@@ -368,6 +368,11 @@ func TestCoalesce(t *testing.T) {
 				Size:               3,
 				MgmtAPIHeap:        &mgmtAPIHeap,
 				McacEnabled:        false,
+				Telemetry: &telemetryapi.TelemetrySpec{
+					Mcac: &telemetryapi.McacTelemetrySpec{
+						Enabled: ptr.To(false),
+					},
+				},
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "cassandra"}},

@@ -30,9 +30,9 @@ func (r *K8ssandraClusterReconciler) reconcileVector(
 		Namespace: namespace,
 		Name:      telemetry.VectorAgentConfigMapName(kc.SanitizedName(), dcConfig.CassDcName()),
 	}
-	if kc.Spec.Cassandra.Telemetry.IsVectorEnabled() {
+	if dcConfig.Telemetry.IsVectorEnabled() {
 		// Create the vector toml config content
-		toml, err := telemetry.CreateCassandraVectorToml(kc.Spec.Cassandra.Telemetry, dcConfig.McacEnabled)
+		toml, err := telemetry.CreateCassandraVectorToml(dcConfig.Telemetry, dcConfig.McacEnabled)
 		if err != nil {
 			return result.Error(err)
 		}
