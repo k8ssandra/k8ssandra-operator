@@ -13,8 +13,9 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 
 When cutting a new release, update the `unreleased` heading to the tag being generated and date, like `## vX.Y.Z - YYYY-MM-DD` and create a new placeholder section for  `unreleased` entries.
 
-## unreleased
+## v1.27.1 - 2026-05-12
 
+* [FEATURE] [#1695](https://github.com/k8ssandra/k8ssandra-operator/issues/1695) Add new CRD option Config for Vector. This accepts the input as TOML and sets it at the server-system-logger's Vector instance. Used for global configuration of Vector.
 * [BUGFIX] [#1717](https://github.com/k8ssandra/k8ssandra-operator/issues/1717) When creating Telemetry config for Vector, take into account Datacenter level as well as Cluster level settings
 
 ## v1.27.0 - 2025-09-26
