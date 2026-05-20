@@ -13,6 +13,8 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 
 ## unreleased
 
+* [CHANGE] Bump Reaper to v4.2.3
+
 ## v1.32.0 - 2026-04-29
 
 * [CHANGE] [#1731](https://github.com/k8ssandra/k8ssandra-operator/issues/1713) Bump Medusa to 0.28.0
