@@ -11,7 +11,9 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 * [TESTING]
 ```
 
-## unreleased
+## v1.32.1 - 2026-05-20
+
+* [CHANGE] Bump Reaper to v4.2.3
 
 ## v1.32.0 - 2026-04-29
 
