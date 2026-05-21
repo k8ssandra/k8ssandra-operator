@@ -39,7 +39,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -58,7 +58,7 @@ type K8ssandraClusterReconciler struct {
 	Scheme        *runtime.Scheme
 	ClientCache   *clientcache.ClientCache
 	ManagementApi cassandra.ManagementApiFactory
-	Recorder      record.EventRecorder
+	Recorder      events.EventRecorder
 	// ImageRegistry provides access to container image settings loaded from ImageConfig (v1beta2).
 	ImageRegistry cassimages.ImageRegistry
 }
@@ -97,7 +97,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	if kc.GetDeletionTimestamp() == nil {
 		if err != nil {
 			kc.Status.Error = err.Error()
-			r.Recorder.Event(kc, corev1.EventTypeWarning, "Reconcile Error", err.Error())
+			r.Recorder.Eventf(kc, nil, corev1.EventTypeWarning, "ReconcileError", "ReconcileError", err.Error())
 		} else {
 			kc.Status.Error = "None"
 		}

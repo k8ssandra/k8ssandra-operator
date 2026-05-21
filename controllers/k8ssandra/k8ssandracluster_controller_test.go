@@ -84,7 +84,7 @@ func TestK8ssandraCluster(t *testing.T) {
 			Scheme:           scheme.Scheme,
 			ClientCache:      clientCache,
 			ManagementApi:    managementApiFactory,
-			Recorder:         mgr.GetEventRecorderFor("k8ssandracluster-controller"),
+			Recorder:         mgr.GetEventRecorder("k8ssandracluster-controller"),
 			ImageRegistry:    getTestImageRegistry(),
 		}).SetupWithManager(mgr, clusters)
 		return err
