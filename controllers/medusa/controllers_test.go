@@ -78,7 +78,7 @@ func setupMedusaBackupTestEnv(t *testing.T, ctx context.Context) *testutils.Mult
 			Scheme:           scheme.Scheme,
 			ClientCache:      clientCache,
 			ManagementApi:    managementApi,
-			Recorder:         controlPlaneMgr.GetEventRecorderFor("cassandrabackup-controller"),
+			Recorder:         controlPlaneMgr.GetEventRecorder("cassandrabackup-controller"),
 			ImageRegistry:    getTestImageRegistry(),
 		}).SetupWithManager(controlPlaneMgr, clusters)
 		if err != nil {
