@@ -56,7 +56,7 @@ func TestK8ssandraTask(t *testing.T) {
 			Client:           mgr.GetClient(),
 			Scheme:           scheme.Scheme,
 			ClientCache:      clientCache,
-			Recorder:         mgr.GetEventRecorderFor("k8ssandratask-controller"),
+			Recorder:         mgr.GetEventRecorder("k8ssandratask-controller"),
 		}).SetupWithManager(mgr, clusters)
 		return err
 	}, nil)

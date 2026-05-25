@@ -35,7 +35,7 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -71,7 +71,7 @@ type K8ssandraTaskReconciler struct {
 	client.Client
 	Scheme      *runtime.Scheme
 	ClientCache *clientcache.ClientCache
-	Recorder    record.EventRecorder
+	Recorder    events.EventRecorder
 }
 
 //+kubebuilder:rbac:groups=control.k8ssandra.io,namespace="k8ssandra",resources=k8ssandratasks,verbs=get;list;watch;create;update;patch;delete
@@ -330,8 +330,8 @@ func (r *K8ssandraTaskReconciler) recordCassandraTaskCreated(
 	if k8sContext != "" {
 		contextInfo = " in context " + k8sContext
 	}
-	r.Recorder.Event(kTask, "Normal", "CreateCassandraTask",
-		fmt.Sprintf("Created CassandraTask %s.%s%s", cTask.Namespace, cTask.Name, contextInfo))
+	r.Recorder.Eventf(kTask, nil, corev1.EventTypeNormal, "CreateCassandraTask", "CreateCassandraTask",
+		"Created CassandraTask %s.%s%s", cTask.Namespace, cTask.Name, contextInfo)
 }
 
 // reportInvalidSpec is called when the user provided an invalid K8ssandraTask spec. A warning event is emitted and the
@@ -342,7 +342,7 @@ func (r *K8ssandraTaskReconciler) reportInvalidSpec(
 	format string,
 	arguments ...interface{},
 ) (ctrl.Result, error) {
-	r.Recorder.Event(kTask, "Warning", "InvalidSpec", fmt.Sprintf(format, arguments...))
+	r.Recorder.Eventf(kTask, nil, corev1.EventTypeWarning, "InvalidSpec", "InvalidSpec", format, arguments...)
 
 	patch := client.MergeFrom(kTask.DeepCopy())
 	kTask.SetCondition(api.JobInvalid, metav1.ConditionTrue)

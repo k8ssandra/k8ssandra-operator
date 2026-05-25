@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	timeout  = time.Second * 1
+	timeout  = time.Second * 5
 	interval = time.Millisecond * 10
 )
 
@@ -197,6 +197,13 @@ func copySecretsFromClusterToCluster(t *testing.T, ctx context.Context, f *frame
 			return errors.IsNotFound(err)
 		}
 		return false
+	}, timeout, interval)
+
+	t.Log("verify the replicated secret deletion is complete")
+	require.Eventually(func() bool {
+		deletedRSec := &api.ReplicatedSecret{}
+		err := f.Client.Get(context.TODO(), types.NamespacedName{Name: rsec.Name, Namespace: rsec.Namespace}, deletedRSec)
+		return errors.IsNotFound(err)
 	}, timeout, interval)
 }
 

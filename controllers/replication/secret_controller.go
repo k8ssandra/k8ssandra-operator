@@ -63,7 +63,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 	rsec := &api.ReplicatedSecret{}
 	if err := localClient.Get(ctx, req.NamespacedName, rsec); err != nil {
 		if errors.IsNotFound(err) {
-			logger.Error(err, "Failed to get replicated secret, it may have been deleted", "ReplicatedSecret", req.NamespacedName)
+			logger.V(1).Info("Replicated secret not found, ignoring", "ReplicatedSecret", req.NamespacedName)
 			return reconcile.Result{}, nil
 		}
 		logger.Error(err, "Failed to get replicated secret", "ReplicatedSecret", req.NamespacedName)
