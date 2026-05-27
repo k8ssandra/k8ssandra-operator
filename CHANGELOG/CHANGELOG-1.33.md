@@ -16,3 +16,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 ## unreleased
 
 * [CHANGE] Update cass-operator to v1.31.0
+* [BUGFIX] [#1739] Use the datacenter native port for Reaper contact points so Reaper works when NodePort is enabled (cass-operator moves native_transport_port off 9042)

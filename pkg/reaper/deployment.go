@@ -74,10 +74,18 @@ func computeEnvVars(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, regis
 			Value: reaper.Spec.Keyspace,
 		})
 		if isReaperPostV4(reaper, registry) {
+			// The native CQL port follows the datacenter: when NodePort is enabled, cass-operator
+			// moves native_transport_port to the configured NodePort value (e.g. 30942), so 9042 is
+			// no longer listening. Mirror cass-operator's own service logic (see construct_service.go)
+			// to keep Reaper's contact point in sync instead of hardcoding 9042.
+			nativePort := cassdcapi.DefaultNativePort
+			if dc.IsNodePortEnabled() {
+				nativePort = dc.GetNodePortNativePort()
+			}
 			// For Reaper v4 and above, we need to specify the contact points as a JSON array of objects, with the host and port
 			envVars = append(envVars, corev1.EnvVar{
 				Name:  "REAPER_CASS_CONTACT_POINTS",
-				Value: fmt.Sprintf("[{\"host\": \"%s\", \"port\": 9042}]", dc.GetDatacenterServiceName()),
+				Value: fmt.Sprintf("[{\"host\": \"%s\", \"port\": %d}]", dc.GetDatacenterServiceName(), nativePort),
 			})
 		} else {
 			// For Reaper v3 and below, we can use the old format
