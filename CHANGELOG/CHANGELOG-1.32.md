@@ -15,6 +15,7 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 
 * [CHANGE] Bump cass-operator to v1.30.1 (0.64.2) and k8ssandra-client to v0.8.12
 * [CHANGE] Bump Reaper to v4.2.4
+* [CHANGE] Medusa to 0.29.0
 
 ## v1.32.1 - 2026-05-20
 
