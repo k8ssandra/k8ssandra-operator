@@ -15,7 +15,7 @@ require (
 	github.com/go-logr/zapr v1.3.0
 	github.com/google/uuid v1.6.0
 	github.com/gruntwork-io/terratest v0.54.0
-	github.com/k8ssandra/cass-operator v1.30.1
+	github.com/k8ssandra/cass-operator v1.30.2
 	github.com/k8ssandra/reaper-client-go v0.4.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.89.0

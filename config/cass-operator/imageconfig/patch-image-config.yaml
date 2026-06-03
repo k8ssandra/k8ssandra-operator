@@ -12,7 +12,7 @@ data:
         system-logger:
             repository: "k8ssandra"
             name: "system-logger"
-            tag: "v1.30.1"
+            tag: "v1.30.2"
         config-builder:
             repository: "datastax"
             name: "cass-config-builder"

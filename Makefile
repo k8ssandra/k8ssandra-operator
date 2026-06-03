@@ -129,7 +129,7 @@ help: ## Display this help.
 
 ##@ Development
 
-CASS_OPERATOR_TAG ?= v1.30.1
+CASS_OPERATOR_TAG ?= v1.30.2
 
 .PHONY: manifests
 manifests: controller-gen kustomize ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
