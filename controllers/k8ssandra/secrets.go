@@ -2,9 +2,12 @@ package k8ssandra
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/go-logr/logr"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
@@ -102,4 +105,72 @@ func (r *K8ssandraClusterReconciler) reconcileReplicatedSecret(ctx context.Conte
 		return result.Error(err)
 	}
 	return result.Continue()
+}
+
+func (r *K8ssandraClusterReconciler) reconcileMedusaReplicatedSecret(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) result.ReconcileResult {
+
+	if kc.Spec.UseExternalSecrets() {
+		return result.Continue()
+	}
+
+	// if MedusaConfigurationRef is not set, then we don't need to replicate the medusa secret
+	if kc.Spec.Medusa == nil || kc.Spec.Medusa.MedusaConfigurationRef.Name == "" {
+		return result.Continue()
+	}
+
+	if kc.Spec.Medusa.StorageProperties.StorageSecretRef.Name != "" {
+		logger.Error(nil, "Both Medusa Configuration Reference and Storage Secret Reference cannot be specified at same time")
+		return result.Error(fmt.Errorf("Both Medusa Configuration Reference and Storage Secret Reference cannot be specified at same time"))
+	}
+
+	// Merge the medusa configuration with the storage properties (priority to storage properties)
+	mergeResult := r.mergeStorageProperties(ctx, r.Client, kc.Spec.Medusa, logger, kc)
+	if mergeResult.IsError() {
+		return result.Error(mergeResult.GetError())
+	}
+
+	if kc.Spec.Medusa.StorageProperties.StorageSecretRef.Name == "" {
+		logger.Info("Medusa Storage Secret Reference is not provided, not replicating medusa secret")
+		return result.Continue()
+	}
+
+	if kc.Spec.Medusa.StorageProperties.CredentialsType == medusa.CredentialsTypeRoleBased {
+		return result.Continue()
+	}
+
+	if err := secret.ReconcileMedusaReplicatedSecret(ctx, r.Client, r.Scheme, kc, logger); err != nil {
+		logger.Error(err, "Failed to reconcile Medusa ReplicatedSecret")
+		return result.Error(err)
+	}
+
+	if err := r.updateK8ssandraClusterMedusaStorageCredentials(ctx, kc, logger); err != nil {
+		logger.Error(err, "Error in updating K8ssandraCluster with Medusa Storage Credentials Secret")
+		return result.Error(err)
+	}
+
+	return result.Continue()
+}
+
+// Update k8ssandraCluster with the new storage secret name (the secret name is updated with the k8ssandracluster name while replication)
+func (r *K8ssandraClusterReconciler) updateK8ssandraClusterMedusaStorageCredentials(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) error {
+
+	prefix := kc.Name + "-"
+	currentSecretName := kc.Spec.Medusa.StorageProperties.StorageSecretRef.Name
+
+	// Check if the secret name already has the prefix to avoid repeated updates
+	if strings.HasPrefix(currentSecretName, prefix) {
+		return nil
+	}
+
+	// Add the prefix only once
+	kc.Spec.Medusa.StorageProperties.StorageSecretRef.Name = prefix + currentSecretName
+
+	err := r.Client.Update(ctx, kc)
+	if err != nil {
+		return err
+	}
+
+	logger.Info("Prefix added to medusa storage credentials secret name in K8ssandraCluster")
+
+	return nil
 }
