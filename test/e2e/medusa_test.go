@@ -14,6 +14,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusa "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
+	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	medusapkg "github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
@@ -128,6 +129,115 @@ func createMultiDcSingleMedusaJob(t *testing.T, ctx context.Context, namespace s
 	createBackupJob(t, ctx, namespace, f, dcKey)
 	verifyBackupJobFinished(t, ctx, f, dcKey, backupKey)
 	checkNoPurgeBackupSchedule(t, ctx, dcKey, f, kc)
+}
+
+func createMultiDatacenterMedusaCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	require := require.New(t)
+
+	t.Log("check that the K8ssandraCluster was created")
+	kc := &k8ssandraapi.K8ssandraCluster{}
+	kcKey := types.NamespacedName{Namespace: namespace, Name: clusterName}
+	err := f.Client.Get(ctx, kcKey, kc)
+	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
+
+	// Define datacenter keys for both DCs
+	dc1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	dc2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
+
+	// Test 1: Check that both datacenters are ready
+	t.Log("checking that both datacenters are ready")
+	checkDatacenterReady(t, ctx, dc1Key, f)
+	checkDatacenterReady(t, ctx, dc2Key, f)
+	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name, dc2Key.Name)
+
+	// Test 2: Verify Medusa storage secret is replicated to all contexts
+	t.Log("verifying that Medusa bucket key has been replicated to all contexts")
+	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
+		verifyBucketKeyPresent(t, f, ctx, kc, namespace, dcKey.K8sContext, kc.SanitizedName()+"-"+localBucketSecretName)
+	}
+
+	// Test 3: Check that Medusa containers exist in both datacenters
+	t.Log("checking that Medusa containers exist in both datacenters")
+	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
+		checkMedusaContainersExist(t, ctx, dcKey, f)
+	}
+
+	// Test 4: Verify that the replicated secret is mounted on Cassandra pods
+	t.Log("verifying that replicated secret is mounted on Cassandra pods in both datacenters")
+	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
+		checkReplicatedSecretMounted(t, ctx, f, dcKey, kc.SanitizedName()+"-"+localBucketSecretName)
+	}
+
+	// Test 5: Check purge backup schedules exist
+	t.Log("checking that purge backup schedules exist in both datacenters")
+	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
+		checkPurgeBackupScheduleExists(t, ctx, dcKey, f, kc)
+	}
+
+	// Test 6: Check ReplicatedSecret has correct labels and annotations
+	t.Log("checking that ReplicatedSecret has been created in control plane with correct labels and annotations")
+	checkMedusaReplicatedSecretLabels(t, ctx, f, dc1Key, kc.Name)
+
+	// Test 7: Retrieve database credentials for nodetool operations
+	t.Log("retrieving database credentials")
+	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName())
+	require.NoError(err, "failed to retrieve database credentials")
+
+	// Calculate expected node count dynamically from datacenter specs
+	dc1 := &cassdcapi.CassandraDatacenter{}
+	dc2 := &cassdcapi.CassandraDatacenter{}
+	require.NoError(f.Get(ctx, dc1Key, dc1), "failed to get dc1")
+	require.NoError(f.Get(ctx, dc2Key, dc2), "failed to get dc2")
+	expectedNodeCount := int(dc1.Spec.Size + dc2.Spec.Size)
+
+	// Test 8: Verify multi-DC topology
+	t.Log("checking that nodes in dc1 see nodes in dc2")
+	pod := DcPrefix(t, f, dc1Key) + "-default-sts-0"
+	checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod, expectedNodeCount, 0, "-u", username, "-pw", password)
+
+	t.Log("checking that nodes in dc2 see nodes in dc1")
+	pod = DcPrefix(t, f, dc2Key) + "-default-sts-0"
+	checkNodeToolStatus(t, f, f.DataPlaneContexts[1], namespace, pod, expectedNodeCount, 0, "-u", username, "-pw", password)
+
+	// Test 9: Create backup in dc1 and verify completion
+	t.Log("creating backup in dc1")
+	backupKey := types.NamespacedName{Namespace: namespace, Name: backupName}
+	createBackupJob(t, ctx, namespace, f, dc1Key)
+	verifyBackupJobFinished(t, ctx, f, dc1Key, backupKey)
+
+	// Test 10: Create backup in dc2 and verify completion
+	t.Log("creating backup in dc2")
+	createBackupJob(t, ctx, namespace, f, dc2Key)
+	verifyBackupJobFinished(t, ctx, f, dc2Key, backupKey)
+
+	// Test 11: Restore backup in dc1 and verify completion
+	t.Log("restoring backup in dc1")
+	restoreBackupJob(t, ctx, namespace, f, dc1Key)
+	verifyRestoreJobFinished(t, ctx, f, dc1Key, backupKey)
+
+	// Test 12: Restore backup in dc2 and verify completion
+	t.Log("restoring backup in dc2")
+	restoreBackupJob(t, ctx, namespace, f, dc2Key)
+	verifyRestoreJobFinished(t, ctx, f, dc2Key, backupKey)
+
+	// Test 13: Verify datacenters are still ready after restore
+	t.Log("verifying that both datacenters are ready after restore")
+	checkDatacenterReady(t, ctx, dc1Key, f)
+	checkDatacenterReady(t, ctx, dc2Key, f)
+	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name, dc2Key.Name)
+
+	// Test 14: Verify multi-DC topology is still intact after restore
+	t.Log("verifying multi-DC topology after restore")
+
+	t.Log("checking that nodes in dc1 see nodes in dc2")
+	pod = DcPrefix(t, f, dc1Key) + "-default-sts-0"
+	checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod, expectedNodeCount, 0, "-u", username, "-pw", password)
+
+	t.Log("checking that nodes in dc2 see nodes in dc1")
+	pod = DcPrefix(t, f, dc2Key) + "-default-sts-0"
+	checkNodeToolStatus(t, f, f.DataPlaneContexts[1], namespace, pod, expectedNodeCount, 0, "-u", username, "-pw", password)
+
+	t.Log("multi-datacenter Medusa cluster test completed successfully")
 }
 
 func verifyBucketKeyPresent(t *testing.T, f *framework.E2eFramework, ctx context.Context, kc *k8ssandraapi.K8ssandraCluster, namespace, k8sContext, secretName string) {
@@ -374,4 +484,20 @@ func createMedusaConfiguration(t *testing.T, ctx context.Context, namespace stri
 		}
 		return false
 	}, polling.medusaConfigurationReady.timeout, polling.medusaConfigurationReady.interval)
+}
+
+func checkMedusaReplicatedSecretLabels(t *testing.T, ctx context.Context, f *framework.E2eFramework, dcKey framework.ClusterKey, kcName string) {
+	replicatedSecretName := types.NamespacedName{
+		Namespace: dcKey.Namespace,
+		Name:      kcName + "-medusa-storage-credentials",
+	}
+	replicatedSecretKey := framework.ClusterKey{
+		NamespacedName: replicatedSecretName,
+		K8sContext:     dcKey.K8sContext,
+	}
+	repSec := &replicationapi.ReplicatedSecret{}
+	err := f.Get(ctx, replicatedSecretKey, repSec)
+	require.NoError(t, err)
+	require.Equal(t, "test", repSec.Labels[k8ssandraapi.K8ssandraClusterNameLabel])
+	require.Equal(t, dcKey.Namespace, repSec.Labels[k8ssandraapi.K8ssandraClusterNamespaceLabel])
 }

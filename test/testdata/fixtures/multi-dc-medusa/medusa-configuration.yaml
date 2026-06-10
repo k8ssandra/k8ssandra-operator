@@ -1,0 +1,18 @@
+apiVersion: medusa.k8ssandra.io/v1alpha1
+kind: MedusaConfiguration
+metadata:
+  name: test-medusa-configuration
+  namespace: test
+spec:
+  storageProperties:
+    bucketName: test-bucket
+    concurrentTransfers: 1
+    maxBackupAge: 0
+    maxBackupCount: 10
+    multiPartUploadThreshold: 104857600
+    secure: false
+    sslVerify: false
+    storageProvider: s3
+    storageSecretRef:
+      name: medusa-bucket-key
+    transferMaxBandwidth: 50MB/s

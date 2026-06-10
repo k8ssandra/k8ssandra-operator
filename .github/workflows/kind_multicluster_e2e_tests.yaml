@@ -73,6 +73,7 @@ jobs:
           - StopAndRestartDc
           - CreateMultiDatacenterDseCluster
           - PerNodeConfig/InitialTokens
+          - CreateMultiDatacenterClusterMedusa
       fail-fast: false
     name: ${{ matrix.e2e_test }}
     env:

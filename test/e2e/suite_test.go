@@ -201,6 +201,13 @@ func TestOperator(t *testing.T) {
 		testFunc: createMultiDatacenterCluster,
 		fixture:  framework.NewTestFixture("multi-dc", controlPlane),
 	}))
+	t.Run("CreateMultiDatacenterClusterMedusa", e2eTest(ctx, &e2eTestOpts{
+		testFunc:                     createMultiDatacenterMedusaCluster,
+		fixture:                      framework.NewTestFixture("multi-dc-medusa", controlPlane),
+		skipK8ssandraClusterCleanup:  true,
+		doCassandraDatacenterCleanup: false,
+		installMinio:                 true,
+	}))
 	t.Run("CreateMultiDatacenterDseCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createMultiDatacenterDseCluster,
 		fixture:  framework.NewTestFixture("multi-dc-dse", controlPlane),
