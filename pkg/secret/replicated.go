@@ -232,7 +232,7 @@ func ReconcileMedusaReplicatedSecret(ctx context.Context, c client.Client, schem
 				replicationapi.ReplicationTarget{
 					K8sContextName: dcTemplate.K8sContext,
 					Namespace:      dcTemplate.Meta.Namespace,
-					TargetPrefix:   kc.Name + "-",
+					TargetPrefix:   kc.SanitizedName() + "-",
 					DropLabels:     []string{medusaApi.MedusaStorageSecretIdentifierLabel},
 				},
 			)
@@ -244,7 +244,7 @@ func ReconcileMedusaReplicatedSecret(ctx context.Context, c client.Client, schem
 		replicationapi.ReplicationTarget{
 			K8sContextName: "",
 			Namespace:      kc.Namespace,
-			TargetPrefix:   kc.Name + "-",
+			TargetPrefix:   kc.SanitizedName() + "-",
 			DropLabels:     []string{medusaApi.MedusaStorageSecretIdentifierLabel},
 		},
 	)
