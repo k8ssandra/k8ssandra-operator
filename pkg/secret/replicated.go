@@ -117,42 +117,8 @@ func ReconcileReplicatedSecret(ctx context.Context, c client.Client, scheme *run
 	}
 
 	targetRepSec := generateReplicatedSecret(client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, replicationTargets)
-	key := client.ObjectKey{Namespace: targetRepSec.Namespace, Name: targetRepSec.Name}
-	repSec := &replicationapi.ReplicatedSecret{}
 
-	labels.AddCommonLabels(targetRepSec, kc)
-	annotations.AddCommonAnnotations(targetRepSec, kc)
-
-	err := controllerutil.SetControllerReference(kc, targetRepSec, scheme)
-	if err != nil {
-		logger.Error(err, "Failed to set owner reference on ReplicatedSecret", "ReplicatedSecret", key)
-		return err
-	}
-
-	err = c.Get(ctx, key, repSec)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			logger.Info("Creating ReplicatedSecret", "ReplicatedSecret", key)
-			if err = c.Create(ctx, targetRepSec); err == nil {
-				return nil
-			}
-		}
-		return err
-	}
-
-	// It exists, override whatever was in it
-	if requiresUpdate(repSec, targetRepSec) {
-		currentResourceVersion := repSec.ResourceVersion
-		// Need to copy the finalizers here; otherwise, they get overwritten and lost. This
-		// will be refactored in https://github.com/k8ssandra/k8ssandra-operator/issues/206
-		finalizers := repSec.Finalizers
-		targetRepSec.DeepCopyInto(repSec)
-		repSec.ResourceVersion = currentResourceVersion
-		repSec.Finalizers = finalizers
-		return c.Update(ctx, repSec)
-	}
-
-	return nil
+	return createOrUpdateReplicatedSecret(ctx, targetRepSec, kc, scheme, c, logger)
 }
 
 func HasReplicatedSecrets(ctx context.Context, c client.Client, kcKey client.ObjectKey, targetContext string) bool {
@@ -224,7 +190,6 @@ func requiresUpdate(current, desired *replicationapi.ReplicatedSecret) bool {
 
 // Create/Update ReplicatedSecret for Medusa Storage Credentials
 func ReconcileMedusaReplicatedSecret(ctx context.Context, c client.Client, scheme *runtime.Scheme, kc *api.K8ssandraCluster, logger logr.Logger) error {
-
 	replicationTargets := make([]replicationapi.ReplicationTarget, 0, len(kc.Spec.Cassandra.Datacenters))
 	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
 		if dcTemplate.K8sContext != "" || dcTemplate.Meta.Namespace != "" {
@@ -256,6 +221,25 @@ func ReconcileMedusaReplicatedSecret(ctx context.Context, c client.Client, schem
 	}
 
 	targetRepSec := generateMedusaReplicatedSecret(client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, replicationTargets, labelSelectors)
+
+	return createOrUpdateReplicatedSecret(ctx, targetRepSec, kc, scheme, c, logger)
+}
+
+func generateMedusaReplicatedSecret(kcKey client.ObjectKey, replicationTargets []replicationapi.ReplicationTarget, selectors *metav1.LabelSelector) *replicationapi.ReplicatedSecret {
+	return &replicationapi.ReplicatedSecret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      kcKey.Name + "-medusa-storage-credentials",
+			Namespace: kcKey.Namespace,
+			Labels:    labels.WatchedByK8ssandraClusterLabels(kcKey),
+		},
+		Spec: replicationapi.ReplicatedSecretSpec{
+			Selector:           selectors,
+			ReplicationTargets: replicationTargets,
+		},
+	}
+}
+
+func createOrUpdateReplicatedSecret(ctx context.Context, targetRepSec *replicationapi.ReplicatedSecret, kc *api.K8ssandraCluster, scheme *runtime.Scheme, c client.Client, logger logr.Logger) error {
 	key := client.ObjectKey{Namespace: targetRepSec.Namespace, Name: targetRepSec.Name}
 	repSec := &replicationapi.ReplicatedSecret{}
 
@@ -271,7 +255,7 @@ func ReconcileMedusaReplicatedSecret(ctx context.Context, c client.Client, schem
 	err = c.Get(ctx, key, repSec)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			logger.Info("Creating Medusa ReplicatedSecret", "Medusa ReplicatedSecret", key)
+			logger.Info("Creating ReplicatedSecret", "ReplicatedSecret", key)
 			if err = c.Create(ctx, targetRepSec); err == nil {
 				return nil
 			}
@@ -292,19 +276,4 @@ func ReconcileMedusaReplicatedSecret(ctx context.Context, c client.Client, schem
 	}
 
 	return nil
-}
-
-func generateMedusaReplicatedSecret(kcKey client.ObjectKey, replicationTargets []replicationapi.ReplicationTarget, selectors *metav1.LabelSelector) *replicationapi.ReplicatedSecret {
-	return &replicationapi.ReplicatedSecret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      kcKey.Name + "-medusa-storage-credentials",
-			Namespace: kcKey.Namespace,
-			Labels:    labels.WatchedByK8ssandraClusterLabels(kcKey),
-		},
-		Spec: replicationapi.ReplicatedSecretSpec{
-			Selector:           selectors,
-			ReplicationTargets: replicationTargets,
-		},
-	}
-
 }
