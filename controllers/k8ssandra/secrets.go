@@ -107,7 +107,6 @@ func (r *K8ssandraClusterReconciler) reconcileReplicatedSecret(ctx context.Conte
 }
 
 func (r *K8ssandraClusterReconciler) reconcileMedusaReplicatedSecret(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) result.ReconcileResult {
-
 	if kc.Spec.UseExternalSecrets() {
 		return result.Continue()
 	}
@@ -119,7 +118,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaReplicatedSecret(ctx context
 
 	if kc.Spec.Medusa.StorageProperties.StorageSecretRef.Name != "" {
 		logger.Error(nil, "Both Medusa Configuration Reference and Storage Secret Reference cannot be specified at same time")
-		return result.Error(fmt.Errorf("Both Medusa Configuration Reference and Storage Secret Reference cannot be specified at same time"))
+		return result.Error(fmt.Errorf("both Medusa Configuration Reference and Storage Secret Reference cannot be specified at same time"))
 	}
 
 	desiredKc := kc.DeepCopy()
