@@ -390,7 +390,7 @@ func medusaVolumeMounts(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.Me
 	// Mount replicated secret with Medusa storage backend credentials if the secret ref is provided.
 	if medusaSpec.StorageProperties.StorageSecretRef.Name != "" {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			Name:      k8cName + "-" + medusaSpec.StorageProperties.StorageSecretRef.Name,
+			Name:      medusaSpec.StorageProperties.StorageSecretRef.Name,
 			MountPath: "/etc/medusa-secrets",
 		})
 	}
@@ -488,12 +488,12 @@ func GenerateMedusaVolumes(dcConfig *cassandra.DatacenterConfig, medusaSpec *api
 
 	// Medusa credentials volume using the referenced secret
 	if medusaSpec.StorageProperties.StorageSecretRef.Name != "" {
-		secretVolumeIndex, found := cassandra.FindVolume(&dcConfig.PodTemplateSpec, k8cName+"-"+medusaSpec.StorageProperties.StorageSecretRef.Name)
+		secretVolumeIndex, found := cassandra.FindVolume(&dcConfig.PodTemplateSpec, medusaSpec.StorageProperties.StorageSecretRef.Name)
 		secretVolume := &corev1.Volume{
-			Name: k8cName + "-" + medusaSpec.StorageProperties.StorageSecretRef.Name,
+			Name: medusaSpec.StorageProperties.StorageSecretRef.Name,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: k8cName + "-" + medusaSpec.StorageProperties.StorageSecretRef.Name,
+					SecretName: medusaSpec.StorageProperties.StorageSecretRef.Name,
 				},
 			},
 		}

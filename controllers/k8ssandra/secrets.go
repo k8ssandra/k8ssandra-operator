@@ -145,3 +145,15 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaReplicatedSecret(ctx context
 
 	return result.Continue()
 }
+
+func (r *K8ssandraClusterReconciler) updateReplicatededMedusaSecretName(kc *api.K8ssandraCluster) {
+	if kc.Spec.UseExternalSecrets() {
+		return
+	}
+
+	if kc.Spec.Medusa.StorageProperties.CredentialsType == medusa.CredentialsTypeRoleBased {
+		return
+	}
+
+	kc.Spec.Medusa.StorageProperties.StorageSecretRef.Name = kc.SanitizedName() + "-" + kc.Spec.Medusa.StorageProperties.StorageSecretRef.Name
+}
