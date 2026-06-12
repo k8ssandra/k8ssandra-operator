@@ -202,11 +202,9 @@ func TestOperator(t *testing.T) {
 		fixture:  framework.NewTestFixture("multi-dc", controlPlane),
 	}))
 	t.Run("CreateMultiDatacenterClusterMedusa", e2eTest(ctx, &e2eTestOpts{
-		testFunc:                     createMultiDatacenterMedusaCluster,
-		fixture:                      framework.NewTestFixture("multi-dc-medusa", controlPlane),
-		skipK8ssandraClusterCleanup:  true,
-		doCassandraDatacenterCleanup: false,
-		installMinio:                 true,
+		testFunc:     createMultiDatacenterMedusaCluster,
+		fixture:      framework.NewTestFixture("multi-dc-medusa", controlPlane),
+		installMinio: true,
 	}))
 	t.Run("CreateMultiDatacenterDseCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createMultiDatacenterDseCluster,
@@ -300,7 +298,7 @@ func TestOperator(t *testing.T) {
 	}))
 	t.Run("CreateMultiMedusaJob", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createMultiMedusaJob,
-		fixture:                      framework.NewTestFixture("multi-dc-encryption-medusa", controlPlane),
+		fixture:                      framework.NewTestFixture("multi-dc-encrypt-medusa", controlPlane),
 		skipK8ssandraClusterCleanup:  false,
 		doCassandraDatacenterCleanup: false,
 		installMinio:                 true,
