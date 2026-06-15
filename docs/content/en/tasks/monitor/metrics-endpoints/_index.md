@@ -7,7 +7,7 @@ description: "Available metrics endpoints for Apache Cassandra®"
 
 Until the v1.5.0 release, k8ssandra-operator was using the [Metric Collector for Apache Cassandra® (MCAC)](https://github.com/datastax/metric-collector-for-apache-cassandra) exclusively to scrape metrics from Cassandra. Starting with v1.5.0, a new metrics endpoint was introduced in the [Management API for Apache Cassandra® (MAAC)](https://github.com/k8ssandra/management-api-for-apache-cassandra) and is available as an alpha feature. The new endpoint is available in the Management API since v0.1.57.
 
-This new metrics endpoint is hooking directly into the Cassandra metrics registry and exposing the metrics through a Prometheus compliant http endpoint at http://localhost:9103/metrics.
+This new metrics endpoint is hooking directly into the Cassandra metrics registry and exposing the metrics through a Prometheus compliant http endpoint at http://localhost:9000/metrics.
 
 MCAC is still enabled by default in v1.5.0 and will be deprecated (and then removed) in a future release. To disable MCAC, you need to set the `spec.cassandra.telemetry.mcac.enabled` field to `false` in the `K8ssandraCluster` manifest:
 
