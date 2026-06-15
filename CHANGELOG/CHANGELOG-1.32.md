@@ -11,7 +11,7 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 * [TESTING]
 ```
 
-## unreleased
+## v1.32.3 - 2026-06-15
 
 * [BUGFIX] Upgrade Reaper to 4.2.5 (scheduler execution fix)
 
