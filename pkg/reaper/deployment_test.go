@@ -1210,6 +1210,41 @@ func TestReaperV4ContactPointsFormat(t *testing.T) {
 		"REAPER_CASS_CONTACT_POINTS should be formatted as a JSON array with host and port for Reaper v4")
 }
 
+func TestReaperV4ContactPointsFormatWithNodePort(t *testing.T) {
+	reaper := newTestReaper()
+	reaper.Spec.ContainerImage = &images.Image{
+		Repository: "test",
+		Name:       "reaper",
+		Tag:        "4.0.1",
+		PullPolicy: corev1.PullAlways,
+	}
+	dc := newTestDatacenter()
+	// When NodePort is enabled, cass-operator moves native_transport_port to the configured
+	// NodePort value, so Reaper's contact point must follow it instead of the default 9042.
+	dc.Spec.Networking = &cassdcapi.NetworkingConfig{
+		NodePort: &cassdcapi.NodePortConfig{
+			Native:    30942,
+			Internode: 30943,
+		},
+	}
+	logger := testlogr.NewTestLogger(t)
+
+	deployment := NewDeployment(reaper, dc, nil, nil, logger, getTestImageRegistry(t))
+	container := deployment.Spec.Template.Spec.Containers[0]
+
+	var contactPointsEnvVar *corev1.EnvVar
+	for _, env := range container.Env {
+		if env.Name == "REAPER_CASS_CONTACT_POINTS" {
+			contactPointsEnvVar = &env
+			break
+		}
+	}
+
+	assert.NotNil(t, contactPointsEnvVar, "REAPER_CASS_CONTACT_POINTS environment variable not found")
+	assert.Equal(t, "[{\"host\": \"cluster1-dc1-service\", \"port\": 30942}]", contactPointsEnvVar.Value,
+		"REAPER_CASS_CONTACT_POINTS must use the NodePort native port when NodePort is enabled")
+}
+
 func TestDefaultReaperContactPointsFormat(t *testing.T) {
 	reaper := newTestReaper()
 	dc := newTestDatacenter()
