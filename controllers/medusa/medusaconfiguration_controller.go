@@ -93,7 +93,7 @@ func (r *MedusaConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.
 		if secret.Labels == nil {
 			secret.Labels = make(map[string]string)
 		}
-		// Deprecated: Eventually this should be removed in favour of adding replication labels to this resource. For now, we'll create the replica in any event.
+		// This label is used to identify the secret and replicate it in all k8s context
 		if secret.Labels[medusav1alpha1.MedusaStorageSecretIdentifierLabel] != utils.HashNameNamespace(secret.Name, secret.Namespace) {
 			secret.Labels[medusav1alpha1.MedusaStorageSecretIdentifierLabel] = utils.HashNameNamespace(secret.Name, secret.Namespace)
 			if err = r.Patch(ctx, secret, patch); err != nil {
@@ -101,7 +101,6 @@ func (r *MedusaConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.
 				return ctrl.Result{}, err
 			}
 		}
-		// End deprecation
 	}
 
 	configuration.Status.SetCondition(medusav1alpha1.ControlStatusReady, metav1.ConditionTrue)

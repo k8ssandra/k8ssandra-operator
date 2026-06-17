@@ -2,9 +2,11 @@ package k8ssandra
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/secret"
@@ -102,4 +104,56 @@ func (r *K8ssandraClusterReconciler) reconcileReplicatedSecret(ctx context.Conte
 		return result.Error(err)
 	}
 	return result.Continue()
+}
+
+func (r *K8ssandraClusterReconciler) reconcileMedusaReplicatedSecret(ctx context.Context, kc *api.K8ssandraCluster, logger logr.Logger) result.ReconcileResult {
+	if kc.Spec.UseExternalSecrets() {
+		return result.Continue()
+	}
+
+	// if MedusaConfigurationRef is not set, then we don't need to replicate the medusa secret
+	if kc.Spec.Medusa == nil || kc.Spec.Medusa.MedusaConfigurationRef.Name == "" {
+		return result.Continue()
+	}
+
+	if kc.Spec.Medusa.StorageProperties.StorageSecretRef.Name != "" {
+		logger.Error(nil, "Both Medusa Configuration Reference and Storage Secret Reference cannot be specified at same time")
+		return result.Error(fmt.Errorf("both Medusa Configuration Reference and Storage Secret Reference cannot be specified at same time"))
+	}
+
+	desiredKc := kc.DeepCopy()
+
+	// Merge the medusa configuration with the kc storage properties (priority to kc storage properties)
+	mergeResult := r.mergeStorageProperties(ctx, r.Client, kc.Spec.Medusa, logger, desiredKc)
+	if mergeResult.IsError() {
+		return result.Error(mergeResult.GetError())
+	}
+
+	if desiredKc.Spec.Medusa.StorageProperties.StorageSecretRef.Name == "" {
+		logger.Info("Medusa Storage Secret Reference is not provided, not replicating medusa secret")
+		return result.Continue()
+	}
+
+	if desiredKc.Spec.Medusa.StorageProperties.CredentialsType == medusa.CredentialsTypeRoleBased {
+		return result.Continue()
+	}
+
+	if err := secret.ReconcileMedusaReplicatedSecret(ctx, r.Client, r.Scheme, desiredKc, logger); err != nil {
+		logger.Error(err, "Failed to reconcile Medusa ReplicatedSecret")
+		return result.Error(err)
+	}
+
+	return result.Continue()
+}
+
+func (r *K8ssandraClusterReconciler) updateReplicatededMedusaSecretName(kc *api.K8ssandraCluster) {
+	if kc.Spec.UseExternalSecrets() {
+		return
+	}
+
+	if kc.Spec.Medusa.StorageProperties.CredentialsType == medusa.CredentialsTypeRoleBased {
+		return
+	}
+
+	kc.Spec.Medusa.StorageProperties.StorageSecretRef.Name = kc.SanitizedName() + "-" + kc.Spec.Medusa.StorageProperties.StorageSecretRef.Name
 }
