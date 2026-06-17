@@ -10,6 +10,7 @@ import (
 	cassimages "github.com/k8ssandra/cass-operator/pkg/images"
 	k8ss "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
+	goalesceutils "github.com/k8ssandra/k8ssandra-operator/pkg/goalesce"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	corev1 "k8s.io/api/core/v1"
 
@@ -215,6 +216,12 @@ func UpdateMedusaInitContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 	restoreContainer.Env = medusaEnvVars(medusaSpec, k8cName, useExternalSecrets, "RESTORE")
 	restoreContainer.VolumeMounts = medusaVolumeMounts(dcConfig, medusaSpec, k8cName)
 	restoreContainer.Resources = medusaInitContainerResources(medusaSpec)
+	if found {
+		*restoreContainer = goalesceutils.MergeCRs(
+			dcConfig.PodTemplateSpec.Spec.InitContainers[restoreContainerIndex],
+			*restoreContainer,
+		)
+	}
 
 	if !found {
 		logger.Info("Couldn't find medusa-restore init container")
@@ -301,7 +308,7 @@ func CreateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 
 func UpdateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaContainer *corev1.Container) {
 	cassandra.UpdateContainer(&dcConfig.PodTemplateSpec, "medusa", func(c *corev1.Container) {
-		*c = *medusaContainer
+		*c = goalesceutils.MergeCRs(*c, *medusaContainer)
 	})
 }
 
