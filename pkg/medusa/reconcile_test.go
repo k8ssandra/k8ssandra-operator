@@ -576,9 +576,98 @@ func TestInitContainerDefaultResources(t *testing.T) {
 	assert.True(t, hasTmpVolume(dcConfig.PodTemplateSpec.Spec.InitContainers[medusaInitContainerIndex].VolumeMounts))
 }
 
+func TestMedusaContainersPreserveCustomEnvAndVolumeMounts(t *testing.T) {
+	medusaSpec := &medusaapi.MedusaClusterTemplate{
+		StorageProperties: medusaapi.Storage{
+			StorageProvider: "s3",
+			StorageSecretRef: corev1.LocalObjectReference{
+				Name: "secret",
+			},
+			BucketName: "bucket",
+		},
+		CassandraUserSecretRef: corev1.LocalObjectReference{
+			Name: "test-superuser",
+		},
+	}
+	dcConfig := cassandra.DatacenterConfig{
+		PodTemplateSpec: corev1.PodTemplateSpec{
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{
+					{
+						Name: "medusa",
+						Env: []corev1.EnvVar{
+							{Name: "AWS_CONFIG_FILE", Value: "/home/cassandra/.aws/config"},
+							{Name: "MEDUSA_MODE", Value: "CUSTOM"},
+						},
+						VolumeMounts: []corev1.VolumeMount{
+							{Name: "medusa-aws-config", MountPath: "/home/cassandra/.aws"},
+						},
+					},
+				},
+				InitContainers: []corev1.Container{
+					{
+						Name: "medusa-restore",
+						Env: []corev1.EnvVar{
+							{Name: "AWS_CONFIG_FILE", Value: "/home/cassandra/.aws/config"},
+							{Name: "MEDUSA_MODE", Value: "CUSTOM"},
+						},
+						VolumeMounts: []corev1.VolumeMount{
+							{Name: "medusa-aws-config", MountPath: "/home/cassandra/.aws"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	logger := logr.New(logr.Discard().GetSink())
+	medusaContainer, err := CreateMedusaMainContainer(&dcConfig, medusaSpec, false, "test", logger, getTestImageRegistry(t))
+	assert.NoError(t, err)
+	UpdateMedusaInitContainer(&dcConfig, medusaSpec, false, "test", logger, getTestImageRegistry(t))
+	UpdateMedusaMainContainer(&dcConfig, medusaContainer)
+
+	medusaContainerIndex, found := cassandra.FindContainer(&dcConfig.PodTemplateSpec, "medusa")
+	assert.True(t, found, "Couldn't find medusa container")
+	medusaInitContainerIndex, found := cassandra.FindInitContainer(&dcConfig.PodTemplateSpec, "medusa-restore")
+	assert.True(t, found, "Couldn't find medusa-restore init container")
+
+	mainContainer := dcConfig.PodTemplateSpec.Spec.Containers[medusaContainerIndex]
+	restoreContainer := dcConfig.PodTemplateSpec.Spec.InitContainers[medusaInitContainerIndex]
+
+	assert.True(t, hasEnvVarWithValue(mainContainer.Env, "AWS_CONFIG_FILE", "/home/cassandra/.aws/config"))
+	assert.True(t, hasEnvVarWithValue(restoreContainer.Env, "AWS_CONFIG_FILE", "/home/cassandra/.aws/config"))
+	assert.True(t, hasEnvVarWithValue(mainContainer.Env, "MEDUSA_MODE", "GRPC"))
+	assert.True(t, hasEnvVarWithValue(restoreContainer.Env, "MEDUSA_MODE", "RESTORE"))
+	assert.False(t, hasEnvVarWithValue(mainContainer.Env, "MEDUSA_MODE", "CUSTOM"))
+	assert.False(t, hasEnvVarWithValue(restoreContainer.Env, "MEDUSA_MODE", "CUSTOM"))
+
+	assert.True(t, hasVolumeMount(mainContainer.VolumeMounts, "medusa-aws-config", "/home/cassandra/.aws"))
+	assert.True(t, hasVolumeMount(restoreContainer.VolumeMounts, "medusa-aws-config", "/home/cassandra/.aws"))
+	assert.True(t, hasTmpVolume(mainContainer.VolumeMounts))
+	assert.True(t, hasTmpVolume(restoreContainer.VolumeMounts))
+}
+
 func hasTmpVolume(volumeMounts []corev1.VolumeMount) bool {
 	for _, vm := range volumeMounts {
 		if vm.Name == "medusa-tmp" {
+			return true
+		}
+	}
+	return false
+}
+
+func hasVolumeMount(volumeMounts []corev1.VolumeMount, name, mountPath string) bool {
+	for _, vm := range volumeMounts {
+		if vm.Name == name && vm.MountPath == mountPath {
+			return true
+		}
+	}
+	return false
+}
+
+func hasEnvVarWithValue(envVars []corev1.EnvVar, name, value string) bool {
+	for _, envVar := range envVars {
+		if envVar.Name == name && envVar.Value == value {
 			return true
 		}
 	}
