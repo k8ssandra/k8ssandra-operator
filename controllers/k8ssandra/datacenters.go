@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -134,6 +135,11 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		// merge in common L&A from the k8ssandra spec
 		desiredDc.SetLabels(goalesce.MustDeepMerge(desiredDc.GetLabels(), kc.Spec.Cassandra.Meta.Labels))
 		desiredDc.SetAnnotations(goalesce.MustDeepMerge(desiredDc.GetAnnotations(), kc.Spec.Cassandra.Meta.Annotations))
+
+		if err := r.setDatacenterOwnership(kc, desiredDc, dcConfig); err != nil {
+			dcLogger.Error(err, "Failed to set owner reference on CassandraDatacenter")
+			return result.Error(err), actualDcs
+		}
 
 		// Note: desiredDc should not be modified from now on
 		annotations.AddHashAnnotation(desiredDc)
@@ -316,6 +322,19 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 	}
 
 	return result.Continue(), actualDcs
+}
+
+// setDatacenterOwnership sets the K8ssandraCluster as an owner of the CassandraDatacenter,
+// but only when the DC is co-located (same namespace and same Kubernetes cluster). Owner
+// references cannot cross namespace or cluster boundaries, so cluster-scoped and multi-cluster
+// deployments keep relying on labels and finalizers for cleanup.
+func (r *K8ssandraClusterReconciler) setDatacenterOwnership(kc *api.K8ssandraCluster, dc *cassdcapi.CassandraDatacenter, dcConfig *cassandra.DatacenterConfig) error {
+	sameCluster := dcConfig.K8sContext == ""
+	sameNamespace := dc.Namespace == kc.Namespace
+	if sameCluster && sameNamespace {
+		return controllerutil.SetOwnerReference(kc, dc, r.Scheme)
+	}
+	return nil
 }
 
 func (r *K8ssandraClusterReconciler) setStatusForDatacenter(kc *api.K8ssandraCluster, dc *cassdcapi.CassandraDatacenter, targetContext string) {
