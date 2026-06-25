@@ -49,6 +49,12 @@ func (r *K8ssandraClusterReconciler) createDatacenterConfigs(
 			return nil, err
 		}
 
+		// Fail fast if ServerVersion is unset; subsequent code dereferences it
+		// (e.g. ServerVersion.Major()) and would otherwise panic.
+		if dcConfig.ServerVersion == nil {
+			return nil, errors.New("serverVersion is required, set it globally on spec.cassandra.serverVersion or per-DC")
+		}
+
 		reaperRequiresJmx := kc.Spec.Reaper != nil && !kc.Spec.Reaper.HttpManagement.Enabled
 		cassandra.ApplyAuth(dcConfig, kc.Spec.IsAuthEnabled(), kc.Spec.UseExternalSecrets(), reaperRequiresJmx)
 
