@@ -11,6 +11,10 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 * [TESTING]
 ```
 
+## v1.32.4 - 2026-07-06
+
+* [CHANGE] Update cass-operator to v1.30.3 (0.64.4) and k8ssandra-client to v0.8.14
+
 ## v1.32.3 - 2026-06-15
 
 * [BUGFIX] Upgrade Reaper to 4.2.5 (scheduler execution fix)
