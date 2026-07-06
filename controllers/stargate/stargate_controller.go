@@ -479,7 +479,9 @@ func reconcileStargateConfigFile(
 func (r *StargateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&api.Stargate{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		Owns(&appsv1.Deployment{}).
-		Owns(&corev1.Service{}).
+		// OnlyMetadata: owner-ref mapping needs only metadata; Deployment/Service
+		// contents are read live (see leancache.DisableFor).
+		Owns(&appsv1.Deployment{}, builder.OnlyMetadata).
+		Owns(&corev1.Service{}, builder.OnlyMetadata).
 		Complete(r)
 }

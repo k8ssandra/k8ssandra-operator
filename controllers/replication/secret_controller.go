@@ -407,17 +407,22 @@ func (s *SecretSyncController) SetupWithManager(mgr ctrl.Manager, clusters []clu
 		return requests
 	}
 
-	toMatchingReplicatesTyped := func(ctx context.Context, secret *corev1.Secret) []reconcile.Request {
+	toMatchingReplicatesTyped := func(ctx context.Context, secret *metav1.PartialObjectMetadata) []reconcile.Request {
 		return toMatchingReplicates(ctx, secret)
 	}
 
+	// Secret watches are metadata-only projections: the map fns above match on labels
+	// only, and secret contents are read live (see leancache.DisableFor), so no cache
+	// ever holds full Secret objects.
 	cb := ctrl.NewControllerManagedBy(mgr).
 		For(&api.ReplicatedSecret{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(toMatchingReplicates))
+		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(toMatchingReplicates), builder.OnlyMetadata)
 
 	for _, c := range clusters {
+		secretMeta := &metav1.PartialObjectMetadata{}
+		secretMeta.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Secret"))
 		cb = cb.WatchesRawSource(
-			source.Kind(c.GetCache(), &corev1.Secret{},
+			source.Kind(c.GetCache(), secretMeta,
 				handler.TypedEnqueueRequestsFromMapFunc(toMatchingReplicatesTyped)))
 	}
 

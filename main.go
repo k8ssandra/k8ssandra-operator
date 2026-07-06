@@ -36,6 +36,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/leancache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 
@@ -143,8 +144,18 @@ func main() {
 		},
 	}
 
+	// Bound the operator's memory regardless of cluster size (see pkg/leancache):
+	// high-cardinality core-type reads go live to the API server (DisableFor) and the
+	// corresponding watches are metadata-only projections. Remote clusters get the
+	// same options in ClientConfigReconciler.InitClientConfigs.
 	options.Cache = cache.Options{
 		DefaultNamespaces: map[string]cache.Config{},
+		DefaultTransform:  leancache.StripHeavyMetadata(),
+	}
+	options.Client = client.Options{
+		Cache: &client.CacheOptions{
+			DisableFor: leancache.DisableFor(),
+		},
 	}
 
 	// Add support for MultiNamespace set in WATCH_NAMESPACE (e.g ns1,ns2)
