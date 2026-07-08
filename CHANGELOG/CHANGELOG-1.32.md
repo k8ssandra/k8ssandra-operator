@@ -11,6 +11,10 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 * [TESTING]
 ```
 
+## Unreleased
+
+* [CHANGE] Bump medusa to v0.29.1
+
 ## v1.32.4 - 2026-07-06
 
 * [CHANGE] Update cass-operator to v1.30.3 (0.64.4) and k8ssandra-client to v0.8.14
