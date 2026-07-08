@@ -14,6 +14,7 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 ## Unreleased
 
 * [CHANGE] Bump medusa to v0.29.1
+* [CHANGE] Upgrade Reaper to v5.0.0
 
 ## v1.32.4 - 2026-07-06
 
