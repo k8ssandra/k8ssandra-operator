@@ -18,3 +18,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [CHANGE] Update cass-operator to v1.31.0
 * [CHANGE] Bump k8ssandra-client to v0.8.13, medusa to v0.29.0 and reaper to v4.2.4
 * [CHANGE] Bump medusa to v0.29.1
+* [CHANGE] Upgrade Reaper to v5.0.0
