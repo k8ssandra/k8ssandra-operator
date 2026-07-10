@@ -247,10 +247,12 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters
 		handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
 	cb = cb.Watches(&reaperapi.Reaper{},
 		handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
+	// OnlyMetadata: both filters match on labels/name only; ConfigMap/EndpointSlice
+	// contents are read live (see leancache.DisableFor).
 	cb = cb.Watches(&corev1.ConfigMap{},
-		handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
+		handler.EnqueueRequestsFromMapFunc(clusterLabelFilter), builder.OnlyMetadata)
 	cb = cb.Watches(&discoveryv1.EndpointSlice{},
-		handler.EnqueueRequestsFromMapFunc(endpointsFilter))
+		handler.EnqueueRequestsFromMapFunc(endpointsFilter), builder.OnlyMetadata)
 
 	for _, c := range clusters {
 		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &cassdcapi.CassandraDatacenter{},
@@ -265,12 +267,18 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters
 			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, obj *reaperapi.Reaper) []reconcile.Request {
 				return clusterLabelFilter(ctx, obj)
 			})))
-		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &corev1.ConfigMap{},
-			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, obj *corev1.ConfigMap) []reconcile.Request {
+		// Metadata-only projections of the remote ConfigMap/EndpointSlice watches,
+		// mirroring the OnlyMetadata local watches above.
+		configMapMeta := &metav1.PartialObjectMetadata{}
+		configMapMeta.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("ConfigMap"))
+		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), configMapMeta,
+			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, obj *metav1.PartialObjectMetadata) []reconcile.Request {
 				return clusterLabelFilter(ctx, obj)
 			})))
-		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &discoveryv1.EndpointSlice{},
-			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, obj *discoveryv1.EndpointSlice) []reconcile.Request {
+		endpointSliceMeta := &metav1.PartialObjectMetadata{}
+		endpointSliceMeta.SetGroupVersionKind(discoveryv1.SchemeGroupVersion.WithKind("EndpointSlice"))
+		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), endpointSliceMeta,
+			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, obj *metav1.PartialObjectMetadata) []reconcile.Request {
 				return clusterLabelFilter(ctx, obj)
 			})))
 	}

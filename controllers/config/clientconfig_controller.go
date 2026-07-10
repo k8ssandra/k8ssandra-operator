@@ -23,6 +23,7 @@ import (
 	configapi "github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/leancache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 )
 
@@ -105,7 +106,9 @@ func (r *ClientConfigReconciler) SetupWithManager(mgr ctrl.Manager, cancelFunc c
 
 	cb := ctrl.NewControllerManagedBy(mgr).
 		For(&configapi.ClientConfig{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(toMatchingClientConfig))
+		// OnlyMetadata: the map fn only needs name/namespace; kubeconfig secret
+		// contents are read through the non-cached client anyway.
+		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(toMatchingClientConfig), builder.OnlyMetadata)
 
 	return cb.Complete(r)
 }
@@ -201,6 +204,10 @@ func (r *ClientConfigReconciler) initAdditionalClusterConfig(ctx context.Context
 	var c cluster.Cluster
 	c, err = cluster.New(cfg, func(o *cluster.Options) {
 		o.Scheme = r.Scheme
+		// Mirror the local manager's lean-cache settings (see main.go and
+		// pkg/leancache) so a remote cluster's cache is bounded the same way.
+		o.Cache.DefaultTransform = leancache.StripHeavyMetadata()
+		o.Client.Cache = &client.CacheOptions{DisableFor: leancache.DisableFor()}
 		if len(namespaces) > 0 {
 			nsConfig := make(map[string]cache.Config)
 			for _, i := range namespaces {
