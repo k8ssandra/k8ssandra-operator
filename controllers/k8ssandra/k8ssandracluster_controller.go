@@ -27,6 +27,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassimages "github.com/k8ssandra/cass-operator/pkg/images"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
@@ -50,6 +51,23 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
+
+// indexK8ssandraClusterByMedusaConfigRef registers a field index on K8ssandraCluster so that
+// the controller can efficiently query which clusters reference a given MedusaConfiguration.
+func indexK8ssandraClusterByMedusaConfigRef(mgr ctrl.Manager) error {
+	return mgr.GetFieldIndexer().IndexField(
+		context.Background(),
+		&api.K8ssandraCluster{},
+		MedusaConfigurationRefIndex,
+		func(obj client.Object) []string {
+			kc := obj.(*api.K8ssandraCluster)
+			if kc.Spec.Medusa == nil || kc.Spec.Medusa.MedusaConfigurationRef.Name == "" {
+				return nil
+			}
+			return []string{kc.Spec.Medusa.MedusaConfigurationRef.Name}
+		},
+	)
+}
 
 // K8ssandraClusterReconciler reconciles a K8ssandraCluster object
 type K8ssandraClusterReconciler struct {
@@ -213,6 +231,10 @@ func updateStatus(ctx context.Context, r client.Client, kc *api.K8ssandraCluster
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters []cluster.Cluster) error {
+	if err := indexK8ssandraClusterByMedusaConfigRef(mgr); err != nil {
+		return err
+	}
+
 	cb := ctrl.NewControllerManagedBy(mgr).
 		For(&api.K8ssandraCluster{}, builder.WithPredicates(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})))
 
@@ -241,6 +263,25 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters
 		return requests
 	}
 
+	// When a MedusaConfiguration changes, find all K8ssandraCluster objects that reference it by name via the field index and enqueue them for reconciliation.
+	medusaConfigFilter := func(ctx context.Context, obj client.Object) []reconcile.Request {
+		kcList := &api.K8ssandraClusterList{}
+		if err := r.List(ctx, kcList,
+			client.InNamespace(obj.GetNamespace()),
+			client.MatchingFields{MedusaConfigurationRefIndex: obj.GetName()},
+		); err != nil {
+			return nil
+		}
+		requests := make([]reconcile.Request, len(kcList.Items))
+		for i, kc := range kcList.Items {
+			requests[i] = reconcile.Request{NamespacedName: types.NamespacedName{
+				Namespace: kc.Namespace,
+				Name:      kc.Name,
+			}}
+		}
+		return requests
+	}
+
 	cb = cb.Watches(&cassdcapi.CassandraDatacenter{},
 		handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
 	cb = cb.Watches(&stargateapi.Stargate{},
@@ -251,6 +292,8 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters
 		handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
 	cb = cb.Watches(&discoveryv1.EndpointSlice{},
 		handler.EnqueueRequestsFromMapFunc(endpointsFilter))
+	cb = cb.Watches(&medusaapi.MedusaConfiguration{},
+		handler.EnqueueRequestsFromMapFunc(medusaConfigFilter))
 
 	for _, c := range clusters {
 		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &cassdcapi.CassandraDatacenter{},
