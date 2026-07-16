@@ -743,3 +743,70 @@ func checkNoPurgeSchedule(ctx context.Context, namespace string, kc *api.K8ssand
 		return errors.IsNotFound(err)
 	}, timeout, interval, "Purge schedule should not exist")
 }
+
+// medusaConfigurationChangeTriggersReconcile verifies that a spec change to a MedusaConfiguration
+// object causes the K8ssandraCluster that references it to reconcile. This exercises the
+// field-index-based Watch registered in SetupWithManager.
+func medusaConfigurationChangeTriggersReconcile(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+	require := require.New(t)
+	fmt.Printf("namespace: %v \n", namespace)
+	t.Log("Creating Medusa bucket secret")
+	medusaSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      medusaBucketSecretName,
+			Namespace: namespace,
+		},
+		StringData: map[string]string{
+			"credentials": "some-credentials",
+		},
+	}
+	err := f.Create(ctx, controlPlaneContextKey(medusaSecret, f.ControlPlaneContext), medusaSecret)
+	require.NoError(err, "failed to create Medusa bucket secret")
+
+	t.Log("Creating initial MedusaConfiguration")
+	medusaConfig := MedusaConfig(medusaConfigName, namespace)
+	medusaConfig.Spec.StorageProperties.StorageSecretRef = corev1.LocalObjectReference{Name: medusaBucketSecretName}
+	medusaConfigKey := controlPlaneContextKey(medusaConfig, f.ControlPlaneContext)
+	err = f.Create(ctx, medusaConfigKey, medusaConfig)
+	require.NoError(err, "failed to create MedusaConfiguration")
+	require.Eventually(f.MedusaConfigExists(ctx, f.ControlPlaneContext, medusaConfigKey), timeout, interval)
+
+	kc := &api.K8ssandraCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      k8ssandraClusterName,
+		},
+		Spec: api.K8ssandraClusterSpec{
+			Cassandra: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: "3.11.14",
+				},
+				Datacenters: []api.CassandraDatacenterTemplate{
+					dcTemplate("dc1", f.DataPlaneContexts[0]),
+				},
+			},
+			Medusa: medusaTemplateWithConfigRefWithPrefix(medusaConfigName, prefixFromClusterSpec),
+		},
+	}
+
+	t.Log("Creating K8ssandraCluster referencing the MedusaConfiguration")
+	err = f.Client.Create(ctx, kc)
+	require.NoError(err, "failed to create K8ssandraCluster")
+	verifyReplicatedSecretReconciled(ctx, t, f, kc)
+
+	t.Log("Verifying configmap reflects the initial MedusaConfiguration values")
+	verifyConfigMap(require, ctx, f, namespace, prefixFromClusterSpec, concurrentTransfersFromMedusaConfig, keyFilePresent)
+
+	t.Log("Patching MedusaConfiguration with a new concurrentTransfers value")
+	updatedTransfers := concurrentTransfersFromMedusaConfig + 5
+	current := &medusaapi.MedusaConfiguration{}
+	err = f.Get(ctx, medusaConfigKey, current)
+	require.NoError(err, "failed to fetch MedusaConfiguration before patch")
+	patch := client.MergeFrom(current.DeepCopy())
+	current.Spec.StorageProperties.ConcurrentTransfers = updatedTransfers
+	err = f.Patch(ctx, current, patch, medusaConfigKey)
+	require.NoError(err, "failed to patch MedusaConfiguration")
+
+	t.Log("Verifying configmap is updated after MedusaConfiguration spec change")
+	verifyConfigMap(require, ctx, f, namespace, prefixFromClusterSpec, updatedTransfers, keyFilePresent)
+}

@@ -115,6 +115,7 @@ func TestK8ssandraCluster(t *testing.T) {
 	t.Run("CreateSingleDcClusterAuth", testEnv.ControllerTest(ctx, createSingleDcClusterAuth))
 	t.Run("CreateSingleDcClusterAuthExternalSecrets", testEnv.ControllerTest(ctx, createSingleDcClusterAuthExternalSecrets))
 	t.Run("CreateSingleDcClusterExternalInternode", testEnv.ControllerTest(ctx, createSingleDcClusterExternalInternode))
+	t.Run("MedusaConfigurationChangeTriggersReconcile", testEnv.ControllerTest(ctx, medusaConfigurationChangeTriggersReconcile))
 
 	// If webhooks are installed, this testcase is handled by the webhook test
 	t.Run("ApplyClusterWithEncryptionOptions", testEnv.ControllerTest(ctx, applyClusterWithEncryptionOptions))
