@@ -135,12 +135,13 @@ func createMultiDatacenterMedusaCluster(t *testing.T, ctx context.Context, names
 	require := require.New(t)
 
 	// Create namespace for one of the DC
-	f.Client.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "separate-namespace"}})
+	err := f.Client.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "separate-namespace"}})
+	require.NoError(err, "failed to create separate DC namespace %s")
 
 	t.Log("check that the K8ssandraCluster was created")
 	kc := &k8ssandraapi.K8ssandraCluster{}
 	kcKey := types.NamespacedName{Namespace: namespace, Name: clusterName}
-	err := f.Client.Get(ctx, kcKey, kc)
+	err = f.Client.Get(ctx, kcKey, kc)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
 	// Define datacenter keys for both DCs
