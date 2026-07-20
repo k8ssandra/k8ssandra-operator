@@ -307,6 +307,10 @@ func ValidateMedusa(r *K8ssandraCluster) error {
 			r.Spec.Medusa.MedusaConfigurationRef.UID != "" {
 			return errors.New("Medusa config invalid, invalid field used")
 		}
+		// Verify that only storage secret reference or medusaconfiguration reference is provided
+		if r.Spec.Medusa.StorageProperties.StorageSecretRef.Name != "" {
+			return errors.New("Both Medusa Configuration Reference and Storage Secret Reference cannot be specified at same time")
+		}
 	} else {
 		if r.Spec.Medusa.StorageProperties.StorageProvider == "" {
 			return ErrNoStorageProvider
@@ -314,10 +318,6 @@ func ValidateMedusa(r *K8ssandraCluster) error {
 		if r.Spec.Medusa.StorageProperties.BucketName == "" {
 			return ErrNoBucketName
 		}
-	}
-
-	if r.Spec.Medusa.StorageProperties.StorageSecretRef.Name != "" {
-		return errors.New("Both Medusa Configuration Reference and Storage Secret Reference cannot be specified at same time")
 	}
 
 	return nil
