@@ -134,6 +134,9 @@ func createMultiDcSingleMedusaJob(t *testing.T, ctx context.Context, namespace s
 func createMultiDatacenterMedusaCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
 	require := require.New(t)
 
+	// Create namespace for one of the DC
+	f.Client.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "separate-namespace"}})
+
 	t.Log("check that the K8ssandraCluster was created")
 	kc := &k8ssandraapi.K8ssandraCluster{}
 	kcKey := types.NamespacedName{Namespace: namespace, Name: clusterName}
@@ -498,6 +501,6 @@ func checkMedusaReplicatedSecretLabels(t *testing.T, ctx context.Context, f *fra
 	repSec := &replicationapi.ReplicatedSecret{}
 	err := f.Get(ctx, replicatedSecretKey, repSec)
 	require.NoError(t, err)
-	require.Equal(t, "test", repSec.Labels[k8ssandraapi.K8ssandraClusterNameLabel])
+	require.Equal(t, kcName, repSec.Labels[k8ssandraapi.K8ssandraClusterNameLabel])
 	require.Equal(t, dcKey.Namespace, repSec.Labels[k8ssandraapi.K8ssandraClusterNamespaceLabel])
 }

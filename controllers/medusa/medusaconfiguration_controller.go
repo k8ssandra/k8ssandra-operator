@@ -93,7 +93,7 @@ func (r *MedusaConfigurationReconciler) Reconcile(ctx context.Context, req ctrl.
 		if secret.Labels == nil {
 			secret.Labels = make(map[string]string)
 		}
-		// This label is used to identify the secret and replicate it in all k8s context
+		// This label is used to identify the secret and replicate it in all k8s contexts
 		if secret.Labels[medusav1alpha1.MedusaStorageSecretIdentifierLabel] != utils.HashNameNamespace(secret.Name, secret.Namespace) {
 			secret.Labels[medusav1alpha1.MedusaStorageSecretIdentifierLabel] = utils.HashNameNamespace(secret.Name, secret.Namespace)
 			if err = r.Patch(ctx, secret, patch); err != nil {

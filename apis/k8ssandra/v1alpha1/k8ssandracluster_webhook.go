@@ -316,6 +316,10 @@ func ValidateMedusa(r *K8ssandraCluster) error {
 		}
 	}
 
+	if r.Spec.Medusa.StorageProperties.StorageSecretRef.Name != "" {
+		return errors.New("Both Medusa Configuration Reference and Storage Secret Reference cannot be specified at same time")
+	}
+
 	return nil
 }
 

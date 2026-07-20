@@ -52,7 +52,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 
 		// Update the storage secret reference name with replicated secret name
 		if kc.Spec.Medusa.MedusaConfigurationRef.Name != "" {
-			r.updateReplicatededMedusaSecretName(kc)
+			r.updateReplicatedMedusaSecretName(kc)
 		}
 
 		// Check that certificates are provided if client encryption is enabled

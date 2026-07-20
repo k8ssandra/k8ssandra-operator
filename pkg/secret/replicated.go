@@ -192,16 +192,14 @@ func requiresUpdate(current, desired *replicationapi.ReplicatedSecret) bool {
 func ReconcileMedusaReplicatedSecret(ctx context.Context, c client.Client, scheme *runtime.Scheme, kc *api.K8ssandraCluster, logger logr.Logger) error {
 	replicationTargets := make([]replicationapi.ReplicationTarget, 0, len(kc.Spec.Cassandra.Datacenters))
 	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
-		if dcTemplate.K8sContext != "" || dcTemplate.Meta.Namespace != "" {
-			replicationTargets = append(replicationTargets,
-				replicationapi.ReplicationTarget{
-					K8sContextName: dcTemplate.K8sContext,
-					Namespace:      dcTemplate.Meta.Namespace,
-					TargetPrefix:   kc.SanitizedName() + "-",
-					DropLabels:     []string{medusaApi.MedusaStorageSecretIdentifierLabel},
-				},
-			)
-		}
+		replicationTargets = append(replicationTargets,
+			replicationapi.ReplicationTarget{
+				K8sContextName: dcTemplate.K8sContext,
+				Namespace:      utils.FirstNonEmptyString(dcTemplate.Meta.Namespace, kc.Namespace),
+				TargetPrefix:   kc.SanitizedName() + "-",
+				DropLabels:     []string{medusaApi.MedusaStorageSecretIdentifierLabel},
+			},
+		)
 	}
 
 	// Replicate the medusa storage secret in the control-plane

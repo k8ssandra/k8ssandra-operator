@@ -24,6 +24,7 @@ spec:
     datacenters:
       - metadata:
           name: dc1
+          namespace: separate-namespace
         size: 2
       - metadata:
           name: dc2
