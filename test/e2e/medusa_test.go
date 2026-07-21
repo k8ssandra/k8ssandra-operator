@@ -292,15 +292,16 @@ func checkPurgeBackupScheduleExists(t *testing.T, ctx context.Context, dcKey fra
 	if dcNamespace == "" {
 		dcNamespace = kc.Namespace
 	}
-	// Get the Cassandra pod
 	dc := &cassdcapi.CassandraDatacenter{}
 	err := f.Get(ctx, dcKey, dc)
-	t.Log("Checking that the purge schedule exists")
 	require.NoError(err, "Error getting the CassandraDatacenter")
-	// check that the purge schedule exists
-	backupSchedule := &medusa.MedusaBackupSchedule{}
-	err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, dcNamespace, medusapkg.MedusaPurgeScheduleName(kc.SanitizedName(), dc.DatacenterName())), backupSchedule)
-	require.NoErrorf(err, "Error getting the Medusa purge schedule. ClusterName: %s, DatacenterName: %s", kc.SanitizedName(), dcKey.Name)
+	t.Log("Checking that the purge schedule exists")
+	scheduleName := medusapkg.MedusaPurgeScheduleName(kc.SanitizedName(), dc.DatacenterName())
+	require.Eventually(func() bool {
+		backupSchedule := &medusa.MedusaBackupSchedule{}
+		err = f.Get(ctx, framework.NewClusterKey(dcKey.K8sContext, dcNamespace, scheduleName), backupSchedule)
+		return err == nil
+	}, polling.medusaBackupDone.timeout, polling.medusaBackupDone.interval, "Medusa purge schedule %s wasn't created within timeout. ClusterName: %s, DatacenterName: %s", scheduleName, kc.SanitizedName(), dc.DatacenterName())
 }
 
 func checkNoPurgeBackupSchedule(t *testing.T, ctx context.Context, dcKey framework.ClusterKey, f *framework.E2eFramework, kc *k8ssandraapi.K8ssandraCluster) {
