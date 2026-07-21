@@ -134,9 +134,12 @@ func createMultiDcSingleMedusaJob(t *testing.T, ctx context.Context, namespace s
 func createMultiDatacenterMedusaCluster(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
 	require := require.New(t)
 
-	// Create namespace for one of the DC
-	err := f.Client.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "separate-namespace"}})
-	require.NoError(err, "failed to create separate DC namespace %s")
+	// dc1 is intentionally deployed to a namespace separate from the K8ssandraCluster to
+	// exercise the cross-namespace DC scenario. The namespace is pre-created here because
+	// the fixture references it before the operator has a chance to create it.
+	const dc1Namespace = "separate-namespace"
+	err := f.Client.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: dc1Namespace}})
+	require.NoError(err, "failed to create separate DC namespace %s", dc1Namespace)
 
 	t.Log("check that the K8ssandraCluster was created")
 	kc := &k8ssandraapi.K8ssandraCluster{}
@@ -144,8 +147,8 @@ func createMultiDatacenterMedusaCluster(t *testing.T, ctx context.Context, names
 	err = f.Client.Get(ctx, kcKey, kc)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
-	// Define datacenter keys for both DCs
-	dc1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
+	// dc1 lives in dc1Namespace (separate from the KC); dc2 lives in the KC namespace.
+	dc1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: dc1Namespace, Name: "dc1"}}
 	dc2Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}}
 
 	// Test 1: Check that both datacenters are ready
@@ -154,11 +157,10 @@ func createMultiDatacenterMedusaCluster(t *testing.T, ctx context.Context, names
 	checkDatacenterReady(t, ctx, dc2Key, f)
 	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dc1Key.Name, dc2Key.Name)
 
-	// Test 2: Verify Medusa storage secret is replicated to all contexts
+	// Test 2: Verify Medusa storage secret is replicated into each DC's namespace
 	t.Log("verifying that Medusa bucket key has been replicated to all contexts")
-	for _, dcKey := range []framework.ClusterKey{dc1Key, dc2Key} {
-		verifyBucketKeyPresent(t, f, ctx, kc, namespace, dcKey.K8sContext, kc.SanitizedName()+"-"+localBucketSecretName)
-	}
+	verifyBucketKeyPresent(t, f, ctx, kc, dc1Namespace, dc1Key.K8sContext, kc.SanitizedName()+"-"+localBucketSecretName)
+	verifyBucketKeyPresent(t, f, ctx, kc, namespace, dc2Key.K8sContext, kc.SanitizedName()+"-"+localBucketSecretName)
 
 	// Test 3: Check that Medusa containers exist in both datacenters
 	t.Log("checking that Medusa containers exist in both datacenters")
@@ -178,11 +180,12 @@ func createMultiDatacenterMedusaCluster(t *testing.T, ctx context.Context, names
 		checkPurgeBackupScheduleExists(t, ctx, dcKey, f, kc)
 	}
 
-	// Test 6: Check ReplicatedSecret has correct labels and annotations
+	// Test 6: Check ReplicatedSecret has correct labels — it lives in the KC namespace.
 	t.Log("checking that ReplicatedSecret has been created in control plane with correct labels and annotations")
-	checkMedusaReplicatedSecretLabels(t, ctx, f, dc1Key, kc.Name)
+	kcClusterKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: kcKey}
+	checkMedusaReplicatedSecretLabels(t, ctx, f, kcClusterKey, kc.Name)
 
-	// Test 7: Retrieve database credentials for nodetool operations
+	// Test 7: Retrieve database credentials — superuser secret is in the KC namespace.
 	t.Log("retrieving database credentials")
 	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], namespace, kc.SanitizedName())
 	require.NoError(err, "failed to retrieve database credentials")
@@ -194,35 +197,36 @@ func createMultiDatacenterMedusaCluster(t *testing.T, ctx context.Context, names
 	require.NoError(f.Get(ctx, dc2Key, dc2), "failed to get dc2")
 	expectedNodeCount := int(dc1.Spec.Size + dc2.Spec.Size)
 
-	// Test 8: Verify multi-DC topology
+	// Test 8: Verify multi-DC topology — pods are in each DC's own namespace.
 	t.Log("checking that nodes in dc1 see nodes in dc2")
 	pod := DcPrefix(t, f, dc1Key) + "-default-sts-0"
-	checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod, expectedNodeCount, 0, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, f.DataPlaneContexts[0], dc1Namespace, pod, expectedNodeCount, 0, "-u", username, "-pw", password)
 
 	t.Log("checking that nodes in dc2 see nodes in dc1")
 	pod = DcPrefix(t, f, dc2Key) + "-default-sts-0"
 	checkNodeToolStatus(t, f, f.DataPlaneContexts[1], namespace, pod, expectedNodeCount, 0, "-u", username, "-pw", password)
 
-	// Test 9: Create backup in dc1 and verify completion
+	// Test 9: Create backup in dc1 and verify completion — backup jobs go into the DC's namespace.
 	t.Log("creating backup in dc1")
-	backupKey := types.NamespacedName{Namespace: namespace, Name: backupName}
-	createBackupJob(t, ctx, namespace, f, dc1Key)
-	verifyBackupJobFinished(t, ctx, f, dc1Key, backupKey)
+	dc1BackupKey := types.NamespacedName{Namespace: dc1Namespace, Name: backupName}
+	createBackupJob(t, ctx, dc1Namespace, f, dc1Key)
+	verifyBackupJobFinished(t, ctx, f, dc1Key, dc1BackupKey)
 
 	// Test 10: Create backup in dc2 and verify completion
 	t.Log("creating backup in dc2")
+	dc2BackupKey := types.NamespacedName{Namespace: namespace, Name: backupName}
 	createBackupJob(t, ctx, namespace, f, dc2Key)
-	verifyBackupJobFinished(t, ctx, f, dc2Key, backupKey)
+	verifyBackupJobFinished(t, ctx, f, dc2Key, dc2BackupKey)
 
 	// Test 11: Restore backup in dc1 and verify completion
 	t.Log("restoring backup in dc1")
-	restoreBackupJob(t, ctx, namespace, f, dc1Key)
-	verifyRestoreJobFinished(t, ctx, f, dc1Key, backupKey)
+	restoreBackupJob(t, ctx, dc1Namespace, f, dc1Key)
+	verifyRestoreJobFinished(t, ctx, f, dc1Key, dc1BackupKey)
 
 	// Test 12: Restore backup in dc2 and verify completion
 	t.Log("restoring backup in dc2")
 	restoreBackupJob(t, ctx, namespace, f, dc2Key)
-	verifyRestoreJobFinished(t, ctx, f, dc2Key, backupKey)
+	verifyRestoreJobFinished(t, ctx, f, dc2Key, dc2BackupKey)
 
 	// Test 13: Verify datacenters are still ready after restore
 	t.Log("verifying that both datacenters are ready after restore")
@@ -235,7 +239,7 @@ func createMultiDatacenterMedusaCluster(t *testing.T, ctx context.Context, names
 
 	t.Log("checking that nodes in dc1 see nodes in dc2")
 	pod = DcPrefix(t, f, dc1Key) + "-default-sts-0"
-	checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod, expectedNodeCount, 0, "-u", username, "-pw", password)
+	checkNodeToolStatus(t, f, f.DataPlaneContexts[0], dc1Namespace, pod, expectedNodeCount, 0, "-u", username, "-pw", password)
 
 	t.Log("checking that nodes in dc2 see nodes in dc1")
 	pod = DcPrefix(t, f, dc2Key) + "-default-sts-0"

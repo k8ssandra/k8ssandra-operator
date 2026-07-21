@@ -2,7 +2,6 @@ apiVersion: medusa.k8ssandra.io/v1alpha1
 kind: MedusaConfiguration
 metadata:
   name: test-medusa-configuration
-  namespace: test
 spec:
   storageProperties:
     bucketName: test-bucket
