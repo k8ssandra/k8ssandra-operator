@@ -212,7 +212,7 @@ func main() {
 			ManagementApi:    cassandra.NewManagementApiFactory(),
 			Recorder:         mgr.GetEventRecorder("k8ssandracluster-controller"),
 			ImageRegistry:    registry,
-		}).SetupWithManager(mgr, additionalClusters); err != nil {
+		}).SetupWithManager(ctx, mgr, additionalClusters); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "K8ssandraCluster")
 			os.Exit(1)
 		}

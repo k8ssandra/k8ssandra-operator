@@ -54,9 +54,9 @@ import (
 
 // indexK8ssandraClusterByMedusaConfigRef registers a field index on K8ssandraCluster so that
 // the controller can efficiently query which clusters reference a given MedusaConfiguration.
-func indexK8ssandraClusterByMedusaConfigRef(mgr ctrl.Manager) error {
+func indexK8ssandraClusterByMedusaConfigRef(ctx context.Context, mgr ctrl.Manager) error {
 	return mgr.GetFieldIndexer().IndexField(
-		context.Background(),
+		ctx,
 		&api.K8ssandraCluster{},
 		MedusaConfigurationRefIndex,
 		func(obj client.Object) []string {
@@ -230,8 +230,8 @@ func updateStatus(ctx context.Context, r client.Client, kc *api.K8ssandraCluster
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters []cluster.Cluster) error {
-	if err := indexK8ssandraClusterByMedusaConfigRef(mgr); err != nil {
+func (r *K8ssandraClusterReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, clusters []cluster.Cluster) error {
+	if err := indexK8ssandraClusterByMedusaConfigRef(ctx, mgr); err != nil {
 		return err
 	}
 
@@ -293,7 +293,7 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters
 	cb = cb.Watches(&discoveryv1.EndpointSlice{},
 		handler.EnqueueRequestsFromMapFunc(endpointsFilter))
 	cb = cb.Watches(&medusaapi.MedusaConfiguration{},
-		handler.EnqueueRequestsFromMapFunc(medusaConfigFilter))
+		handler.EnqueueRequestsFromMapFunc(medusaConfigFilter), builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 
 	for _, c := range clusters {
 		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &cassdcapi.CassandraDatacenter{},

@@ -86,7 +86,7 @@ func TestK8ssandraCluster(t *testing.T) {
 			ManagementApi:    managementApiFactory,
 			Recorder:         mgr.GetEventRecorder("k8ssandracluster-controller"),
 			ImageRegistry:    getTestImageRegistry(),
-		}).SetupWithManager(mgr, clusters)
+		}).SetupWithManager(ctx, mgr, clusters)
 		return err
 	}, nil)
 	if err != nil {
