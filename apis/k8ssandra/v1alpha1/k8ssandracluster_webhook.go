@@ -24,6 +24,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
+	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -289,37 +290,45 @@ func ValidateMedusa(r *K8ssandraCluster) error {
 	if r.Spec.Medusa == nil {
 		return nil
 	}
-
-	// Verify the Medusa storage prefix is explicitly set
-	// only relevant if Medusa is enabled and the MedusaConfiguration object is referenced
 	if r.Spec.Medusa.MedusaConfigurationRef.Name != "" {
-		if r.Spec.Medusa.StorageProperties.Prefix == "" {
-			return ErrNoStoragePrefix
-		}
-		// Verify that any referenced MedusaConfig is NS-local
-		if r.Spec.Medusa.MedusaConfigurationRef.Namespace != "" {
-			return errors.New("Medusa config must be namespace local")
-		}
-		if r.Spec.Medusa.MedusaConfigurationRef.APIVersion != "" ||
-			r.Spec.Medusa.MedusaConfigurationRef.Kind != "" ||
-			r.Spec.Medusa.MedusaConfigurationRef.FieldPath != "" ||
-			r.Spec.Medusa.MedusaConfigurationRef.ResourceVersion != "" ||
-			r.Spec.Medusa.MedusaConfigurationRef.UID != "" {
-			return errors.New("Medusa config invalid, invalid field used")
-		}
-		// Verify that only storage secret reference or medusaconfiguration reference is provided
-		if r.Spec.Medusa.StorageProperties.StorageSecretRef.Name != "" {
-			return errors.New("Both Medusa Configuration Reference and Storage Secret Reference cannot be specified at same time")
-		}
-	} else {
-		if r.Spec.Medusa.StorageProperties.StorageProvider == "" {
-			return ErrNoStorageProvider
-		}
-		if r.Spec.Medusa.StorageProperties.BucketName == "" {
-			return ErrNoBucketName
-		}
+		return validateMedusaWithConfigRef(r.Spec.Medusa)
 	}
+	return validateMedusaWithoutConfigRef(r.Spec.Medusa)
+}
 
+// validateMedusaWithConfigRef validates Medusa configuration when a MedusaConfigurationRef is provided.
+func validateMedusaWithConfigRef(medusa *medusaapi.MedusaClusterTemplate) error {
+	// Verify the Medusa storage prefix is explicitly set
+	if medusa.StorageProperties.Prefix == "" {
+		return ErrNoStoragePrefix
+	}
+	// Verify that the referenced MedusaConfig is namespace-local
+	if medusa.MedusaConfigurationRef.Namespace != "" {
+		return errors.New("Medusa config must be namespace local")
+	}
+	ref := medusa.MedusaConfigurationRef
+	if ref.APIVersion != "" ||
+		ref.Kind != "" ||
+		ref.FieldPath != "" ||
+		ref.ResourceVersion != "" ||
+		ref.UID != "" {
+		return errors.New("Medusa config invalid, invalid field used")
+	}
+	// Verify that only one of storage secret reference or MedusaConfiguration reference is provided
+	if medusa.StorageProperties.StorageSecretRef.Name != "" {
+		return errors.New("Both Medusa Configuration Reference and Storage Secret Reference cannot be specified at same time")
+	}
+	return nil
+}
+
+// validateMedusaWithoutConfigRef validates Medusa configuration when no MedusaConfigurationRef is provided.
+func validateMedusaWithoutConfigRef(medusa *medusaapi.MedusaClusterTemplate) error {
+	if medusa.StorageProperties.StorageProvider == "" {
+		return ErrNoStorageProvider
+	}
+	if medusa.StorageProperties.BucketName == "" {
+		return ErrNoBucketName
+	}
 	return nil
 }
 
