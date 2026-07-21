@@ -202,11 +202,12 @@ func TestOperator(t *testing.T) {
 		fixture:  framework.NewTestFixture("multi-dc", controlPlane),
 	}))
 	t.Run("CreateMultiDatacenterClusterMedusa", e2eTest(ctx, &e2eTestOpts{
-		testFunc:      createMultiDatacenterMedusaCluster,
-		fixture:       framework.NewTestFixture("multi-dc-medusa", controlPlane),
-		installMinio:  true,
-		clusterScoped: true,
-		sutNamespace:  "multi-dc-medusa",
+		testFunc:             createMultiDatacenterMedusaCluster,
+		fixture:              framework.NewTestFixture("multi-dc-medusa", controlPlane),
+		installMinio:         true,
+		clusterScoped:        true,
+		sutNamespace:         "multi-dc-medusa",
+		additionalNamespaces: []string{"separate-namespace"},
 	}))
 	t.Run("CreateMultiDatacenterDseCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createMultiDatacenterDseCluster,
