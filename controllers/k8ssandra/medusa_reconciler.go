@@ -50,6 +50,11 @@ func (r *K8ssandraClusterReconciler) reconcileMedusa(
 			return result.Error(mergeResult.GetError())
 		}
 
+		// Update the storage secret reference name with replicated secret name
+		if kc.Spec.Medusa.MedusaConfigurationRef.Name != "" {
+			r.updateReplicatedMedusaSecretName(kc)
+		}
+
 		// Check that certificates are provided if client encryption is enabled
 		if cassandra.ClientEncryptionEnabled(dcConfig) {
 			// check if we need to worry about client encryption stores ourselves

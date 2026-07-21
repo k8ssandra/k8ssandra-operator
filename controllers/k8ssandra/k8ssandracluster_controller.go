@@ -148,6 +148,10 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		return recResult.Output()
 	}
 
+	if medusaRecResult := r.reconcileMedusaReplicatedSecret(ctx, kc, kcLogger); medusaRecResult.Completed() {
+		return medusaRecResult.Output()
+	}
+
 	var actualDcs []*cassdcapi.CassandraDatacenter
 	if recResult, dcs := r.reconcileDatacenters(ctx, kc, kcLogger); recResult.Completed() {
 		return recResult.Output()
