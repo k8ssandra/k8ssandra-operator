@@ -137,14 +137,12 @@ func createMultiDatacenterMedusaCluster(t *testing.T, ctx context.Context, names
 	// dc1 is intentionally deployed to a namespace separate from the K8ssandraCluster to
 	// exercise the cross-namespace DC scenario. The namespace is pre-created here because
 	// the fixture references it before the operator has a chance to create it.
-	const dc1Namespace = "separate-namespace"
-	err := f.Client.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: dc1Namespace}})
-	require.NoError(err, "failed to create separate DC namespace %s", dc1Namespace)
+	var dc1Namespace = "separate-namespace"
 
 	t.Log("check that the K8ssandraCluster was created")
 	kc := &k8ssandraapi.K8ssandraCluster{}
 	kcKey := types.NamespacedName{Namespace: namespace, Name: clusterName}
-	err = f.Client.Get(ctx, kcKey, kc)
+	err := f.Client.Get(ctx, kcKey, kc)
 	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
 
 	// dc1 lives in dc1Namespace (separate from the KC); dc2 lives in the KC namespace.
