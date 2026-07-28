@@ -26,6 +26,8 @@ func TestMedusaIni(t *testing.T) {
 	t.Run("Unsecured", testMedusaIniUnsecured)
 	t.Run("MissingOptional", testMedusaIniMissingOptionalSettings)
 	t.Run("SecuredDcLevelSetting", testMedusaIniSecuredDcLevelSetting)
+	t.Run("CustomMgmtApiPort", testMedusaIniCustomMgmtApiPort)
+
 }
 
 func testMedusaIniFull(t *testing.T) {
@@ -779,3 +781,65 @@ func getTestImageRegistry(t testing.TB) cassimages.ImageRegistry {
 	})
 	return imageRegistryTest
 }
+
+func testMedusaIniCustomMgmtApiPort(t *testing.T) {
+	kc := &api.K8ssandraCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test",
+			Name:      "demo",
+		},
+		Spec: api.K8ssandraClusterSpec{
+			Cassandra: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					ServerVersion: "3.11.14",
+				},
+				Datacenters: []api.CassandraDatacenterTemplate{
+					{
+						Meta: api.EmbeddedObjectMeta{
+							Name: "dc1",
+						},
+						K8sContext: "k8sCtx0",
+						Size:       3,
+						DatacenterOptions: api.DatacenterOptions{
+							ServerVersion: "3.11.14",
+						},
+					},
+				},
+			},
+			Medusa: &medusaapi.MedusaClusterTemplate{
+				StorageProperties: medusaapi.Storage{
+					StorageProvider: "s3",
+					StorageSecretRef: corev1.LocalObjectReference{
+						Name: "secret",
+					},
+					BucketName: "bucket",
+				},
+				CassandraUserSecretRef: corev1.LocalObjectReference{
+					Name: "test-superuser",
+				},
+			},
+		},
+	}
+
+	dcConfig := cassandra.Coalesce(kc.CassClusterName(), kc.Spec.Cassandra.DeepCopy(), kc.Spec.Cassandra.Datacenters[0].DeepCopy())
+	
+	// Add a cassandra container with a custom management API port
+	dcConfig.PodTemplateSpec.Spec.Containers = []corev1.Container{
+		{
+			Name: "cassandra",
+			Ports: []corev1.ContainerPort{
+				{
+					Name:          "mgmt-api-http",
+					ContainerPort: 9000,
+				},
+			},
+		},
+	}
+
+	medusaIni := CreateMedusaIni(kc, dcConfig)
+
+	// Verify the custom port is used in the cassandra_url
+	assert.Contains(t, medusaIni, "cassandra_url = http://127.0.0.1:9000/api/v0/ops/node/snapshots")
+	assert.NotContains(t, medusaIni, "cassandra_url = http://127.0.0.1:8080/api/v0/ops/node/snapshots")
+}
+
