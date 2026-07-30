@@ -86,7 +86,7 @@ func TestK8ssandraCluster(t *testing.T) {
 			ManagementApi:    managementApiFactory,
 			Recorder:         mgr.GetEventRecorder("k8ssandracluster-controller"),
 			ImageRegistry:    getTestImageRegistry(),
-		}).SetupWithManager(mgr, clusters)
+		}).SetupWithManager(ctx, mgr, clusters)
 		return err
 	}, nil)
 	if err != nil {
@@ -115,6 +115,7 @@ func TestK8ssandraCluster(t *testing.T) {
 	t.Run("CreateSingleDcClusterAuth", testEnv.ControllerTest(ctx, createSingleDcClusterAuth))
 	t.Run("CreateSingleDcClusterAuthExternalSecrets", testEnv.ControllerTest(ctx, createSingleDcClusterAuthExternalSecrets))
 	t.Run("CreateSingleDcClusterExternalInternode", testEnv.ControllerTest(ctx, createSingleDcClusterExternalInternode))
+	t.Run("MedusaConfigurationChangeTriggersReconcile", testEnv.ControllerTest(ctx, medusaConfigurationChangeTriggersReconcile))
 
 	// If webhooks are installed, this testcase is handled by the webhook test
 	t.Run("ApplyClusterWithEncryptionOptions", testEnv.ControllerTest(ctx, applyClusterWithEncryptionOptions))

@@ -26,6 +26,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
+// MedusaConfigurationRefIndex is the field index name used to look up K8ssandraCluster
+// objects by their spec.medusa.medusaConfigurationRef.name field.
+const MedusaConfigurationRefIndex = ".spec.medusa.medusaConfigurationRef.name"
+
 const (
 	operatorNamespaceEnvVar = "OPERATOR_NAMESPACE"
 )
