@@ -148,7 +148,7 @@ jobs:
         run: make IMG="k8ssandra/k8ssandra-operator:${{ needs.build_image.outputs.image_tag }}" KIND_NODE_VERSION="${{ matrix.kind_node_version }}" create-kind-cluster kind-load-image cert-manager nginx-kind
       - name: Run e2e test ( ${{ matrix.e2e_test }} )
         run: |
-          e2e_test="TestOperator/${{ matrix.e2e_test }}"
+          e2e_test="TestOperator/${{ matrix.e2e_test }}$"
           args="-kubeconfigFile '${{ env.KUBECONFIG_FILE }}'"
           args="$args -controlPlane '${{ env.CONTROL_PLANE }}'"
           args="$args -dataPlanes '${{ env.DATA_PLANES }}'"

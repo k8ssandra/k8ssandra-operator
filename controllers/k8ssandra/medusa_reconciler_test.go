@@ -144,6 +144,8 @@ func medusaTemplate(configObjectReference *corev1.ObjectReference) *medusaapi.Me
 
 	if configObjectReference != nil {
 		configObjectReference.DeepCopyInto(&template.MedusaConfigurationRef)
+		// User should not specify both storage secret reference and medusaconfigurationref
+		template.StorageProperties.StorageSecretRef.Name = ""
 	}
 
 	return &template
@@ -644,8 +646,8 @@ func createMultiDcClusterWithReplicatedSecrets(t *testing.T, ctx context.Context
 	require.Eventually(f.DatacenterExists(ctx, dc2Key), timeout, interval)
 
 	// verify the copied secret is mounted in the pods
-	verifyBucketSecretMounted(ctx, t, f, dc1Key, secretName)
-	verifyBucketSecretMounted(ctx, t, f, dc2Key, secretName)
+	verifyBucketSecretMounted(ctx, t, f, dc1Key, secretName, clusterName)
+	verifyBucketSecretMounted(ctx, t, f, dc2Key, secretName, clusterName)
 
 	// verify the cluster's spec still contains the correct value
 	// which is empty because we used MedusaConfigRef
@@ -656,7 +658,7 @@ func createMultiDcClusterWithReplicatedSecrets(t *testing.T, ctx context.Context
 	require.Equal("", kc.Spec.Medusa.StorageProperties.StorageSecretRef.Name)
 }
 
-func verifyBucketSecretMounted(ctx context.Context, t *testing.T, f *framework.Framework, dcKey framework.ClusterKey, clusterSecretName string) {
+func verifyBucketSecretMounted(ctx context.Context, t *testing.T, f *framework.Framework, dcKey framework.ClusterKey, clusterSecretName string, clusterName string) {
 	require := require.New(t)
 
 	// fetch the DC spec
@@ -670,7 +672,7 @@ func verifyBucketSecretMounted(ctx context.Context, t *testing.T, f *framework.F
 	medusaContainer := dc.Spec.PodTemplateSpec.Spec.Containers[containerIndex]
 
 	// check its mount
-	assert.True(t, f.ContainerHasVolumeMount(medusaContainer, clusterSecretName, "/etc/medusa-secrets"), "Missing Volume Mount for Medusa bucket key")
+	assert.True(t, f.ContainerHasVolumeMount(medusaContainer, clusterName+"-"+clusterSecretName, "/etc/medusa-secrets"), "Missing Volume Mount for Medusa bucket key")
 }
 
 func createSingleDcClusterWithManagementApiSecured(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {

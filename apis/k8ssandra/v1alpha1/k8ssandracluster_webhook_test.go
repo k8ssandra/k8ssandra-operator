@@ -177,6 +177,7 @@ func TestWebhook(t *testing.T) {
 	t.Run("MedusaPrefixMissing", testMedusaPrefixMissing)
 	t.Run("InvalidDcName", testInvalidDcName)
 	t.Run("MedusaConfigNonLocalNamespace", testMedusaNonLocalNamespace)
+	t.Run("MedusaConfigRefAndStorageSecretRefBothPresent", testMedusaConfigRefAndStorageSecretRefMutuallyExclusive)
 	t.Run("AutomatedUpdateAnnotation", testAutomatedUpdateAnnotation)
 	t.Run("ReaperStorage", testReaperStorage)
 	t.Run("NoDCRename", testNoDCRename)
@@ -566,6 +567,40 @@ func testMedusaNonLocalNamespace(t *testing.T) {
 	err := validateK8ssandraCluster(badCluster)
 	required.Error(err)
 	required.Contains(err.Error(), "Medusa config must be namespace local")
+}
+
+func testMedusaConfigRefAndStorageSecretRefMutuallyExclusive(t *testing.T) {
+	required := require.New(t)
+
+	// Both MedusaConfigurationRef and StorageSecretRef set — should be rejected.
+	clusterWithBoth := createMinimalClusterObj("medusa-both-refs", "ns")
+	clusterWithBoth.Spec.Medusa = &medusaapi.MedusaClusterTemplate{
+		MedusaConfigurationRef: corev1.ObjectReference{
+			Name: "medusa-config",
+		},
+		StorageProperties: medusaapi.Storage{
+			Prefix: "some-prefix",
+			StorageSecretRef: corev1.LocalObjectReference{
+				Name: "storage-secret",
+			},
+		},
+	}
+	err := validateK8ssandraCluster(clusterWithBoth)
+	required.Error(err)
+	required.Contains(err.Error(), "Both Medusa Configuration Reference and Storage Secret Reference cannot be specified at same time")
+
+	// MedusaConfigurationRef set without StorageSecretRef — should be accepted.
+	clusterWithConfigRefOnly := createMinimalClusterObj("medusa-config-ref-only", "ns")
+	clusterWithConfigRefOnly.Spec.Medusa = &medusaapi.MedusaClusterTemplate{
+		MedusaConfigurationRef: corev1.ObjectReference{
+			Name: "medusa-config",
+		},
+		StorageProperties: medusaapi.Storage{
+			Prefix: "some-prefix",
+		},
+	}
+	err = validateK8ssandraCluster(clusterWithConfigRefOnly)
+	required.NoError(err)
 }
 
 func testReaperStorage(t *testing.T) {

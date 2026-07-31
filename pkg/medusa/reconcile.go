@@ -387,7 +387,7 @@ func medusaVolumeMounts(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.Me
 		})
 	}
 
-	// Mount secret with Medusa storage backend credentials if the secret ref is provided.
+	// Mount replicated secret with Medusa storage backend credentials if the secret ref is provided.
 	if medusaSpec.StorageProperties.StorageSecretRef.Name != "" {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      medusaSpec.StorageProperties.StorageSecretRef.Name,

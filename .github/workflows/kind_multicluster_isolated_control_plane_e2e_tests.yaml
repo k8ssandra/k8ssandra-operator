@@ -96,7 +96,7 @@ jobs:
         run: make IMG="k8ssandra/k8ssandra-operator:${{ needs.build_image.outputs.image_tag }}" NUM_CLUSTERS=3 NUM_WORKER_NODES=1,2,2 create-kind-multicluster kind-load-image-multi cert-manager-multi nginx-kind-multi
       - name: Run e2e test ( ${{ matrix.e2e_test }} )
         run: |
-          e2e_test="TestOperator/${{ matrix.e2e_test }}"
+          e2e_test="TestOperator/${{ matrix.e2e_test }}$"
           args="-kubeconfigFile '${{ env.KUBECONFIG_FILE }}'"
           args="$args -controlPlane '${{ env.CONTROL_PLANE }}'"
           args="$args -dataPlanes '${{ env.DATA_PLANES }}'"
