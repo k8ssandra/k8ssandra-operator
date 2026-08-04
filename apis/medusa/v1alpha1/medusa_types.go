@@ -86,6 +86,11 @@ type Storage struct {
 	// +optional
 	MultiPartUploadThreshold int `json:"multiPartUploadThreshold,omitempty"`
 
+	// Chunk size in bytes for multipart uploads.
+	// Defaults to 0 (medusa uses its own default).
+	// +optional
+	MultiPartChunkSize int `json:"multiPartChunkSize,omitempty"`
+
 	// Host to connect to for the storage backend.
 	// +optional
 	Host string `json:"host,omitempty"`
