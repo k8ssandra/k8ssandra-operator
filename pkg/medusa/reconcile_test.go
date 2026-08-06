@@ -66,6 +66,7 @@ func testMedusaIniFull(t *testing.T) {
 					TransferMaxBandwidth:     "100MB/s",
 					ConcurrentTransfers:      2,
 					MultiPartUploadThreshold: 204857600,
+					MultiPartChunkSize:       10485760,
 					Host:                     "192.168.0.1",
 					Region:                   "us-east-1",
 					Port:                     9001,
@@ -98,6 +99,7 @@ func testMedusaIniFull(t *testing.T) {
 	assert.Contains(t, medusaIni, "transfer_max_bandwidth = 100MB/s")
 	assert.Contains(t, medusaIni, "concurrent_transfers = 2")
 	assert.Contains(t, medusaIni, "multi_part_upload_threshold = 204857600")
+	assert.Contains(t, medusaIni, "multipart_chunksize = 10485760")
 	assert.Contains(t, medusaIni, "host = 192.168.0.1")
 	assert.Contains(t, medusaIni, "region = us-east-1")
 	assert.Contains(t, medusaIni, "port = 9001")
@@ -216,6 +218,7 @@ func testMedusaIniZeroConcurrentTransfers(t *testing.T) {
 					TransferMaxBandwidth:     "100MB/s",
 					ConcurrentTransfers:      0,
 					MultiPartUploadThreshold: 204857600,
+					MultiPartChunkSize:       10485760,
 					Host:                     "192.168.0.1",
 					Region:                   "us-east-1",
 					Port:                     9001,
@@ -241,6 +244,7 @@ func testMedusaIniZeroConcurrentTransfers(t *testing.T) {
 	assert.Contains(t, medusaIni, "transfer_max_bandwidth = 100MB/s")
 	assert.Contains(t, medusaIni, "concurrent_transfers = 1")
 	assert.Contains(t, medusaIni, "multi_part_upload_threshold = 204857600")
+	assert.Contains(t, medusaIni, "multipart_chunksize = 10485760")
 	assert.Contains(t, medusaIni, "host = 192.168.0.1")
 	assert.Contains(t, medusaIni, "region = us-east-1")
 	assert.Contains(t, medusaIni, "port = 9001")
@@ -291,6 +295,7 @@ func testMedusaIniSecured(t *testing.T) {
 					TransferMaxBandwidth:     "100MB/s",
 					ConcurrentTransfers:      2,
 					MultiPartUploadThreshold: 204857600,
+					MultiPartChunkSize:       10485760,
 					Host:                     "192.168.0.1",
 					Region:                   "us-east-1",
 					Port:                     9001,
@@ -318,6 +323,7 @@ func testMedusaIniSecured(t *testing.T) {
 	assert.Contains(medusaIni, "transfer_max_bandwidth = 100MB/s")
 	assert.Contains(medusaIni, "concurrent_transfers = 2")
 	assert.Contains(medusaIni, "multi_part_upload_threshold = 204857600")
+	assert.Contains(medusaIni, "multipart_chunksize = 10485760")
 	assert.Contains(medusaIni, "host = 192.168.0.1")
 	assert.Contains(medusaIni, "region = us-east-1")
 	assert.Contains(medusaIni, "port = 9001")
@@ -435,6 +441,7 @@ func testMedusaIniUnsecured(t *testing.T) {
 					TransferMaxBandwidth:     "100MB/s",
 					ConcurrentTransfers:      2,
 					MultiPartUploadThreshold: 204857600,
+					MultiPartChunkSize:       10485760,
 					Host:                     "192.168.0.1",
 					Region:                   "us-east-1",
 					Port:                     9001,
@@ -460,6 +467,7 @@ func testMedusaIniUnsecured(t *testing.T) {
 	assert.Contains(t, medusaIni, "transfer_max_bandwidth = 100MB/s")
 	assert.Contains(t, medusaIni, "concurrent_transfers = 2")
 	assert.Contains(t, medusaIni, "multi_part_upload_threshold = 204857600")
+	assert.Contains(t, medusaIni, "multipart_chunksize = 10485760")
 	assert.Contains(t, medusaIni, "host = 192.168.0.1")
 	assert.Contains(t, medusaIni, "region = us-east-1")
 	assert.Contains(t, medusaIni, "port = 9001")
@@ -519,6 +527,7 @@ func testMedusaIniMissingOptionalSettings(t *testing.T) {
 	assert.NotContains(t, medusaIni, "transfer_max_bandwidth =")
 	assert.Contains(t, medusaIni, "concurrent_transfers = 1")
 	assert.NotContains(t, medusaIni, "multi_part_upload_threshold =")
+	assert.NotContains(t, medusaIni, "multipart_chunksize =")
 	assert.NotContains(t, medusaIni, "host =")
 	assert.NotContains(t, medusaIni, "region =")
 	assert.NotContains(t, medusaIni, "port =")
