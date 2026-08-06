@@ -111,6 +111,9 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster, dcConfig *cassandra.DatacenterCo
     {{- if .Spec.Medusa.StorageProperties.MultiPartUploadThreshold }}
     multi_part_upload_threshold = {{ .Spec.Medusa.StorageProperties.MultiPartUploadThreshold }}
     {{- end }}
+    {{- if .Spec.Medusa.StorageProperties.MultiPartChunkSize }}
+    multipart_chunksize = {{ .Spec.Medusa.StorageProperties.MultiPartChunkSize }}
+    {{- end }}
 
     [grpc]
     enabled = 1

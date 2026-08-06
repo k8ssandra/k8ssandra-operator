@@ -29204,6 +29204,11 @@ spec:
                           Maximum number of backups to keep (used by the purge process).
                           Default is unlimited.
                         type: integer
+                      multiPartChunkSize:
+                        description: |-
+                          Chunk size in bytes for multipart uploads.
+                          Leaving this empty uses medusa's default value
+                        type: integer
                       multiPartUploadThreshold:
                         default: 104857600
                         description: |-
