@@ -29272,7 +29272,7 @@ spec:
                       multiPartChunkSize:
                         description: |-
                           Chunk size in bytes for multipart uploads.
-                          Defaults to 0 (medusa uses its own default).
+                          Leaving this empty uses medusa's default value
                         type: integer
                       multiPartUploadThreshold:
                         default: 104857600
@@ -35516,7 +35516,7 @@ spec:
                   multiPartChunkSize:
                     description: |-
                       Chunk size in bytes for multipart uploads.
-                      Defaults to 0 (medusa uses its own default).
+                      Leaving this empty uses medusa's default value
                     type: integer
                   multiPartUploadThreshold:
                     default: 104857600
