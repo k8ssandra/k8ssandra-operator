@@ -11,6 +11,13 @@ Changelog for the K8ssandra Operator, new PRs should update the `unreleased` sec
 * [TESTING]
 ```
 
+## unreleased
+
+## v1.32.6 - 2026-08-07
+
+* [CHANGE] Bump cassandra-medusa to v0.30.0
+* [ENHANCEMENT] [#1760](https://github.com/k8ssandra/k8ssandra-operator/issues/1760) Allow setting Medusa's chunk size
+
 ## v1.32.5 - 2026-07-08
 
 * [CHANGE] Bump medusa to v0.29.1
