@@ -10,19 +10,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout K8ssandra-operator main branch
-        uses: actions/checkout@v2
+        uses: actions/checkout@v7
         with:
           repository: k8ssandra/k8ssandra-operator
           ref: main
           path: k8ssandra-operator-main
       - name: Checkout K8ssandra-operator releases
-        uses: actions/checkout@v2
+        uses: actions/checkout@v7
         with:
           repository: k8ssandra/k8ssandra-operator
           ref: main
           path: k8ssandra-operator-releases
       - name: Checkout cass-operator
-        uses: actions/checkout@v2
+        uses: actions/checkout@v7
         with:
           repository: k8ssandra/cass-operator
           ref: master
@@ -93,7 +93,7 @@ jobs:
           fi              
       - name: Send CRD reference update PR
         if: ${{ env.PR_EXISTS == 'no' }}
-        uses: peter-evans/create-pull-request@v3
+        uses: peter-evans/create-pull-request@v8
         with:
           path: k8ssandra-operator-main
           token: ${{ secrets.CREATE_PR_TOKEN }}

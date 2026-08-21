@@ -13,17 +13,19 @@ jobs:
       run:
         working-directory: ./docs
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
       name: Checkout code w/ submodules
       with:
         submodules: recursive
-    - uses: google-github-actions/setup-gcloud@v0.6.0
+    - uses: google-github-actions/auth@v3
+      name: Authenticate to Google Cloud
+      with:
+        credentials_json: ${{ secrets.GCP_DOCS_STAGING_SA_KEY }}
+    - uses: google-github-actions/setup-gcloud@v3
       name: Setup gcloud
       with:
         project_id: ${{ secrets.GCP_DOCS_STAGING_PROJECT_ID }}
-        service_account_key: ${{ secrets.GCP_DOCS_STAGING_SA_KEY }}
-        export_default_credentials: true
-    - uses: actions/setup-node@v3
+    - uses: actions/setup-node@v7
       name: Setup Node
       with:
         node-version: 20.x
