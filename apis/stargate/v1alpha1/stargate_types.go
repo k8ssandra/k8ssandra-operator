@@ -413,7 +413,3 @@ type StargateList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Stargate `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&Stargate{}, &StargateList{})
-}

@@ -115,7 +115,3 @@ type MedusaTaskList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []MedusaTask `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&MedusaTask{}, &MedusaTaskList{})
-}

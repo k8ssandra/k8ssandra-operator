@@ -114,7 +114,3 @@ type ReplicatedSecretList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ReplicatedSecret `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&ReplicatedSecret{}, &ReplicatedSecretList{})
-}

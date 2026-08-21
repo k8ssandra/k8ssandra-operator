@@ -81,7 +81,3 @@ type MedusaBackupList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []MedusaBackup `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&MedusaBackup{}, &MedusaBackupList{})
-}
