@@ -43,8 +43,7 @@ func (f *E2eFramework) ExecuteCql(ctx context.Context, k8sContext, namespace, cl
 		f.cqlshBin,
 		"--username",
 		username,
-		"--password",
-		password,
+		"--password="+password,
 		"-e",
 		query,
 	)
