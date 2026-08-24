@@ -104,7 +104,7 @@ func (r *MedusaTaskReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// If the task is already finished, there is nothing to do.
 	if taskFinished(task) {
 		logger.Info("Task is already finished", "MedusaTask", req.NamespacedName, "Operation", task.Spec.Operation)
-		return ctrl.Result{Requeue: false}, nil
+		return ctrl.Result{}, nil
 	}
 
 	// First check to see if the task is already in progress
@@ -136,7 +136,7 @@ func (r *MedusaTaskReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			return ctrl.Result{}, err
 		}
 
-		return ctrl.Result{Requeue: false}, nil
+		return ctrl.Result{}, nil
 	}
 
 	// Task hasn't started yet
@@ -283,10 +283,10 @@ func (r *MedusaTaskReconciler) syncOperation(ctx context.Context, task *medusav1
 				if err := r.Get(ctx, backupKey, backupResource); err != nil {
 					if errors.IsNotFound(err) {
 						// Backup doesn't exist, create it
-						shouldReturn, ctrlResult, err := createMedusaBackup(logger, backup, task.Spec.CassandraDatacenter, task.Namespace, r, ctx)
-						if shouldReturn {
-							return ctrlResult, err
+						if err := createMedusaBackup(logger, backup, task.Spec.CassandraDatacenter, task.Namespace, r, ctx); err != nil {
+							return ctrl.Result{}, err
 						}
+						return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 					} else {
 						logger.Error(err, "failed to get backup", "Backup", backup.BackupName)
 						return ctrl.Result{}, err
@@ -343,7 +343,7 @@ func (r *MedusaTaskReconciler) syncOperation(ctx context.Context, task *medusav1
 	return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 }
 
-func createMedusaBackup(logger logr.Logger, backup *medusa.BackupSummary, datacenter, namespace string, r *MedusaTaskReconciler, ctx context.Context) (bool, reconcile.Result, error) {
+func createMedusaBackup(logger logr.Logger, backup *medusa.BackupSummary, datacenter, namespace string, r *MedusaTaskReconciler, ctx context.Context) error {
 	logger.Info("Creating Cassandra Backup", "Backup", backup.BackupName)
 	startTime := metav1.Unix(backup.StartTime, 0)
 	finishTime := metav1.Unix(backup.FinishTime, 0)
@@ -359,7 +359,7 @@ func createMedusaBackup(logger logr.Logger, backup *medusa.BackupSummary, datace
 	}
 	if err := r.Create(ctx, backupResource); err != nil {
 		logger.Error(err, "failed to create backup", "MedusaBackup", backup.BackupName)
-		return true, ctrl.Result{}, err
+		return err
 	} else {
 		logger.Info("Created Medusa Backup", "Backup", backupResource)
 		backupPatch := client.MergeFrom(backupResource.DeepCopy())
@@ -380,10 +380,10 @@ func createMedusaBackup(logger logr.Logger, backup *medusa.BackupSummary, datace
 
 		if err := r.Status().Patch(ctx, backupResource, backupPatch); err != nil {
 			logger.Error(err, "failed to patch status with finish time")
-			return true, ctrl.Result{}, err
+			return err
 		}
 	}
-	return false, reconcile.Result{}, nil
+	return nil
 }
 
 // If the task operation was a purge, we may need to schedule a sync operation next

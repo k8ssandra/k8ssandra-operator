@@ -108,7 +108,7 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if err := r.Update(ctx, kTask); err != nil {
 			return ctrl.Result{}, err
 		}
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 	}
 
 	if !kTask.DeletionTimestamp.IsZero() && controllerutil.ContainsFinalizer(kTask, k8ssandraTaskFinalizer) {
@@ -186,7 +186,7 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		kTask.RefreshGlobalStatus(len(dcs))
 		if err = r.Status().Update(ctx, kTask); err != nil {
 			if k8serrors.IsConflict(err) {
-				return ctrl.Result{Requeue: true}, nil
+				return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 			}
 			return ctrl.Result{}, err
 		}
@@ -194,7 +194,7 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		// because we configured GenerationChangedPredicate in SetupWithManager(), we ignore our own status updates.
 		// Requeue manually just for this case.
 		if !kTask.Status.CompletionTime.IsZero() {
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 		}
 
 		return ctrl.Result{}, nil

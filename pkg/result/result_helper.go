@@ -113,7 +113,7 @@ func (c callBackSoon) Completed() bool {
 	return true
 }
 func (c callBackSoon) Output() (ctrl.Result, error) {
-	return ctrl.Result{Requeue: true, RequeueAfter: c.after}, nil
+	return ctrl.Result{RequeueAfter: c.after}, nil
 }
 
 func (callBackSoon) IsDone() bool {

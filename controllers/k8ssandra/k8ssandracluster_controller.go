@@ -106,7 +106,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		if errors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
-		return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+		return ctrl.Result{}, err
 	}
 
 	kc = kc.DeepCopy()

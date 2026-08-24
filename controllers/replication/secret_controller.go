@@ -105,7 +105,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 			logger.Error(err, "Failed to get add finalizer to replicated secret", "ReplicatedSecret", req.NamespacedName)
 			return ctrl.Result{}, err
 		}
-		return ctrl.Result{Requeue: true}, err
+		return ctrl.Result{}, err
 	}
 
 	// Add the new matcher rules also to our cache if not found
