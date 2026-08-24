@@ -38,3 +38,4 @@ charts/*/charts/*.tgz
 
 # Helm chart lock file
 charts/*/Chart.lock
+govulncheck.json
