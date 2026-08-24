@@ -416,7 +416,10 @@ endif
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
 $(CONTROLLER_GEN): $(LOCALBIN)
-	test -s $(LOCALBIN)/controller-gen && $(LOCALBIN)/controller-gen --version | grep -q $(CONTROLLER_TOOLS_VERSION) || \
+	@if test -x $(LOCALBIN)/controller-gen && ! $(LOCALBIN)/controller-gen --version | grep -q $(CONTROLLER_TOOLS_VERSION); then \
+		echo "$(LOCALBIN)/controller-gen version is not expected $(CONTROLLER_TOOLS_VERSION). Removing it before installing."; \
+		rm -rf $(LOCALBIN)/controller-gen ; \
+	fi
 	$(call go-install-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen,$(CONTROLLER_TOOLS_VERSION))
 
 .PHONY: golangci-lint
