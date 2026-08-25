@@ -21,3 +21,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [ENHANCEMENT] [#1760](https://github.com/k8ssandra/k8ssandra-operator/issues/1760) Allow setting Medusa's chunk size
 * [BUGFIX] Medusa Configurations aren't replicated to remote contexts
 * [BUGFIX] [#1415](https://github.com/k8ssandra/k8ssandra-operator/issues/1415) Trigger k8ssandrcluster reconcile on referenced MedusaConfiguration update
+* [BUGFIX] [#1771](https://github.com/k8ssandra/k8ssandra-operator/issues/1771) ContactPoints services was created by polling the potential pods using dc name only, without namespace filtering
