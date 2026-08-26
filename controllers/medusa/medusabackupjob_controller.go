@@ -107,7 +107,7 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 	if len(pods) == 0 {
 		logger.Info("No pods found for datacenter", "CassandraDatacenter", cassdcKey)
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 	}
 
 	// If there is anything in progress, simply requeue the request until each pod has finished or errored
@@ -151,13 +151,13 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			logger.Info("MedusaBackupJob is still being processed", "Backup", req.NamespacedName)
 			return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 		}
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 	}
 
 	// If the backup is already finished, there is nothing to do.
 	if medusaBackupFinished(backupJob) {
 		logger.Info("Backup operation is already finished")
-		return ctrl.Result{Requeue: false}, nil
+		return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 	}
 
 	// First check to see if the backup is already in progress
@@ -182,7 +182,7 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		// if there are failures, we will end here and not proceed with creating a backup object
 		if len(backupJob.Status.Failed) > 0 {
 			logger.Info("Backup failed on some nodes", "BackupName", backupJob.Name, "Failed", backupJob.Status.Failed)
-			return ctrl.Result{Requeue: false}, nil
+			return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 		}
 
 		logger.Info("backup complete")
@@ -198,7 +198,7 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			return ctrl.Result{}, err
 		}
 
-		return ctrl.Result{Requeue: false}, nil
+		return ctrl.Result{}, nil
 	}
 
 	logger.Info("Backups have not been started yet")

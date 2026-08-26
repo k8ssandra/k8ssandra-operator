@@ -582,10 +582,6 @@ func (s *K8ssandraClusterStatus) SetCondition(condition K8ssandraClusterConditio
 	s.Conditions = append(s.Conditions, condition)
 }
 
-func init() {
-	SchemeBuilder.Register(&K8ssandraCluster{}, &K8ssandraClusterList{})
-}
-
 type ServerDistribution string
 
 const (

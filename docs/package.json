@@ -23,11 +23,18 @@
     "url": "https://github.com/k8ssandra/k8ssandra/issues"
   },
   "homepage": "https://github.com/k8ssandra/k8ssandra/tree/main/docs#readme",
+  "hugo-bin": {
+    "buildTags": "extended",
+    "version": "0.103.1"
+  },
+  "overrides": {
+    "@xhmikosr/bin-wrapper": "14.5.1"
+  },
   "devDependencies": {
-    "autoprefixer": "^10.4.0",
-    "del-cli": "^4.0.1",
-    "hugo-extended": "^0.89.4",
-    "postcss": "^8.3.11",
-    "postcss-cli": "^8.3.1"
+    "autoprefixer": "^10.5.4",
+    "del-cli": "^7.0.0",
+    "hugo-bin": "^0.149.2",
+    "postcss": "^8.5.26",
+    "postcss-cli": "^11.0.1"
   }
 }

@@ -96,7 +96,3 @@ type MedusaRestoreJobList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []MedusaRestoreJob `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&MedusaRestoreJob{}, &MedusaRestoreJobList{})
-}

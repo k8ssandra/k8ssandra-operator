@@ -189,10 +189,6 @@ func getConditionStatus(s cassapi.CassandraTaskStatus, conditionType cassapi.Job
 	return metav1.ConditionUnknown
 }
 
-func init() {
-	SchemeBuilder.Register(&K8ssandraTask{}, &K8ssandraTaskList{})
-}
-
 // toConditionStatus converts a primitive boolean into a k8s ConditionStatus
 func toConditionStatus(condition bool) metav1.ConditionStatus {
 	if condition {

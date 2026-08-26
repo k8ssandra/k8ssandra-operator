@@ -289,7 +289,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			if errors.IsAlreadyExists(err) {
 				// the read from the local cache didn't catch that the resource was created
 				// already; simply requeue until the cache is up-to-date
-				return ctrl.Result{Requeue: true}, nil
+				return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 			} else {
 				logger.Error(err, "Failed to create new Stargate Deployment", "Deployment", deploymentKey)
 				return ctrl.Result{}, err
@@ -355,7 +355,7 @@ func (r *StargateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 				if errors.IsAlreadyExists(err) {
 					// the read from the local cache didn't catch that the resource was created
 					// already; simply requeue until the cache is up-to-date
-					return ctrl.Result{Requeue: true}, nil
+					return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 				} else {
 					logger.Error(err, "Failed to create new Stargate Service", "Service", serviceKey)
 					return ctrl.Result{}, err

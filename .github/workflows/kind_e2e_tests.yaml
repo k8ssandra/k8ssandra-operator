@@ -29,7 +29,7 @@ jobs:
       - id: input_or_default
         name: Set Kind node version from workflow input or default
         env:
-          DEFAULT_KIND_NODE_VERSION: v1.31.6
+          DEFAULT_KIND_NODE_VERSION: v1.36.1
         run: |
           if [[ -z "${{ inputs.kind_node_version }}" ]]; then
             echo "kind_node_version=${{ env.DEFAULT_KIND_NODE_VERSION }}" >> $GITHUB_OUTPUT
@@ -42,20 +42,20 @@ jobs:
     outputs:
       image_tag: ${{ steps.parse_image_tag.outputs.image_tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: github.event_name == 'pull_request'
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: github.event_name != 'pull_request'
       - name: Parse image version
         id: parse_image_tag
         run: echo "image_tag=$(yq eval '.images[0].newTag' config/deployments/default/kustomization.yaml)" >> $GITHUB_OUTPUT
       - name: Set up Docker buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
       - name: Build image
         id: docker_build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           file: Dockerfile
           context: .
@@ -66,7 +66,7 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
       - name: Upload k8ssandra-operator image
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: k8ssandra-operator
           path: /tmp/k8ssandra-operator.tar
@@ -121,23 +121,23 @@ jobs:
         run: |
           sudo rm -rf /usr/local/lib/android
           sudo rm -rf /usr/share/dotnet
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: github.event_name == 'pull_request'
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: github.event_name != 'pull_request'
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version-file: 'go.mod'
           cache: true
       - name: Install Kind
         run: go get sigs.k8s.io/kind
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
       - name: Download k8ssandra-operator image
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: k8ssandra-operator
           path: /tmp
@@ -162,7 +162,7 @@ jobs:
           echo "uploaddir_name=$uploaddir_name" >> $GITHUB_ENV
       - name: Archive k8s logs
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: k8s-logs-${{ env.uploaddir_name }}
           path: ./build/test

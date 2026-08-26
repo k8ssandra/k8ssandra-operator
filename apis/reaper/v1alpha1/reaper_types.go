@@ -439,7 +439,3 @@ type ReaperList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Reaper `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&Reaper{}, &ReaperList{})
-}

@@ -44,13 +44,15 @@ var (
 
 func TestSecretController(t *testing.T) {
 	ctx := testutils.TestSetup(t)
+	reconcilerConfig := config.InitConfig()
+	reconcilerConfig.DefaultDelay = interval
 	ctx, cancel := context.WithCancel(ctx)
 	testEnv = &testutils.MultiClusterTestEnv{NumDataPlanes: 2}
 	err := testEnv.Start(ctx, t, func(mgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error {
 		scheme = mgr.GetScheme()
 		logger = mgr.GetLogger()
 		return (&SecretSyncController{
-			ReconcilerConfig: config.InitConfig(),
+			ReconcilerConfig: reconcilerConfig,
 			ClientCache:      clientCache,
 		}).SetupWithManager(mgr, clusters, logger)
 	}, nil)

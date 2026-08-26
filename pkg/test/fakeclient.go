@@ -18,16 +18,11 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/scheme"
 )
 
 // NewFakeClient gets a fake client loaded up with a scheme that contains all the APIs used in this project.
 func NewFakeClient(initRuntimeObjs ...runtime.Object) (client.Client, error) {
-	schemeBuilder := scheme.Builder{}
-	testScheme, err := schemeBuilder.Build()
-	if err != nil {
-		return nil, err
-	}
+	testScheme := runtime.NewScheme()
 	utilruntime.Must(promapi.AddToScheme(testScheme))
 	utilruntime.Must(cassdcapi.AddToScheme(testScheme))
 	utilruntime.Must(k8ssandraapi.AddToScheme(testScheme))

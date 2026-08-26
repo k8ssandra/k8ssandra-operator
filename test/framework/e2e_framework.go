@@ -16,6 +16,7 @@ import (
 
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
+	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 
@@ -638,7 +639,29 @@ func (f *E2eFramework) WaitForCrdsToBecomeActive() error {
 // ready in the control plane and all data planes.
 func (f *E2eFramework) WaitForK8ssandraOperatorToBeReady(namespace string, timeout, interval time.Duration) error {
 	key := NewClusterKey("", namespace, "k8ssandra-operator")
-	return f.WaitForDeploymentToBeReady(key, timeout, interval)
+	if err := f.WaitForDeploymentToBeReady(key, timeout, interval); err != nil {
+		return err
+	}
+
+	f.logger.Info("Waiting for k8ssandra-operator webhook", "Context", f.ControlPlaneContext, "Namespace", namespace)
+	var lastErr error
+	err := wait.PollUntilContextTimeout(context.Background(), interval, timeout, true, func(ctx context.Context) (bool, error) {
+		probe := &k8ssandraapi.K8ssandraCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "webhook-readiness-probe-",
+				Namespace:    namespace,
+			},
+			Spec: k8ssandraapi.K8ssandraClusterSpec{
+				Cassandra: &k8ssandraapi.CassandraClusterTemplate{},
+			},
+		}
+		lastErr = f.Client.Create(ctx, probe, client.DryRunAll)
+		return lastErr == nil, nil
+	})
+	if err != nil && lastErr != nil {
+		return fmt.Errorf("timed out waiting for k8ssandra-operator webhook: %w", lastErr)
+	}
+	return err
 }
 
 // WaitForCassOperatorToBeReady blocks until the cass-operator deployment is ready in the control

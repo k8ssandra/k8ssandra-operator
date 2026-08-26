@@ -54,9 +54,6 @@ IMG ?= $(IMAGE_TAG_BASE):latest
 # Create Kubernetes objects with embeddedObjectMeta
 CRD_OPTIONS ?= "crd"
 
-# ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.34.x
-
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -97,7 +94,7 @@ NUM_CLUSTERS = 2
 NUM_WORKER_NODES = 4
 
 # The version of the Kind image to run end-to-end tests.
-KIND_NODE_VERSION = v1.34.3
+KIND_NODE_VERSION = v1.36.1
 
 ifeq ($(DEPLOYMENT), )
 	DEPLOY_TARGET =
@@ -129,7 +126,7 @@ help: ## Display this help.
 
 ##@ Development
 
-CASS_OPERATOR_TAG ?= v1.31.0
+CASS_OPERATOR_TAG ?= v1.32.0
 
 .PHONY: manifests
 manifests: controller-gen kustomize ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
@@ -341,10 +338,12 @@ GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
 VECTOR ?= $(LOCALBIN)/bin/vector
 
 ## Tool Versions
-CERT_MANAGER_VERSION ?= v1.18.5
+CERT_MANAGER_VERSION ?= v1.21.0
 KUSTOMIZE_VERSION ?= v5.8.1
-CONTROLLER_TOOLS_VERSION ?= v0.19.0
-GOLINT_VERSION ?= 2.11.4
+CONTROLLER_TOOLS_VERSION ?= v0.21.0
+GOLANGCI_LINT_VERSION ?= 2.13.1
+ENVTEST_VERSION ?= $(shell go list -m -f "{{ .Version }}" sigs.k8s.io/controller-runtime | awk -F'[v.]' '{printf "release-%d.%d", $$2, $$3}')
+ENVTEST_K8S_VERSION ?= $(shell go list -m -f "{{ .Version }}" k8s.io/api | awk -F'[v.]' '{printf "1.%d", $$3}')
 
 cert-manager: ## Install cert-manager to the cluster
 	kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/$(CERT_MANAGER_VERSION)/cert-manager.yaml
@@ -404,7 +403,6 @@ create-clientconfig:
 		  --dest-context kind-k8ssandra-0; \
 	done
 
-KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary. If wrong version is installed, it will be removed before downloading.
 $(KUSTOMIZE): $(LOCALBIN)
@@ -412,32 +410,31 @@ ifeq ($(GITHUB_ACTIONS), true)
 	@echo "Running in GitHub Actions, using the kustomize version provided by the runner."
 	test -e $(LOCALBIN)/kustomize || ln -s $(shell which kustomize) $(LOCALBIN)/kustomize
 else
-	@if test -x $(LOCALBIN)/kustomize && ! $(LOCALBIN)/kustomize version | grep -q $(KUSTOMIZE_VERSION); then \
-		echo "$(LOCALBIN)/kustomize version is not expected $(KUSTOMIZE_VERSION). Removing it before installing."; \
-		rm -rf $(LOCALBIN)/kustomize; \
-	fi
-	test -s $(LOCALBIN)/kustomize || { curl -s $(KUSTOMIZE_INSTALL_SCRIPT) | bash -s -- $(subst v,,$(KUSTOMIZE_VERSION)) $(LOCALBIN); }
+	$(call go-install-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v5,$(KUSTOMIZE_VERSION))
 endif
 
 .PHONY: controller-gen
-controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary. If wrong version is installed, it will be overwritten.
+controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
 $(CONTROLLER_GEN): $(LOCALBIN)
-	test -s $(LOCALBIN)/controller-gen && $(LOCALBIN)/controller-gen --version | grep -q $(CONTROLLER_TOOLS_VERSION) || \
-	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
+	@if test -x $(LOCALBIN)/controller-gen && ! $(LOCALBIN)/controller-gen --version | grep -q $(CONTROLLER_TOOLS_VERSION); then \
+		echo "$(LOCALBIN)/controller-gen version is not expected $(CONTROLLER_TOOLS_VERSION). Removing it before installing."; \
+		rm -rf $(LOCALBIN)/controller-gen ; \
+	fi
+	$(call go-install-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen,$(CONTROLLER_TOOLS_VERSION))
 
 .PHONY: golangci-lint
-golangci-lint:
-	@if test -x $(LOCALBIN)/golangci-lint && ! $(LOCALBIN)/golangci-lint version | grep -q $(GOLINT_VERSION); then \
-		echo "$(LOCALBIN)/golangci-lint version is not expected $(GOLINT_VERSION). Removing it before installing."; \
+golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
+$(GOLANGCI_LINT): $(LOCALBIN)
+	@if test -x $(LOCALBIN)/golangci-lint && ! $(LOCALBIN)/golangci-lint version | grep -q $(GOLANGCI_LINT_VERSION); then \
+		echo "$(LOCALBIN)/golangci-lint version is not expected $(GOLANGCI_LINT_VERSION). Removing it before installing."; \
 		rm -rf $(LOCALBIN)/golangci-lint; \
 	fi
-	test -s $(LOCALBIN)/golangci-lint || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v$(GOLINT_VERSION)
-
+	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/v2/cmd/golangci-lint,v$(GOLANGCI_LINT_VERSION))
 
 .PHONY: envtest
-envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
+envtest: $(ENVTEST) ## Download setup-envtest locally if necessary.
 $(ENVTEST): $(LOCALBIN)
-	test -s $(ENVTEST) || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+	$(call go-install-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest,$(ENVTEST_VERSION))
 
 OS=$(shell go env GOOS)
 ARCH=$(shell go env GOARCH)
@@ -456,6 +453,22 @@ else
 OPSDK = $(shell which operator-sdk)
 endif
 endif
+
+# go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
+# $1 - target path with name of binary
+# $2 - package url which can be installed
+# $3 - specific version of package
+define go-install-tool
+@[ -f "$(1)-$(3)" ] || { \
+set -e; \
+package=$(2)@$(3) ;\
+echo "Downloading $${package}" ;\
+rm -f $(1) || true ;\
+GOBIN=$(LOCALBIN) go install $${package} ;\
+mv $(1) $(1)-$(3) ;\
+} ;\
+ln -sf $(1)-$(3) $(1)
+endef
 
 .PHONY: bundle
 bundle: manifests kustomize ## Generate bundle manifests and metadata, then validate generated files.

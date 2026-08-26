@@ -17,30 +17,67 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         if: github.event_name == 'pull_request'
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: github.event_name != 'pull_request'
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version-file: 'go.mod'
           cache: false
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v8
+        uses: golangci/golangci-lint-action@v9
         with:
           version: latest
           # GHA requires longer timeout
           args: --timeout=10m
           # Optional: show only new issues if it's a pull request. The default value is `false`.
           only-new-issues: ${{ github.event_name == 'pull_request' }}
-          skip-pkg-cache: true
-          skip-build-cache: true
+      - name: govulncheck
+        uses: golang/govulncheck-action@v1
+        with:
+          go-version-file: go.mod
+          go-package: ./...
+          repo-checkout: false
+          cache: false
+          output-format: json
+          output-file: govulncheck.json
+      - name: Enforce fixable govulncheck findings
+        run: |
+          jq -r -s '
+            def reachable:
+              select(.finding != null)
+              | .finding
+              | select(any(.trace[]?; (.function // "") != ""));
+            [.[] | reachable | select((.fixed_version // "") == "")]
+            | unique_by(.osv)[]
+            | "::warning title=govulncheck \(.osv)::Reachable vulnerability has no fix available"
+          ' govulncheck.json
+
+          if jq -e -s '
+            def reachable:
+              select(.finding != null)
+              | .finding
+              | select(any(.trace[]?; (.function // "") != ""));
+            any(.[] | reachable; (.fixed_version // "") != "")
+          ' govulncheck.json >/dev/null; then
+            jq -r -s '
+              def reachable:
+                select(.finding != null)
+                | .finding
+                | select(any(.trace[]?; (.function // "") != ""));
+              [.[] | reachable | select((.fixed_version // "") != "")]
+              | unique_by(.osv)[]
+              | "::error title=govulncheck \(.osv)::Reachable vulnerability is fixed in \(.fixed_version)"
+            ' govulncheck.json
+            exit 1
+          fi
       - name: Run unit and integration tests
         run: |
-          make envtest test
+          make test
       - name: Check that the build did not generate additional git changes
         run: |
           if [ -n "$(git status --porcelain)" ]; then
@@ -67,22 +104,22 @@ jobs:
       #  uses: mxschmitt/action-tmate@v3
       #  timeout-minutes: 30
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v7
   build_image:
     name: Build and push image to Docker Hub
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
     steps:
       - name: Check out code into the Go module directory
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v4
         with:
           platforms: 'arm64,arm'
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_PASSWORD }}
@@ -104,7 +141,7 @@ jobs:
           echo "TAGS=k8ssandra/k8ssandra-operator:${{ steps.vars.outputs.sha_short }},k8ssandra/k8ssandra-operator:${release_prefix}-latest" >> $GITHUB_ENV
       - name: Build and push
         id: docker_build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           file: Dockerfile
           context: .

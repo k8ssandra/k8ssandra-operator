@@ -73,7 +73,7 @@ func (r *ReaperReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			return ctrl.Result{}, nil
 		}
 		logger.Info("Failed to fetch Reaper resource")
-		return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+		return ctrl.Result{}, err
 	}
 
 	actualReaper = actualReaper.DeepCopy()
@@ -176,7 +176,7 @@ func (r *ReaperReconciler) reconcileDeployment(
 	authVars, err := r.collectAuthVars(ctx, actualReaper, logger)
 	if err != nil {
 		logger.Error(err, "Failed to collect Reaper auth variables")
-		return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+		return ctrl.Result{}, err
 	}
 	logger.Info("Collected Reaper auth variables", "authVars", authVars)
 
@@ -185,13 +185,13 @@ func (r *ReaperReconciler) reconcileDeployment(
 
 	if actualReaper.Spec.ClientEncryptionStores != nil && !actualReaper.Spec.UseExternalSecrets() {
 		if password, err := cassandra.ReadEncryptionStorePassword(ctx, actualReaper.Namespace, r.Client, actualReaper.Spec.ClientEncryptionStores, encryption.StoreNameKeystore); err != nil {
-			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+			return ctrl.Result{}, err
 		} else {
 			keystorePassword = ptr.To(password)
 		}
 
 		if password, err := cassandra.ReadEncryptionStorePassword(ctx, actualReaper.Namespace, r.Client, actualReaper.Spec.ClientEncryptionStores, encryption.StoreNameTruststore); err != nil {
-			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+			return ctrl.Result{}, err
 		} else {
 			truststorePassword = ptr.To(password)
 		}
@@ -223,22 +223,22 @@ func (r *ReaperReconciler) reconcileDeployment(
 		if errors.IsNotFound(err) {
 			if err = controllerutil.SetControllerReference(actualReaper, desiredDeployment, r.Scheme); err != nil {
 				logger.Error(err, "Failed to set owner on Reaper Deployment")
-				return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+				return ctrl.Result{}, err
 			} else if err = r.Create(ctx, desiredDeployment); err != nil {
 				if errors.IsAlreadyExists(err) {
 					// the read from the local cache didn't catch that the resource was created
 					// already; simply requeue until the cache is up-to-date
-					return ctrl.Result{Requeue: true}, nil
+					return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 				} else {
 					logger.Error(err, "Failed to create Reaper Deployment")
-					return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+					return ctrl.Result{}, err
 				}
 			}
 			logger.Info("Reaper Deployment created successfully")
 			return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 		} else {
 			logger.Error(err, "Failed to get Reaper Deployment")
-			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+			return ctrl.Result{}, err
 		}
 	}
 
@@ -295,10 +295,10 @@ func (r *ReaperReconciler) reconcileDeployment(
 		actualDeployment.SetResourceVersion(resourceVersion)
 		if err := controllerutil.SetControllerReference(actualReaper, actualDeployment, r.Scheme); err != nil {
 			logger.Error(err, "Failed to set controller reference on updated Reaper Deployment")
-			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+			return ctrl.Result{}, err
 		} else if err := r.Update(ctx, actualDeployment); err != nil {
 			logger.Error(err, "Failed to update Reaper Deployment")
-			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+			return ctrl.Result{}, err
 		} else {
 			logger.Info("Reaper Deployment updated successfully")
 			return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
@@ -349,24 +349,24 @@ func (r *ReaperReconciler) reconcileService(
 			// create the service
 			if err = controllerutil.SetControllerReference(actualReaper, desiredService, r.Scheme); err != nil {
 				logger.Error(err, "Failed to set controller reference on Reaper Service")
-				return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+				return ctrl.Result{}, err
 			}
 			logger.Info("Creating Reaper service")
 			if err = r.Create(ctx, desiredService); err != nil {
 				if errors.IsAlreadyExists(err) {
 					// the read from the local cache didn't catch that the resource was created
 					// already; simply requeue until the cache is up-to-date
-					return ctrl.Result{Requeue: true}, nil
+					return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 				} else {
 					logger.Error(err, "Failed to create Reaper Service")
-					return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+					return ctrl.Result{}, err
 				}
 			}
 			logger.Info("Reaper Service created successfully")
 			return ctrl.Result{}, nil
 		} else {
 			logger.Error(err, "Failed to get Reaper Service")
-			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+			return ctrl.Result{}, err
 		}
 	}
 	if !annotations.CompareHashAnnotations(actualService, desiredService) {
@@ -378,10 +378,10 @@ func (r *ReaperReconciler) reconcileService(
 		updatedService.Spec.ClusterIPs = actualService.Spec.ClusterIPs
 		if err := controllerutil.SetControllerReference(actualReaper, updatedService, r.Scheme); err != nil {
 			logger.Error(err, "Failed to set controller reference on updated Reaper Service")
-			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+			return ctrl.Result{}, err
 		} else if err := r.Update(ctx, updatedService); err != nil {
 			logger.Error(err, "Failed to update Reaper Service")
-			return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+			return ctrl.Result{}, err
 		} else {
 			logger.Info("Reaper Service updated successfully")
 			return ctrl.Result{}, nil
@@ -396,7 +396,7 @@ func (r *ReaperReconciler) configureReaper(ctx context.Context, actualReaper *re
 	manager.SetK8sClient(r)
 	// Get the Reaper UI secret username and password values if auth is enabled
 	if username, password, err := manager.GetUiCredentials(ctx, actualReaper.Spec.UiUserSecretRef, actualReaper.Namespace); err != nil {
-		return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+		return ctrl.Result{}, err
 	} else {
 		if err := manager.Connect(ctx, actualReaper, username, password); err != nil {
 			logger.Error(err, "failed to connect to reaper")
@@ -409,7 +409,7 @@ func (r *ReaperReconciler) configureReaper(ctx context.Context, actualReaper *re
 			logger.Info("registering cluster with reaper")
 			if err = manager.AddClusterToReaper(ctx, actualDc); err != nil {
 				logger.Error(err, "failed to register cluster with reaper")
-				return ctrl.Result{RequeueAfter: r.DefaultDelay}, err
+				return ctrl.Result{}, err
 			}
 		}
 	}
