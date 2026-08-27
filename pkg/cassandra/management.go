@@ -136,32 +136,22 @@ func (r *defaultManagementApiFacade) CreateKeyspaceIfNotExists(
 func (r *defaultManagementApiFacade) fetchDatacenterPods() ([]corev1.Pod, error) {
 	podList := &corev1.PodList{}
 	labels := client.MatchingLabels(r.dc.GetDatacenterLabels())
-	if err := r.k8sClient.List(r.ctx, podList, labels); err != nil {
+	if err := r.k8sClient.List(r.ctx, podList, client.InNamespace(r.dc.Namespace), labels); err != nil {
 		return nil, err
 	} else {
-		pods := r.filterPods(podList.Items, func(pod corev1.Pod) bool {
+		pods := make([]corev1.Pod, 0)
+		for _, pod := range podList.Items {
 			status := r.getCassandraContainerStatus(pod)
-			return status != nil && status.Ready
-		})
+			if status != nil && status.Ready {
+				pods = append(pods, pod)
+			}
+		}
 		if len(pods) == 0 {
 			err = fmt.Errorf("no pods in READY state found in datacenter %v", r.dc.Name)
 			return nil, err
 		}
 		return pods, nil
 	}
-}
-
-func (r *defaultManagementApiFacade) filterPods(pods []corev1.Pod, filter func(corev1.Pod) bool) []corev1.Pod {
-	if len(pods) == 0 {
-		return pods
-	}
-	filtered := make([]corev1.Pod, 0)
-	for _, pod := range pods {
-		if filter(pod) {
-			filtered = append(pods, pod)
-		}
-	}
-	return filtered
 }
 
 func (r *defaultManagementApiFacade) createReplicationConfig(replication map[string]int) []map[string]string {

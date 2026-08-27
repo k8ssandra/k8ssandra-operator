@@ -71,7 +71,7 @@ func (r *K8ssandraClusterReconciler) loadAllPodsEndpoints(
 	endpoints := &discoveryv1.EndpointSliceList{}
 	searchLabels := dc.GetDatacenterLabels()
 	searchLabels["kubernetes.io/service-name"] = dc.GetAllPodsServiceName()
-	if err := remoteClient.List(ctx, endpoints, client.MatchingLabels(searchLabels)); err != nil {
+	if err := remoteClient.List(ctx, endpoints, client.InNamespace(dc.Namespace), client.MatchingLabels(searchLabels)); err != nil {
 		if errors.IsNotFound(err) {
 			return nil, nil
 		}
