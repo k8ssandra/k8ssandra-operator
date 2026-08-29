@@ -9,8 +9,6 @@ rules:
   - ""
   resources:
   - configmaps
-  - endpoints
-  - endpoints/restricted
   - secrets
   - services
   verbs:
@@ -21,6 +19,15 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  - endpoints/restricted
+  verbs:
+  - delete
+  - get
+  - list
 - apiGroups:
   - ""
   resources:
@@ -54,12 +61,9 @@ rules:
   resources:
   - cronjobs
   verbs:
-  - create
   - delete
   - get
   - list
-  - update
-  - watch
 - apiGroups:
   - cassandra.datastax.com
   resources:
