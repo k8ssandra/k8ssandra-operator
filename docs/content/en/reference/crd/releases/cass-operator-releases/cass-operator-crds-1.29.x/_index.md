@@ -1,9 +1,9 @@
 ---
-title: "cass-operator CRDs latest build"
-linkTitle: "cass-operator CRDs latest build"
+title: "cass-operator CRDs v1.29.x"
+linkTitle: "cass-operator CRDs v1.29.x"
 weight: 5
 description: >
-  Configuration reference for the CRDs used with cass-operator latest build.  
+  Configuration reference for the CRDs used with cass-operator v1.29.x.  
 ---
 
 Packages:
@@ -286,14 +286,6 @@ roll out.<br/>
         <td>object</td>
         <td>
           Config for the Management API certificates<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>maxUnavailable</b></td>
-        <td>int or string</td>
-        <td>
-          MaxUnavailable sets the maximum number of rack pods that can be modified simultaneously during an update. This can at most target a single rack, so values higher than rack size will have no effect. Requires Kubernetes 1.35 or higher. Setting percentage will
-calculate against single rack's percentage of pods, not the entire datacenter.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -603,7 +595,7 @@ There are three important differences between dataSource and dataSourceRef:
         <td>object</td>
         <td>
           resources represents the minimum resources the volume should have.
-Users are allowed to specify resource requirements
+If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
 that are lower than previous value but must still be higher than capacity recorded in the
 status field of the claim.
 More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources<br/>
@@ -789,7 +781,7 @@ Note that when a namespace is specified, a gateway.networking.k8s.io/ReferenceGr
 
 
 resources represents the minimum resources the volume should have.
-Users are allowed to specify resource requirements
+If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
 that are lower than previous value but must still be higher than capacity recorded in the
 status field of the claim.
 More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
@@ -2231,7 +2223,7 @@ There are three important differences between dataSource and dataSourceRef:
         <td>object</td>
         <td>
           resources represents the minimum resources the volume should have.
-Users are allowed to specify resource requirements
+If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
 that are lower than previous value but must still be higher than capacity recorded in the
 status field of the claim.
 More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources<br/>
@@ -2417,7 +2409,7 @@ Note that when a namespace is specified, a gateway.networking.k8s.io/ReferenceGr
 
 
 resources represents the minimum resources the volume should have.
-Users are allowed to specify resource requirements
+If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
 that are lower than previous value but must still be higher than capacity recorded in the
 status field of the claim.
 More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
@@ -4064,25 +4056,6 @@ longer than 24 hours.<br/>
             <i>Format</i>: int32<br/>
         </td>
         <td>false</td>
-      </tr><tr>
-        <td><b>userAnnotations</b></td>
-        <td>map[string]string</td>
-        <td>
-          userAnnotations allow pod authors to pass additional information to
-the signer implementation.  Kubernetes does not restrict or validate this
-metadata in any way.
-
-These values are copied verbatim into the `spec.unverifiedUserAnnotations` field of
-the PodCertificateRequest objects that Kubelet creates.
-
-Entries are subject to the same validation as object metadata annotations,
-with the addition that all keys must be domain-prefixed. No restrictions
-are placed on values, except an overall size limitation on the entire field.
-
-Signers should document the keys and values they support. Signers should
-deny requests that contain keys they do not recognize.<br/>
-        </td>
-        <td>false</td>
       </tr></tbody>
 </table>
 
@@ -4923,7 +4896,7 @@ There are three important differences between dataSource and dataSourceRef:
         <td>object</td>
         <td>
           resources represents the minimum resources the volume should have.
-Users are allowed to specify resource requirements
+If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
 that are lower than previous value but must still be higher than capacity recorded in the
 status field of the claim.
 More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources<br/>
@@ -5109,7 +5082,7 @@ Note that when a namespace is specified, a gateway.networking.k8s.io/ReferenceGr
 
 
 resources represents the minimum resources the volume should have.
-Users are allowed to specify resource requirements
+If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
 that are lower than previous value but must still be higher than capacity recorded in the
 status field of the claim.
 More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
@@ -6324,8 +6297,8 @@ and reserved before the Pod is allowed to start. The resources
 will be made available to those containers which consume them
 by name.
 
-This is a stable field but requires that the
-DynamicResourceAllocation feature gate is enabled.
+This is an alpha field and requires enabling the
+DynamicResourceAllocation feature gate.
 
 This field is immutable.<br/>
         </td>
@@ -6479,19 +6452,6 @@ All topologySpreadConstraints are ANDed.<br/>
 More info: https://kubernetes.io/docs/concepts/storage/volumes<br/>
         </td>
         <td>false</td>
-      </tr><tr>
-        <td><b><a href="#cassandradatacenterspecpodtemplatespecspecworkloadref">workloadRef</a></b></td>
-        <td>object</td>
-        <td>
-          WorkloadRef provides a reference to the Workload object that this Pod belongs to.
-This field is used by the scheduler to identify the PodGroup and apply the
-correct group scheduling policies. The Workload object referenced
-by this field may not exist at the time the Pod is created.
-This field is immutable, but a Workload object with the same name
-may be recreated with different policies. Doing this during pod scheduling
-may result in the placement not conforming to the expected policies.<br/>
-        </td>
-        <td>false</td>
       </tr></tbody>
 </table>
 
@@ -6635,8 +6595,7 @@ More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#cont
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspeccontainersindexresizepolicyindex">resizePolicy</a></b></td>
         <td>[]object</td>
         <td>
-          Resources resize policy for the container.
-This field cannot be set on ephemeral containers.<br/>
+          Resources resize policy for the container.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -14497,8 +14456,7 @@ More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#cont
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecinitcontainersindexresizepolicyindex">resizePolicy</a></b></td>
         <td>[]object</td>
         <td>
-          Resources resize policy for the container.
-This field cannot be set on ephemeral containers.<br/>
+          Resources resize policy for the container.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -18163,10 +18121,9 @@ If the key is empty, operator must be Exists; this combination means to match al
         <td>string</td>
         <td>
           Operator represents a key's relationship to the value.
-Valid operators are Exists, Equal, Lt, and Gt. Defaults to Equal.
+Valid operators are Exists and Equal. Defaults to Equal.
 Exists is equivalent to wildcard for value, so that a pod can
-tolerate all taints of a particular category.
-Lt and Gt perform numeric comparisons (requires feature gate TaintTolerationComparisonOperators).<br/>
+tolerate all taints of a particular category.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -19772,7 +19729,7 @@ There are three important differences between dataSource and dataSourceRef:
         <td>object</td>
         <td>
           resources represents the minimum resources the volume should have.
-Users are allowed to specify resource requirements
+If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
 that are lower than previous value but must still be higher than capacity recorded in the
 status field of the claim.
 More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources<br/>
@@ -19958,7 +19915,7 @@ Note that when a namespace is specified, a gateway.networking.k8s.io/ReferenceGr
 
 
 resources represents the minimum resources the volume should have.
-Users are allowed to specify resource requirements
+If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
 that are lower than previous value but must still be higher than capacity recorded in the
 status field of the claim.
 More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
@@ -21605,25 +21562,6 @@ longer than 24 hours.<br/>
             <i>Format</i>: int32<br/>
         </td>
         <td>false</td>
-      </tr><tr>
-        <td><b>userAnnotations</b></td>
-        <td>map[string]string</td>
-        <td>
-          userAnnotations allow pod authors to pass additional information to
-the signer implementation.  Kubernetes does not restrict or validate this
-metadata in any way.
-
-These values are copied verbatim into the `spec.unverifiedUserAnnotations` field of
-the PodCertificateRequest objects that Kubelet creates.
-
-Entries are subject to the same validation as object metadata annotations,
-with the addition that all keys must be domain-prefixed. No restrictions
-are placed on values, except an overall size limitation on the entire field.
-
-Signers should document the keys and values they support. Signers should
-deny requests that contain keys they do not recognize.<br/>
-        </td>
-        <td>false</td>
       </tr></tbody>
 </table>
 
@@ -22385,63 +22323,6 @@ Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.<br/>
         <td>string</td>
         <td>
           storagePolicyName is the storage Policy Based Management (SPBM) profile name.<br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-#### CassandraDatacenter.spec.podTemplateSpec.spec.workloadRef
-<sup><sup>[↩ Parent](#cassandradatacenterspecpodtemplatespecspec)</sup></sup>
-
-
-
-WorkloadRef provides a reference to the Workload object that this Pod belongs to.
-This field is used by the scheduler to identify the PodGroup and apply the
-correct group scheduling policies. The Workload object referenced
-by this field may not exist at the time the Pod is created.
-This field is immutable, but a Workload object with the same name
-may be recreated with different policies. Doing this during pod scheduling
-may result in the placement not conforming to the expected policies.
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>name</b></td>
-        <td>string</td>
-        <td>
-          Name defines the name of the Workload object this Pod belongs to.
-Workload must be in the same namespace as the Pod.
-If it doesn't match any existing Workload, the Pod will remain unschedulable
-until a Workload object is created and observed by the kube-scheduler.
-It must be a DNS subdomain.<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
-        <td><b>podGroup</b></td>
-        <td>string</td>
-        <td>
-          PodGroup is the name of the PodGroup within the Workload that this Pod
-belongs to. If it doesn't match any existing PodGroup within the Workload,
-the Pod will remain unschedulable until the Workload object is recreated
-and observed by the kube-scheduler. It must be a DNS label.<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
-        <td><b>podGroupReplicaKey</b></td>
-        <td>string</td>
-        <td>
-          PodGroupReplicaKey specifies the replica key of the PodGroup to which this
-Pod belongs. It is used to distinguish pods belonging to different replicas
-of the same pod group. The pod group policy is applied separately to each replica.
-When set, it must be a DNS label.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -24335,10 +24216,9 @@ If the key is empty, operator must be Exists; this combination means to match al
         <td>string</td>
         <td>
           Operator represents a key's relationship to the value.
-Valid operators are Exists, Equal, Lt, and Gt. Defaults to Equal.
+Valid operators are Exists and Equal. Defaults to Equal.
 Exists is equivalent to wildcard for value, so that a pod can
-tolerate all taints of a particular category.
-Lt and Gt perform numeric comparisons (requires feature gate TaintTolerationComparisonOperators).<br/>
+tolerate all taints of a particular category.<br/>
         </td>
         <td>false</td>
       </tr><tr>
