@@ -28882,6 +28882,14 @@ Setting it to an empty list will result in all metrics being extracted.<br/>
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>config</b></td>
+        <td>string</td>
+        <td>
+          Config is raw TOML merged into the generated Vector configuration.
+This can be used to set global Vector options or anything that does not fit the components model.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>enabled</b></td>
         <td>boolean</td>
         <td>
@@ -30007,6 +30015,14 @@ Setting it to an empty list will result in all metrics being extracted.<br/>
         <td>object</td>
         <td>
           <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>config</b></td>
+        <td>string</td>
+        <td>
+          Config is raw TOML merged into the generated Vector configuration.
+This can be used to set global Vector options or anything that does not fit the components model.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -35267,6 +35283,14 @@ Setting it to an empty list will result in all metrics being extracted.<br/>
         <td>object</td>
         <td>
           <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>config</b></td>
+        <td>string</td>
+        <td>
+          Config is raw TOML merged into the generated Vector configuration.
+This can be used to set global Vector options or anything that does not fit the components model.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -54363,6 +54387,14 @@ Setting it to an empty list will result in all metrics being extracted.<br/>
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>config</b></td>
+        <td>string</td>
+        <td>
+          Config is raw TOML merged into the generated Vector configuration.
+This can be used to set global Vector options or anything that does not fit the components model.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>enabled</b></td>
         <td>boolean</td>
         <td>
@@ -62472,6 +62504,14 @@ Setting it to an empty list will result in all metrics being extracted.<br/>
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>config</b></td>
+        <td>string</td>
+        <td>
+          Config is raw TOML merged into the generated Vector configuration.
+This can be used to set global Vector options or anything that does not fit the components model.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>enabled</b></td>
         <td>boolean</td>
         <td>
@@ -66067,6 +66107,14 @@ Setting it to an empty list will result in all metrics being extracted.<br/>
         <td>object</td>
         <td>
           <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>config</b></td>
+        <td>string</td>
+        <td>
+          Config is raw TOML merged into the generated Vector configuration.
+This can be used to set global Vector options or anything that does not fit the components model.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -93286,6 +93334,14 @@ Setting it to an empty list will result in all metrics being extracted.<br/>
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>config</b></td>
+        <td>string</td>
+        <td>
+          Config is raw TOML merged into the generated Vector configuration.
+This can be used to set global Vector options or anything that does not fit the components model.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>enabled</b></td>
         <td>boolean</td>
         <td>
@@ -100316,6 +100372,14 @@ Setting it to an empty list will result in all metrics being extracted.<br/>
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>config</b></td>
+        <td>string</td>
+        <td>
+          Config is raw TOML merged into the generated Vector configuration.
+This can be used to set global Vector options or anything that does not fit the components model.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>enabled</b></td>
         <td>boolean</td>
         <td>
@@ -101441,6 +101505,14 @@ Setting it to an empty list will result in all metrics being extracted.<br/>
         <td>object</td>
         <td>
           <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>config</b></td>
+        <td>string</td>
+        <td>
+          Config is raw TOML merged into the generated Vector configuration.
+This can be used to set global Vector options or anything that does not fit the components model.<br/>
         </td>
         <td>false</td>
       </tr><tr>
