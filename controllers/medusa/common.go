@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strconv"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
@@ -25,7 +26,7 @@ func newClient(ctx context.Context, c client.Client, cassdc *cassdcapi.Cassandra
 		grpcPort = explicitPort
 	}
 
-	address := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(grpcPort))
+	address := net.JoinHostPort(pod.Status.PodIP, strconv.Itoa(grpcPort))
 
 	if clientSecretName != "" {
 		secretKey := types.NamespacedName{
