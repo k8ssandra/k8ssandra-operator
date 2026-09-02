@@ -1326,6 +1326,46 @@ func TestCoalesce(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "Set termination grace period at cluster level",
+			clusterTemplate: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					TerminationGracePeriodSeconds: ptr.To(int64(300)),
+				},
+			},
+			dcTemplate: &api.CassandraDatacenterTemplate{},
+			want: &DatacenterConfig{
+				McacEnabled: false,
+				PodTemplateSpec: corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers:                    []corev1.Container{{Name: "cassandra"}},
+						TerminationGracePeriodSeconds: ptr.To(int64(300)),
+					},
+				},
+			},
+		},
+		{
+			name: "Override termination grace period",
+			clusterTemplate: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					TerminationGracePeriodSeconds: ptr.To(int64(300)),
+				},
+			},
+			dcTemplate: &api.CassandraDatacenterTemplate{
+				DatacenterOptions: api.DatacenterOptions{
+					TerminationGracePeriodSeconds: ptr.To(int64(600)),
+				},
+			},
+			want: &DatacenterConfig{
+				McacEnabled: false,
+				PodTemplateSpec: corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers:                    []corev1.Container{{Name: "cassandra"}},
+						TerminationGracePeriodSeconds: ptr.To(int64(600)),
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range tests {
@@ -1431,6 +1471,17 @@ func TestNewDatacenter_PodPriorityClassName(t *testing.T) {
 	)
 	assert.NoError(t, err)
 	assert.Equal(t, "mock-priority", dc.Spec.PodTemplateSpec.Spec.PriorityClassName)
+}
+
+func TestNewDatacenter_TerminationGracePeriodSeconds(t *testing.T) {
+	template := GetDatacenterConfig()
+	template.PodTemplateSpec.Spec.TerminationGracePeriodSeconds = ptr.To(int64(300))
+	dc, err := NewDatacenter(
+		types.NamespacedName{Name: "testdc", Namespace: "test-namespace"},
+		&template,
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, ptr.To(int64(300)), dc.Spec.PodTemplateSpec.Spec.TerminationGracePeriodSeconds)
 }
 
 // TestValidateCoalesced_Fail_NoStorageConfig tests that NewDatacenter fails when no storage config is provided.

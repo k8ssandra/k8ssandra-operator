@@ -284,6 +284,11 @@ func (in *DatacenterOptions) DeepCopyInto(out *DatacenterOptions) {
 		*out = new(v1.PodSecurityContext)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.TerminationGracePeriodSeconds != nil {
+		in, out := &in.TerminationGracePeriodSeconds, &out.TerminationGracePeriodSeconds
+		*out = new(int64)
+		**out = **in
+	}
 	if in.ManagementApiAuth != nil {
 		in, out := &in.ManagementApiAuth, &out.ManagementApiAuth
 		*out = new(v1beta1.ManagementApiAuthConfig)
