@@ -9,7 +9,7 @@ images:
     name: "system-logger"
     tag: "latest"
   config-builder:
-    repository: "datastax"
+    repository: "ghcr.io/datastax/cass-config-builder"
     name: "cass-config-builder"
     tag: "1.0-ubi"
   k8ssandra-client: 
