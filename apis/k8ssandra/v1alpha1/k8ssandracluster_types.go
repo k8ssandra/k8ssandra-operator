@@ -447,6 +447,13 @@ type DatacenterOptions struct {
 	// +optional
 	PodPriorityClassName string `json:"podPriorityClassName,omitempty"`
 
+	// TerminationGracePeriodSeconds defines how long the Cassandra pods have to shut down gracefully, in seconds.
+	// The pre-stop hook drains the Cassandra node within this period, so a value that is too low results in the node
+	// being killed mid-drain. When unset, cass-operator applies its own default of 120 seconds.
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	TerminationGracePeriodSeconds *int64 `json:"terminationGracePeriodSeconds,omitempty"`
+
 	// ManagementApiAuth defines the authentication settings for the management API in the Cassandra pods.
 	// +optional
 	ManagementApiAuth *cassdcapi.ManagementApiAuthConfig `json:"managementApiAuth,omitempty"`

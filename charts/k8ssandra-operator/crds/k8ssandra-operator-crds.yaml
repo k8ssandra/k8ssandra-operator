@@ -18363,6 +18363,14 @@ spec:
                                   type: string
                               type: object
                           type: object
+                        terminationGracePeriodSeconds:
+                          description: |-
+                            TerminationGracePeriodSeconds defines how long the Cassandra pods have to shut down gracefully, in seconds.
+                            The pre-stop hook drains the Cassandra node within this period, so a value that is too low results in the node
+                            being killed mid-drain. When unset, cass-operator applies its own default of 120 seconds.
+                          format: int64
+                          minimum: 0
+                          type: integer
                         tolerations:
                           description: Tolerations applied to every Cassandra pod.
                           items:
@@ -28299,6 +28307,14 @@ spec:
                             type: string
                         type: object
                     type: object
+                  terminationGracePeriodSeconds:
+                    description: |-
+                      TerminationGracePeriodSeconds defines how long the Cassandra pods have to shut down gracefully, in seconds.
+                      The pre-stop hook drains the Cassandra node within this period, so a value that is too low results in the node
+                      being killed mid-drain. When unset, cass-operator applies its own default of 120 seconds.
+                    format: int64
+                    minimum: 0
+                    type: integer
                   tolerations:
                     description: Tolerations applied to every Cassandra pod.
                     items:
