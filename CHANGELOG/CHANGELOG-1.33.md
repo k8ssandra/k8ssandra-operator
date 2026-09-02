@@ -22,3 +22,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [BUGFIX] [#1773](https://github.com/k8ssandra/k8ssandra-operator/issues/1773) Medusa Configurations aren't replicated to remote contexts
 * [BUGFIX] [#1415](https://github.com/k8ssandra/k8ssandra-operator/issues/1415) Trigger k8ssandrcluster reconcile on referenced MedusaConfiguration update
 * [BUGFIX] [#1771](https://github.com/k8ssandra/k8ssandra-operator/issues/1771) ContactPoints services was created by polling the potential pods using dc name only, without namespace filtering
+* [BUGFIX] [#1778](https://github.com/k8ssandra/k8ssandra-operator/issues/1778) Add ServerVersion check for Create also in the webhook to prevent invalid K8ssandraCluster creation

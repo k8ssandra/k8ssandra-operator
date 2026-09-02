@@ -171,6 +171,7 @@ func TestWebhook(t *testing.T) {
 	t.Run("ContextValidation", testContextValidation)
 	t.Run("ReaperKeyspaceValidation", testReaperKeyspaceValidation)
 	t.Run("StorageConfigValidation", testStorageConfigValidation)
+	t.Run("ServerVersionValidation", testServerVersionValidation)
 	t.Run("NumTokensValidation", testNumTokens)
 	t.Run("NumTokensValidationInUpdate", testNumTokensInUpdate)
 	t.Run("StsNameTooLong", testStsNameTooLong)
@@ -265,6 +266,26 @@ func testStorageConfigValidation(t *testing.T) {
 
 	cluster.Spec.Cassandra.Datacenters[1].StorageConfig = &v1beta1.StorageConfig{}
 	err = k8sClient.Update(ctx, cluster)
+	required.NoError(err)
+}
+
+func testServerVersionValidation(t *testing.T) {
+	required := require.New(t)
+	createNamespace(required, "server-version-namespace")
+
+	cluster := createMinimalClusterObj("server-version-test", "server-version-namespace")
+	cluster.Spec.Cassandra.ServerVersion = ""
+	err := k8sClient.Create(ctx, cluster)
+	required.EqualError(err, "admission webhook \"vk8ssandracluster.kb.io\" denied the request: serverVersion should be set globally or at DC level")
+
+	cluster = createMinimalClusterObj("server-version-global", "server-version-namespace")
+	err = k8sClient.Create(ctx, cluster)
+	required.NoError(err)
+
+	cluster = createMinimalClusterObj("server-version-dc", "server-version-namespace")
+	cluster.Spec.Cassandra.ServerVersion = ""
+	cluster.Spec.Cassandra.Datacenters[0].ServerVersion = "5.0.9"
+	err = k8sClient.Create(ctx, cluster)
 	required.NoError(err)
 }
 
@@ -434,6 +455,7 @@ func createMinimalClusterObj(name, namespace string) *K8ssandraCluster {
 		Spec: K8ssandraClusterSpec{
 			Cassandra: &CassandraClusterTemplate{
 				DatacenterOptions: DatacenterOptions{
+					ServerVersion: "5.0.9",
 					StorageConfig: &v1beta1.StorageConfig{},
 				},
 				Datacenters: []CassandraDatacenterTemplate{
