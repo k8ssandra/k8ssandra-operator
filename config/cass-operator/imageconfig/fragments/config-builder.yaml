@@ -1,0 +1,5 @@
+images:
+  config-builder:
+    repository: "ghcr.io/datastax/cass-config-builder"
+    name: "cass-config-builder"
+    tag: "1.0-ubi"
