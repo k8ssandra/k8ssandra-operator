@@ -19,6 +19,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [CHANGE] Bump k8ssandra-client to v0.8.13, medusa to v0.29.0 and reaper to v4.2.4
 * [CHANGE] Bump cassandra-medusa to v0.30.1
 * [CHANGE] Bump cassandra-reaper to v5.0.1
+* [CHANGE] Bump cass-operator chart to 0.67.1 (bumps k8ssandra-client & cass-config-builder)
 * [ENHANCEMENT] [#1760](https://github.com/k8ssandra/k8ssandra-operator/issues/1760) Allow setting Medusa's chunk size
 * [BUGFIX] [#1773](https://github.com/k8ssandra/k8ssandra-operator/issues/1773) Medusa Configurations aren't replicated to remote contexts
 * [BUGFIX] [#1415](https://github.com/k8ssandra/k8ssandra-operator/issues/1415) Trigger k8ssandrcluster reconcile on referenced MedusaConfiguration update
