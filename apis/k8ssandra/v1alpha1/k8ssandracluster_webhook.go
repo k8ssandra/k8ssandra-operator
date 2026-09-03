@@ -40,6 +40,7 @@ import (
 var (
 	clientCache                 *clientcache.ClientCache
 	ErrNumTokens                = fmt.Errorf("num_tokens value can't be changed")
+	ErrNoServerVersion          = fmt.Errorf("serverVersion should be set globally or at DC level")
 	ErrReaperKeyspace           = fmt.Errorf("reaper keyspace can not be changed")
 	ErrNoStorageConfig          = fmt.Errorf("storageConfig must be defined at cluster level or dc level")
 	ErrNoResourcesSet           = fmt.Errorf("softPodAntiAffinity requires Resources to be set")
@@ -85,7 +86,21 @@ type K8ssandraClusterCustomValidator struct {
 func (v *K8ssandraClusterCustomValidator) ValidateCreate(ctx context.Context, obj *K8ssandraCluster) (admission.Warnings, error) {
 	webhookLog.Info("validate K8ssandraCluster create", "K8ssandraCluster", obj.Name)
 
-	return ValidateDeprecatedFieldUsage(obj), validateK8ssandraCluster(obj)
+	warnings := ValidateDeprecatedFieldUsage(obj)
+	if err := validateK8ssandraCluster(obj); err != nil {
+		return warnings, err
+	}
+
+	return warnings, validateServerVersion(obj.Spec.Cassandra)
+}
+
+func validateServerVersion(cassandra *CassandraClusterTemplate) error {
+	for _, dc := range cassandra.Datacenters {
+		if dc.ServerVersion == "" && cassandra.ServerVersion == "" {
+			return ErrNoServerVersion
+		}
+	}
+	return nil
 }
 
 func validateK8ssandraCluster(r *K8ssandraCluster) error {
@@ -264,7 +279,7 @@ func numTokensPerDc(cassandra *CassandraClusterTemplate) (map[string]interface{}
 				versionString = cassandra.ServerVersion
 			}
 			if versionString == "" {
-				return nil, errors.New("serverVersion should be set globally or at DC level")
+				return nil, ErrNoServerVersion
 			}
 			version, err := semver.NewVersion(versionString)
 			if err != nil {
