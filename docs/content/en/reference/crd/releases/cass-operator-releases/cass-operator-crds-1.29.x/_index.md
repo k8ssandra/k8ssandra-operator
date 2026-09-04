@@ -1,9 +1,9 @@
 ---
-title: "cass-operator CRDs latest build"
-linkTitle: "cass-operator CRDs latest build"
+title: "cass-operator CRDs v1.29.x"
+linkTitle: "cass-operator CRDs v1.29.x"
 weight: 5
 description: >
-  Configuration reference for the CRDs used with cass-operator latest build.  
+  Configuration reference for the CRDs used with cass-operator v1.29.x.  
 ---
 
 Packages:
@@ -286,14 +286,6 @@ roll out.<br/>
         <td>object</td>
         <td>
           Config for the Management API certificates<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>maxUnavailable</b></td>
-        <td>int or string</td>
-        <td>
-          MaxUnavailable sets the maximum number of rack pods that can be modified simultaneously during an update. This can at most target a single rack, so values higher than rack size will have no effect. Requires Kubernetes 1.35 or higher. Setting percentage will
-calculate against single rack's percentage of pods, not the entire datacenter.<br/>
         </td>
         <td>false</td>
       </tr><tr>
