@@ -25,7 +25,6 @@ import (
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
-	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -80,12 +79,6 @@ func TestAPISchemesRegisterKnownTypes(t *testing.T) {
 			groupVersion: replicationapi.GroupVersion,
 			addToScheme:  replicationapi.AddToScheme,
 			objects:      []runtime.Object{&replicationapi.ReplicatedSecret{}, &replicationapi.ReplicatedSecretList{}},
-		},
-		{
-			name:         "stargate",
-			groupVersion: stargateapi.GroupVersion,
-			addToScheme:  stargateapi.AddToScheme,
-			objects:      []runtime.Object{&stargateapi.Stargate{}, &stargateapi.StargateList{}},
 		},
 	}
 

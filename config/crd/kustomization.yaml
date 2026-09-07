@@ -3,7 +3,6 @@
 # It should be run by config/default
 resources:
 - bases/k8ssandra.io_k8ssandraclusters.yaml
-- bases/stargate.k8ssandra.io_stargates.yaml
 - bases/config.k8ssandra.io_clientconfigs.yaml
 - bases/replication.k8ssandra.io_replicatedsecrets.yaml
 - bases/reaper.k8ssandra.io_reapers.yaml
@@ -20,7 +19,6 @@ patchesStrategicMerge:
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix.
 # patches here are for enabling the conversion webhook for each CRD
 # - patches/webhook_in_k8ssandraclusters.yaml
-#- patches/webhook_in_stargates.yaml
 #- patches/webhook_in_replicatedsecrets.yaml
 #- patches/webhook_in_reapers.yaml
 #- patches/webhook_in_MedusaTasks.yaml
@@ -35,7 +33,6 @@ patchesStrategicMerge:
 # [CERTMANAGER] To enable webhook, uncomment all the sections with [CERTMANAGER] prefix.
 # patches here are for enabling the CA injection for each CRD
 - patches/cainjection_in_k8ssandraclusters.yaml
-#- patches/cainjection_in_stargates.yaml
 #- patches/cainjection_in_replicatedsecrets.yaml
 #- patches/cainjection_in_reapers.yaml
 #- patches/cainjection_in_MedusaTasks.yaml

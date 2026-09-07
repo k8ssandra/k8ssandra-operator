@@ -29,7 +29,6 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
-	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
@@ -87,9 +86,9 @@ type K8ssandraClusterReconciler struct {
 // +kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters/finalizers,verbs=update
 // +kubebuilder:rbac:groups=cassandra.datastax.com,namespace="k8ssandra",resources=cassandradatacenters,verbs=get;list;watch;create;update;delete;patch
 // +kubebuilder:rbac:groups=control.k8ssandra.io,namespace="k8ssandra",resources=cassandratasks,verbs=get;list;watch;create;update;delete;patch
-// +kubebuilder:rbac:groups=stargate.k8ssandra.io,namespace="k8ssandra",resources=stargates,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=reaper.k8ssandra.io,namespace="k8ssandra",resources=reapers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=pods;secrets,verbs=get;list;watch
+// +kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=endpoints;endpoints/restricted,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=discovery.k8s.io,namespace="k8ssandra",resources=endpointslices;endpointslices/restricted,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=monitoring.coreos.com,namespace="k8ssandra",resources=servicemonitors,verbs=get;list;watch;create;update;patch;delete;deletecollection
@@ -197,13 +196,11 @@ func (r *K8ssandraClusterReconciler) afterCassandraReconciled(ctx context.Contex
 		dc := dcs[i]
 		dcKey := utils.GetKey(dc)
 		logger := logger.WithValues("CassandraDatacenter", dcKey)
-		logger.Info("Reconciling Stargate and Reaper for dc " + dc.DatacenterName())
+		logger.Info("Reconciling Reaper for dc " + dc.DatacenterName())
 		if remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext); err != nil {
 			logger.Error(err, "Failed to get remote client")
 			return result.Error(err)
 		} else if recResult := r.reconcileCassandraDCTelemetry(ctx, kc, dcTemplate, dc, logger, remoteClient); recResult.Completed() {
-			return recResult
-		} else if recResult := r.reconcileStargate(ctx, kc, dcTemplate, dc, logger, remoteClient); recResult.Completed() {
 			return recResult
 		} else if recResult := r.reconcileReaper(ctx, kc, dcTemplate, dc, logger, remoteClient); recResult.Completed() {
 			return recResult
@@ -288,8 +285,6 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(ctx context.Context, mgr c
 
 	cb = cb.Watches(&cassdcapi.CassandraDatacenter{},
 		handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
-	cb = cb.Watches(&stargateapi.Stargate{},
-		handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
 	cb = cb.Watches(&reaperapi.Reaper{},
 		handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
 	cb = cb.Watches(&corev1.ConfigMap{},
@@ -302,10 +297,6 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(ctx context.Context, mgr c
 	for _, c := range clusters {
 		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &cassdcapi.CassandraDatacenter{},
 			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, obj *cassdcapi.CassandraDatacenter) []reconcile.Request {
-				return clusterLabelFilter(ctx, obj)
-			})))
-		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &stargateapi.Stargate{},
-			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, obj *stargateapi.Stargate) []reconcile.Request {
 				return clusterLabelFilter(ctx, obj)
 			})))
 		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &reaperapi.Reaper{},

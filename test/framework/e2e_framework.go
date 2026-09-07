@@ -22,7 +22,6 @@ import (
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
-	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
 	"github.com/k8ssandra/k8ssandra-operator/test/kustomize"
 	corev1 "k8s.io/api/core/v1"
@@ -711,7 +710,7 @@ func (f *E2eFramework) DumpClusterInfo(test string, namespaces ...string) error 
 			}
 
 			// Dump all objects that we need to investigate failures as a flat list and as yaml manifests
-			for _, objectType := range []string{"K8ssandraCluster", "CassandraDatacenter", "Stargate", "Reaper", "StatefulSet", "Secrets",
+			for _, objectType := range []string{"K8ssandraCluster", "CassandraDatacenter", "Reaper", "StatefulSet", "Secrets",
 				"ReplicatedSecret", "ClientConfig", "CassandraTask", "MedusaBackup", "MedusaBackupJob", "MedusaRestoreJob", "MedusaTask", "ConfigMaps", "MedusaBackupSchedule"} {
 				if err := os.MkdirAll(fmt.Sprintf("%s/%s/objects/%s", outputDir, namespace, objectType), 0755); err != nil {
 					return err
@@ -777,19 +776,6 @@ func (f *E2eFramework) DeleteDatacenters(namespace string, timeout, interval tim
 		timeout,
 		interval,
 		client.HasLabels{cassdcapi.ClusterLabel},
-	)
-}
-
-// DeleteStargates deletes all Stargates in namespace in all remote clusters.
-// This function blocks until all pods from all Stargates have terminated.
-func (f *E2eFramework) DeleteStargates(namespace string, timeout, interval time.Duration) error {
-	f.logger.Info("deleting all Stargates", "Namespace", namespace)
-	return f.deleteAllResources(
-		namespace,
-		&stargateapi.Stargate{},
-		timeout,
-		interval,
-		client.HasLabels{stargateapi.StargateLabel},
 	)
 }
 

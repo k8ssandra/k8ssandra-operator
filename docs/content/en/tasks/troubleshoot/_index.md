@@ -5,7 +5,7 @@ description: "Troubleshooting tips for K8ssandra Operator users."
 ---
 
 The best place to start when troubleshooting a K8ssandra cluster deployment is its status. The status of a K8ssandra
-cluster reports useful information about each of its components (CassandraDatacenter, Stargate, Reaper, etc.)
+cluster reports useful information about each of its components (CassandraDatacenter, Reaper, etc.)
 
 
 ## Checking reconcile errors
@@ -56,11 +56,10 @@ Status:
     <datacenter_name>:
       Cassandra: ...      # status of the datacenter itself (always present)
       Reaper: ...         # status of Reaper, if deployed in this datacenter, absent otherwise
-      Stargate: ...       # status of Stargate, if deployed in this datacenter, absent otherwise
 ```
 
 The `Datacenters` entry is a map keyed by datacenter name. Each datacenter reports its own status per component:
-currently Cassandra, Reaper and Stargate statuses are included.
+currently Cassandra and Reaper statuses are included.
 
 ### CassandraDatacenter status
 
@@ -128,69 +127,10 @@ When Reaper is ready, the status of this entry looks like below:
 
 When Reaper is fully deployed, the `Ready` condition must be true, and the `Progress` field must be set to `Running`.
 
-### Stargate status
-
-The `Stargate` entry of a datacenter status is provided by k8ssandra-operator. The contents of this entry correspond to
-the status of the `Stargate` resource.
-
-When Stargate is being deployed, this entry usually looks like below:
-
-```
-# Status.Datacenters.<datacenter_name>:
-  Stargate:
-    Available Replicas:  0
-    Conditions:
-      Last Transition Time:  2022-02-28T17:22:42Z
-      Status:                False
-      Type:                  Ready
-    Deployment Refs:
-      <stargate_deployment_ref>
-      <stargate_deployment_ref>
-      ...
-    Progress:              Deploying
-    Ready Replicas:        0
-    Ready Replicas Ratio:  0/3
-    Replicas:              3
-    Updated Replicas:      3
-```
-
-Currently, Stargate only supports the `Ready` condition; it is set to true when Stargate is ready.
-
-The `Progress` field can have the following values:
-
-* `Pending`: when the controller is waiting for the datacenter to become ready.
-* `Deploying`: when the controller is waiting for the Stargate deployment and its associated service to become ready.
-* `Running`: when Stargate is up and running.
-
-When Stargate is ready, the status of this entry looks like below:
-
-```
-# Status.Datacenters.<datacenter_name>:
-  Stargate:
-    Available Replicas:  3
-    Conditions:
-      Last Transition Time:  2022-02-28T17:20:01Z
-      Status:                True
-      Type:                  Ready
-    Deployment Refs:
-      <stargate_deployment_ref>
-      <stargate_deployment_ref>
-      ...
-    Progress:              Running
-    Ready Replicas:        3
-    Ready Replicas Ratio:  3/3
-    Replicas:              3
-    Service Ref:           <service_ref>
-    Updated Replicas:      3
-```
-
-When Stargate is fully deployed, the `Ready` condition must be true, and the `Progress` field must be set to `Running`.
-
 ### Available `K8ssandraCluster` conditions
 
 Currently, the only condition supported at K8ssandraCluster level is `CassandraInitialized`: it is set to true when the
-Cassandra cluster (that is, the Cassandra nodes without taking into account other components, such as Stargate or
-Reaper) becomes ready for the first time. During the lifetime of that Cassandra cluster, datacenters may have their
+Cassandra cluster (that is, the Cassandra nodes without taking into account other components, such as Reaper) becomes ready for the first time. During the lifetime of that Cassandra cluster, datacenters may have their
 readiness condition change back and forth. Once set, this condition however does not change. This condition is mainly
 intended for internal use.
 
@@ -217,7 +157,7 @@ From the GCP &gt; IAM &amp; Admin &gt; Quotas display:
 5. Enter a brief request description and click **Next**.
 6. Verify your contact information, and click **Submit Request**.
 
-Notice how in the following example the Backend services quota is set to '5', and we're changing it to '50'. For the K8ssandra deployments (Stargate, cass-operator, Reaper, Medusa, and so on), actually `10` might be a sufficient quota.
+Notice how in the following example the Backend services quota is set to '5', and we're changing it to '50'. For the K8ssandra deployments (cass-operator, Reaper, Medusa, and so on), actually `10` might be a sufficient quota.
 
 ![Quota UI showing change in Backend service quota from 5 to 50](gcp-quota-example2.png)
 
@@ -380,4 +320,4 @@ kubectl describe pod/*pod-name* -n k8ssandra
 ## Next steps
 
 * Explore other K8ssandra Operator [tasks]({{< relref "/tasks" >}}).
-* See the [Reference]({{< relref "/reference" >}}) topics for information about K8ssandra Operator Custom Resource Definitions (CRDs) and the single K8ssandra Operator Helm chart.  
+* See the [Reference]({{< relref "/reference" >}}) topics for information about K8ssandra Operator Custom Resource Definitions (CRDs) and the single K8ssandra Operator Helm chart.

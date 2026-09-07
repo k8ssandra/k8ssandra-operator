@@ -41,7 +41,6 @@ const (
 
 	ComponentLabel               = "app.kubernetes.io/component"
 	ComponentLabelValueCassandra = "cassandra"
-	ComponentLabelValueStargate  = "stargate"
 	ComponentLabelValueReaper    = "reaper"
 	ComponentLabelTelemetry      = "telemetry"
 

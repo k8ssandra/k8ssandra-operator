@@ -62,14 +62,6 @@ func (r *K8ssandraClusterReconciler) createDatacenterConfigs(
 			cassandra.ApplySystemReplication(dcConfig, systemReplication)
 		}
 
-		// Stargate has a bug when backed by Cassandra 4, unless `cassandra.allow_alter_rf_during_range_movement` is
-		// set (see https://github.com/stargate/stargate/issues/1274).
-		// Set the option preemptively (we don't check `kc.HasStargates()` explicitly, because that causes the operator
-		// to restart the whole DC whenever Stargate is added or removed).
-		if kc.Spec.Cassandra.ServerType.IsCassandra() && dcConfig.ServerVersion.Major() != 3 {
-			cassandra.AllowAlterRfDuringRangeMovement(dcConfig)
-		}
-
 		// Inject Reaper settings, unless we just reference an existing Reaper
 		if kc.Spec.Reaper != nil && kc.Spec.Reaper.ReaperRef.Name == "" {
 			reaper.AddReaperSettingsToDcConfig(kc.Spec.Reaper.DeepCopy(), dcConfig, kc.Spec.IsAuthEnabled())

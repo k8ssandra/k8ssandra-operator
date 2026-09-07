@@ -248,7 +248,7 @@ func TestOperator(t *testing.T) {
 		testFunc: removeLocalDcFromCluster,
 		fixture:  framework.NewTestFixture("remove-local-dc-5.0", controlPlane),
 	}))
-	t.Run("CreateSingleReaperNoStargate", e2eTest(ctx, &e2eTestOpts{
+	t.Run("CreateSingleReaper", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createSingleReaper,
 		fixture:  framework.NewTestFixture("single-dc-reaper", controlPlane),
 	}))
@@ -316,7 +316,7 @@ func TestOperator(t *testing.T) {
 	}))
 	t.Run("SingleDcEncryption", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createSingleDatacenterClusterWithEncryption,
-		fixture:  framework.NewTestFixture("single-dc-encryption-stargate", controlPlane),
+		fixture:  framework.NewTestFixture("single-dc-encryption", controlPlane),
 	}))
 	t.Run("SingleDcEncryptionWithReaper", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createSingleReaperWithEncryption,

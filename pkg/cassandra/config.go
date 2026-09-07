@@ -14,7 +14,6 @@ import (
 
 const (
 	SystemReplicationFactorStrategy = "-Dcassandra.system_distributed_replication"
-	allowAlterRf                    = "-Dcassandra.allow_alter_rf_during_range_movement=true"
 )
 
 // createJsonConfig parses a CassandraConfig into raw JSON bytes as required by the
@@ -119,10 +118,6 @@ func ApplySystemReplication(dcConfig *DatacenterConfig, replication SystemReplic
 	}
 	replicationStrategy := SystemReplicationFactorStrategy + "=" + strings.Join(replicationFactors, ",")
 	addOptionIfMissing(dcConfig, replicationStrategy)
-}
-
-func AllowAlterRfDuringRangeMovement(dcConfig *DatacenterConfig) {
-	addOptionIfMissing(dcConfig, allowAlterRf)
 }
 
 // EnableSmartTokenAllocation adds the allocate_tokens_for_local_replication_factor option to

@@ -175,11 +175,11 @@ Enabling client-to-node encryption will also encrypt JMX communications. Running
 Again, server (internode) and client (client-to-node) encryption are totally independent and can be enabled/disabled individually, as well as use different encryption stores.
 {{% /alert %}}
 
-## Stargate and Reaper encryption
+## Reaper encryption
 
-Stargate and Reaper will both inherit from Cassandra's encryption settings without any additional change to the manifest.
+Reaper will inherit from Cassandra's encryption settings without any additional change to the manifest.
 
-An encrypted cluster with both Stargate and Reaper would be deployed with the following manifest:
+An encrypted cluster with Reaper would be deployed with the following manifest:
 
 ```yaml
 apiVersion: k8ssandra.io/v1alpha1
@@ -223,8 +223,6 @@ spec:
         name: client-encryption-stores
       truststoreSecretRef:
         name: client-encryption-stores
-  stargate:
-    size: 1
   reaper:
     deploymentMode: SINGLE
 ```
@@ -273,4 +271,4 @@ The `clientEncryptionStores` also feature `KeystorePasswordRef`, which is ignore
 
 Explore other K8ssandra [tasks]({{< relref "/tasks" >}}).
 
-See the [Reference]({{< relref "/reference" >}}) topics for information about K8ssandra charts, and a glossary. 
+See the [Reference]({{< relref "/reference" >}}) topics for information about K8ssandra charts, and a glossary.

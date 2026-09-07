@@ -28,7 +28,6 @@ Follow these steps to run `nodetool` commands.
 
     ```
     NAME                                                    READY   STATUS    RESTARTS   AGE
-    demo-dc1-default-stargate-deployment-7b6c9d8dcd-k65jx   1/1     Running   0          5m33s
     demo-dc1-default-sts-0                                  2/2     Running   0          10m
     demo-dc1-default-sts-1                                  2/2     Running   0          10m
     demo-dc1-default-sts-2                                  2/2     Running   0          10m

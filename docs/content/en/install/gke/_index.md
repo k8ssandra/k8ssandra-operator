@@ -175,7 +175,6 @@ Verify that the following CRDs are installed:
 * `orders.acme.cert-manager.io`
 * `reapers.reaper.k8ssandra.io`
 * `replicatedsecrets.replication.k8ssandra.io`
-* `stargates.stargate.k8ssandra.io`
 
 
 Check that there are two deployments. A sample result is:
