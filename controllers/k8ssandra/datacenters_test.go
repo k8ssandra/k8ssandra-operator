@@ -8,8 +8,10 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/scheme"
 )
 
 var (
@@ -71,6 +73,71 @@ func TestDatacenters(t *testing.T) {
 	t.Run("DcUpgradePriorityTest", dcUpgradePriorityTest)
 	t.Run("SortDatacentersForUpgradeTest", sortDatacentersForUpgradeTest)
 	t.Run("SortNoChangeTest", sortNoChangeTest)
+}
+
+func TestSetDatacenterOwnership(t *testing.T) {
+	require.NoError(t, api.AddToScheme(scheme.Scheme))
+	require.NoError(t, cassdcapi.AddToScheme(scheme.Scheme))
+
+	r := &K8ssandraClusterReconciler{Scheme: scheme.Scheme}
+	kc := &api.K8ssandraCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "kc",
+			Namespace: "ns1",
+		},
+	}
+
+	tests := []struct {
+		name        string
+		dcNamespace string
+		k8sContext  string
+		expectOwner bool
+	}{
+		{
+			name:        "same namespace and local cluster",
+			dcNamespace: "ns1",
+			k8sContext:  "",
+			expectOwner: true,
+		},
+		{
+			name:        "different namespace",
+			dcNamespace: "ns2",
+			k8sContext:  "",
+			expectOwner: false,
+		},
+		{
+			name:        "remote cluster",
+			dcNamespace: "ns1",
+			k8sContext:  "remote",
+			expectOwner: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert := assert.New(t)
+			dc := &cassdcapi.CassandraDatacenter{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "dc1",
+					Namespace: tt.dcNamespace,
+				},
+			}
+			dcConfig := &cassandra.DatacenterConfig{K8sContext: tt.k8sContext}
+
+			require.NoError(t, r.setDatacenterOwnership(kc, dc, dcConfig))
+
+			if tt.expectOwner {
+				require.Len(t, dc.OwnerReferences, 1)
+				owner := dc.OwnerReferences[0]
+				assert.Equal(kc.Name, owner.Name)
+				assert.Equal("K8ssandraCluster", owner.Kind)
+				// Non-controller owner reference: visibility only, no controller semantics.
+				assert.Nil(owner.Controller)
+			} else {
+				assert.Empty(dc.OwnerReferences)
+			}
+		})
+	}
 }
 
 func dcUpgradePriorityTest(t *testing.T) {
