@@ -3,6 +3,7 @@ package medusa
 import (
 	"context"
 	"fmt"
+	"net"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
@@ -24,7 +25,7 @@ func newClient(ctx context.Context, c client.Client, cassdc *cassdcapi.Cassandra
 		grpcPort = explicitPort
 	}
 
-	address := fmt.Sprintf("%s:%d", pod.Status.PodIP, grpcPort)
+	address := net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(grpcPort))
 
 	if clientSecretName != "" {
 		secretKey := types.NamespacedName{
