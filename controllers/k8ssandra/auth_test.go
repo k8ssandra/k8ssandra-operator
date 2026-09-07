@@ -7,7 +7,6 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
-	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/unstructured"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
@@ -21,7 +20,7 @@ import (
 )
 
 // createSingleDcClusterNoAuth verifies that it is possible to create an unauthenticated cluster with one DC and with
-// Reaper and Stargate.
+// Reaper.
 func createSingleDcClusterNoAuth(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
@@ -57,7 +56,6 @@ func createSingleDcClusterNoAuth(t *testing.T, ctx context.Context, f *framework
 
 	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	reaperKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-reaper"}}
-	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-stargate"}}
 
 	verifyFinalizerAdded(ctx, t, f, kc)
 	verifySuperuserSecretCreated(ctx, t, f, kc)
@@ -77,7 +75,7 @@ func createSingleDcClusterNoAuth(t *testing.T, ctx context.Context, f *framework
 
 	t.Log("update reaper status to ready")
 	err = f.SetReaperStatusReady(ctx, reaperKey)
-	require.NoError(t, err, "failed to set Stargate status ready")
+	require.NoError(t, err, "failed to set Reaper status ready")
 
 	withReaper := f.NewWithReaper(ctx, reaperKey)
 
@@ -90,12 +88,11 @@ func createSingleDcClusterNoAuth(t *testing.T, ctx context.Context, f *framework
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
 	require.NoError(t, err, "failed to delete K8ssandraCluster")
 	f.AssertObjectDoesNotExist(ctx, t, dcKey, &cassdcapi.CassandraDatacenter{}, timeout, interval)
-	f.AssertObjectDoesNotExist(ctx, t, stargateKey, &stargateapi.Stargate{}, timeout, interval)
 	f.AssertObjectDoesNotExist(ctx, t, reaperKey, &reaperapi.Reaper{}, timeout, interval)
 }
 
 // createSingleDcClusterAuth verifies that it is possible to create an authenticated cluster with one DC and with
-// Reaper and Stargate.
+// Reaper.
 func createSingleDcClusterAuth(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
@@ -131,7 +128,6 @@ func createSingleDcClusterAuth(t *testing.T, ctx context.Context, f *framework.F
 
 	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
 	reaperKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-reaper"}}
-	stargateKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[1], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "cluster1-dc1-stargate"}}
 
 	verifyFinalizerAdded(ctx, t, f, kc)
 	verifySuperuserSecretCreated(ctx, t, f, kc)
@@ -151,7 +147,7 @@ func createSingleDcClusterAuth(t *testing.T, ctx context.Context, f *framework.F
 
 	t.Log("update reaper status to ready")
 	err = f.SetReaperStatusReady(ctx, reaperKey)
-	require.NoError(t, err, "failed to set Stargate status ready")
+	require.NoError(t, err, "failed to set Reaper status ready")
 
 	withReaper := f.NewWithReaper(ctx, reaperKey)
 
@@ -164,7 +160,6 @@ func createSingleDcClusterAuth(t *testing.T, ctx context.Context, f *framework.F
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
 	require.NoError(t, err, "failed to delete K8ssandraCluster")
 	f.AssertObjectDoesNotExist(ctx, t, dcKey, &cassdcapi.CassandraDatacenter{}, timeout, interval)
-	f.AssertObjectDoesNotExist(ctx, t, stargateKey, &stargateapi.Stargate{}, timeout, interval)
 	f.AssertObjectDoesNotExist(ctx, t, reaperKey, &reaperapi.Reaper{}, timeout, interval)
 }
 
@@ -229,7 +224,7 @@ func createSingleDcClusterAuthExternalSecrets(t *testing.T, ctx context.Context,
 
 	t.Log("update reaper status to ready")
 	err = f.SetReaperStatusReady(ctx, reaperKey)
-	require.NoError(t, err, "failed to set Stargate status ready")
+	require.NoError(t, err, "failed to set Reaper status ready")
 
 	withReaper := f.NewWithReaper(ctx, reaperKey)
 

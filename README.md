@@ -47,12 +47,6 @@ k8ssandra-operator uses [Medusa](https://github.com/thelastpickle/cassandra-medu
 
 Backup and restore schedules can be configured using Kubernetes manifests, allowing for declarative, auditable management of backup and restore processes.
 
-### Flexible APIs
-
-[Stargate](https://stargate.io/) for Apache Cassandra offers advanced APIs including integration with the [Mongoose](https://mongoosejs.com/) object modelling framework for node.js, GraphQL, and REST. It can also enhance Cassandra's native CQL performance in some cluster topologies.
-
-Using k8ssandra-operator, Stargate can be deployed and configured via simple Kubernetes manifests.
-
 ### Where to from here?
 
 This documentation covers everything from install details, deployed components, configuration references, and guided outcome-based tasks. 
