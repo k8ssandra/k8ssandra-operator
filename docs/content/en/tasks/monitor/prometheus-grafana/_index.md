@@ -16,7 +16,7 @@ See the [installation documentation]({{< relref "/install" >}}) for more informa
 
 ## Installing and configuring the kube-prometheus-stack
 
-`k8ssandra-operator` has integrations with Prometheus which allow for the simple rollout of Prometheus ServiceMonitors for Stargate, Cassandra and Reaper.
+`k8ssandra-operator` has integrations with Prometheus which allow for the simple rollout of Prometheus ServiceMonitors for Cassandra and Reaper.
 ServiceMonitors are custom resources of [prometheus-operator](https://github.com/prometheus-operator/prometheus-operator) which describe the set of targets to be scraped by Prometheus.
 The prometheus-operator is a core component of the kube-prometheus-stack.
 
@@ -98,11 +98,6 @@ spec:
           name: dc1
         size: 3
     mgmtAPIHeap: 64Mi 
-  stargate:
-    size: 1
-    telemetry:
-      prometheus:
-        enabled: true
   reaper:
     keyspace: reaper_db
     telemetry:
@@ -111,7 +106,7 @@ spec:
 ```
 *Download this manifest [here](k8ssandra.yaml).*
 
-Setting `telemetry.prometheus.enabled` to `true` on the `.spec.cassandra`, `.spec.stargate` and `.spec.reaper` sections of the K8ssandraCluster CR will automatically create the ServiceMonitors.  
+Setting `telemetry.prometheus.enabled` to `true` on the `.spec.cassandra` and `.spec.reaper` sections of the K8ssandraCluster CR will automatically create the ServiceMonitors.
 *Note: Reaper's telemetry block was added in K8ssandra v1.2.0 and Reaper v3.2.0.*  
   
 You can selectively enable service monitor creation for each component without any requirement to enable them all.  
@@ -138,19 +133,18 @@ prometheus-grafana-kube-state-metrics                7m41s
 prometheus-grafana-prometheus-node-exporter          7m41s
 test-dc1-cass-servicemonitor                         5m47s
 test-dc1-reaper-reaper-servicemonitor                5m47s
-test-dc1-stargate-stargate-servicemonitor            5m47s
 ```
 
 ### Install the Grafana dashboards
 
 Grafana will pick up dashboards passed as configmaps that have the label `grafana_dashboard: "1"`.  
-**When using MCAC**, create the overview, condensed and stargate dashboards (download the manifest [here](grafana-dashboards.yaml)) configmaps:
+**When using MCAC**, create the overview and condensed dashboards (download the manifest [here](grafana-dashboards.yaml)) configmaps:
 
 ```bash
 kubectl apply -f grafana-dashboards.yaml -n k8ssandra-operator
 ``` 
 
-**When using the new metrics endpoint** (and MCAC is disabled), create the overview, condensed and stargate dashboards (download the manifest [here](grafana-dashboards-new.yaml)) configmaps:
+**When using the new metrics endpoint** (and MCAC is disabled), create the overview and condensed dashboards (download the manifest [here](grafana-dashboards-new.yaml)) configmaps:
 
 ```bash
 kubectl apply -f grafana-dashboards-new.yaml -n k8ssandra-operator
@@ -254,5 +248,4 @@ relabels:
 ## Next steps
 
 * Explore other K8ssandra Operator [tasks]({{< relref "/tasks" >}}).
-* See the [Reference]({{< relref "/reference" >}}) topics for information about K8ssandra Operator Custom Resource Definitions (CRDs) and the single K8ssandra Operator Helm chart. 
-
+* See the [Reference]({{< relref "/reference" >}}) topics for information about K8ssandra Operator Custom Resource Definitions (CRDs) and the single K8ssandra Operator Helm chart.

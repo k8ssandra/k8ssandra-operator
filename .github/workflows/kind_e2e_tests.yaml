@@ -79,14 +79,11 @@ jobs:
         e2e_test:
           - CreateSingleDatacenterCluster
           - CreateSingleDatacenterClusterMgmtAuth
-          # - CreateStargateAndDatacenter
-          - CreateSingleReaperNoStargate
+          - CreateSingleReaper
           - CreateSingleMedusaJob
           - CreateMultiDcSingleMedusaJob
           - CreateSingleDseMedusaJob
           - ConfigControllerRestarts
-          # TODO: these e2e tests started breaking after new client certificates were added. Needs fixing.
-          #- SingleDcEncryptionWithStargate
           - SingleDcEncryptionWithReaper
           - GCTests/4.0-jdk11-G1
           - GCTests/4.0-jdk11-CMS

@@ -43,7 +43,6 @@ kubectl get pods
 ```bash
 NAME                                                         READY   STATUS    RESTARTS   AGE
 cass-operator-controller-manager-55f6b84454-zpcfd            1/1     Running   1          10d
-k8ssandra-dc1-default-stargate-deployment-7847d945b4-vxth8   1/1     Running   0          10d
 k8ssandra-dc1-default-sts-0                                  3/3     Running   0          10d
 k8ssandra-dc1-default-sts-1                                  3/3     Running   0          10d
 k8ssandra-dc1-default-sts-2                                  3/3     Running   0          10d

@@ -23,7 +23,7 @@ The control plane creates and manages objects that exist only in the API server.
 
 The data plane deploys and manages pods, and the data plane can be installed on any number of clusters. Moreover, the data plane may interact directly with the managed applications. For example, the operator may call the `management-api` to create keyspaces in Cassandra.
 
-In each cluster, the deployed and managed pods can include [Stargate]({{< relref "/components/stargate/" >}}) and [cass-operator]({{< relref "/components/cass-operator/" >}}).   
+In each cluster, the deployed and managed pods include [cass-operator]({{< relref "/components/cass-operator/" >}}).
 
 **Tip:** In addition to this topic, be sure to read this [K8ssandra Operator architecture]({{< relref "/components/k8ssandra-operator/architecture/" >}}) deep dive! 
 
@@ -64,16 +64,10 @@ spec:
           name: dc1
         k8sContext: kind-k8ssandra-1
         size: 3
-        stargate:
-          size: 1
-          heapSize: 256M
       - metadata:
           name: dc2
         k8sContext: kind-k8ssandra-2
         size: 3
-        stargate:
-          size: 1
-          heapSize: 256M
 ```
 
 In this example, you can see that the Cassandra configuration is exposed very similarly to how it was previously within K8ssandra 1.4.x, allowing you to specify data centers, racks, and easy access to the selected version — to name a few. 

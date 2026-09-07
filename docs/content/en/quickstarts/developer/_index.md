@@ -2,7 +2,7 @@
 title: "Quickstart for developers"
 linkTitle: "Developers"
 weight: 2
-description: "Get up and coding with K8ssandra Operator by exposing access to Stargate and CQL APIs!"
+description: "Get up and coding with K8ssandra Operator by exposing access to CQL!"
 ---
 
 {{% alert title="Tip" color="success" %}}
@@ -11,8 +11,7 @@ Before performing these post-install steps, complete at least one K8ssandra Oper
 
 In this quickstart for developers, we'll cover:
 
-* [Setting up port forwarding]({{< relref "#set-up-port-forwarding" >}}) to access Stargate services and CQLSH outside your Kubernetes (K8s) cluster.
-* [Accessing Cassandra using Stargate]({{< relref "#access-cassandra-using-the-stargate-apis" >}}) by creating an access token, and using Stargates's REST, GraphQL and document interfaces.
+* [Setting up port forwarding]({{< relref "#set-up-port-forwarding" >}}) to access CQLSH outside your Kubernetes (K8s) cluster.
 * [Accessing Cassandra using CQLSH]({{< relref "#access-cassandra-using-cqlsh" >}}) including some basic CQL commands.
 
 ## Set up port forwarding
@@ -23,15 +22,7 @@ In order to access Apache Cassandra® outside of the K8s cluster, you'll need to
 kubectl get services
 ```
 
-The service of interest is:
-
-* **demo-dc1-stargate-service**: The K8ssandra Stargate service where the name is a combination of the k8ssandra  cluster name you specified during the Helm install, such as `demo`, the datacenter name, `dc1` and the postfix, `-service`. This service listens on the ports:
-  * **8080/TCP**: GraphQL interface
-  * **8081/TCP**: REST authorization service for generating tokens
-  * **8082/TCP**: REST interface
-  * **9042/TCP**: CQL service
-
-Those are the ports we'll need to forward for CQLSH and Stargate access.
+Use the Cassandra client service, `demo-dc1-service`, on port 9042.
 
 To configure port forwarding:
 
@@ -40,7 +31,7 @@ To configure port forwarding:
 2. Run the `kubectl port-forward` command in the background:
 
     ```bash
-    kubectl port-forward svc/demo-dc1-stargate-service 8080 8081 8082 9042 &
+    kubectl port-forward svc/demo-dc1-service 9042 &
     ```
 
     **Output**:
@@ -48,13 +39,8 @@ To configure port forwarding:
     ```bash
     [1] 80940
 
-    ~/
-    Forwarding from 127.0.0.1:8080 -> 8080
-    Forwarding from [::1]:8080 -> 8080
-    Forwarding from 127.0.0.1:8081 -> 8081
-    Forwarding from [::1]:8081 -> 8081
-    Forwarding from 127.0.0.1:8082 -> 8082
-    Forwarding from [::1]:8082 -> 8082
+    Forwarding from 127.0.0.1:9042 -> 9042
+    Forwarding from [::1]:9042 -> 9042
     ```
 
 ### Terminate port forwarding
@@ -70,7 +56,7 @@ To terminate the port forwarding service:
     **Output**:
 
     ```bash
-    [1]  + 80940 running    kubectl port-forward svc/k8ssandra-dc1-stargate-service 8080 8081 8082
+    [1]  + 80940 running    kubectl port-forward svc/demo-dc1-service 9042
     ```
 
 1. Kill the process
@@ -82,45 +68,12 @@ To terminate the port forwarding service:
     **Output**:
 
     ```bash
-    [1]  + terminated  kubectl port-forward svc/k8ssandra-dc1-stargate-service 8080 8081 8082
+    [1]  + terminated  kubectl port-forward svc/demo-dc1-service 9042
     ```
 
 {{% alert title="Tip" color="success" %}}
 Exiting the terminal instance will terminate the port forwarding service.
 {{% /alert %}}
-
-## Access Cassandra using the Stargate APIs
-
-[Stargate](https://stargate.io/) provides APIs, data types and access methods that bring new capabilities to existing databases. Currently Stargate adds Document, REST and GraphQL APIs for CRUD access to data stored in Apache Cassandra® and there are many more APIs coming soon. Separating compute and storage also has benefits for maximizing resource consumption in cloud environments. When using Stargate with Cassandra, you can offload the request coordination overhead from your storage instances onto Stargate instances which has shown latency improvements in preliminary testing.
-
-To access K8ssandra using Stargate:
-
-1. Generate a Stargate access token replacing `<k8ssandra-username>` and `<k8ssandra-password>` with the values you retrieved in [Retrieve K8ssandra superuser credentials]({{< relref "/install/local#superuser" >}}):
-
-    ```bash
-    curl -L -X POST 'http://localhost:8081/v1/auth' -H 'Content-Type: application/json' --data-raw '{"username": "<k8ssandra-username>", "password": "<k8ssandra-password>"}'
-    ```
-
-    **Output**:
-
-    ```json
-    {"authToken":"<access-token>"}
-    ```
-
-1. Use `<access-token>` to populate the `x-cassandra-token` header for all Stargate requests.
-
-Once you've got the access token, take a look at the following Stargate access options:
-
-* [Access Document Data API]({{< relref "develop#access-document-data-api" >}})
-* [Access REST Data API]({{< relref "develop#access-rest-data-api" >}})
-* [Access GraphQL Data API]({{< relref "develop#access-graphql-data-api" >}})
-
-You can access the following interfaces to make development easier as well:
-
-* Stargate swagger UI: <http://127.0.0.1:8082/swagger-ui>
-* GraphQL Playground: <http://127.0.0.1:8080/playground>
-
-For complete details on Stargate, see the [Stargate documentation](https://stargate.io/docs/stargate/1.0/quickstart/quickstart.html).
 
 ## Access Cassandra using CQLSH
 

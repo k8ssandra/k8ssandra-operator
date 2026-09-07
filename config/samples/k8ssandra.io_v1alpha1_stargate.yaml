@@ -1,7 +1,0 @@
-apiVersion: stargate.k8ssandra.io/v1alpha1
-kind: Stargate
-metadata:
-  name: stargate-sample
-spec:
-  # Add fields here
-  foo: bar
