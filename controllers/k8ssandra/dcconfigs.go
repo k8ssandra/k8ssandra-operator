@@ -62,6 +62,12 @@ func (r *K8ssandraClusterReconciler) createDatacenterConfigs(
 			cassandra.ApplySystemReplication(dcConfig, systemReplication)
 		}
 
+		// Datacenter removal requires replication changes while endpoints may not be in normal state.
+		// Configure this at startup so topology changes do not require an extra rolling restart.
+		if kc.Spec.Cassandra.ServerType.IsCassandra() && dcConfig.ServerVersion.Major() != 3 {
+			cassandra.AllowAlterRfDuringRangeMovement(dcConfig)
+		}
+
 		// Inject Reaper settings, unless we just reference an existing Reaper
 		if kc.Spec.Reaper != nil && kc.Spec.Reaper.ReaperRef.Name == "" {
 			reaper.AddReaperSettingsToDcConfig(kc.Spec.Reaper.DeepCopy(), dcConfig, kc.Spec.IsAuthEnabled())
