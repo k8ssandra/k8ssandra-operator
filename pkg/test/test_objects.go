@@ -6,7 +6,6 @@ import (
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
-	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -80,29 +79,6 @@ func NewCassandraDatacenter(name string, namespace string) cassdcapi.CassandraDa
 				},
 			},
 			ClusterName: "test-cluster",
-		},
-	}
-}
-
-func NewStargate(name string, namespace string) stargateapi.Stargate {
-	return stargateapi.Stargate{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "stargate.k8ssandra.io/v1alpha1",
-			Kind:       "Stargate",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Spec: stargateapi.StargateSpec{
-			StargateDatacenterTemplate: stargateapi.StargateDatacenterTemplate{
-				StargateClusterTemplate: stargateapi.StargateClusterTemplate{
-					StargateTemplate: stargateapi.StargateTemplate{
-						AllowStargateOnDataNodes: true,
-					},
-					Size: 1,
-				},
-			},
 		},
 	}
 }

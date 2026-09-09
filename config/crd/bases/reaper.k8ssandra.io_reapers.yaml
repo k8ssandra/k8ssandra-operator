@@ -2961,7 +2961,7 @@ spec:
                         type: object
                       enabled:
                         description: Enable the creation of Prometheus serviceMonitors
-                          for this resource (Cassandra or Stargate).
+                          for this resource (Cassandra).
                         type: boolean
                     type: object
                   vector:
@@ -3048,7 +3048,7 @@ spec:
                         type: string
                       enabled:
                         description: |-
-                          Enabled enables the Vector agent for this resource (Cassandra, Reaper or Stargate).
+                          Enabled enables the Vector agent for this resource (Cassandra or Reaper).
                           Enabling the vector agent will inject a sidecar container into the pod.
                         type: boolean
                       image:

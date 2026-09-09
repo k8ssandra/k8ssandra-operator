@@ -27,11 +27,6 @@ spec:
           name: dc1
         size: 3
     mgmtAPIHeap: 64Mi 
-  stargate:
-    size: 1
-    telemetry:
-      prometheus:
-        enabled: true
   reaper:
     keyspace: reaper_db
     telemetry:

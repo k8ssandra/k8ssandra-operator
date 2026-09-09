@@ -22,7 +22,6 @@ K8ssandra Operator is deployed in each cluster. The operator consists of several
 Other controllers run in both the control plane and in the data plane. This includes controllers for the following types:
 
 * CassandraDataCenter
-* Stargate
 * Reaper
 * MedusaBackupJob
 * MedusaRestoreJob
@@ -79,26 +78,6 @@ When telemetry is enabled, K8ssandra Operator creates a `ServiceMonitor` for eac
 
 **Note:** See [Monitoring using Prometheus](https://github.com/k8ssandra/k8ssandra-operator/blob/main/docs/prometheus-grafana/prometheus-installation-configuration.md) for more information about using ServiceMonitors.
 
-## Stargate
-K8ssandra Operator provides a Stargate CRD. Stargate objects are managed by the Stargate controller.
-
-Here is the relevant portion of the manifest for the `stargate` property:
-
-```yaml
-cassandra:
-  ...
-stargate:
-  size: 1  
-```
-
-The presence of the `stargate` property tells the operator to enable and configure Stargate for each CassandraDatacenter. The `size` property configures the number of Stargate nodes per datacenter.
-
-(TODO: Add link to configuration doc when it's available.)
-
-**Note:** See [stargate.io](https://stargate.io/) to learn more abour Stargate.
-
-After the K8ssandraCluster controller creates the Stargate object, the Stargate controller creates a Deployment. After the Deployment is created, the Deployment controller, which is part of Kubernetes itself, creates the Stargate pod. This pod runs the Stargate process.
-
 ## Reaper
 K8ssandra Operator provides a Reaper CRD. Reaper objects are managed by the Reaper controller. 
 
@@ -106,8 +85,6 @@ Here is the relevant portion of the manifest for the `reaper` property:
 
 ```yaml
 cassandra:
-  ...
-stargate:
   ...
 reaper: {}    
 ```
@@ -128,8 +105,6 @@ Here is the relevant portion of the manifest for the `medusa` property:
 ```yaml
 cassandra:
   ...
-stargate:
-  ...
 reaper: {}
 medusa:
   storageProperties:
@@ -139,7 +114,7 @@ medusa:
 
 **Note:** See [https://github.com/thelastpickle/cassandra-medusa](https://github.com/thelastpickle/cassandra-medusa) to learn more about Medusa.
 
-The `medusa` property is different from the `telemetry`, `stargate`, and `reaper` properties in that it does not result in the operator 
+The `medusa` property is different from the `telemetry` and `reaper` properties in that it does not result in the operator
 creating an additional object. Instead K8ssandra Operator configures the CassandraDatacenter to enable and deploy Medusa. 
 
 The Cassandra pod has a `medusa-restore` init container and a `medusa` sidecar container. The former performs restores and the latter performs backups.
@@ -157,4 +132,3 @@ There is a superuser secret for each K8ssandraCluster. It can be created and pro
 The SecretSync controller ensures that the secret is replicated to each of the data plane clusters.
 
 (TODO: Add link to secrets management doc when it's available.)
- 

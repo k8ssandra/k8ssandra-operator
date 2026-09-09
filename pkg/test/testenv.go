@@ -40,7 +40,6 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
-	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 )
 
 const (
@@ -440,10 +439,6 @@ func registerApis() error {
 	}
 
 	if err := cassctlapi.AddToScheme(scheme.Scheme); err != nil {
-		return err
-	}
-
-	if err := stargateapi.AddToScheme(scheme.Scheme); err != nil {
 		return err
 	}
 
