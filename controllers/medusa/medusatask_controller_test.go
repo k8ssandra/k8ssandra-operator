@@ -2,17 +2,24 @@ package medusa
 
 import (
 	"context"
+	"fmt"
 	"testing"
+	"time"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ss "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
@@ -293,4 +300,96 @@ func checkSyncTask(require *require.Assertions, ctx context.Context, namespace, 
 
 		return !updated.Status.FinishTime.IsZero()
 	}, timeout, interval)
+}
+
+type syncTestClient struct {
+	medusa.Client
+	backups []*medusa.BackupSummary
+	err     error
+	calls   int
+}
+
+func (c *syncTestClient) GetBackups(context.Context) ([]*medusa.BackupSummary, error) {
+	c.calls++
+	return c.backups, c.err
+}
+func (c *syncTestClient) Close() error { return nil }
+
+type syncTestFactory struct {
+	medusa.ClientFactory
+	remote *syncTestClient
+}
+
+func (f syncTestFactory) NewClient(string) (medusa.Client, error) { return f.remote, nil }
+
+type syncCreateFailureClient struct {
+	client.Client
+	fail bool
+}
+
+func (c *syncCreateFailureClient) Create(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
+	if backup, ok := obj.(*api.MedusaBackup); ok && backup.Name == "backup2" && c.fail {
+		return fmt.Errorf("backup creation unavailable")
+	}
+	return c.Client.Create(ctx, obj, opts...)
+}
+
+func TestMedusaSyncReconcile(t *testing.T) {
+	for _, failure := range []string{"none", "list", "create"} {
+		t.Run(failure, func(t *testing.T) {
+			ctx := context.Background()
+			scheme := runtime.NewScheme()
+			require.NoError(t, corev1.AddToScheme(scheme))
+			require.NoError(t, cassdcapi.AddToScheme(scheme))
+			require.NoError(t, api.AddToScheme(scheme))
+			dc := &cassdcapi.CassandraDatacenter{ObjectMeta: metav1.ObjectMeta{Name: "dc1", Namespace: "test", UID: "dc1"}}
+			task := &api.MedusaTask{ObjectMeta: metav1.ObjectMeta{Name: "sync", Namespace: dc.Namespace, OwnerReferences: []metav1.OwnerReference{{APIVersion: cassdcapi.GroupVersion.String(), Kind: "CassandraDatacenter", Name: dc.Name, UID: dc.UID}}}, Spec: api.MedusaTaskSpec{Operation: api.OperationTypeSync, CassandraDatacenter: dc.Name}}
+			pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "pod1", Namespace: dc.Namespace, Labels: dc.GetDatacenterLabels()}}
+			stale := &api.MedusaBackup{ObjectMeta: metav1.ObjectMeta{Name: "stale", Namespace: dc.Namespace}, Spec: api.MedusaBackupSpec{CassandraDatacenter: dc.Name}}
+			other := &api.MedusaBackup{ObjectMeta: metav1.ObjectMeta{Name: "other", Namespace: dc.Namespace}, Spec: api.MedusaBackupSpec{CassandraDatacenter: "dc2"}}
+			c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(dc, task, pod, stale, other).WithStatusSubresource(&api.MedusaTask{}, &api.MedusaBackup{}).Build()
+			remote := &syncTestClient{backups: []*medusa.BackupSummary{
+				{BackupName: "backup1", Status: medusa.StatusType_SUCCESS, StartTime: 100, FinishTime: 200},
+				{BackupName: "backup2", Status: medusa.StatusType_SUCCESS, StartTime: 100, FinishTime: 200},
+			}}
+			r := &MedusaTaskReconciler{Client: c, Scheme: scheme, ReconcilerConfig: &config.ReconcilerConfig{DefaultDelay: time.Second}, ClientFactory: syncTestFactory{remote: remote}}
+			req := reconcile.Request{NamespacedName: client.ObjectKeyFromObject(task)}
+			if failure == "create" {
+				failingClient := &syncCreateFailureClient{Client: c, fail: true}
+				r.Client = failingClient
+				_, err := r.Reconcile(ctx, req)
+				require.EqualError(t, err, "backup creation unavailable")
+				require.NoError(t, c.Get(ctx, req.NamespacedName, task))
+				require.False(t, task.Status.StartTime.IsZero())
+				require.True(t, task.Status.FinishTime.IsZero())
+				require.NoError(t, c.Get(ctx, client.ObjectKey{Namespace: dc.Namespace, Name: "backup1"}, &api.MedusaBackup{}))
+				failingClient.fail = false
+			}
+			if failure == "list" {
+				remote.err = fmt.Errorf("remote unavailable")
+				result, err := r.Reconcile(ctx, req)
+				require.NoError(t, err)
+				require.NotZero(t, result.RequeueAfter)
+				require.NoError(t, c.Get(ctx, req.NamespacedName, task))
+				require.True(t, task.Status.FinishTime.IsZero())
+				remote.err = nil
+			}
+			_, err := r.Reconcile(ctx, req)
+			require.NoError(t, err)
+			backups := &api.MedusaBackupList{}
+			require.NoError(t, c.List(ctx, backups, client.InNamespace(dc.Namespace)))
+			names := []string{}
+			for _, backup := range backups.Items {
+				names = append(names, backup.Name)
+			}
+			require.ElementsMatch(t, []string{"backup1", "backup2", "other"}, names)
+			require.NoError(t, c.Get(ctx, req.NamespacedName, task))
+			require.False(t, task.Status.FinishTime.IsZero())
+			require.Len(t, task.Status.Finished, 1)
+			calls := remote.calls
+			_, err = r.Reconcile(ctx, req)
+			require.NoError(t, err)
+			require.Equal(t, calls, remote.calls)
+		})
+	}
 }
