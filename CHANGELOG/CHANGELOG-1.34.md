@@ -19,3 +19,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [ENHANCEMENT] [#1754](https://github.com/k8ssandra/k8ssandra-operator/issues/1754) Use namespaceselector on the webhooks if watchNamespaces is used
 * [TESTING] [#1804](https://github.com/k8ssandra/k8ssandra-operator/issues/1804) Slightly increase medusa-related timeouts in ITs
 * [TESTING] [#1806](https://github.com/k8ssandra/k8ssandra-operator/issues/1806) Replace minio with silo
+* [BUGFIX] [#1566](https://github.com/k8ssandra/k8ssandra-operator/issues/1566) Write `jvmOptions.gc` to jvm17-server-options for Cassandra 5.x so the selected garbage collector is actually applied

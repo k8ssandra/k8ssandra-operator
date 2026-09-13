@@ -233,6 +233,36 @@ func TestCreateJsonConfig(t *testing.T) {
            }`,
 		},
 		{
+			name:          "[4.1.0] GC",
+			serverVersion: semver.MustParse("4.1.0"),
+			serverType:    api.ServerDistributionCassandra,
+			cassandraConfig: api.CassandraConfig{
+				JvmOptions: api.JvmOptions{
+					GarbageCollector: ptr.To("ZGC"),
+				},
+			},
+			want: `{
+             "jvm11-server-options": {
+               "garbage_collector": "ZGC"
+             }
+           }`,
+		},
+		{
+			name:          "[5.0.0] GC",
+			serverVersion: semver.MustParse("5.0.0"),
+			serverType:    api.ServerDistributionCassandra,
+			cassandraConfig: api.CassandraConfig{
+				JvmOptions: api.JvmOptions{
+					GarbageCollector: ptr.To("ZGC"),
+				},
+			},
+			want: `{
+             "jvm17-server-options": {
+               "garbage_collector": "ZGC"
+             }
+           }`,
+		},
+		{
 			name:          "[DSE 6.8.25] simple",
 			serverVersion: semver.MustParse("6.8.25"),
 			serverType:    api.ServerDistributionDse,
