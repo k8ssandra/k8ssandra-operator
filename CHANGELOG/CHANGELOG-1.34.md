@@ -16,3 +16,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 ## unreleased
 
 * [ENHANCEMENT] [#1796](https://github.com/k8ssandra/k8ssandra-operator/issues/1796) Declare JMX container port (7199) on the Cassandra pod template when enabling remote JMX access for Reaper
+* [BUGFIX] [#1566](https://github.com/k8ssandra/k8ssandra-operator/issues/1566) Write `jvmOptions.gc` to jvm17-server-options for Cassandra 5.x so the selected garbage collector is actually applied
