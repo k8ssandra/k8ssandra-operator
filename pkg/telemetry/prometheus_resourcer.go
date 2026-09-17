@@ -53,8 +53,8 @@ func (cfg PrometheusResourcer) UpdateResources(
 	if err := client.Get(ctx, types.NamespacedName{Name: desiredSM.Name, Namespace: desiredSM.Namespace}, actualSM); err != nil {
 		if k8serrors.IsNotFound(err) {
 			cfg.Logger.Info("Prometheus ServiceMonitor for Cassandra not found, creating")
-			if err := controllerutil.SetControllerReference(owner, desiredSM, client.Scheme()); err != nil {
-				cfg.Logger.Error(err, "could not set controller reference for ServiceMonitor", "owner", owner)
+			if err := controllerutil.SetOwnerReference(owner, desiredSM, client.Scheme()); err != nil {
+				cfg.Logger.Error(err, "could not set owner reference for ServiceMonitor", "owner", owner)
 				return err
 			} else if err = client.Create(ctx, desiredSM); err != nil {
 				if k8serrors.IsAlreadyExists(err) {
@@ -77,8 +77,8 @@ func (cfg PrometheusResourcer) UpdateResources(
 		resourceVersion := actualSM.GetResourceVersion()
 		desiredSM.DeepCopyInto(actualSM)
 		actualSM.SetResourceVersion(resourceVersion)
-		if err := controllerutil.SetControllerReference(owner, actualSM, client.Scheme()); err != nil {
-			cfg.Logger.Error(err, "could not set controller reference for ServiceMonitor", "resource", desiredSM, "owner", owner)
+		if err := controllerutil.SetOwnerReference(owner, actualSM, client.Scheme()); err != nil {
+			cfg.Logger.Error(err, "could not set owner reference for ServiceMonitor", "resource", desiredSM, "owner", owner)
 			return err
 		} else if err := client.Update(ctx, actualSM); err != nil {
 			cfg.Logger.Error(err, "could not update ServiceMonitor resource", "resource", desiredSM, "owner", owner)
