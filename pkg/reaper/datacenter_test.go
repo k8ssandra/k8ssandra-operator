@@ -43,8 +43,9 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{
-							Name: reconciliation.CassandraContainerName,
-							Env:  []corev1.EnvVar{{Name: "LOCAL_JMX", Value: "no"}},
+							Name:  reconciliation.CassandraContainerName,
+							Env:   []corev1.EnvVar{{Name: "LOCAL_JMX", Value: "no"}},
+							Ports: []corev1.ContainerPort{{Name: "jmx", ContainerPort: 7199, Protocol: corev1.ProtocolTCP}},
 						}},
 					},
 				},
@@ -65,8 +66,9 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{
-							Name: reconciliation.CassandraContainerName,
-							Env:  []corev1.EnvVar{{Name: "LOCAL_JMX", Value: "no"}},
+							Name:  reconciliation.CassandraContainerName,
+							Env:   []corev1.EnvVar{{Name: "LOCAL_JMX", Value: "no"}},
+							Ports: []corev1.ContainerPort{{Name: "jmx", ContainerPort: 7199, Protocol: corev1.ProtocolTCP}},
 						}},
 					},
 				},
@@ -119,6 +121,7 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 									{Name: "ANOTHER_VAR", Value: "irrelevant"},
 									{Name: "LOCAL_JMX", Value: "no"},
 								},
+								Ports: []corev1.ContainerPort{{Name: "jmx", ContainerPort: 7199, Protocol: corev1.ProtocolTCP}},
 							},
 							{
 								Name: "another-container",
@@ -169,6 +172,7 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 									{Name: "ANOTHER_VAR", Value: "irrelevant"},
 									{Name: "LOCAL_JMX", Value: "no"},
 								},
+								Ports: []corev1.ContainerPort{{Name: "jmx", ContainerPort: 7199, Protocol: corev1.ProtocolTCP}},
 							},
 							{
 								Name: "another-container",
@@ -197,8 +201,9 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{
-							Name: reconciliation.CassandraContainerName,
-							Env:  []corev1.EnvVar{{Name: "LOCAL_JMX", Value: "no"}},
+							Name:  reconciliation.CassandraContainerName,
+							Env:   []corev1.EnvVar{{Name: "LOCAL_JMX", Value: "no"}},
+							Ports: []corev1.ContainerPort{{Name: "jmx", ContainerPort: 7199, Protocol: corev1.ProtocolTCP}},
 						}},
 					},
 				},
