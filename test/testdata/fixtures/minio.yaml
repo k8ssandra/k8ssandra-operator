@@ -1,4 +1,4 @@
-# Deploys a new MinIO Pod into the metadata.namespace Kubernetes namespace
+# Deploys a new Silo (S3-compatible MinIO fork) Pod into the metadata.namespace Kubernetes namespace
 
 # The `spec.containers[0].args` contains the command run on the pod
 # The `/data` directory corresponds to the `spec.containers[0].volumeMounts[0].mountPath`
@@ -23,12 +23,12 @@ spec:
     spec:
       containers:
       - name: minio
-        image: quay.io/minio/minio:latest
+        image: docker.io/pgsty/silo:latest
         command:
         - /bin/bash
         - -c
         args:
-        - minio server /data --console-address :9090
+        - silo server /data --console-address :9090
         volumeMounts:
         - mountPath: /data
           name: localvolume

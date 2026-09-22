@@ -104,9 +104,9 @@ jobs:
           title: Upgrade CRD reference ${{ env.PR_BRANCH }}
           body: |
             This is an auto-generated PR from the K8ssandra CRD reference update GHA workflow. 
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        if: ${{ failure() }}
-        timeout-minutes: 15
-        with:
-          limit-access-to-actor: true
+      # - name: Setup tmate session
+      #   uses: mxschmitt/action-tmate@v3
+      #   if: ${{ failure() }}
+      #   timeout-minutes: 15
+      #   with:
+      #     limit-access-to-actor: true

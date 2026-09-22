@@ -8,8 +8,8 @@ spec:
       restartPolicy: OnFailure
       containers:
         - name: setup-minio-pod
-          image: quay.io/minio/mc
-          command: ["bash", "-c"]
+          image: pgsty/mc
+          command: ["/bin/sh", "-c"]
           args:
             - |
               mc alias set k8s-minio http://minio-service.minio.svc.cluster.local:9000 minioadmin minioadmin
