@@ -8,7 +8,7 @@ spec:
       restartPolicy: OnFailure
       containers:
         - name: setup-minio-pod
-          image: minio/mc
+          image: quay.io/minio/mc
           command: ["bash", "-c"]
           args:
             - |
