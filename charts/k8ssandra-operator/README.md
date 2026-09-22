@@ -39,6 +39,7 @@ Kubernetes operator which handles the provisioning and management of K8ssandra c
 | image.registryOverride | string | `nil` | Docker registry containing all cass-operator related images. Setting this allows for usage of an internal registry without specifying serverImage, configBuilderImage, and busyboxImage on all CassandraDatacenter objects. |
 | imagePullSecrets | list | `[]` | References to secrets to use when pulling images. See: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/ |
 | serviceAccount.annotations | object | `{}` | Annotations to add to the service account. |
+| serviceAccount.automountServiceAccountToken | bool | `nil` | Controls whether a service account token is automatically mounted into the operator pod and by the service account. Only applied when explicitly set. |
 | podAnnotations | object | `{}` | Annotations for the cass-operator pod. |
 | podSecurityContext | object | `{}` | PodSecurityContext for the cass-operator pod. See: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/ |
 | securityContext.runAsNonRoot | bool | `true` | Run cass-operator container as non-root user |
