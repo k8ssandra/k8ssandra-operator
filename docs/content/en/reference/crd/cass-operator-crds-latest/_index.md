@@ -24877,6 +24877,21 @@ Arguments are additional parameters for the command
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>fast</b></td>
+        <td>boolean</td>
+        <td>
+          Fast modifies the behavior of rolling restart to restart multiple nodes (or entire rack) at the same time.
+If the cluster is degraded in availability, the fast path isn't used<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>force</b></td>
+        <td>boolean</td>
+        <td>
+          Force is used to force the execution of a command even if the operator thinks it is unsafe<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>jobs</b></td>
         <td>integer</td>
         <td>
@@ -25431,6 +25446,21 @@ Arguments are additional parameters for the command
         <td>string</td>
         <td>
           <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>fast</b></td>
+        <td>boolean</td>
+        <td>
+          Fast modifies the behavior of rolling restart to restart multiple nodes (or entire rack) at the same time.
+If the cluster is degraded in availability, the fast path isn't used<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>force</b></td>
+        <td>boolean</td>
+        <td>
+          Force is used to force the execution of a command even if the operator thinks it is unsafe<br/>
         </td>
         <td>false</td>
       </tr><tr>
