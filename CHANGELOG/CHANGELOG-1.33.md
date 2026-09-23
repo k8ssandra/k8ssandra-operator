@@ -15,6 +15,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [BUGFIX] [#1800](https://github.com/k8ssandra/k8ssandra-operator/issues/1800) The Medusa INI configuration cassandra_url management API port is hardcoded
+
 ## v1.33.0 - 2026-09-03
 
 * [CHANGE] Update cass-operator to v1.32.0
