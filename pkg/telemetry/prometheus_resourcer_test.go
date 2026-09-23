@@ -13,9 +13,11 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Test_PrometheusResourcer_UpdateResources_Create_CassDC tests that a serviceMonitor is created if one does not exist.
@@ -50,6 +52,47 @@ func Test_PrometheusResourcer_UpdateResources_Create_CassDC(t *testing.T) {
 	assert.NotEmpty(t, createdSM)
 	assert.Equal(t, cfg.ServiceMonitorName, createdSM.Name)
 	assert.Equal(t, cfg.MonitoringTargetNS, createdSM.Namespace)
+	assertNonBlockingOwnerReference(t, createdSM, ownerCassDC.Name)
+}
+
+// Test_PrometheusResourcer_UpdateResources_Update_CassDC tests that an out of date serviceMonitor is updated, and that
+// a controller reference left by an earlier version of the operator is replaced with a non-blocking owner reference.
+func Test_PrometheusResourcer_UpdateResources_Update_CassDC(t *testing.T) {
+	fakeClient, err := test.NewFakeClient()
+	require.NoError(t, err, "could not create fake client")
+	ctx := context.Background()
+	cfg := PrometheusResourcer{
+		MonitoringTargetNS:   "test-namespace",
+		MonitoringTargetName: "test-dc-name",
+		Logger:               testr.New(t),
+		ServiceMonitorName:   "test-servicemonitor",
+		CommonLabels:         map[string]string{k8ssandraapi.K8ssandraClusterNameLabel: "test-k8ssandracluster"},
+	}
+	ownerCassDC := test.NewCassandraDatacenter("test-cassdc", "test-namespace")
+	existingSM, err := cfg.NewCassServiceMonitor(true)
+	require.NoError(t, err, "couldn't create new ServiceMonitor for CassDC")
+	require.NoError(t, controllerutil.SetControllerReference(&ownerCassDC, existingSM, fakeClient.Scheme()))
+	require.NoError(t, fakeClient.Create(ctx, existingSM))
+
+	desiredSM, err := cfg.NewCassServiceMonitor(false)
+	require.NoError(t, err, "couldn't create new ServiceMonitor for CassDC")
+	require.NoError(t, cfg.UpdateResources(ctx, fakeClient, &ownerCassDC, desiredSM))
+
+	updatedSM := &promapi.ServiceMonitor{}
+	require.NoError(t, fakeClient.Get(ctx, types.NamespacedName{Namespace: cfg.MonitoringTargetNS, Name: cfg.ServiceMonitorName}, updatedSM))
+	assert.Equal(t, desiredSM.Annotations[k8ssandraapi.ResourceHashAnnotation], updatedSM.Annotations[k8ssandraapi.ResourceHashAnnotation])
+	assertNonBlockingOwnerReference(t, updatedSM, ownerCassDC.Name)
+}
+
+// assertNonBlockingOwnerReference checks the ServiceMonitor has a single non-controller owner reference to the CassandraDatacenter.
+func assertNonBlockingOwnerReference(t *testing.T, sm *promapi.ServiceMonitor, ownerName string) {
+	t.Helper()
+	require.Len(t, sm.OwnerReferences, 1)
+	owner := sm.OwnerReferences[0]
+	assert.Equal(t, "CassandraDatacenter", owner.Kind)
+	assert.Equal(t, ownerName, owner.Name)
+	assert.Nil(t, owner.Controller)
+	assert.Nil(t, owner.BlockOwnerDeletion)
 }
 
 // Test_PrometheusResourcer_Cleanup_CassDC tests that the Cleanup method on PrometheusResourcer correctly
