@@ -24700,10 +24700,27 @@ can access<br/>
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>maxConcurrentPods</b></td>
+        <td>integer</td>
+        <td>
+          MaxConcurrentPods specifies the maximum number of pods to process concurrently in a rack.
+If not set or set to 0 defaults to 1.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>restartPolicy</b></td>
         <td>string</td>
         <td>
-          RestartPolicy indicates the behavior n case of failure. Default is Never.<br/>
+          RestartPolicy indicates the behavior n case of failure. Default is OnFailure.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>retries</b></td>
+        <td>integer</td>
+        <td>
+          Retries specifies the maximum number of times a failed pod operation can be retried.
+This is only relevant if the RestartPolicy is set to OnFailure. If not set,
+the default value is 1.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -24877,6 +24894,21 @@ Arguments are additional parameters for the command
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>fast</b></td>
+        <td>boolean</td>
+        <td>
+          Fast modifies the behavior of rolling restart to restart multiple nodes (or entire rack) at the same time.
+If the cluster is degraded in availability, the fast path isn't used<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>force</b></td>
+        <td>boolean</td>
+        <td>
+          Force is used to force the execution of a command even if the operator thinks it is unsafe<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>jobs</b></td>
         <td>integer</td>
         <td>
@@ -25022,6 +25054,14 @@ More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b><a href="#cassandrataskstatuspodstatuseskey">podStatuses</a></b></td>
+        <td>map[string]object</td>
+        <td>
+          PodStatuses tracks the processing status of each pod for bookkeeping.
+Keys are pod names (not including pod UID to handle recreation scenarios).<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>startTime</b></td>
         <td>string</td>
         <td>
@@ -25115,6 +25155,72 @@ with respect to the current state of the instance.<br/>
           <br/>
             <i>Format</i>: int64<br/>
             <i>Minimum</i>: 0<br/>
+        </td>
+        <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### CassandraTask.status.podStatuses[key]
+<sup><sup>[↩ Parent](#cassandrataskstatus)</sup></sup>
+
+
+
+PodProcessingStatus represents the status of a pod being processed by a CassandraTask.
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>status</b></td>
+        <td>string</td>
+        <td>
+          Status of the pod processing.<br/>
+        </td>
+        <td>true</td>
+      </tr><tr>
+        <td><b>completionTime</b></td>
+        <td>string</td>
+        <td>
+          Represents time when the pod was completed (success or fail).<br/>
+          <br/>
+            <i>Format</i>: date-time<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>error</b></td>
+        <td>string</td>
+        <td>
+          Error message if failed.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>jobId</b></td>
+        <td>string</td>
+        <td>
+          JobID for async operations (mgmt-api).<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>retries</b></td>
+        <td>integer</td>
+        <td>
+          Retry count<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>startTime</b></td>
+        <td>string</td>
+        <td>
+          Represents time when the job controller started processing this pod.<br/>
+          <br/>
+            <i>Format</i>: date-time<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -25250,6 +25356,14 @@ can access<br/>
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>maxConcurrentPods</b></td>
+        <td>integer</td>
+        <td>
+          MaxConcurrentPods specifies the maximum number of pods to process concurrently in a rack.
+If not set or set to 0 defaults to 1.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>name</b></td>
         <td>string</td>
         <td>
@@ -25260,7 +25374,16 @@ can access<br/>
         <td><b>restartPolicy</b></td>
         <td>string</td>
         <td>
-          RestartPolicy indicates the behavior n case of failure. Default is Never.<br/>
+          RestartPolicy indicates the behavior n case of failure. Default is OnFailure.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>retries</b></td>
+        <td>integer</td>
+        <td>
+          Retries specifies the maximum number of times a failed pod operation can be retried.
+This is only relevant if the RestartPolicy is set to OnFailure. If not set,
+the default value is 1.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -25431,6 +25554,21 @@ Arguments are additional parameters for the command
         <td>string</td>
         <td>
           <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>fast</b></td>
+        <td>boolean</td>
+        <td>
+          Fast modifies the behavior of rolling restart to restart multiple nodes (or entire rack) at the same time.
+If the cluster is degraded in availability, the fast path isn't used<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>force</b></td>
+        <td>boolean</td>
+        <td>
+          Force is used to force the execution of a command even if the operator thinks it is unsafe<br/>
         </td>
         <td>false</td>
       </tr><tr>
