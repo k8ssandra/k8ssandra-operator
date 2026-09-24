@@ -20,6 +20,16 @@ webhooks:
         path: /validate-medusa-k8ssandra-io-v1alpha1-medusabackupschedule
     failurePolicy: Fail
     name: vmedusabackupschedule.kb.io
+    {{- if .Values.global.watchNamespaces }}
+    namespaceSelector:
+      matchExpressions:
+      - key: kubernetes.io/metadata.name
+        operator: In
+        values:
+        {{- range .Values.global.watchNamespaces }}
+        - {{ . | quote }}
+        {{- end }}
+    {{- end }}
     rules:
     - apiGroups:
       - medusa.k8ssandra.io
@@ -40,6 +50,16 @@ webhooks:
         path: /validate-k8ssandra-io-v1alpha1-k8ssandracluster
     failurePolicy: Fail
     name: vk8ssandracluster.kb.io
+    {{- if .Values.global.watchNamespaces }}
+    namespaceSelector:
+      matchExpressions:
+      - key: kubernetes.io/metadata.name
+        operator: In
+        values:
+        {{- range .Values.global.watchNamespaces }}
+        - {{ . | quote }}
+        {{- end }}
+    {{- end }}
     rules:
       - apiGroups:
           - k8ssandra.io
@@ -70,6 +90,16 @@ webhooks:
         path: /validate-medusa-k8ssandra-io-v1alpha1-medusabackupschedule
     failurePolicy: Fail
     name: vmedusabackupschedule.kb.io
+    {{- if .Values.global.watchNamespaces }}
+    namespaceSelector:
+      matchExpressions:
+      - key: kubernetes.io/metadata.name
+        operator: In
+        values:
+        {{- range .Values.global.watchNamespaces }}
+        - {{ . | quote }}
+        {{- end }}
+    {{- end }}
     rules:
     - apiGroups:
       - medusa.k8ssandra.io

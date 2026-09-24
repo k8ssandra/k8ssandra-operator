@@ -16,3 +16,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 ## unreleased
 
 * [ENHANCEMENT] [#1796](https://github.com/k8ssandra/k8ssandra-operator/issues/1796) Declare JMX container port (7199) on the Cassandra pod template when enabling remote JMX access for Reaper
+* [ENHANCEMENT] [#1754](https://github.com/k8ssandra/k8ssandra-operator/issues/1754) Use namespaceselector on the webhooks if watchNamespaces is used
