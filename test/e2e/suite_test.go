@@ -686,10 +686,10 @@ func applyPollingDefaults() {
 	polling.reaperReady.timeout = 10 * time.Minute
 	polling.reaperReady.interval = 15 * time.Second
 
-	polling.medusaBackupDone.timeout = 10 * time.Minute
+	polling.medusaBackupDone.timeout = 15 * time.Minute
 	polling.medusaBackupDone.interval = 15 * time.Second
 
-	polling.medusaRestoreDone.timeout = 15 * time.Minute
+	polling.medusaRestoreDone.timeout = 20 * time.Minute
 	polling.medusaRestoreDone.interval = 15 * time.Second
 
 	polling.datacenterUpdating.timeout = 3 * time.Minute
