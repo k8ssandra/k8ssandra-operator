@@ -82,6 +82,9 @@ spec:
           periodSeconds: 20
         name: k8ssandra-operator
         ports:
+          - containerPort: 8080
+            name: metrics
+            protocol: TCP
           - containerPort: 9443
             name: webhook-server
             protocol: TCP
