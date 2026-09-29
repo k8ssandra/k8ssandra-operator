@@ -16,3 +16,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 ## unreleased
 
 * [ENHANCEMENT] Add `affinity` and `topologySpreadConstraints` support to the k8ssandra-operator chart, allowing the operator pods to be spread across nodes when `replicaCount` is greater than 1
+* [ENHANCEMENT] [#1796](https://github.com/k8ssandra/k8ssandra-operator/issues/1796) Declare JMX container port (7199) on the Cassandra pod template when enabling remote JMX access for Reaper

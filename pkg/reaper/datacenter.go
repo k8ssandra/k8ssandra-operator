@@ -22,5 +22,6 @@ func AddReaperSettingsToDcConfig(reaperTemplate *reaperapi.ReaperClusterTemplate
 func enableRemoteJmxAccess(dcConfig *cassandra.DatacenterConfig) {
 	cassandra.UpdateCassandraContainer(&dcConfig.PodTemplateSpec, func(c *corev1.Container) {
 		c.Env = append(c.Env, corev1.EnvVar{Name: "LOCAL_JMX", Value: "no"})
+		c.Ports = append(c.Ports, corev1.ContainerPort{Name: "jmx", ContainerPort: 7199, Protocol: corev1.ProtocolTCP})
 	})
 }
