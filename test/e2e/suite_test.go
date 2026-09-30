@@ -185,8 +185,8 @@ func TestOperator(t *testing.T) {
 		fixture:  framework.NewTestFixture("single-dc-hcd", controlPlane),
 	}))
 	t.Run("CreateSingleDseSearchDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
-		testFunc:     createSingleDseSearchDatacenterCluster,
-		fixture:      framework.NewTestFixture("single-dc-dse-search", controlPlane),
+		testFunc:    createSingleDseSearchDatacenterCluster,
+		fixture:     framework.NewTestFixture("single-dc-dse-search", controlPlane),
 		installSilo: true,
 	}))
 	t.Run("CreateSingleDseGraphDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
@@ -204,7 +204,7 @@ func TestOperator(t *testing.T) {
 	t.Run("CreateMultiDatacenterClusterMedusa", e2eTest(ctx, &e2eTestOpts{
 		testFunc:             createMultiDatacenterMedusaCluster,
 		fixture:              framework.NewTestFixture("multi-dc-medusa", controlPlane),
-		installSilo:         true,
+		installSilo:          true,
 		clusterScoped:        true,
 		sutNamespace:         "multi-dc-medusa",
 		additionalNamespaces: []string{"separate-namespace"},
@@ -275,7 +275,7 @@ func TestOperator(t *testing.T) {
 			clusterScoped:        true,
 			sutNamespace:         "test-0",
 			additionalNamespaces: []string{"test-1", "test-2"},
-			installSilo:         true,
+			installSilo:          true,
 		}))
 	})
 	t.Run("CreateSingleMedusaJob", e2eTest(ctx, &e2eTestOpts{
@@ -283,28 +283,28 @@ func TestOperator(t *testing.T) {
 		fixture:                      framework.NewTestFixture("single-dc-encryption-medusa", controlPlane),
 		skipK8ssandraClusterCleanup:  false,
 		doCassandraDatacenterCleanup: false,
-		installSilo:                 true,
+		installSilo:                  true,
 	}))
 	t.Run("CreateMultiDcSingleMedusaJob", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createMultiDcSingleMedusaJob,
 		fixture:                      framework.NewTestFixture("single-dc-multi-cluster-medusa", controlPlane),
 		skipK8ssandraClusterCleanup:  false,
 		doCassandraDatacenterCleanup: false,
-		installSilo:                 true,
+		installSilo:                  true,
 	}))
 	t.Run("CreateSingleDseMedusaJob", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createSingleMedusaJob,
 		fixture:                      framework.NewTestFixture("single-dc-dse-medusa", controlPlane),
 		skipK8ssandraClusterCleanup:  false,
 		doCassandraDatacenterCleanup: false,
-		installSilo:                 true,
+		installSilo:                  true,
 	}))
 	t.Run("CreateMultiMedusaJob", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createMultiMedusaJob,
 		fixture:                      framework.NewTestFixture("multi-dc-encrypt-medusa", controlPlane),
 		skipK8ssandraClusterCleanup:  false,
 		doCassandraDatacenterCleanup: false,
-		installSilo:                 true,
+		installSilo:                  true,
 	}))
 	t.Run("MultiDcAuthOnOff", e2eTest(ctx, &e2eTestOpts{
 		testFunc: multiDcAuthOnOff,

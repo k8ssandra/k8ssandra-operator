@@ -39,10 +39,10 @@ import (
 )
 
 const (
-	repoName       = "k8ssandra"
-	relName        = "k8ssandra-operator"
-	chartName      = "k8ssandra-operator"
-	repoURL        = "https://helm.k8ssandra.io/stable"
+	repoName      = "k8ssandra"
+	relName       = "k8ssandra-operator"
+	chartName     = "k8ssandra-operator"
+	repoURL       = "https://helm.k8ssandra.io/stable"
 	SiloNamespace = "silo"
 )
 
@@ -420,7 +420,7 @@ func (f *E2eFramework) InstallSilo() error {
 		err := wait.PollUntilContextTimeout(context.Background(), 5*time.Second, 5*time.Minute, true, func(ctx context.Context) (bool, error) {
 			if err := kubectl.RolloutStatus(ctx, opts, "Deployment", "silo"); err != nil {
 				f.logger.Info("Waiting for silo rollout to complete: %s", err)
-				return false, err
+				return false, nil
 			}
 			return true, nil
 		})
