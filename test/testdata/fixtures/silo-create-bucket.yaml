@@ -1,0 +1,18 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: setup-silo
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: setup-silo-pod
+          image: pgsty/mc
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              mc alias set k8s-silo http://silo-service.silo.svc.cluster.local:9000 siloadmin siloadmin
+              mc mb k8s-silo/k8ssandra-medusa
+              mc admin user add k8s-silo k8ssandra k8ssandra
+              mc admin policy attach k8s-silo readwrite --user k8ssandra

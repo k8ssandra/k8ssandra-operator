@@ -8,21 +8,21 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: minio
-  name: minio
-  namespace: minio
+    app: silo
+  name: silo
+  namespace: silo
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: minio
+      app: silo
   template:
     metadata:
       labels:
-        app: minio
+        app: silo
     spec:
       containers:
-      - name: minio
+      - name: silo
         image: docker.io/pgsty/silo:latest
         command:
         - /bin/bash
@@ -41,11 +41,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: minio-service
-  namespace: minio
+  name: silo-service
+  namespace: silo
 spec:
   selector:
-    app: minio
+    app: silo
   ports:
     - protocol: TCP
       name: api

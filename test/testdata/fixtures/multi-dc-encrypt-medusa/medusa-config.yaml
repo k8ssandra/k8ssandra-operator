@@ -8,7 +8,7 @@ spec:
     bucketName: k8ssandra-medusa
     storageSecretRef:
       name: medusa-bucket-key
-    host: minio-service.minio.svc.cluster.local
+    host: silo-service.silo.svc.cluster.local
     port: 9000
     secure: false
     concurrentTransfers: 2
