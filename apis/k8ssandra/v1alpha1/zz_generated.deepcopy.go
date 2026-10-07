@@ -24,7 +24,6 @@ import (
 	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	medusav1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	reaperv1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
-	stargatev1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	telemetryv1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
@@ -175,11 +174,6 @@ func (in *CassandraDatacenterTemplate) DeepCopyInto(out *CassandraDatacenterTemp
 	*out = *in
 	in.Meta.DeepCopyInto(&out.Meta)
 	in.DatacenterOptions.DeepCopyInto(&out.DatacenterOptions)
-	if in.Stargate != nil {
-		in, out := &in.Stargate, &out.Stargate
-		*out = new(stargatev1alpha1.StargateDatacenterTemplate)
-		(*in).DeepCopyInto(*out)
-	}
 	out.PerNodeConfigMapRef = in.PerNodeConfigMapRef
 }
 
@@ -904,11 +898,6 @@ func (in *K8ssandraClusterSpec) DeepCopyInto(out *K8ssandraClusterSpec) {
 		*out = new(CassandraClusterTemplate)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.Stargate != nil {
-		in, out := &in.Stargate, &out.Stargate
-		*out = new(stargatev1alpha1.StargateClusterTemplate)
-		(*in).DeepCopyInto(*out)
-	}
 	if in.Reaper != nil {
 		in, out := &in.Reaper, &out.Reaper
 		*out = new(reaperv1alpha1.ReaperClusterTemplate)
@@ -971,11 +960,6 @@ func (in *K8ssandraStatus) DeepCopyInto(out *K8ssandraStatus) {
 	if in.Cassandra != nil {
 		in, out := &in.Cassandra, &out.Cassandra
 		*out = new(v1beta1.CassandraDatacenterStatus)
-		(*in).DeepCopyInto(*out)
-	}
-	if in.Stargate != nil {
-		in, out := &in.Stargate, &out.Stargate
-		*out = new(stargatev1alpha1.StargateStatus)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.Reaper != nil {

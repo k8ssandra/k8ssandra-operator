@@ -24,7 +24,6 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
-	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/utils/ptr"
 
@@ -56,9 +55,6 @@ func Init(t *testing.T) {
 
 	err = api.AddToScheme(scheme.Scheme)
 	require.NoError(t, err, "failed to register scheme for k8ssandra-operator")
-
-	err = stargateapi.AddToScheme(scheme.Scheme)
-	require.NoError(t, err, "failed to register scheme for stargate")
 
 	err = reaperapi.AddToScheme(scheme.Scheme)
 	require.NoError(t, err, "failed to register scheme for reaper")
@@ -643,38 +639,6 @@ func (f *Framework) K8ssandraTaskExists(ctx context.Context, key ClusterKey) fun
 		return true
 	})
 }
-
-// // NewWithStargate is a function generator for withStargate that is bound to ctx, and key.
-// func (f *Framework) NewWithStargate(ctx context.Context, key ClusterKey) func(func(stargate *stargateapi.Stargate) bool) func() bool {
-// 	return func(condition func(*stargateapi.Stargate) bool) func() bool {
-// 		return f.withStargate(ctx, key, condition)
-// 	}
-// }
-
-// withStargate Fetches the stargate specified by key and then calls condition.
-// func (f *Framework) withStargate(ctx context.Context, key ClusterKey, condition func(*stargateapi.Stargate) bool) func() bool {
-// 	return func() bool {
-// 		remoteClient, found := f.remoteClients[key.K8sContext]
-// 		if !found {
-// 			f.logger.Error(f.k8sContextNotFound(key.K8sContext), "cannot lookup Stargate", "key", key)
-// 			return false
-// 		}
-// 		stargate := &stargateapi.Stargate{}
-// 		if err := remoteClient.Get(ctx, key.NamespacedName, stargate); err == nil {
-// 			return condition(stargate)
-// 		} else {
-// 			f.logger.Error(err, "failed to get Stargate", "key", key)
-// 			return false
-// 		}
-// 	}
-// }
-
-// func (f *Framework) StargateExists(ctx context.Context, key ClusterKey) func() bool {
-// 	withStargate := f.NewWithStargate(ctx, key)
-// 	return withStargate(func(s *stargateapi.Stargate) bool {
-// 		return true
-// 	})
-// }
 
 // NewWithReaper is a function generator for withReaper that is bound to ctx, and key.
 func (f *Framework) NewWithReaper(ctx context.Context, key ClusterKey) func(func(reaper *reaperapi.Reaper) bool) func() bool {

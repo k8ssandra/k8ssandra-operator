@@ -17,7 +17,6 @@ import (
 	kerrors "github.com/k8ssandra/k8ssandra-operator/pkg/errors"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/k8ssandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,10 +41,6 @@ func (r *K8ssandraClusterReconciler) checkSchemas(
 	}
 
 	if recResult := r.updateReplicationOfSystemKeyspaces(ctx, kc, mgmtApi, logger); recResult.Completed() {
-		return recResult
-	}
-
-	if recResult := r.reconcileStargateAuthSchema(ctx, kc, mgmtApi, logger); recResult.Completed() {
 		return recResult
 	}
 
@@ -328,14 +323,9 @@ func getUserKeyspaces(mgmtApi cassandra.ManagementApiFacade, kc *api.K8ssandraCl
 	return userKeyspaces, nil
 }
 
-// getInternalKeyspaces returns all internal Cassandra keyspaces as well as the Stargate
-// auth and Reaper keyspaces if Stargate and Reaper are enabled.
+// getInternalKeyspaces returns internal Cassandra keyspaces and the Reaper keyspace when enabled.
 func getInternalKeyspaces(kc *api.K8ssandraCluster) []string {
 	keyspaces := api.SystemKeyspaces
-
-	if kc.HasStargates() {
-		keyspaces = append(keyspaces, stargate.AuthKeyspace)
-	}
 
 	if kc.Spec.Reaper != nil {
 		keyspaces = append(keyspaces, getReaperKeyspace(kc))

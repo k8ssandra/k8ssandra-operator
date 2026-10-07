@@ -43,9 +43,9 @@ patches:
 1. **The ImageConfig ConfigMap will be automatically updated in the pod filesystem  when it changes, but changes will not take effect until the Operator is restarted.**
 2. **If a CassandraDatacenter is already running, the new image configurations will not be automatically applied. The CassandraDatacenter needs to be deleted and re-created in order for the changes to take effect.**
 
-## Cassandra, Stargate, Medusa and Reaper images
+## Cassandra, Medusa and Reaper images
 
-The images for Reaper, Stargate, the short lived JMX container within the Cassandra pods, and the Cassandra/management-api containers can be also set via the K8ssandraCluster CR as follows:
+The images for Reaper, the short lived JMX container within the Cassandra pods, and the Cassandra/management-api containers can be also set via the K8ssandraCluster CR as follows:
 
 ```
 apiVersion: k8ssandra.io/v1alpha1
@@ -71,17 +71,6 @@ spec:
       tag: <my-tag>
       pullPolicy: <my-pullPolicy>
       pullSecretRef: <my-pullSecretRef>
-  stargate:
-    size: 1
-    containerImage:
-      registry: <my-registry>
-      repository: <my-repository>
-      image: <my-image>
-      name: <my-name>
-      tag: <my-tag>
-      pullPolicy: <my-pullPolicy>
-      pullSecretRef: <my-pullSecretRef>
-          stargate:
   reaper:
     containerImage:
       registry: <my-registry>
@@ -115,16 +104,6 @@ spec:
             resources:
               requests:
                 storage: 5Gi
-        stargate:
-          size: 1
-          containerImage:
-            registry: <my-registry>
-            repository: <my-repository>
-            image: <my-image>
-            name: <my-name>
-            tag: <my-tag>
-            pullPolicy: <my-pullPolicy>
-            pullSecretRef: <my-pullSecretRef>
         reaper:
           containerImage:
             registry: <my-registry>
@@ -136,7 +115,7 @@ spec:
             pullSecretRef: <my-pullSecretRef>
 ```
 
-Some settings (`containerImage` for Reaper, Stargate, Medusa; and `ServerImage` and `JmxInitContainerImage` for the Cassandra pods) can be defined in multiple places, even within the K8ssandraCluster CR. 
+Some settings (`containerImage` for Reaper, Medusa; and `ServerImage` and `JmxInitContainerImage` for the Cassandra pods) can be defined in multiple places, even within the K8ssandraCluster CR.
 
 The configurations will be applied with the following precendence:
 

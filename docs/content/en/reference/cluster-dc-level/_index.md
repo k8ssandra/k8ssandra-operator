@@ -369,7 +369,7 @@ extraVolumes:
             storage: 100Mi
 ```
 
-The same merging rules apply to other components of your cluster, namely, Stargate and Telemetry.
+The same merging rules apply to other components of your cluster, namely, Telemetry.
 
 Let's consider another example:
 
@@ -379,13 +379,6 @@ kind: K8ssandraCluster
 metadata:
   name: cluster1
 spec:
-  # cluster-level Stargate configuration goes here
-  stargate:
-    size: 1
-    resources:
-      requests:
-        cpu: 1000m
-        memory: 1Gi
   # cluster-level Reaper configuration goes here
   reaper:
     resources:
@@ -415,13 +408,6 @@ spec:
           name: dc3
         k8sContext: data-plane3
         size: 3
-        # dc-level Stargate configuration goes here
-        stargate:
-          size: 2
-          resources:
-            limits:
-              cpu: 2000m
-              memory: 2Gi
         # dc-level Telemetry configuration goes here
         telemetry:
           prometheus:
@@ -429,4 +415,4 @@ spec:
         # Reaper and Medusa configuration overrides are not allowed at dc level!
 ```
 
-In the above example, the `stargate` section in dc3 will be merged with the cluster-level `stargate` section; and likewise for the `telemetry` sections. However, **the `reaper` and `medusa` sections are not allowed to be overridden at dc level**, as these components must have exactly the same configuration for the entire cluster.
+In the above example, the `telemetry` section in dc3 will be merged with the cluster-level `telemetry` section. However, **the `reaper` and `medusa` sections are not allowed to be overridden at dc level**, as these components must have exactly the same configuration for the entire cluster.

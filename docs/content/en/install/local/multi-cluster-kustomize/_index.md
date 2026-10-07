@@ -105,7 +105,6 @@ Verify that the following CRDs are installed:
 * `medusatasks.medusa.k8ssandra.io`
 * `reapers.reaper.k8ssandra.io`
 * `replicatedsecrets.replication.k8ssandra.io`
-* `stargates.stargate.k8ssandra.io`
 
 Check that there are two Deployments. The output should look similar to this:
 
@@ -156,7 +155,6 @@ Verify that the following CRDs are installed:
 * `medusatasks.medusa.k8ssandra.io`
 * `reapers.reaper.k8ssandra.io`
 * `replicatedsecrets.replication.k8ssandra.io`
-* `stargates.stargate.k8ssandra.io`
 
 Check that there are two Deployments. The output should look similar to this:
 
@@ -200,7 +198,7 @@ why it is necessary to restart the control plane operator.
 
 ## Deploy a K8ssandraCluster
 Now we will create a `K8ssandraCluster` custom resource that consists of a Cassandra cluster with 2 DCs and 3 
-nodes per DC, and a Stargate node per DC.
+nodes per DC.
 
 ```sh
 cat <<EOF | kubectl -n k8ssandra-operator apply -f -
@@ -228,16 +226,10 @@ spec:
       - metadata:
           name: dc1
         size: 3
-        stargate:
-          size: 1
-          heapSize: 256M
       - metadata:
           name: dc2
         k8sContext: kind-k8ssandra-1
         size: 3
-        stargate:
-          size: 1
-          heapSize: 256M 
 EOF
 ```
 

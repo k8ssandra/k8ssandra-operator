@@ -86,12 +86,11 @@ type K8ssandraClusterCustomValidator struct {
 func (v *K8ssandraClusterCustomValidator) ValidateCreate(ctx context.Context, obj *K8ssandraCluster) (admission.Warnings, error) {
 	webhookLog.Info("validate K8ssandraCluster create", "K8ssandraCluster", obj.Name)
 
-	warnings := ValidateDeprecatedFieldUsage(obj)
 	if err := validateK8ssandraCluster(obj); err != nil {
-		return warnings, err
+		return nil, err
 	}
 
-	return warnings, validateServerVersion(obj.Spec.Cassandra)
+	return nil, validateServerVersion(obj.Spec.Cassandra)
 }
 
 func validateServerVersion(cassandra *CassandraClusterTemplate) error {
@@ -228,7 +227,7 @@ func (v *K8ssandraClusterCustomValidator) ValidateUpdate(ctx context.Context, ol
 		return nil, err
 	}
 
-	return ValidateDeprecatedFieldUsage(newCluster), nil
+	return nil, nil
 }
 
 func validateUpdateNumTokens(
@@ -372,34 +371,4 @@ func validateReaper(r *K8ssandraCluster) error {
 		return ErrNoReaperPerDcWithLocal
 	}
 	return nil
-}
-
-// ValidateDeprecatedFieldUsage adds warning about fields that are deprecated
-func ValidateDeprecatedFieldUsage(r *K8ssandraCluster) admission.Warnings {
-	warnings := admission.Warnings{}
-
-	if r.Spec.Stargate != nil {
-		warnings = append(warnings, deprecatedWarning("stargate", "", ""))
-	}
-
-	if r.Spec.Cassandra != nil && len(r.Spec.Cassandra.Datacenters) > 0 {
-		for _, dc := range r.Spec.Cassandra.Datacenters {
-			if dc.Stargate != nil {
-				warnings = append(warnings, deprecatedWarning("cassandra.datacenters.stargate", "", ""))
-			}
-		}
-	}
-
-	return warnings
-}
-
-func deprecatedWarning(field, instead, extra string) string {
-	warning := fmt.Sprintf("K8ssandraCluster is using deprecated field '%s'", field)
-	if instead != "" {
-		warning += fmt.Sprintf(", use '%s' instead", instead)
-	}
-	if extra != "" {
-		warning += ". %s"
-	}
-	return warning
 }

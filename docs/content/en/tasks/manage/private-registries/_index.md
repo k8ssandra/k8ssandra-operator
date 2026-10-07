@@ -89,8 +89,6 @@ Here is a list of CRD properties that correspond to K8ssandra Operator deployed 
 | `cassandra.configBuilder`                                | An init container that provisions Cassandra configuration files such as cassandra.yaml |
 | `cassandra.jmxCredentialsConfig` | An init container that configures authentication for remote JMX access |
 | `cassandra.loggingSidecar` | A container that tails Cassandra's system.log file |
-| `stargate` | Runs Stargate, which is an API for interacting with Cassandra |
-| `stargate.waitForCassandra` | An init container that waits until all the Cassandra pods are ready |
 | `reaper` | Run Reaper, which provides repair functionality for Cassandra data |
 | `medusa` | Runs the medusa container that performs backups, and the `medusa-restore` init container that performs restores |
 | `cleaner` | A Helm pre-delete hook that deletes the CassandraDatacenter |
@@ -131,7 +129,6 @@ The following table lists the relevant properties for configuring service accoun
 | Pod       | Chart property                     | Summary                               |
 | ----------|----------------------------------- | ------------------------------------- |
 | Cassandra | `cassandra.serviceAccount`         | Specifies the name of an existing service account. If not specified the default service account is used. |
-| Stargate  | `stargate.serviceAccount`          | Specifies the name of an existing service account. If not specified the default service account is used. |
 | Reaper    | `reaper.serviceAccount`            | Specifies the name of an existing service account. If not specified the default service account is used. |
 | Prometheus Operator | `kube-prometheus-stack.prometheusOperator.serviceAccount.name` | Specifies the name of the service account that will be created. The `kube-prometheus-stack` chart creates this service account by default. |
 | Prometheus | `kube-prometheus-stack.prometheus.serviceAccountName` | Specifies the name of the service account that will be created. The `kube-prometheus-stack` chart creates this service account by default. |
@@ -146,9 +143,9 @@ The following table lists the relevant properties for configuring service accoun
 
 There are some differences in the way K8ssandra Operator handles the configuration of service accounts, depending on the component. Let's look at each component to see how to configure image pull secrets.
 
-#### Cassandra, Stargate, Reaper
+#### Cassandra, Reaper
 
-For each of these components -- Cassandra, Stargate, Reaper -- K8ssandra does not create or configure the service account. For details on configuring and creating a service account with image pull secrets for these components, see [Configure Service Accounts for Pods](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#add-imagepullsecrets-to-a-service-account) in the Kubernetes documentation. 
+For each of these components -- Cassandra, Reaper -- K8ssandra does not create or configure the service account. For details on configuring and creating a service account with image pull secrets for these components, see [Configure Service Accounts for Pods](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#add-imagepullsecrets-to-a-service-account) in the Kubernetes documentation.
 
 #### Prometheus Operator
 
@@ -221,25 +218,6 @@ You must create this service account for CRD Updater separately.
 
 Let's look at two examples that demonstrates how to work with the image properties.
 
-### Custom stargate example with the default registry
-
-Suppose we are working on a fork of [Stargate](https://github.com/stargate/stargate) and we want to deploy it in K8ssandra. We also want to use a custom image for the `waitForCassandra` init container. We could create and apply an overrides values YAML file with properties like this:
-
-``` yaml
-stargate:
-  image:    
-    repository: example-user/stargate
-    tag: 1.0.29-dev
-  waitForCassandra:
-    image:
-      repository: example-user/stargate-init
-      tag: 0.1.0
-```
-
-Notice that the property names (`stargate` and `waitForCassandra`) in the example correspond directly to properties in the [list of chart properties]({{< relref "#list-of-chart-properties" >}}) table above. 
-
-Because the `registry` property was not specified, the default (`docker.io`) will be used.
-
 ### Complete example with a private registry
 
 Here is a complete example of an overrides file that is configured to use a private registry. See the comments embedded in the YAML.
@@ -274,21 +252,6 @@ cassandra:
     image:
       registry: myregistry
       repository: myrepo/system-logger
-
-stargate:
-  # This service account needs to be configured and created prior to installing
-  # the chart.
-  serviceAccount: stargate
-  image:
-    registry: myregistry
-    repository: myrepo/stargate-3_11
-    # We have to specify the tag since we are not using the image mapping
-    tag: 1.0.29
-
-  waitForCassandra:
-    image:
-      registry: myregistry
-      repository: myrepo/alpine
 
 reaper:
   # This service account needs to be configured and created prior to installing

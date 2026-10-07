@@ -10,7 +10,7 @@ The k8ssandra-operator project has a wide range of end to end tests, which use K
 
 - [Single DC with Reaper](https://github.com/k8ssandra/k8ssandra-operator/blob/main/test/testdata/fixtures/single-dc-reaper/k8ssandra.yaml)
 - [Single DC with Medusa](https://github.com/k8ssandra/k8ssandra-operator/blob/main/test/testdata/samples/k8ssandra-single-kind-medusa.yaml)
-- [Single DC with Stargate and encryption enabled](https://github.com/k8ssandra/k8ssandra-operator/blob/main/test/testdata/fixtures/single-dc-encryption-stargate/k8ssandra.yaml) (requires secrets with the encryption stores: [server](https://github.com/k8ssandra/k8ssandra-operator/blob/main/test/testdata/fixtures/server-encryption-secret.yaml) and [client](https://github.com/k8ssandra/k8ssandra-operator/blob/main/test/testdata/fixtures/client-encryption-secret.yaml))
+- [Single DC with encryption enabled](https://github.com/k8ssandra/k8ssandra-operator/blob/main/test/testdata/fixtures/single-dc-encryption/k8ssandra.yaml) (requires secrets with the encryption stores: [server](https://github.com/k8ssandra/k8ssandra-operator/blob/main/test/testdata/fixtures/server-encryption-secret.yaml) and [client](https://github.com/k8ssandra/k8ssandra-operator/blob/main/test/testdata/fixtures/client-encryption-secret.yaml))
 - [Multi DC](https://github.com/k8ssandra/k8ssandra-operator/blob/main/test/testdata/fixtures/multi-dc/k8ssandra.yaml)
   
 More examples can be found in the [k8ssandra-operator test fixtures](https://github.com/k8ssandra/k8ssandra-operator/blob/main/test/testdata/fixtures).

@@ -121,6 +121,7 @@ func ApplySystemReplication(dcConfig *DatacenterConfig, replication SystemReplic
 	addOptionIfMissing(dcConfig, replicationStrategy)
 }
 
+// AllowAlterRfDuringRangeMovement permits replication changes while endpoints are changing state.
 func AllowAlterRfDuringRangeMovement(dcConfig *DatacenterConfig) {
 	addOptionIfMissing(dcConfig, allowAlterRf)
 }

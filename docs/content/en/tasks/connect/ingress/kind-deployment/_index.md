@@ -25,9 +25,6 @@ Kind supports an optional configuration file for configuring specific behaviors 
   is deployed you **must** add additional ports here.
 * `9142` - C* TLS traffic - Secure Cassandra traffic, multiple clusters may run
   behind this single port.
-* `8080` - Stargate GraphQL API
-* `8081` - Stargate Authorization REST API
-* `8082` - Stargate CRUD REST API
   
 ### [`kind.config.yaml`](kind.config.yaml)
 
