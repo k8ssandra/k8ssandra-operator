@@ -20,3 +20,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [BUGFIX] [#1788](https://github.com/k8ssandra/k8ssandra-operator/issues/1788) Don't stop syncing Medusa backups even if there's a requeue
 * [TESTING] [#1804](https://github.com/k8ssandra/k8ssandra-operator/issues/1804) Slightly increase medusa-related timeouts in ITs
 * [TESTING] [#1806](https://github.com/k8ssandra/k8ssandra-operator/issues/1806) Replace minio with silo
+* [BUGFIX] [#1566](https://github.com/k8ssandra/k8ssandra-operator/issues/1566) Write `jvmOptions.gc` to jvm17-server-options for Cassandra 5.x so the selected garbage collector is actually applied
