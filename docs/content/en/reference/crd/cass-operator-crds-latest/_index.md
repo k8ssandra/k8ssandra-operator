@@ -193,7 +193,7 @@ either 0 or greater than the rack size, then all nodes in the rack will get upda
         <td><b><a href="#cassandradatacenterspeccdc">cdc</a></b></td>
         <td>object</td>
         <td>
-          CDC allows configuration of the change data capture agent which can run within the Management API container. Use it to send data to Pulsar.<br/>
+          Deprecated this field is deprecated and will be removed in the future. DeprecatedCDC allows configuration of the change data capture agent which can run within the Management API container. Use it to send data to Pulsar.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -286,6 +286,14 @@ roll out.<br/>
         <td>object</td>
         <td>
           Config for the Management API certificates<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>maxUnavailable</b></td>
+        <td>int or string</td>
+        <td>
+          MaxUnavailable sets the maximum number of rack pods that can be modified simultaneously during an update. This can at most target a single rack, so values higher than rack size will have no effect. Requires Kubernetes 1.35 or higher. Setting percentage will
+calculate against single rack's percentage of pods, not the entire datacenter.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -595,7 +603,7 @@ There are three important differences between dataSource and dataSourceRef:
         <td>object</td>
         <td>
           resources represents the minimum resources the volume should have.
-If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+Users are allowed to specify resource requirements
 that are lower than previous value but must still be higher than capacity recorded in the
 status field of the claim.
 More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources<br/>
@@ -781,7 +789,7 @@ Note that when a namespace is specified, a gateway.networking.k8s.io/ReferenceGr
 
 
 resources represents the minimum resources the volume should have.
-If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+Users are allowed to specify resource requirements
 that are lower than previous value but must still be higher than capacity recorded in the
 status field of the claim.
 More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
@@ -2223,7 +2231,7 @@ There are three important differences between dataSource and dataSourceRef:
         <td>object</td>
         <td>
           resources represents the minimum resources the volume should have.
-If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+Users are allowed to specify resource requirements
 that are lower than previous value but must still be higher than capacity recorded in the
 status field of the claim.
 More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources<br/>
@@ -2409,7 +2417,7 @@ Note that when a namespace is specified, a gateway.networking.k8s.io/ReferenceGr
 
 
 resources represents the minimum resources the volume should have.
-If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+Users are allowed to specify resource requirements
 that are lower than previous value but must still be higher than capacity recorded in the
 status field of the claim.
 More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
@@ -4056,6 +4064,25 @@ longer than 24 hours.<br/>
             <i>Format</i>: int32<br/>
         </td>
         <td>false</td>
+      </tr><tr>
+        <td><b>userAnnotations</b></td>
+        <td>map[string]string</td>
+        <td>
+          userAnnotations allow pod authors to pass additional information to
+the signer implementation.  Kubernetes does not restrict or validate this
+metadata in any way.
+
+These values are copied verbatim into the `spec.unverifiedUserAnnotations` field of
+the PodCertificateRequest objects that Kubelet creates.
+
+Entries are subject to the same validation as object metadata annotations,
+with the addition that all keys must be domain-prefixed. No restrictions
+are placed on values, except an overall size limitation on the entire field.
+
+Signers should document the keys and values they support. Signers should
+deny requests that contain keys they do not recognize.<br/>
+        </td>
+        <td>false</td>
       </tr></tbody>
 </table>
 
@@ -4896,7 +4923,7 @@ There are three important differences between dataSource and dataSourceRef:
         <td>object</td>
         <td>
           resources represents the minimum resources the volume should have.
-If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+Users are allowed to specify resource requirements
 that are lower than previous value but must still be higher than capacity recorded in the
 status field of the claim.
 More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources<br/>
@@ -5082,7 +5109,7 @@ Note that when a namespace is specified, a gateway.networking.k8s.io/ReferenceGr
 
 
 resources represents the minimum resources the volume should have.
-If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+Users are allowed to specify resource requirements
 that are lower than previous value but must still be higher than capacity recorded in the
 status field of the claim.
 More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
@@ -5431,7 +5458,7 @@ ServiceConfigAdditions exposes additional options for each service
 
 
 
-CDC allows configuration of the change data capture agent which can run within the Management API container. Use it to send data to Pulsar.
+Deprecated this field is deprecated and will be removed in the future. DeprecatedCDC allows configuration of the change data capture agent which can run within the Management API container. Use it to send data to Pulsar.
 
 <table>
     <thead>
@@ -6297,8 +6324,8 @@ and reserved before the Pod is allowed to start. The resources
 will be made available to those containers which consume them
 by name.
 
-This is an alpha field and requires enabling the
-DynamicResourceAllocation feature gate.
+This is a stable field but requires that the
+DynamicResourceAllocation feature gate is enabled.
 
 This field is immutable.<br/>
         </td>
@@ -6452,6 +6479,19 @@ All topologySpreadConstraints are ANDed.<br/>
 More info: https://kubernetes.io/docs/concepts/storage/volumes<br/>
         </td>
         <td>false</td>
+      </tr><tr>
+        <td><b><a href="#cassandradatacenterspecpodtemplatespecspecworkloadref">workloadRef</a></b></td>
+        <td>object</td>
+        <td>
+          WorkloadRef provides a reference to the Workload object that this Pod belongs to.
+This field is used by the scheduler to identify the PodGroup and apply the
+correct group scheduling policies. The Workload object referenced
+by this field may not exist at the time the Pod is created.
+This field is immutable, but a Workload object with the same name
+may be recreated with different policies. Doing this during pod scheduling
+may result in the placement not conforming to the expected policies.<br/>
+        </td>
+        <td>false</td>
       </tr></tbody>
 </table>
 
@@ -6595,7 +6635,8 @@ More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#cont
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspeccontainersindexresizepolicyindex">resizePolicy</a></b></td>
         <td>[]object</td>
         <td>
-          Resources resize policy for the container.<br/>
+          Resources resize policy for the container.
+This field cannot be set on ephemeral containers.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -14456,7 +14497,8 @@ More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#cont
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecinitcontainersindexresizepolicyindex">resizePolicy</a></b></td>
         <td>[]object</td>
         <td>
-          Resources resize policy for the container.<br/>
+          Resources resize policy for the container.
+This field cannot be set on ephemeral containers.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -18121,9 +18163,10 @@ If the key is empty, operator must be Exists; this combination means to match al
         <td>string</td>
         <td>
           Operator represents a key's relationship to the value.
-Valid operators are Exists and Equal. Defaults to Equal.
+Valid operators are Exists, Equal, Lt, and Gt. Defaults to Equal.
 Exists is equivalent to wildcard for value, so that a pod can
-tolerate all taints of a particular category.<br/>
+tolerate all taints of a particular category.
+Lt and Gt perform numeric comparisons (requires feature gate TaintTolerationComparisonOperators).<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -19729,7 +19772,7 @@ There are three important differences between dataSource and dataSourceRef:
         <td>object</td>
         <td>
           resources represents the minimum resources the volume should have.
-If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+Users are allowed to specify resource requirements
 that are lower than previous value but must still be higher than capacity recorded in the
 status field of the claim.
 More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources<br/>
@@ -19915,7 +19958,7 @@ Note that when a namespace is specified, a gateway.networking.k8s.io/ReferenceGr
 
 
 resources represents the minimum resources the volume should have.
-If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+Users are allowed to specify resource requirements
 that are lower than previous value but must still be higher than capacity recorded in the
 status field of the claim.
 More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
@@ -21562,6 +21605,25 @@ longer than 24 hours.<br/>
             <i>Format</i>: int32<br/>
         </td>
         <td>false</td>
+      </tr><tr>
+        <td><b>userAnnotations</b></td>
+        <td>map[string]string</td>
+        <td>
+          userAnnotations allow pod authors to pass additional information to
+the signer implementation.  Kubernetes does not restrict or validate this
+metadata in any way.
+
+These values are copied verbatim into the `spec.unverifiedUserAnnotations` field of
+the PodCertificateRequest objects that Kubelet creates.
+
+Entries are subject to the same validation as object metadata annotations,
+with the addition that all keys must be domain-prefixed. No restrictions
+are placed on values, except an overall size limitation on the entire field.
+
+Signers should document the keys and values they support. Signers should
+deny requests that contain keys they do not recognize.<br/>
+        </td>
+        <td>false</td>
       </tr></tbody>
 </table>
 
@@ -22323,6 +22385,63 @@ Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.<br/>
         <td>string</td>
         <td>
           storagePolicyName is the storage Policy Based Management (SPBM) profile name.<br/>
+        </td>
+        <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### CassandraDatacenter.spec.podTemplateSpec.spec.workloadRef
+<sup><sup>[↩ Parent](#cassandradatacenterspecpodtemplatespecspec)</sup></sup>
+
+
+
+WorkloadRef provides a reference to the Workload object that this Pod belongs to.
+This field is used by the scheduler to identify the PodGroup and apply the
+correct group scheduling policies. The Workload object referenced
+by this field may not exist at the time the Pod is created.
+This field is immutable, but a Workload object with the same name
+may be recreated with different policies. Doing this during pod scheduling
+may result in the placement not conforming to the expected policies.
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>name</b></td>
+        <td>string</td>
+        <td>
+          Name defines the name of the Workload object this Pod belongs to.
+Workload must be in the same namespace as the Pod.
+If it doesn't match any existing Workload, the Pod will remain unschedulable
+until a Workload object is created and observed by the kube-scheduler.
+It must be a DNS subdomain.<br/>
+        </td>
+        <td>true</td>
+      </tr><tr>
+        <td><b>podGroup</b></td>
+        <td>string</td>
+        <td>
+          PodGroup is the name of the PodGroup within the Workload that this Pod
+belongs to. If it doesn't match any existing PodGroup within the Workload,
+the Pod will remain unschedulable until the Workload object is recreated
+and observed by the kube-scheduler. It must be a DNS label.<br/>
+        </td>
+        <td>true</td>
+      </tr><tr>
+        <td><b>podGroupReplicaKey</b></td>
+        <td>string</td>
+        <td>
+          PodGroupReplicaKey specifies the replica key of the PodGroup to which this
+Pod belongs. It is used to distinguish pods belonging to different replicas
+of the same pod group. The pod group policy is applied separately to each replica.
+When set, it must be a DNS label.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -24216,9 +24335,10 @@ If the key is empty, operator must be Exists; this combination means to match al
         <td>string</td>
         <td>
           Operator represents a key's relationship to the value.
-Valid operators are Exists and Equal. Defaults to Equal.
+Valid operators are Exists, Equal, Lt, and Gt. Defaults to Equal.
 Exists is equivalent to wildcard for value, so that a pod can
-tolerate all taints of a particular category.<br/>
+tolerate all taints of a particular category.
+Lt and Gt perform numeric comparisons (requires feature gate TaintTolerationComparisonOperators).<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -24700,10 +24820,27 @@ can access<br/>
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>maxConcurrentPods</b></td>
+        <td>integer</td>
+        <td>
+          MaxConcurrentPods specifies the maximum number of pods to process concurrently in a rack.
+If not set or set to 0 defaults to 1.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>restartPolicy</b></td>
         <td>string</td>
         <td>
-          RestartPolicy indicates the behavior n case of failure. Default is Never.<br/>
+          RestartPolicy indicates the behavior n case of failure. Default is OnFailure.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>retries</b></td>
+        <td>integer</td>
+        <td>
+          Retries specifies the maximum number of times a failed pod operation can be retried.
+This is only relevant if the RestartPolicy is set to OnFailure. If not set,
+the default value is 1.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -24877,6 +25014,21 @@ Arguments are additional parameters for the command
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>fast</b></td>
+        <td>boolean</td>
+        <td>
+          Fast modifies the behavior of rolling restart to restart multiple nodes (or entire rack) at the same time.
+If the cluster is degraded in availability, the fast path isn't used<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>force</b></td>
+        <td>boolean</td>
+        <td>
+          Force is used to force the execution of a command even if the operator thinks it is unsafe<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>jobs</b></td>
         <td>integer</td>
         <td>
@@ -25022,6 +25174,14 @@ More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b><a href="#cassandrataskstatuspodstatuseskey">podStatuses</a></b></td>
+        <td>map[string]object</td>
+        <td>
+          PodStatuses tracks the processing status of each pod for bookkeeping.
+Keys are pod names (not including pod UID to handle recreation scenarios).<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>startTime</b></td>
         <td>string</td>
         <td>
@@ -25115,6 +25275,72 @@ with respect to the current state of the instance.<br/>
           <br/>
             <i>Format</i>: int64<br/>
             <i>Minimum</i>: 0<br/>
+        </td>
+        <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### CassandraTask.status.podStatuses[key]
+<sup><sup>[↩ Parent](#cassandrataskstatus)</sup></sup>
+
+
+
+PodProcessingStatus represents the status of a pod being processed by a CassandraTask.
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>status</b></td>
+        <td>string</td>
+        <td>
+          Status of the pod processing.<br/>
+        </td>
+        <td>true</td>
+      </tr><tr>
+        <td><b>completionTime</b></td>
+        <td>string</td>
+        <td>
+          Represents time when the pod was completed (success or fail).<br/>
+          <br/>
+            <i>Format</i>: date-time<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>error</b></td>
+        <td>string</td>
+        <td>
+          Error message if failed.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>jobId</b></td>
+        <td>string</td>
+        <td>
+          JobID for async operations (mgmt-api).<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>retries</b></td>
+        <td>integer</td>
+        <td>
+          Retry count<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>startTime</b></td>
+        <td>string</td>
+        <td>
+          Represents time when the job controller started processing this pod.<br/>
+          <br/>
+            <i>Format</i>: date-time<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -25250,6 +25476,14 @@ can access<br/>
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>maxConcurrentPods</b></td>
+        <td>integer</td>
+        <td>
+          MaxConcurrentPods specifies the maximum number of pods to process concurrently in a rack.
+If not set or set to 0 defaults to 1.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>name</b></td>
         <td>string</td>
         <td>
@@ -25260,7 +25494,16 @@ can access<br/>
         <td><b>restartPolicy</b></td>
         <td>string</td>
         <td>
-          RestartPolicy indicates the behavior n case of failure. Default is Never.<br/>
+          RestartPolicy indicates the behavior n case of failure. Default is OnFailure.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>retries</b></td>
+        <td>integer</td>
+        <td>
+          Retries specifies the maximum number of times a failed pod operation can be retried.
+This is only relevant if the RestartPolicy is set to OnFailure. If not set,
+the default value is 1.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -25431,6 +25674,21 @@ Arguments are additional parameters for the command
         <td>string</td>
         <td>
           <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>fast</b></td>
+        <td>boolean</td>
+        <td>
+          Fast modifies the behavior of rolling restart to restart multiple nodes (or entire rack) at the same time.
+If the cluster is degraded in availability, the fast path isn't used<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>force</b></td>
+        <td>boolean</td>
+        <td>
+          Force is used to force the execution of a command even if the operator thinks it is unsafe<br/>
         </td>
         <td>false</td>
       </tr><tr>
