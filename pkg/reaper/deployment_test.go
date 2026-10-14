@@ -181,6 +181,10 @@ func TestNewDeployment(t *testing.T) {
 			Name:  "REAPER_HTTP_MANAGEMENT_ENABLE",
 			Value: "true",
 		},
+		{
+			Name:  "REAPER_HTTP_MANAGEMENT_PORT",
+			Value: "8080",
+		},
 	})
 
 	assert.Len(t, podSpec.InitContainers, 1)
@@ -225,6 +229,10 @@ func TestNewDeployment(t *testing.T) {
 			Name:  "REAPER_HTTP_MANAGEMENT_ENABLE",
 			Value: "true",
 		},
+		{
+			Name:  "REAPER_HTTP_MANAGEMENT_PORT",
+			Value: "8080",
+		},
 	})
 
 	assert.ElementsMatch(t, initContainer.Args, []string{"schema-migration"})
@@ -246,7 +254,7 @@ func TestNewDeployment(t *testing.T) {
 	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
 	podSpec = deployment.Spec.Template.Spec
 	container = podSpec.Containers[0]
-	assert.Len(t, container.Env, 8)
+	assert.Len(t, container.Env, 9)
 
 	assert.Contains(t, container.Env, corev1.EnvVar{
 		Name:  "REAPER_CASS_KEYSPACE",
@@ -257,7 +265,7 @@ func TestNewDeployment(t *testing.T) {
 	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
 	podSpec = deployment.Spec.Template.Spec
 	container = podSpec.Containers[0]
-	assert.Len(t, container.Env, 18)
+	assert.Len(t, container.Env, 19)
 
 	assert.Contains(t, container.Env, corev1.EnvVar{
 		Name:  "REAPER_AUTO_SCHEDULING_ADAPTIVE",
@@ -418,6 +426,30 @@ func TestHttpManagementConfiguration(t *testing.T) {
 				SecretName: reaper.Spec.HttpManagement.Keystores.Name,
 			},
 		},
+	})
+}
+
+func TestHttpManagementCustomPort(t *testing.T) {
+	reaper := newTestReaper()
+	reaper.Spec.HttpManagement.Enabled = true
+	dc := newTestDatacenter()
+	dc.Spec.PodTemplateSpec = &corev1.PodTemplateSpec{
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				{
+					Name:  "cassandra",
+					Ports: []corev1.ContainerPort{{Name: "mgmt-api-http", ContainerPort: 8085}},
+				},
+			},
+		},
+	}
+	logger := testlogr.NewTestLogger(t)
+
+	deployment := NewDeployment(reaper, dc, nil, nil, logger, getTestImageRegistry(t))
+
+	assert.Contains(t, deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
+		Name:  "REAPER_HTTP_MANAGEMENT_PORT",
+		Value: "8085",
 	})
 }
 

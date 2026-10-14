@@ -16,6 +16,7 @@ import (
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	imageapi "github.com/k8ssandra/cass-operator/apis/config/v1beta2"
+	casshttphelper "github.com/k8ssandra/cass-operator/pkg/httphelper"
 	cassimages "github.com/k8ssandra/cass-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
@@ -157,6 +158,15 @@ func computeEnvVars(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, regis
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  "REAPER_HTTP_MANAGEMENT_ENABLE",
 			Value: "true",
+		})
+
+		mgmtApiPort := cassdcapi.DefaultMgmtApiPort
+		if dc != nil && dc.Spec.PodTemplateSpec != nil {
+			mgmtApiPort = casshttphelper.GetMgmtApiPort(dc.Spec.PodTemplateSpec.Spec.Containers)
+		}
+		envVars = append(envVars, corev1.EnvVar{
+			Name:  "REAPER_HTTP_MANAGEMENT_PORT",
+			Value: fmt.Sprintf("%d", mgmtApiPort),
 		})
 
 		if reaper.Spec.HttpManagement.Keystores != nil {

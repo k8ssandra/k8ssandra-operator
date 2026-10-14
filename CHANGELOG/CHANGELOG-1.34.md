@@ -15,6 +15,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [BUGFIX] [#1813](https://github.com/k8ssandra/k8ssandra-operator/issues/1813) Set `REAPER_HTTP_MANAGEMENT_PORT` from the Cassandra container's management API port so Reaper uses the correct port with HTTP management
 * [ENHANCEMENT] [#1808](https://github.com/k8ssandra/k8ssandra-operator/issues/1808) Add `metrics.address` to the Helm chart and declare the operator metrics container port when metrics are exposed
 * [ENHANCEMENT] [#1796](https://github.com/k8ssandra/k8ssandra-operator/issues/1796) Declare JMX container port (7199) on the Cassandra pod template when enabling remote JMX access for Reaper
 * [ENHANCEMENT] [#1754](https://github.com/k8ssandra/k8ssandra-operator/issues/1754) Use namespaceselector on the webhooks if watchNamespaces is used
