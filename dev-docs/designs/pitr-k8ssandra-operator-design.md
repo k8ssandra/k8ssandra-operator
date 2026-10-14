@@ -275,22 +275,32 @@ type PitrRestoreBlock struct {
 }
 ```
 
-For a PITR restore, the operator sets `in_place` to `true` and leaves `host_map` empty. Medusa reads `host_map` only when `in_place` is `false`. Each pod finds its own base backup in `pitr.node_backups`.
+For a PITR restore, the operator sets `in_place` to `true`. Each pod finds its own base backup in `pitr.node_backups`.
 
-When `json.Marshal` is called on `MedusaRestoreMapping`, the resulting JSON matches the format that Medusa's `pitr_restore.py` reads:
+When `json.Marshal` is called on `MedusaRestoreMapping`, the resulting JSON matches the format that Medusa's `pitr_restore.py` reads.
+
+For a two-node cluster, the full `RESTORE_MAPPING` env var set on every pod's initContainer looks like this (from the Medusa spec, §4.7):
 
 ```json
 {
   "in_place": true,
+  "host_map": {
+    "node1.fqdn": {"source": ["node1.fqdn"], "seed": false},
+    "node2.fqdn": {"source": ["node2.fqdn"], "seed": false},
+    "node3.fqdn": {"source": ["node3.fqdn"], "seed": false}
+  },
   "pitr": {
     "target_timestamp_s": 1721000000.0,
     "node_backups": {
       "node1.fqdn": "backup-20240715-node1",
-      "node2.fqdn": "backup-20240715-node2"
+      "node2.fqdn": "backup-20240715-node2",
+      "node3.fqdn": "backup-20240715-node3"
     }
   }
 }
 ```
+
+The same JSON is set identically on every pod. Each pod's `pitr_restore.py` reads its own `fqdn` and looks up `pitr.node_backups[fqdn]` to find its assigned base backup. The `host_map` is present because `in_place` is `true` and every node maps to itself; Medusa reads it only when `in_place` is `false`, but the operator includes it for consistency with the existing mapping structure.
 
 ### 4.4 `medusa.proto` Changes
 
@@ -801,3 +811,13 @@ Reuse `GetHostMap` with a synthetic `MedusaRestoreJob`, using one of the backup 
    - **Current decision:** Option A. Reusing `CassandraDatacenterReady` keeps the restore loop simple and consistent with standard snapshot restores.
 
 3. **PITR after PITR.**
+
+
+
+- pods can be renamed during restores. allows restoring to a different cluster.
+
+- pitr after pitr - we need to mark skipped commitlogs persisted in the storage, and make it part of the medusa docs. they cannot be replayed. no team agreement here, the functionality might also not be needed (and solved by documenting you shouldn't pitr after pitr)
+
+- the polling for health - poller bad, not sure about the storing crd, and explore metrics. it'd still like to mimic dc status, but then the source location is not clear
+
+- PITR done when we READY the pod (cos that waits for cql), we cannot really do it later
