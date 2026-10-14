@@ -85,6 +85,13 @@ nodeSelector: {}
 ## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
 ##
 tolerations: []
+# -- metrics allows to change the configuration of how metrics are exposed. Default is
+# to expose /metrics endpoint at port :8080. If you wish to make this available only on
+# localhost (such as when using kube-rbac-proxy to secure access to them), set the value
+# to 127.0.0.1:8080
+metrics:
+  # -- Address where the metrics endpoint binds. Use "0" to disable metrics.
+  address: ":8080"
 # -- This client configuration is used for the CRD upgrader job only. Otherwise, modify
 # the global.imageConfig values to change k8ssandra-client
 client:
