@@ -127,7 +127,11 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster, dcConfig *cassandra.DatacenterCo
 	{{- end }}
 
     [logging]
+    {{- if .Spec.Medusa.LogLevel }}
+    level = {{ .Spec.Medusa.LogLevel }}
+    {{- else }}
     level = DEBUG
+    {{- end }}
 
     [kubernetes]
     use_mgmt_api = 1

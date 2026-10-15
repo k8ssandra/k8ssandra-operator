@@ -479,6 +479,17 @@ spec:
     purgeBackups: false
  ```
 
+### Medusa log level
+Medusa logs at `DEBUG` level by default. To reduce the log volume, set the optional `logLevel` field to `INFO`, `WARNING` or `ERROR`. The new level takes effect when the Medusa containers restart:
+
+```yaml
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+spec:
+  medusa:
+    logLevel: INFO
+```
+
 ## Deprecation Notice
 
 The `CassandraBackup` and `CassandraRestore` CRDs are removed in v1.6.0.
