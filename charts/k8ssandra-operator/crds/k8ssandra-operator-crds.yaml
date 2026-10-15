@@ -28796,6 +28796,16 @@ spec:
                         format: int32
                         type: integer
                     type: object
+                  logLevel:
+                    description: |-
+                      LogLevel sets the log level of the Medusa containers ([logging] level in medusa.ini).
+                      Defaults to DEBUG. Takes effect when the Medusa containers restart.
+                    enum:
+                    - DEBUG
+                    - INFO
+                    - WARNING
+                    - ERROR
+                    type: string
                   medusaConfigurationRef:
                     description: |-
                       MedusaConfigurationRef points to an existing MedusaConfiguration object.

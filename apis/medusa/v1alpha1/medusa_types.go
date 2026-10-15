@@ -213,6 +213,12 @@ type MedusaClusterTemplate struct {
 	// +kubebuilder:default=true
 	// +optional
 	PurgeBackups *bool `json:"purgeBackups,omitempty"`
+
+	// LogLevel sets the log level of the Medusa containers ([logging] level in medusa.ini).
+	// Defaults to DEBUG. Takes effect when the Medusa containers restart.
+	// +kubebuilder:validation:Enum=DEBUG;INFO;WARNING;ERROR
+	// +optional
+	LogLevel string `json:"logLevel,omitempty"`
 }
 
 type GRPCEncryption struct {

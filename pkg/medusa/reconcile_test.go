@@ -83,6 +83,7 @@ func testMedusaIniFull(t *testing.T) {
 				CassandraUserSecretRef: corev1.LocalObjectReference{
 					Name: "test-superuser",
 				},
+				LogLevel: "INFO",
 			},
 		},
 	}
@@ -109,6 +110,8 @@ func testMedusaIniFull(t *testing.T) {
 	assert.Contains(t, medusaIni, "ca_cert = /etc/certificates/grpc-server-certs/ca.crt")
 	assert.Contains(t, medusaIni, "tls_cert = /etc/certificates/grpc-server-certs/tls.crt")
 	assert.Contains(t, medusaIni, "tls_key = /etc/certificates/grpc-server-certs/tls.key")
+	assert.Contains(t, medusaIni, "level = INFO")
+	assert.NotContains(t, medusaIni, "level = DEBUG")
 }
 
 func testMedusaIniNoPrefix(t *testing.T) {
@@ -533,6 +536,7 @@ func testMedusaIniMissingOptionalSettings(t *testing.T) {
 	assert.NotContains(t, medusaIni, "port =")
 	assert.Contains(t, medusaIni, "secure = False")
 	assert.NotContains(t, medusaIni, "backup_grace_period_in_days =")
+	assert.Contains(t, medusaIni, "level = DEBUG")
 }
 
 func TestInitContainerDefaultResources(t *testing.T) {
