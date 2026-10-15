@@ -35,19 +35,20 @@ Medusa's gRPC server now exposes `GetCommitLogArchiveStatus` and `PreparePitrRes
 **In scope:**
 - A new optional `pitr` field on `MedusaClusterTemplate` that maps to the `[pitr]` section in `medusa.ini`.
 - A new optional `targetTimestamp` field on `MedusaRestoreJobSpec`. Setting it triggers the PITR restore path.
-- In `RestoreJobController`, calling `PreparePitrRestore` instead of `GetHostMap` when `targetTimestamp` is set. PITR is always in-place, so no host map is built.
-- A drain gate in `RestoreJobController`: before the datacenter is stopped for a PITR restore, every Cassandra node is drained and every commitlog spool is uploaded (§4.7, "Drain gate").
-- Extending `MedusaRestoreMapping` (the `RESTORE_MAPPING` JSON structure) with a `pitr` block so Medusa's initContainer can resolve per-node base backups and download commitlog segments.
-- A `MedusaStatus` struct added to `K8ssandraStatus` (the per-DC status bucket in `K8ssandraCluster.status.datacenters[name]`), holding a `map[podName]CommitLogArchiveStatus` populated by polling `GetCommitLogArchiveStatus` on every pod.
+- In `RestoreJobController`, calling `PreparePitrRestore` when `targetTimestamp` is set and building the host map from its result. Pod names may differ from the source (§4.7).
+- A drain gate before an in-place PITR restore stops the datacenter (§4.7).
+- A `pitr` block in `MedusaRestoreMapping` (`RESTORE_MAPPING`), read by Medusa's initContainer (§4.3.3).
+- A `MedusaStatus` struct on `K8ssandraStatus` with per-pod archiving status, filled by polling `GetCommitLogArchiveStatus` (§4.8).
 - Regenerating Go gRPC stubs from the updated `medusa.proto`.
 - Unit and integration tests covering the new paths, with zero regressions on existing paths.
 
 **Out of scope:**
 - Cross-DC PITR restore. The restore orchestration is strictly cluster-local; a `MedusaRestoreJob` always targets a single `CassandraDatacenter`.
+- Cross-topology PITR restore. The target DC must have the same rack names and the same node count per rack as the source. Commitlog streams are per node and cannot be split or merged (Medusa spec, NG1).
 - Managing `commitlog_archiving.properties` directly — Medusa's initContainer owns that file.
 - Starting or stopping Cassandra — cass-operator handles that.
 - New CLI commands or new CRDs — all changes extend existing objects.
-- Timeline floor across repeated PITR restores. A later PITR of the same DC can replay commitlogs from the discarded timeline. This is handled in a separate, parallel effort, not in this doc. The drain gate (§4.7) keeps the old spool from reaching the bucket after the restore. It does not replace the timeline floor.
+- Timeline floor across repeated PITR restores. A later PITR of the same DC can replay commitlogs from the discarded timeline. A separate, parallel effort handles it. The drain gate (§4.7) does not replace it.
 
 ---
 
@@ -60,6 +61,7 @@ Medusa's gRPC server now exposes `GetCommitLogArchiveStatus` and `PreparePitrRes
 - **G3:** A PITR restore is driven through the same `MedusaRestoreJob` object and the same rolling-restart machinery that backup restores use today.
 - **G4:** The operator never needs direct knowledge of commitlog internals. All PITR-specific logic runs inside Medusa; the operator only passes a timestamp and routes the result.
 - **G5:** Operators can observe archiving health from Kubernetes (`kubectl get k8ssandracluster`) without gRPC access.
+- **G6:** A PITR restore can target a DC whose pod names differ from the source, as long as the DC name, rack names, and node count per rack match. This is the same rule as for backup restores today. Such a target does not need `pitr.enabled` set: it may be a disaster recovery cluster while the source is gone. The base backups must have been taken with `pitr.enabled` on (§4.10 item 1). It must read the source's backups: set `storageProperties.prefix` to the source's prefix (the default prefix is the cluster name), and use a different cluster name, or the pod names equal the source's and the restore is in place.
 
 ### Non-Goals
 
@@ -76,6 +78,7 @@ Medusa's gRPC server now exposes `GetCommitLogArchiveStatus` and `PreparePitrRes
 | SC3 | A `MedusaRestoreJob` with both `backup` and `targetTimestamp` set is rejected by the webhook | Webhook unit test |
 | SC4 | A `MedusaRestoreJob` without `targetTimestamp` follows the existing code path with no behaviour change | Existing test suite; zero new failures |
 | SC5 | `GetCommitLogArchiveStatus` is called for every pod; each result is reflected at `K8ssandraCluster.status.datacenters[dc-name].medusa.commitLogArchiveStatuses[pod-name]` | Unit test with mock gRPC client returning distinct responses per pod |
+| SC6 | A `MedusaRestoreJob` with `targetTimestamp` on a DC whose pod names differ from the backup's node names produces a `RESTORE_MAPPING` with `in_place: false` and a `host_map` from each target pod to its source node | Unit test on `GetPitrHostMap` |
 
 ---
 
@@ -83,17 +86,17 @@ Medusa's gRPC server now exposes `GetCommitLogArchiveStatus` and `PreparePitrRes
 
 The feature has three parts:
 
-1. **Config surface (`pitr` field on `MedusaClusterTemplate`):** A new optional `Pitr *PitrConfig` field. When set and `Enabled: true`, `CreateMedusaIni` renders a `[pitr]` section in the `medusa.ini` ConfigMap. The section is opaque to the k8ssandra-operator; it passes through whatever Medusa expects, defaulting to Medusa's own defaults when fields are absent. When `Pitr` is nil or `Enabled` is false (the default), no `[pitr]` section is emitted.
+1. **Config surface (`pitr` field on `MedusaClusterTemplate`):** A new optional `Pitr *PitrConfig` field. When set and `Enabled: true`, `CreateMedusaIni` renders a `[pitr]` section in the `medusa.ini` ConfigMap. The operator exposes three of Medusa's five `[pitr]` keys: `enabled`, `commitlog_archive_interval_seconds`, and `commitlog_spool_dir`. The staging directory and the restore grace period keep Medusa's defaults. When `Pitr` is nil or `Enabled` is false (the default), no `[pitr]` section is emitted.
 
-2. **PITR restore path (`targetTimestamp` on `MedusaRestoreJobSpec`):** When `targetTimestamp` is set, the restore reconciler executes fail-fast validation before touching the cluster:
-   - First, it verifies that PITR is enabled (`spec.medusa.pitr.enabled: true`) on the datacenter. If PITR is disabled, the restore job fails immediately without requeue.
-   - Second, in `prepareRestore`, it calls `PreparePitrRestore(targetTimestamp)` on a live Medusa gRPC sidecar. Medusa queries object storage and validates base backup eligibility for every node in the cluster topology (`snapshot_time <= target_timestamp`).
-   - If any node in the cluster lacks an eligible base backup, Medusa returns `FAILED` immediately. The operator marks `MedusaRestoreJob` failed with a terminal error and stops reconciliation. No pods are stopped, no data is modified, and no StatefulSets are patched.
-   - Only on success does the reconciler assemble `RESTORE_MAPPING` with the `pitr` block (`target_timestamp_s` and `node_backups`) and mark the restore prepared.
-   - Then the reconciler runs the drain gate. It drains Cassandra on every pod, so no new commitlog segments are written. It waits until every Medusa archiver has uploaded its whole spool. A node does not go down before its commitlogs are in the bucket.
-   - Only then does the reconciler stop the datacenter and proceed with rolling restart. Inside each initContainer: `restore.py` downloads per-node base SSTables; `pitr_restore.py` queries object storage for commitlog segments archived since the base backup, stages them locally, and configures `commitlog_archiving.properties` for Cassandra replay up to the target timestamp.
+2. **PITR restore path (`targetTimestamp` on `MedusaRestoreJobSpec`):** When `targetTimestamp` is set, the restore reconciler:
+   1. Calls `PreparePitrRestore(datacenter, targetTimestamp)` on one Medusa sidecar, for the DC named in `spec.cassandraDatacenter`. Medusa picks, per node, the latest backup taken with PITR enabled before the timestamp. If any node has none, the job fails and nothing is touched.
+   2. Builds the host map from the returned nodes and `GetBackups`, as for a backup restore. Pod names may differ from the source (`in_place: false`). Assembles `RESTORE_MAPPING` with the `pitr` block.
+   3. For an in-place restore only, runs the drain gate: the target is the source cluster, so it checks that the archiver is running on every pod (else the job fails before any drain), drains every node, and waits until every spool is uploaded. An out-of-place target may be a disaster recovery cluster while the source is gone; its archiver is not checked.
+   4. Stops the datacenter, patches the restore initContainer, and starts the datacenter again. Each initContainer restores its base SSTables and stages commitlogs for replay up to the target.
 
-3. **Archiving status surface:** A new `Medusa *MedusaStatus` field on `K8ssandraStatus` (`.status.datacenters[name]`), carrying a `map[string]CommitLogArchiveStatus` keyed by pod name and a `lastStatusPoll` timestamp. Polling runs during Medusa reconciliation when `pitr.enabled = true`, throttled to once per `archiveIntervalSeconds` (default: 60s). If the interval has not elapsed since `lastStatusPoll`, gRPC polling is skipped. When polling runs, if a pod fails, the reconciler logs a warning and records the failure directly in that pod's entry (`Running: false`, `Status: FAILED`, `LastError: <error-message>`). Stale success data is not retained. Polling errors do not block backup, restore, or purge operations.
+   A failure that a retry cannot fix sets `FinishTime` and `Message`, and the job is never reconciled again (§4.7.8). Details in §4.7.
+
+3. **Archiving status surface:** A new `Medusa *MedusaStatus` field on `K8ssandraStatus` (`.status.datacenters[name]`) holds one `CommitLogArchiveStatus` per pod and a `lastStatusPoll` time. The `K8ssandraCluster` reconciler polls `GetCommitLogArchiveStatus` when `pitr.enabled = true`, once per `archiveIntervalSeconds`, and requeues itself for the next poll. A failed poll is recorded in that pod's entry and never blocks backup, restore, or purge. Details in §4.8.
 
 The design is purely additive. Existing backup, restore, and purge flows are unchanged when `targetTimestamp` is absent and `pitr.enabled` is false. Commitlog purge is handled entirely inside Medusa's own `purge_commitlogs` function, invoked during the existing `medusa purge` command — no operator changes are required for purge.
 
@@ -149,16 +152,22 @@ sequenceDiagram
     participant DC as CassandraDatacenter
 
     User->>Reconciler: MedusaRestoreJob{targetTimestamp}
-    Reconciler->>Medusa: PreparePitrRestore(targetTimestamp)
+    Reconciler->>Medusa: PreparePitrRestore(datacenter, targetTimestamp)
     Medusa-->>Reconciler: {nodeBaseBackups, targetTimestampS}
-    Note over Reconciler: Build RESTORE_MAPPING with pitr block
-    Reconciler->>Medusa: drain Cassandra on every pod (management API)
-    Reconciler->>Medusa: GetCommitLogArchiveStatus on every pod
-    Medusa-->>Reconciler: pendingCount == 0 on all pods (else requeue)
-    Reconciler->>DC: Patch PodTemplateSpec<br>(RESTORE_MAPPING env var on medusa-restore)
-    Reconciler->>DC: Spec.Stopped = true (rolling restart)
+    Reconciler->>Medusa: GetBackups()
+    Medusa-->>Reconciler: backups with per-node DC and rack
+    Note over Reconciler: Build host_map rack by rack,<br>then RESTORE_MAPPING with in_place, host_map, pitr block
+    opt in_place == true (drain gate, §4.7.5)
+        Reconciler->>Medusa: GetCommitLogArchiveStatus on every pod
+        Medusa-->>Reconciler: running == true on all pods (else job fails)
+        Reconciler->>Medusa: drain Cassandra on every pod (management API)
+        Reconciler->>Medusa: GetCommitLogArchiveStatus on every pod
+        Medusa-->>Reconciler: pendingCount == 0 on all pods (else requeue)
+    end
+    Reconciler->>DC: Spec.Stopped = true
     DC-->>Reconciler: datacenter stopped
-    Reconciler->>DC: Spec.Stopped = false
+    Reconciler->>DC: Patch PodTemplateSpec<br>(BACKUP_NAME = "", RESTORE_MAPPING, RESTORE_KEY on medusa-restore)
+    Reconciler->>DC: Spec.Stopped = false (rolling restart)
     DC-->>Reconciler: datacenter ready
     Reconciler->>User: MedusaRestoreJob status: finished
 ```
@@ -168,21 +177,29 @@ sequenceDiagram
 | File | Change | Responsibility |
 |---|---|---|
 | [`apis/medusa/v1alpha1/medusa_types.go`](../../apis/medusa/v1alpha1/medusa_types.go) | Modify | Add `Pitr *PitrConfig` to `MedusaClusterTemplate`; add `PitrConfig` struct |
-| [`apis/medusa/v1alpha1/medusarestorejob_types.go`](../../apis/medusa/v1alpha1/medusarestorejob_types.go) | Modify | Add `TargetTimestamp string` to `MedusaRestoreJobSpec`; make `Backup` optional; add `PitrBlock` to `MedusaRestoreMapping`; add `DatacenterDrained` to `MedusaRestoreJobStatus` |
+| [`apis/medusa/v1alpha1/medusarestorejob_types.go`](../../apis/medusa/v1alpha1/medusarestorejob_types.go) | Modify | Add `TargetTimestamp string` to `MedusaRestoreJobSpec`; make `Backup` optional; add `Pitr *PitrRestoreBlock` to `MedusaRestoreMapping`; add `DrainStarted` to `MedusaRestoreJobStatus` |
 | [`apis/medusa/v1alpha1/zz_generated.deepcopy.go`](../../apis/medusa/v1alpha1/zz_generated.deepcopy.go) | Re-generate | Deep copy for `PitrConfig` and `PitrRestoreBlock` |
 | [`apis/k8ssandra/v1alpha1/k8ssandracluster_types.go`](../../apis/k8ssandra/v1alpha1/k8ssandracluster_types.go) | Modify | Add `Medusa *MedusaStatus` to `K8ssandraStatus`; add `MedusaStatus` and `CommitLogArchiveStatus` structs |
 | [`apis/k8ssandra/v1alpha1/zz_generated.deepcopy.go`](../../apis/k8ssandra/v1alpha1/zz_generated.deepcopy.go) | Re-generate | Deep copy for `MedusaStatus` and `CommitLogArchiveStatus` |
 | [`pkg/medusa/reconcile.go`](../../pkg/medusa/reconcile.go) | Modify | Extend `CreateMedusaIni` to render `[pitr]` section when `pitr.enabled = true` |
 | [`pkg/cassandra/management.go`](../../pkg/cassandra/management.go) | Modify | Add `DrainNode` to `ManagementApiFacade` (wraps `CallDrainEndpoint`); re-generate `pkg/mocks/ManagementApiFacade.go` |
+| [`pkg/medusa/hostmap.go`](../../pkg/medusa/hostmap.go) | Modify | Split `GetHostMap` into `getSourceRacks` and `buildHostMap`; add `GetPitrHostMap` that takes the source nodes from `nodeBaseBackups` |
+| [`pkg/medusa/hostmap_test.go`](../../pkg/medusa/hostmap_test.go) | Modify | Tests for `GetPitrHostMap` (in place, out of place, mismatches) and the `buildHostMap` fixes |
+| `pkg/medusa/errors.go` | New | `TerminalError` type returned by `preparePitrRestore`, `GetPitrHostMap`, and `drainGate` for failures that must not be retried (§4.7.8) |
+| [`controllers/medusa/common.go`](../../controllers/medusa/common.go) | Modify | Move `newClient` to `pkg/medusa` as `NewPodClient`, so the `K8ssandraCluster` reconciler can dial sidecars too |
+| [`controllers/k8ssandra/medusa_reconciler.go`](../../controllers/k8ssandra/medusa_reconciler.go) | Modify | Add `reconcileMedusaArchiveStatus`: poll `GetCommitLogArchiveStatus`, write `K8ssandraStatus.Medusa`, requeue (§4.8) |
+| [`controllers/k8ssandra/medusa_reconciler_test.go`](../../controllers/k8ssandra/medusa_reconciler_test.go) | Modify | Status polling tests |
+| [`controllers/k8ssandra/k8ssandracluster_controller.go`](../../controllers/k8ssandra/k8ssandracluster_controller.go) | Modify | Add `ClientFactory medusa.ClientFactory` field |
+| `config/crd/bases/*.yaml` | Re-generate | `make manifests`: `backup` optional, new spec and status fields |
 | [`pkg/medusa/grpc.go`](../../pkg/medusa/grpc.go) | Modify | Add `GetCommitLogArchiveStatus` and `PreparePitrRestore` to `Client` interface and `defaultClient` |
 | [`pkg/medusa/medusa.proto`](../../pkg/medusa/medusa.proto) | Modify | Add `GetCommitLogArchiveStatus` and `PreparePitrRestore` RPCs and message types (additive only) |
 | [`pkg/medusa/medusa.pb.go`](../../pkg/medusa/medusa.pb.go) | Re-generate | Protobuf generated code |
 | [`pkg/medusa/medusa_grpc.pb.go`](../../pkg/medusa/medusa_grpc.pb.go) | Re-generate | gRPC generated code |
-| [`controllers/medusa/medusarestorejob_controller.go`](../../controllers/medusa/medusarestorejob_controller.go) | Modify | Add PITR branch in `prepareRestore`; extend `podTemplateSpecUpdateComplete` and `updateMedusaRestoreInitContainer`; add `validateTargetTimestamp`; add `drainGate` before `stopDatacenterRestoreJob` |
+| [`controllers/medusa/medusarestorejob_controller.go`](../../controllers/medusa/medusarestorejob_controller.go) | Modify | Add PITR branch in `prepareRestore`; extend `podTemplateSpecUpdateComplete` and `updateMedusaRestoreInitContainer`; add `validateRestoreSpec`; add `drainGate` before `stopDatacenterRestoreJob`; map `TerminalError` to a failed job; skip finished jobs (§4.7.8) |
 | [`controllers/medusa/medusarestorejob_controller_test.go`](../../controllers/medusa/medusarestorejob_controller_test.go) | Modify | Add PITR restore test cases |
 | `apis/medusa/v1alpha1/medusarestorejob_webhook.go` | New | Validating webhook: exactly one of `backup` / `targetTimestamp`; `targetTimestamp` parses. No MedusaRestoreJob webhook exists today |
 | `apis/medusa/v1alpha1/medusarestorejob_webhook_test.go` | New | Webhook unit tests (SC3) |
-| [`main.go`](../../main.go) | Modify | Register the MedusaRestoreJob webhook, next to `SetupMedusaBackupScheduleWebhookWithManager`; pass `ManagementApi` to `MedusaRestoreJobReconciler` |
+| [`main.go`](../../main.go) | Modify | Register the MedusaRestoreJob webhook, next to `SetupMedusaBackupScheduleWebhookWithManager`; pass `ManagementApi` to `MedusaRestoreJobReconciler`; pass `ClientFactory` to `K8ssandraClusterReconciler` |
 | `config/webhook/manifests.yaml` | Re-generate | `make manifests` picks up the new `+kubebuilder:webhook` marker |
 
 ### 4.3 API Changes
@@ -236,7 +253,8 @@ type MedusaRestoreJobSpec struct {
 
     // TargetTimestamp is the point in time to restore to. Accepts ISO-8601 (UTC)
     // or a Unix epoch float string. Mutually exclusive with Backup.
-    // Requires pitr.enabled=true on the K8ssandraCluster.
+    // The base backups must have been taken with pitr.enabled=true.
+    // An in-place restore also requires a running Medusa commitlog archiver on every pod.
     // +optional
     TargetTimestamp string `json:"targetTimestamp,omitempty"`
 }
@@ -275,19 +293,17 @@ type PitrRestoreBlock struct {
 }
 ```
 
-For a PITR restore, the operator sets `in_place` to `true`. Each pod finds its own base backup in `pitr.node_backups`.
+For a PITR restore, the operator computes `in_place` and `host_map` the same way as for a backup restore. The keys of `pitr.node_backups` are source node names, as returned by `PreparePitrRestore`. Each pod resolves its source node from `host_map[POD_NAME].source[0]` and then finds its base backup in `pitr.node_backups[source]`. The same JSON is set on every pod.
 
-When `json.Marshal` is called on `MedusaRestoreMapping`, the resulting JSON matches the format that Medusa's `pitr_restore.py` reads.
-
-For a two-node cluster, the full `RESTORE_MAPPING` env var set on every pod's initContainer looks like this (from the Medusa spec, §4.7):
+Example for an out-of-place restore of a three-node DC. An in-place restore differs only in `in_place: true` and an identity `host_map` (Medusa spec, §4.7):
 
 ```json
 {
-  "in_place": true,
+  "in_place": false,
   "host_map": {
-    "node1.fqdn": {"source": ["node1.fqdn"], "seed": false},
-    "node2.fqdn": {"source": ["node2.fqdn"], "seed": false},
-    "node3.fqdn": {"source": ["node3.fqdn"], "seed": false}
+    "node1-new.fqdn": {"source": ["node1.fqdn"], "seed": false},
+    "node2-new.fqdn": {"source": ["node2.fqdn"], "seed": false},
+    "node3-new.fqdn": {"source": ["node3.fqdn"], "seed": false}
   },
   "pitr": {
     "target_timestamp_s": 1721000000.0,
@@ -299,8 +315,6 @@ For a two-node cluster, the full `RESTORE_MAPPING` env var set on every pod's in
   }
 }
 ```
-
-The same JSON is set identically on every pod. Each pod's `pitr_restore.py` reads its own `fqdn` and looks up `pitr.node_backups[fqdn]` to find its assigned base backup. The `host_map` is present because `in_place` is `true` and every node maps to itself; Medusa reads it only when `in_place` is `false`, but the operator includes it for consistency with the existing mapping structure.
 
 ### 4.4 `medusa.proto` Changes
 
@@ -326,6 +340,7 @@ message GetCommitLogArchiveStatusResponse {
 
 message PreparePitrRestoreRequest {
   string targetTimestamp = 1;
+  string datacenter      = 2;  // Cassandra DC name of MedusaRestoreJob.spec.cassandraDatacenter (§4.10 item 7)
 }
 
 message PreparePitrRestoreResponse {
@@ -334,6 +349,8 @@ message PreparePitrRestoreResponse {
   double              targetTimestampS = 3;
 }
 ```
+
+The `datacenter` field is not in the frozen Medusa spec; the operator needs it (§4.10 item 7). It mirrors `PrepareRestoreRequest.datacenter`. The response has no message text (§4.10 item 1).
 
 After editing `medusa.proto`, regenerate with:
 
@@ -356,7 +373,7 @@ type Client interface {
 
     // New: PITR
     GetCommitLogArchiveStatus(ctx context.Context) (*GetCommitLogArchiveStatusResponse, error)
-    PreparePitrRestore(ctx context.Context, targetTimestamp string) (*PreparePitrRestoreResponse, error)
+    PreparePitrRestore(ctx context.Context, datacenter, targetTimestamp string) (*PreparePitrRestoreResponse, error)
 }
 ```
 
@@ -372,7 +389,7 @@ Implementations on `defaultClient` are single-line wrappers, identical in style 
     [pitr]
     enabled = true
     {{- if .Spec.Medusa.Pitr.ArchiveIntervalSeconds }}
-    commitlog_archive_interval_seconds = {{ deref .Spec.Medusa.Pitr.ArchiveIntervalSeconds }}
+    commitlog_archive_interval_seconds = {{ .Spec.Medusa.Pitr.ArchiveIntervalSeconds }}
     {{- end }}
     {{- if .Spec.Medusa.Pitr.SpoolDir }}
     commitlog_spool_dir = {{ .Spec.Medusa.Pitr.SpoolDir }}
@@ -382,11 +399,13 @@ Implementations on `defaultClient` are single-line wrappers, identical in style 
 
 When `Pitr` is nil or `Enabled` is false, no `[pitr]` section is emitted; Medusa defaults to `pitr.enabled = false`.
 
+`text/template` dereferences the `*int` when it prints it. The template has no `FuncMap`, and `CreateMedusaIni` panics on a parse error, so no custom function may be used.
+
 ### 4.7 Restore Reconciler — PITR Branch & Fail-Fast Strategy
 
-[`controllers/medusa/medusarestorejob_controller.go`](../../controllers/medusa/medusarestorejob_controller.go) — The PITR restore path must fail as early as possible. If PITR is disabled or if any node lacks an eligible base backup, the restore cannot execute. The reconciler aborts before draining or stopping Cassandra, and before patching pod specs.
+[`controllers/medusa/medusarestorejob_controller.go`](../../controllers/medusa/medusarestorejob_controller.go) — The PITR restore path must fail as early as possible. If any node lacks a base backup taken with PITR enabled before the target, or an in-place target is not archiving, the restore cannot execute. The reconciler aborts before draining or stopping Cassandra, and before patching pod specs.
 
-#### 1. Pre-flight validation & request construction
+#### 4.7.1 Pre-flight validation & request construction
 
 1. **`NewMedusaRestoreRequest`**:
    - For backup restore (`spec.backup != ""`), it fetches the `MedusaBackup` CR.
@@ -395,24 +414,17 @@ When `Pitr` is nil or `Enabled` is false, no `[pitr]` section is emitted; Medusa
 
      | Site | Backup restore | PITR restore |
      |---|---|---|
-     | `Reconcile`, `validateBackupForRestore(request.MedusaBackup, cassdc)` (line 114) | unchanged | skipped; run step 3 (PITR enablement) instead |
+     | `Reconcile`, `validateBackupForRestore(request.MedusaBackup, cassdc)` (line 114) | unchanged | skipped; an in-place target's archiver is checked by the drain gate (§4.7.5) |
      | `podTemplateSpecUpdateComplete`, `req.MedusaBackup.Name` (line 257) | unchanged | check `RESTORE_MAPPING` instead (see below) |
-     | `updateMedusaRestoreInitContainer`, `setBackupNameInRestoreContainer(req.MedusaBackup.Name, ...)` (line 375) | unchanged | skipped (see below) |
+     | `updateMedusaRestoreInitContainer`, `setBackupNameInRestoreContainer(req.MedusaBackup.Name, ...)` (line 375) | unchanged | called with `""` (§4.7.7) |
 
 2. **`validateRestoreSpec`**:
    - Rejects specs where both `backup` and `targetTimestamp` are set, or where neither is set.
    - Validates that `targetTimestamp` parses as ISO-8601 UTC or Unix epoch float string.
 
-3. **Verify cluster PITR enablement**:
-   - Checks the target datacenter's Medusa configuration (`spec.medusa.pitr.enabled`).
-   - If PITR is disabled (`pitr.enabled != true`), the operator marks the job failed immediately:
-     ```go
-     request.RestoreJob.Status.FinishTime = metav1.Now()
-     request.RestoreJob.Status.Message = fmt.Sprintf("PITR is disabled on CassandraDatacenter %s; restore cannot proceed", cassdc.Name)
-     ```
-     The reconciler returns `ctrl.Result{}, nil` (terminal error, no requeue). No restore action is executed.
+3. **No `K8ssandraCluster` read.** `MedusaRestoreJobReconciler` runs in the data plane. The `K8ssandraCluster` object lives in the control plane only (`main.go` registers `K8ssandraClusterReconciler` under `isControlPlane()` and the Medusa controllers outside it). So a DP reconciler cannot read `spec.medusa.pitr`, and it does not need to. Whether PITR was enabled at backup time is Medusa's check in `PreparePitrRestore` (§4.10 item 1), for every PITR restore. Whether the archiver runs now matters only for an in-place restore; the drain gate (§4.7.5) asks every pod's sidecar: `GetCommitLogArchiveStatus.running` says whether the archiver is on, and `intervalSeconds` gives the timeout basis. `in_place` is known only after `prepareRestore`, which is read-only. An out-of-place restore skips the gate.
 
-#### 2. `prepareRestore` — Fail-Fast Base Backup Verification
+#### 4.7.2 `prepareRestore` — Fail-Fast Base Backup Verification
 
 `prepareRestore` executes before `request.RestoreJob.Status.RestorePrepared` is set to `true`, and before `request.Datacenter.Spec.Stopped` is set to `true`.
 
@@ -434,7 +446,7 @@ func (r *MedusaRestoreJobReconciler) prepareRestore(
         }
 
         if request.RestoreJob.Spec.TargetTimestamp != "" {
-            // PITR path: verifies base backup eligibility across all nodes via Medusa
+            // PITR path: Medusa picks the base backups, the operator builds the host map
             return r.preparePitrRestore(ctx, request, client, logger)
         }
 
@@ -454,26 +466,11 @@ func (r *MedusaRestoreJobReconciler) prepareRestore(
 }
 ```
 
-#### 3. `preparePitrRestore` — Contract with Medusa
+#### 4.7.3 `preparePitrRestore`
 
-**What Medusa does:**
-- Medusa receives `PreparePitrRestore(targetTimestamp)`.
-- It iterates across all nodes in the cluster topology and queries object storage for base backups.
-- For each node FQDN, it evaluates `select_node_base_snapshot(storage, fqdn, target_timestamp_s)`:
-  - Finds the latest backup with `snapshot_time <= target_timestamp_s`.
-  - If **any** node lacks an eligible backup before `targetTimestamp`, Medusa returns `StatusType_FAILED` with an error indicating which node is missing an eligible backup.
-- Medusa performs this check entirely in memory and against storage metadata. It does not stop Cassandra, modify data, or wipe directories.
+`PreparePitrRestore` is read-only (§4.10 item 1). For every node of the DC (§4.10 item 7), Medusa picks the latest backup that carries the snapshot-time marker and has `snapshot_time <= target_timestamp_s` (`select_node_base_snapshot`). The marker is written only when `pitr.enabled` was on at backup time, so this is the PITR enablement gate. It holds for in-place and out-of-place restores alike. If any node has no such backup, it returns `StatusType_FAILED`. The response has no text field, so the operator cannot name the node.
 
-**What the operator does:**
-- If Medusa returns `StatusType_FAILED` or a non-recoverable error:
-  - The reconciler sets `request.RestoreJob.Status.FinishTime = metav1.Now()`.
-  - The reconciler sets `request.RestoreJob.Status.Message = fmt.Sprintf("PreparePitrRestore failed: %s", errMessage)`.
-  - The reconciler updates status and returns `ctrl.Result{}, nil` (terminal failure, no requeue).
-  - `RestorePrepared` remains `false`. The datacenter is never stopped, pod templates are untouched, and no restore mapping is written.
-- If Medusa returns `StatusType_SUCCESS`:
-  - The operator builds `MedusaRestoreMapping` with the returned `resp.NodeBaseBackups` and `resp.TargetTimestampS`.
-  - Sets `RestorePrepared = true`.
-  - Only then proceeds to stop the datacenter and initiate the rolling restore.
+On `FAILED`, on gRPC `UNIMPLEMENTED`, and on a host map mismatch, `preparePitrRestore` returns a `medusa.TerminalError`. `Reconcile` turns it into a failed job (§4.7.8): `RestorePrepared` stays `false` and the DC is never stopped. Other errors (network, pod not ready) are returned as today, and controller-runtime retries them with backoff. On success, the operator builds the host map with `GetPitrHostMap`, attaches the `pitr` block, and sets `RestorePrepared = true`.
 
 ```go
 func (r *MedusaRestoreJobReconciler) preparePitrRestore(
@@ -483,61 +480,78 @@ func (r *MedusaRestoreJobReconciler) preparePitrRestore(
     logger logr.Logger,
 ) (*medusav1alpha1.MedusaRestoreMapping, error) {
 
-    resp, err := client.PreparePitrRestore(ctx, request.RestoreJob.Spec.TargetTimestamp)
+    // The DC comes from MedusaRestoreJob.spec.cassandraDatacenter, resolved to its Cassandra DC name,
+    // the same value getSourceRacks filters on.
+    resp, err := client.PreparePitrRestore(ctx, request.Datacenter.DatacenterName(), request.RestoreJob.Spec.TargetTimestamp)
+    if status.Code(err) == codes.Unimplemented {
+        return nil, medusa.Terminal(fmt.Errorf("Medusa does not support PITR; upgrade the Medusa image"))
+    }
     if err != nil {
-        return nil, fmt.Errorf("PreparePitrRestore gRPC call failed: %w", err)
+        return nil, fmt.Errorf("PreparePitrRestore gRPC call failed: %w", err) // transient: retried
     }
     if resp.Status == medusa.StatusType_FAILED {
-        return nil, fmt.Errorf("no eligible base backup for at least one node before timestamp %s", request.RestoreJob.Spec.TargetTimestamp)
+        return nil, medusa.Terminal(fmt.Errorf("no eligible base backup for at least one node before timestamp %s", request.RestoreJob.Spec.TargetTimestamp))
     }
 
-    // Every pod of the target DC must have a base backup. Fail now, before the DC is stopped.
-    if missing := medusa.PodsMissingFromNodeBackups(request.Datacenter, resp.NodeBaseBackups); len(missing) > 0 {
-        return nil, fmt.Errorf("PreparePitrRestore returned no base backup for pods %v", missing)
+    // Same rack-by-rack pairing as a backup restore. A mismatch is a TerminalError,
+    // raised before the DC is stopped. Pod names may differ (in_place = false).
+    hostMap, err := medusa.GetPitrHostMap(request.Datacenter, resp.NodeBaseBackups, client, ctx)
+    if err != nil {
+        return nil, err
     }
-
-    // PITR is always in-place: no host map. Each pod reads its own entry in pitr.node_backups.
-    return &medusav1alpha1.MedusaRestoreMapping{
-        InPlace: ptr.To(true),
-        Pitr: &medusav1alpha1.PitrRestoreBlock{
-            TargetTimestampS: resp.TargetTimestampS,
-            NodeBackups:      resp.NodeBaseBackups,
-        },
-    }, nil
+    mapping, err := hostMap.ToMedusaRestoreMapping()
+    if err != nil {
+        return nil, err
+    }
+    mapping.Pitr = &medusav1alpha1.PitrRestoreBlock{
+        TargetTimestampS: resp.TargetTimestampS,
+        NodeBackups:      resp.NodeBaseBackups, // keyed by source node name
+    }
+    return &mapping, nil
 }
 ```
 
-> **Note on the host map during PITR:** PITR does not call `GetHostMap`. A host map translates source nodes to target nodes. PITR restores each node from its own backups (same topology, no translation). Medusa reads `host_map` only when `in_place` is `false`. The keys of `pitr.node_backups` are pod names. Each pod looks up its own name in that map.
->
-> **Pod name check:** `PodsMissingFromNodeBackups` (new, in `pkg/medusa/hostmap.go`) takes the pod names from `getTargetRackFQDNs(dc)` and returns those that are not keys of `nodeBaseBackups`. If the list is not empty, the restore fails before the DC is stopped. Extra keys are ignored: the backup can hold nodes of other DCs, and the operator cannot tell them apart from extra nodes of this DC. A DC that is now smaller than at backup time is not detected.
+#### 4.7.4 Host map for PITR
 
-#### 4. Drain gate — no node stops before its commitlogs are uploaded
+`PreparePitrRestore` returns `{sourceNode: backupName}` with no rack or DC. `GetHostMap` cannot be reused as is, because it takes the source nodes from the one backup in `spec.backup`. The pairing logic in [`pkg/medusa/hostmap.go`](../../pkg/medusa/hostmap.go) is split out and shared:
 
-**Why:** Each pod holds sealed commitlog segments in its spool. They are not in the bucket yet. Medusa's in-place restore cleans the commitlog directory, but not the spool. If the DC stops with a full spool, the archiver uploads those segments after the restore. They belong to the discarded timeline. A node that is still running also keeps writing new segments. So the gate does two things in order: stop new commitlogs, then upload the old ones.
+- `getSourceRacks(nodes []*BackupNode, dcName)` groups backup nodes by rack and drops nodes of other DCs. It is the existing body of `getSourceRacksIPs` after the backup lookup.
+- `buildHostMap(sourceRacks, cassDC)` is the existing pairing loop of `GetHostMap` with two fixes. It sorts racks by name, requires the same rack count and the same rack names, requires the same DC name, and pairs node `j` of source rack `i` with pod `j` of target rack `i`. Fix one: the rack name check is new. Today only the count is compared; names are checked only by `validateBackupForRestore`, which the PITR path skips. Fix two: a source rack with more nodes than its target rack returns an error. Today the check is `j > destRack.Size`, so the loop indexes `destRack.Nodes[j]` out of range and panics before it can return; it becomes `j >= destRack.Size`.
+- `GetHostMap` (backup restore) = look up `spec.backup` in `GetBackups`, then `getSourceRacks` and `buildHostMap`. Behaviour is unchanged, except that the panic above becomes an error and rack names are checked twice.
+- `GetPitrHostMap(cassDC, nodeBackups, client, ctx)` (PITR) = call `GetBackups` once; for each `(node, backupName)` in `nodeBackups`, find backup `backupName` and its `BackupNode` with `host == node` to get rack and DC; then `getSourceRacks` and `buildHostMap`. It also requires that every target pod got a source: `len(hostMap)` must equal the pod count of the DC. A missing backup, a missing node entry, or a count mismatch is an error. Every error from `GetPitrHostMap` is a `medusa.TerminalError`.
 
-**Where:** In `Reconcile`, after `RestorePrepared` is `true` and before `stopDatacenterRestoreJob`. Only for PITR restores (`spec.targetTimestamp != ""`). Backup restores skip the gate.
+`ToMedusaRestoreMapping` then sets `in_place` to `true` only when every source name equals its target name. The operator never rewrites the keys of `pitr.node_backups`. They stay source names so that each pod can resolve them through `host_map`.
+
+#### 4.7.5 Drain gate — no node stops before its commitlogs are uploaded
+
+**Why:** Each pod holds sealed commitlog segments in its spool that are not in the bucket yet. Medusa's restore cleans the commitlog directory, but not the spool. If the DC stops with a full spool, the archiver uploads those segments after the restore, and they belong to the discarded timeline. A running node also keeps writing new segments. So the gate first stops new commitlogs, then uploads the old ones.
+
+**Where:** In `Reconcile`, after `RestorePrepared` is `true` and before `stopDatacenterRestoreJob`. Only for in-place PITR restores (`spec.targetTimestamp != ""` and `RestoreMapping.InPlace` true). Backup restores and out-of-place PITR restores skip the gate. An out-of-place target has no spool of the source timeline, and it may be a disaster recovery cluster while the source is gone. If it archives its own commitlogs to the same bucket under its own node names, those segments belong to its own timeline and do not affect this restore.
+
+The gate also does not run once `Datacenter.Spec.Stopped` is `true`. `stopDatacenterRestoreJob` sets that flag and returns `false` on its first call, and the `DatacenterStopped.IsZero()` block runs again on every reconcile until the DC is fully stopped. Without this guard the gate would poll terminating pods and could never pass.
 
 **Steps:**
 
-1. **Drain Cassandra on every pod.** The reconciler calls the management API drain endpoint on each pod (`httphelper.NodeMgmtClient.CallDrainEndpoint`). A drained node flushes its memtables and accepts no more writes. It writes no new commitlog segments. The Cassandra process and the Medusa sidecar stay up, so the archiver keeps running. Drain is idempotent. When all pods are drained, the reconciler sets `Status.DatacenterDrained = metav1.Now()`. This field marks that step 1 is done and starts the wait in step 2.
+0. **Check the archiver on every pod.** The reconciler calls `GetCommitLogArchiveStatus` on every pod. If any pod reports `running == false`, the job fails with a `TerminalError` before any drain. `Message` names the pods and says to set `spec.medusa.pitr.enabled` on the `K8ssandraCluster`. This checks that the source cluster, which is also the target, is archiving now. Whether PITR was on at backup time is Medusa's check (§4.10 item 1). The largest `intervalSeconds` in the responses becomes the gate interval; if it is `0`, 60s is used. On the first pass the reconciler sets `Status.DrainStarted = metav1.Now()`. The timeout counts from this field, so a pod whose drain call keeps failing also times out.
+1. **Drain Cassandra on every pod.** The reconciler calls the management API drain endpoint on each pod (`httphelper.NodeMgmtClient.CallDrainEndpoint`). A drained node flushes its memtables and accepts no more writes. It writes no new commitlog segments. The Cassandra process and the Medusa sidecar stay up, so the archiver keeps running. Drain is idempotent, so it is repeated on every pass. A failed drain call is "not ready yet", not an error.
 2. **Wait for the spool to be empty on every pod.** The reconciler calls `GetCommitLogArchiveStatus` on every pod. A pod passes when `running == true`, `pendingCount == 0`, and `lastError == ""`. After drain, no new segment can arrive, so `pendingCount == 0` stays true.
 3. **Stop the datacenter** (`stopDatacenterRestoreJob`) only when all pods pass.
 
-**Not ready yet:** If any pod does not pass, the reconciler writes the pod names and reasons to `Status.Message` and requeues after `DefaultDelay`. The datacenter is not stopped. The archiver uploads on its own interval, so a wait of up to `archiveIntervalSeconds` is normal.
+**Not ready yet:** If any pod does not pass, the reconciler writes the pod names and reasons to `Status.Message` and requeues after `DefaultDelay`. The datacenter is not stopped. The archiver uploads on its own interval, so a wait of up to the gate interval is normal.
 
-**Timeout:** If the wait exceeds 5 × `archiveIntervalSeconds` since `Status.DatacenterDrained`, the job fails. The reconciler sets `Status.FinishTime` and `Status.Message` with the failing pods. No requeue. The datacenter is not stopped and no restore data is touched. The nodes stay drained, because drain cannot be undone without a restart. The user must restart the pods, fix the archiver, and create a new `MedusaRestoreJob`. This is the same terminal-failure style as `PreparePitrRestore` failing.
+**Timeout:** If the gate has not passed 5 × the gate interval after `Status.DrainStarted`, `drainGate` returns a `TerminalError` with the failing pods (§4.7.8). The datacenter is not stopped and no restore data is touched. Nodes that were drained stay drained, because drain cannot be undone without a restart. The user must restart the pods, fix the archiver, and create a new `MedusaRestoreJob`. This is the same terminal-failure style as `PreparePitrRestore` failing.
 
-**Contract with Medusa:** After drain, `pendingCount` must include the last commitlog segment that Cassandra closes during drain. If Medusa reports `0` while that segment is not yet in the spool, the gate passes too early. The integration test (§6.5 step 6) checks for this.
+**Contract with Medusa:** `pendingCount` must cover the segment closed by drain. See §4.10 item 2.
 
 **Code changes:**
 - `ManagementApiFacade` in [`pkg/cassandra/management.go`](../../pkg/cassandra/management.go) gains `DrainNode(pod *corev1.Pod) error`. It wraps `CallDrainEndpoint`. The mock is re-generated.
 - `MedusaRestoreJobReconciler` gains a `ManagementApi cassandra.ManagementApiFactory` field, wired in [`main.go`](../../main.go) like the existing reconcilers.
-- `MedusaRestoreJobStatus` gains `DatacenterDrained metav1.Time` (`json:"datacenterDrained,omitempty"`), next to `DatacenterStopped`.
-- A new `drainGate(ctx, request)` function in the restore controller returns `(passed bool, err error)`. `Reconcile` calls it for PITR restores, inside the `DatacenterStopped.IsZero()` block, before `stopDatacenterRestoreJob`. If it returns `false`, `Reconcile` applies updates and requeues.
+- `MedusaRestoreJobStatus` gains `DrainStarted metav1.Time` (`json:"drainStarted,omitempty"`), next to `DatacenterStopped`.
+- A new `drainGate(ctx, request)` function in the restore controller returns `(passed bool, err error)`. `Reconcile` calls it for in-place PITR restores, inside the `DatacenterStopped.IsZero()` block, only while `request.Datacenter.Spec.Stopped` is `false`, before `stopDatacenterRestoreJob`. If it returns `false`, `Reconcile` applies updates and requeues after `DefaultDelay`. A `TerminalError` fails the job (§4.7.8).
 
-#### `podTemplateSpecUpdateComplete` for PITR
+#### 4.7.6 `podTemplateSpecUpdateComplete` for PITR
 
-The existing check verifies that `BACKUP_NAME` and `RESTORE_KEY` env vars have propagated to StatefulSets. For PITR, `BACKUP_NAME` is not set (it is absent from the spec). The check becomes:
+The existing check verifies that `BACKUP_NAME` and `RESTORE_KEY` env vars have propagated to StatefulSets. For PITR, `BACKUP_NAME` is set to the empty string (§4.7.7) and `RESTORE_MAPPING` carries the mapping. `pkg/utils` has only `ContainerHasEnvVar(container, name, value)`, so the check compares against the marshalled mapping from the job status:
 
 ```go
 for _, statefulset := range statefulsetList.Items {
@@ -546,9 +560,16 @@ for _, statefulset := range statefulsetList.Items {
         return false, nil
     }
 
-    if request.RestoreJob.Spec.TargetTimestamp != "" {
-        // PITR restore: check RESTORE_MAPPING contains the pitr block instead of BACKUP_NAME
-        if !utils.ContainerHasEnvVarSet(container, restoreMappingEnvVar) {
+    if req.RestoreJob.Spec.TargetTimestamp != "" {
+        // PITR restore: BACKUP_NAME cleared, RESTORE_MAPPING equal to the status mapping
+        if !utils.ContainerHasEnvVar(container, backupNameEnvVar, "") {
+            return false, nil
+        }
+        mappingJSON, err := json.Marshal(req.RestoreJob.Status.RestoreMapping)
+        if err != nil {
+            return false, err
+        }
+        if !utils.ContainerHasEnvVar(container, restoreMappingEnvVar, string(mappingJSON)) {
             return false, nil
         }
     } else {
@@ -563,16 +584,25 @@ for _, statefulset := range statefulsetList.Items {
 }
 ```
 
-#### `updateMedusaRestoreInitContainer` for PITR
+#### 4.7.7 `updateMedusaRestoreInitContainer` for PITR
 
 When `targetTimestamp` is set:
-- Skip `setBackupNameInRestoreContainer` (no single backup name; `pitr_restore.py` reads from the `pitr` block).
+- Call `setBackupNameInRestoreContainer("", cassdc)`. There is no single backup name. A value left by an earlier backup restore would otherwise open the entrypoint's `[ -n "$BACKUP_NAME" ]` gate (Medusa spec §4.8) and hide a missing §4.10 item 3.
 - `setRestoreMappingInRestoreContainer` is called as today — with the mapping that now includes the `pitr` block.
 - `setRestoreKeyInRestoreContainer` is called as today.
 
 The `RESTORE_MAPPING` env var is set identically on every pod's initContainer (the existing `setRestoreMappingInRestoreContainer` function already marshals the full mapping struct — no change needed there, only the struct now carries the `pitr` field).
 
-**Contract with the Medusa entrypoint:** For PITR, the operator does not set `BACKUP_NAME`. `PreparePitrRestore` returns one base backup per pod. The operator passes the full map to every pod in `pitr.node_backups`. Each pod looks up its own entry by `POD_NAME`. The Medusa restore entrypoint must therefore run the SSTable restore step when `RESTORE_KEY` is set and `RESTORE_MAPPING` contains a `pitr` block, even if `BACKUP_NAME` is empty. If the entrypoint gates only on `BACKUP_NAME`, the SSTable step is skipped and commitlogs replay onto unrestored data.
+**Contracts with Medusa:** see §4.10 items 3 to 7.
+
+#### 4.7.8 Terminal failures
+
+A terminal failure is one that a retry cannot fix: no eligible base backup, Medusa too old, a topology mismatch, an archiver that is not running on an in-place target, or a drain gate timeout. Today `Reconcile` returns every `prepareRestore` error unchanged, so controller-runtime retries it with backoff forever. It also never checks `FinishTime`, so a job that was marked failed runs again on the next resync or operator restart.
+
+- `pkg/medusa/errors.go` defines `TerminalError` (`type TerminalError struct{ Err error }` with `Error()` and `Unwrap()`) and `Terminal(err error) error`. `preparePitrRestore`, `GetPitrHostMap`, and `drainGate` return it for the cases above.
+- `Reconcile` checks `errors.As(err, &terminal)` on the `prepareRestore` and `drainGate` results. On a match it sets `Status.FinishTime`, sets `Status.Message` to the error text, applies updates, and returns `ctrl.Result{}, nil`. This is the path `validateBackupForRestore` uses today. Any other error is returned as today.
+- `Reconcile` returns `ctrl.Result{}, nil` right after `NewMedusaRestoreRequest` when `Status.FinishTime` is set and `Status.Message` is not empty. `Message` is set only on failure, so a successful job still reaches `RefreshSecrets` on a requeue as today.
+- The backup restore path is not affected: `GetHostMap` errors stay plain errors.
 
 ### 4.8 Archiving Health Status
 
@@ -591,7 +621,7 @@ type CommitLogArchiveStatus struct {
     LastUploadTime int64 `json:"lastUploadTime,omitempty"`
 
     // PendingCount is the number of commitlog segments in the spool not yet uploaded.
-    PendingCount int32 `json:"pendingCount,omitempty"`
+    PendingCount int32 `json:"pendingCount"`
 
     // IntervalSeconds is the configured drain interval.
     IntervalSeconds int32 `json:"intervalSeconds,omitempty"`
@@ -616,7 +646,7 @@ type MedusaStatus struct {
 }
 ```
 
-Added to `K8ssandraStatus`:
+Added to `K8ssandraStatus` in [`apis/k8ssandra/v1alpha1/k8ssandracluster_types.go`](../../apis/k8ssandra/v1alpha1/k8ssandracluster_types.go), next to the existing `Cassandra`, `Stargate`, and `Reaper` fields:
 
 ```go
 // Medusa holds PITR archiving health for this datacenter.
@@ -624,9 +654,9 @@ Added to `K8ssandraStatus`:
 Medusa *MedusaStatus `json:"medusa,omitempty"`
 ```
 
-**Where to store it:** `K8ssandraCluster.status.datacenters[dc-name].medusa.commitLogArchiveStatuses[pod-name]`. Add `Medusa *MedusaStatus` to `K8ssandraStatus` in [`apis/k8ssandra/v1alpha1/k8ssandracluster_types.go`](../../apis/k8ssandra/v1alpha1/k8ssandracluster_types.go). This follows the same pattern as the existing `Cassandra`, `Stargate`, and `Reaper` fields on that struct.
+**Where to poll:** In `K8ssandraClusterReconciler.reconcileDatacenters`, right after `setStatusForDatacenter` copies the `CassandraDatacenter` status into `kc.Status.Datacenters[dc.Name]`, when `kc.Spec.Medusa.Pitr.Enabled` is `true`. This is the control plane, the only place that writes `K8ssandraCluster` status. Pods are listed through the DC's remote client. The sidecar is dialled with the same pod-IP client builder the Medusa controllers use (`newClient` in `controllers/medusa/common.go`, moved to `pkg/medusa` as `NewPodClient`), through a new `ClientFactory` field on `K8ssandraClusterReconciler` wired in `main.go`.
 
-**When to poll:** Inside the existing Medusa reconcile loop, when `pitr.enabled = true`:
+**When to poll:**
 1. **Interval:** The polling interval is `spec.medusa.pitr.archiveIntervalSeconds` (default 60s). The operator does not poll faster than Medusa uploads. There is no separate knob.
 2. **Throttling:** Compare `now` with `status.datacenters[dc-name].medusa.lastStatusPoll`. If `now - lastStatusPoll < interval`, skip gRPC calls to avoid network overhead during frequent reconciliations.
 3. **Execution:** When the interval has elapsed (or `lastStatusPoll` is nil):
@@ -636,6 +666,8 @@ Medusa *MedusaStatus `json:"medusa,omitempty"`
    - **On poll failure:** Log a warning and overwrite `commitLogArchiveStatuses[pod.Name]` with an error status: `Running: false`, `Status: "FAILED"`, and `LastError: err.Error()`. Stale metrics (`lastUploadTime`, `pendingCount`) are cleared so failures are immediately visible.
    - Poll failures do not requeue or block other operations.
    - Pods that no longer exist are removed from the map.
+4. **Requeue:** The `K8ssandraCluster` reconcile normally ends with `result.Done()`, so the next poll would wait for the next change to the object. When `pitr.enabled` is `true`, `reconcileDatacenters` returns `result.RequeueSoon(interval - time.Since(lastStatusPoll))` instead, so the next poll happens on time.
+5. **Reachability:** The control plane dials pod IPs. In a multi-cluster deployment where the pod IPs of a remote data plane are not routable from the control plane, every poll fails and every entry shows `status: FAILED` with the dial error. This is a known limitation and one reason §7 question 1 stays open.
 
 **Example output** (`kubectl get k8ssandracluster -o yaml`):
 
@@ -660,6 +692,7 @@ status:
             status: IN_PROGRESS
           cluster1-dc1-rack1-sts-2:
             running: false
+            pendingCount: 0
             status: FAILED
             lastError: "failed to read spool directory: permission denied"
 ```
@@ -671,11 +704,23 @@ All changes follow the "extend in place" principle:
 - `MedusaRestoreJobSpec.Backup` changes from `required` to `optional` (one of `backup`/`targetTimestamp` required by webhook, not by schema). **This is the only breaking schema change.** Existing objects already have `backup` set; the omitempty tag ensures they continue to marshal correctly.
 - `MedusaRestoreMapping` gains an optional `pitr` field with `omitempty`. Existing marshalled JSON is unaffected.
 - `MedusaClusterTemplate` gains an optional `pitr` field. Absent = disabled.
-- The restore reconciler's existing loop and DC stop/start/wait logic is reused without modification.
-- `GetHostMap` is not used on the PITR path (see §4.7).
+- The restore reconciler's existing DC stop/start/wait logic is reused. `Reconcile` gains a finished-job guard and the `TerminalError` mapping (§4.7.8).
+- `GetHostMap` keeps its signature. Its rack-pairing body moves to `buildHostMap`, shared with `GetPitrHostMap` (§4.7.4), which also turns a panic into an error and adds a rack name check.
 - `setRestoreMappingInRestoreContainer` is reused without modification.
 
 No new CRDs are introduced.
+
+### 4.10 Contracts with Medusa
+
+The operator depends on these Medusa behaviours. Each item says whether the frozen Medusa spec already provides it. The minimum Medusa version named in the release notes (§6.1) must have all of them.
+
+1. **`PreparePitrRestore` is read-only, selects only PITR-enabled backups, and fails whole.** It does not stop Cassandra, modify data, or wipe directories. A backup taken with `pitr.enabled` on carries a snapshot-time marker in storage (the `snapshot_time_{fqdn}_{timestamp}.timestamp` index blob); Medusa must write it only then. Base selection considers only backups that carry the marker, with no fallback to `started`. A backup without it was taken while commitlogs were not archived, so no replay window starts at it. If any node has no such backup before the target, the RPC returns `StatusType_FAILED`. The operator relies on this to fail before the DC is stopped (§4.7), for in-place and out-of-place restores alike. In the spec: read-only and fail-whole yes (SC5); marker-only selection no, the spec falls back to `started`, and its open question 4 already flags this. The response has no text field, so the operator's `Message` names the target timestamp, not the node.
+2. **`pendingCount` covers the drain segment.** After drain, `GetCommitLogArchiveStatus.pendingCount` must include the last commitlog segment that Cassandra closes during drain. If Medusa reports `0` while that segment is not yet in the spool, the drain gate passes too early (§4.7.5, §6.5 step 6). In the spec: no.
+3. **SSTable restore runs without `BACKUP_NAME`.** For PITR the operator sets `BACKUP_NAME` to `""`. The entrypoint must run the SSTable restore step when `RESTORE_KEY` is set and `RESTORE_MAPPING` has a `pitr` block. `restore.py` resolves the source node from `host_map[POD_NAME].source[0]`, as `apply_mapping_env()` does today, and reads `pitr.node_backups[source]`. If the entrypoint gates only on `BACKUP_NAME`, commitlogs replay onto unrestored data (§6.5 step 7). In the spec: no. The entrypoint gates on `[ -n "$BACKUP_NAME" ]` (Medusa spec §4.8).
+4. **Replay does not depend on `pitr.enabled`.** The target of an out-of-place restore may have `pitr.enabled = false`; PITR enablement is gated on the backups (item 1), not on the target. As specced today (Medusa spec §4.8), `pitr_restore.py` returns early when `config.pitr.enabled` is false and would silently stop at the base backup. It must stage segments and write the replay parameters whenever `RESTORE_MAPPING` has a `pitr` block, and gate only the `archive_command` line of `commitlog_archiving.properties` on `pitr.enabled`. The staging and spool directories come from the `[pitr]` defaults, so the target needs no config (§6.5 step 8). In the spec: no.
+5. **`pitr_restore.py` resolves the source node through `host_map`.** It runs as a separate process after `restore.py`, so the `POD_IP` overwrite that `apply_mapping_env()` does is not visible to it. As specced it keys on `os.environ.get("POD_IP", os.environ.get("POD_NAME"))` (Medusa spec §4.8), and the operator sets only `POD_NAME`. On an out-of-place target that is a `KeyError` in `node_backups`, or the target's own commitlog prefix. It must use `host_map[POD_NAME].source[0]` for `node_backups`, `get_node_backup`, `find_next_backup`, and `find_commitlog_segments`. In-place restores are unaffected, since the two names are equal. In the spec: no (§6.5 step 8).
+6. **Replay runs in the same initContainer run as the SSTable restore.** The entrypoint writes `RESTORE_KEY` to `.last-restore` before it runs `pitr_restore.py`, and `pitr_restore.py` computes `is_pitr_restore` as `last_restore_val != restore_key` (Medusa spec §4.8). On the run that restores the SSTables the marker already matches, so no segments are staged and nothing replays. `pitr_restore.py` must keep its own marker, or the entrypoint must write `.last-restore` after it. In the spec: no (SC2, §6.5 step 7).
+7. **`PreparePitrRestore` takes its node set from storage and is scoped to the DC in the request.** The spec says "all nodes in the cluster" without saying which list (Medusa spec §3, §4.7). The operator needs two things. The node list must come from the backups in object storage, not from the live cluster of the sidecar that is called, so an out-of-place target's sidecar can run it. And the request carries a `datacenter` field, set to the DC that `MedusaRestoreJob.spec.cassandraDatacenter` names, as its Cassandra DC name (`request.Datacenter.DatacenterName()`). This is how `MedusaTask` passes `spec.cassandraDatacenter` to `PrepareRestore` today. Medusa evaluates only the nodes of that DC, so a node of another DC without a base backup does not fail the restore, and `nodeBaseBackups` holds only that DC. The operator still filters by DC in `getSourceRacks` (§4.7.4). In the spec: no. Until it is, a backup whose other DCs lack a base before the target cannot be used.
 
 ---
 
@@ -710,16 +755,27 @@ Instead of embedding the `pitr` block in `RESTORE_MAPPING`, write it to a Config
 
 **Why rejected:** Extending `RESTORE_MAPPING` with an optional `pitr` block is the minimal, consistent approach. Medusa's `pitr_restore.py` is already designed to read from that JSON.
 
-### Option C — Call `GetHostMap` on the PITR path (Rejected)
+### Option C — Call `GetHostMap` unchanged on the PITR path (Rejected)
 
-Reuse `GetHostMap` with a synthetic `MedusaRestoreJob`, using one of the backup names from `nodeBaseBackups`.
+Pick one backup name from `nodeBaseBackups` and call the existing `GetHostMap` with a synthetic `MedusaRestoreJob`.
 
 **Cons:**
-- `GetHostMap` needs one backup name. `PreparePitrRestore` returns one name per node, so we must pick one.
-- It adds a `GetBackups` call, whose result Medusa does not use for an in-place restore.
+- `GetHostMap` takes the source node list from one backup. With PITR each node may have a different base backup. A node that is missing from the chosen backup gets no mapping.
 - It is confusing to read.
 
-**Why rejected:** PITR is always in-place. `PreparePitrRestore` already gives the per-node data. The operator only checks that every target pod has an entry.
+**Why rejected:** The source node list for PITR is the key set of `nodeBaseBackups`. `GetPitrHostMap` reads rack and DC for exactly those nodes and reuses the shared pairing code. Out-of-place PITR restores (different pod names) then work the same way as out-of-place backup restores.
+
+### Option D — Return rack and DC per node from `PreparePitrRestore` (Deferred)
+
+Extend `PreparePitrRestoreResponse` so the operator does not need `GetBackups` for topology.
+
+**Pros:**
+- One RPC instead of two.
+
+**Cons:**
+- Changes the Medusa proto and the Medusa spec. `GetBackups` already returns the data and is already called on the backup restore path.
+
+**Why deferred:** Not needed for correctness. Revisit if the `GetBackups` call is too slow on large buckets.
 
 ---
 
@@ -730,7 +786,7 @@ Reuse `GetHostMap` with a synthetic `MedusaRestoreJob`, using one of the backup 
 - **Existing `MedusaRestoreJob` objects** that set `spec.backup` continue to work unchanged. The PITR branch is entered only when `spec.targetTimestamp` is non-empty.
 - **Existing `K8ssandraCluster` objects** that do not set `spec.medusa.pitr` see no change in `medusa.ini`.
 - **Older Medusa images** that do not have `PreparePitrRestore` will return an `UNIMPLEMENTED` gRPC error. The reconciler treats this as a terminal error on the `MedusaRestoreJob` with an appropriate message. Users must upgrade Medusa before using PITR.
-- **Minimum Medusa image** for PITR must also include the entrypoint change in §4.7 ("Contract with the Medusa entrypoint"). A Medusa image that has `PreparePitrRestore` but still gates the SSTable step on `BACKUP_NAME` alone silently skips the SSTable restore. The release notes must name one minimum Medusa version that has both.
+- **Minimum Medusa image** for PITR must have every behaviour in §4.10. An image with `PreparePitrRestore` but without items 3 to 6 silently skips the SSTable restore or the replay. The release notes must name one minimum Medusa version.
 - **`spec.backup` field change from required to optional:** The CRD schema change makes `backup` optional. Existing objects written with `backup` set are fully backward compatible. The webhook enforces "exactly one of backup/targetTimestamp" at admission time.
 
 ### 6.2 Security & Privacy
@@ -741,23 +797,28 @@ Reuse `GetHostMap` with a synthetic `MedusaRestoreJob`, using one of the backup 
 ### 6.3 Observability & Monitoring
 
 - `commitLogArchiveStatuses` on the cluster status gives operators a per-node view of archiving health without requiring gRPC access. A single failing pod is immediately visible by name.
-- `MedusaRestoreJob.Status.Message` is populated with a human-readable error when `PreparePitrRestore` returns `FAILED` (e.g. "no eligible base backup for node X before 2024-07-15T12:30:00Z").
+- `MedusaRestoreJob.Status.Message` is populated with a human-readable error when `PreparePitrRestore` returns `FAILED` (e.g. "no eligible base backup for at least one node before timestamp 2024-07-15T12:30:00Z"; the response carries no node name, §4.10 item 1).
 - Existing restore job status fields (`StartTime`, `FinishTime`, `InProgress`, `Finished`, `Failed`) are reused.
 
 ### 6.4 Failure Modes
 
 | Scenario | Behaviour |
 |---|---|
-| `PreparePitrRestore` returns `FAILED` (no eligible base backup) | Terminal error. Reconciler sets `Status.FinishTime` and `Status.Message`, returns with no requeue. Datacenter is never stopped, data is never wiped. |
-| `PreparePitrRestore` succeeds but `nodeBaseBackups` has no entry for a pod of the target DC | Same terminal error. `Status.Message` lists the missing pods. Datacenter is never stopped. |
-| `PreparePitrRestore` returns gRPC `UNIMPLEMENTED` | Terminal error with message "Medusa does not support PITR — upgrade the Medusa image." |
-| `PreparePitrRestore` returns transient network error | Reconciler returns with requeue after `DefaultDelay`; retries until success or pod unavailability. |
+| `PreparePitrRestore` returns `FAILED` (some node has no backup taken with PITR enabled before the target) | `TerminalError` (§4.7.8). Reconciler sets `Status.FinishTime` and `Status.Message`, returns with no requeue, and skips the job on later reconciles. Datacenter is never stopped, data is never wiped. |
+| `PreparePitrRestore` succeeds but the source topology does not match the target DC (rack count, DC name, nodes per rack, or a target pod without a source) | Same terminal error from `GetPitrHostMap`. `Status.Message` names the mismatch. Datacenter is never stopped. |
+| `PreparePitrRestore` succeeds but a backup or node named in `nodeBaseBackups` is not in `GetBackups` | Same terminal error. Datacenter is never stopped. |
+| `PreparePitrRestore` returns gRPC `UNIMPLEMENTED` | `TerminalError` with message "Medusa does not support PITR; upgrade the Medusa image". |
+| `PreparePitrRestore` returns transient network error | Plain error returned to controller-runtime; retried with backoff, as for backup restores today. |
 | `GetCommitLogArchiveStatus` fails for a pod during status poll | Warning logged; that pod's entry in `commitLogArchiveStatuses` is overwritten with error details (`running: false`, `status: FAILED`, `lastError` populated). Stale success metrics are discarded. Other pods' entries are updated normally. No impact on restore or backup operations. |
-| A pod still has pending commitlog segments, or its archiver is not running or has an error, at the drain gate | Datacenter is not stopped. `Status.Message` lists the pods. Requeue after `DefaultDelay`. |
-| Drain gate wait exceeds 5 × `archiveIntervalSeconds` | Terminal error. `Status.FinishTime` and `Status.Message` set, no requeue. Datacenter is not stopped and no data is wiped. Nodes stay drained; the user restarts the pods and creates a new job. |
+| A pod reports `running == false` at the drain gate pre-check (archiver off, e.g. `pitr.enabled = false` on an in-place target) | `TerminalError` before any drain. `Status.Message` names the pods and says to enable `spec.medusa.pitr`. Datacenter is never stopped. |
+| A pod still has pending commitlog segments, or its archiver stopped or has an error, after drain | Datacenter is not stopped. `Status.Message` lists the pods. Requeue after `DefaultDelay`. |
+| Drain gate not passed 5 × the gate interval after `DrainStarted` (including a drain call that keeps failing) | `TerminalError`. `Status.FinishTime` and `Status.Message` set, no requeue. Datacenter is not stopped and no data is wiped. Nodes that were drained stay drained; the user restarts the pods and creates a new job. |
+| A failed job is reconciled again (resync, operator restart) | `Reconcile` returns at once when `FinishTime` is set and `Message` is non-empty (§4.7.8). Nothing runs. |
 | Pod crash mid-restore | Medusa's own idempotency handles it: `pitr_restore.py` cleans the staging dir on every startup; the `.last-restore` guard prevents double SSTable restore. The operator's `podTemplateSpecUpdateComplete` check keeps the `RESTORE_MAPPING` env var set until the pod comes back up. |
 | User sets both `backup` and `targetTimestamp` | Rejected at admission by the webhook; `MedusaRestoreJob` is never created. |
-| PITR restore requested but `pitr.enabled = false` on cluster | Pre-flight validation fails immediately. Reconciler sets `Status.FinishTime` and `Status.Message = "PITR is disabled on CassandraDatacenter <name>"`, returns with no requeue. No restore executes. |
+| Out-of-place PITR restore to a target with `pitr.enabled = false` | Allowed. No archiver check and no drain gate. The base backups still must be PITR-enabled backups (§4.10 item 1). Replay is driven by the `pitr` block in `RESTORE_MAPPING` (§4.10 items 4 and 5). |
+| Stale `BACKUP_NAME` from an earlier backup restore | Cleared to `""` by `updateMedusaRestoreInitContainer` (§4.7.7), so the entrypoint's `BACKUP_NAME` gate does not open by accident. |
+| Control plane cannot reach pod IPs of a remote data plane (status polling) | Every entry shows `status: FAILED` with the dial error. No other effect. Known limitation (§4.8, §7 question 1). |
 
 ### 6.5 Testing & Rollout Plan
 
@@ -767,34 +828,40 @@ Reuse `GetHostMap` with a synthetic `MedusaRestoreJob`, using one of the backup 
   - `validateRestoreSpec`: rejects both-set, rejects neither-set, accepts each alone.
   - Nil-backup guard: reconcile a PITR job with no `MedusaBackup` object in the namespace. Assert no panic, `validateBackupForRestore` is not called, and the reconciler reaches `prepareRestore`.
   - `preparePitrRestore`: mock `PreparePitrRestore` returning success; verify `RESTORE_MAPPING` contains the `pitr` block.
-  - `preparePitrRestore`: mock returning `FAILED`; verify reconciler sets `Status.Message` and does not requeue.
-  - `preparePitrRestore`: mock returning success with `nodeBaseBackups` missing one pod; verify the error, no `RESTORE_MAPPING`, and DC not stopped.
-  - `preparePitrRestore`: verify `in_place` is `true` and `host_map` is empty.
-  - Drain gate: mock one pod with `pendingCount > 0`; verify the DC is not stopped and `Status.Message` names the pod. Mock all pods drained with `pendingCount == 0`; verify the DC is stopped. Verify drain is called before `GetCommitLogArchiveStatus`. Verify timeout fails the job terminally. Verify a backup restore never calls the gate.
-  - `podTemplateSpecUpdateComplete` for PITR: verify it checks `RESTORE_MAPPING` not `BACKUP_NAME`.
+  - `preparePitrRestore`: mock returning `FAILED`; verify `TerminalError`, `Status.FinishTime` and `Status.Message` set, no requeue, and that a second reconcile of the job returns at once without calling Medusa.
+  - `preparePitrRestore`: mock gRPC `UNIMPLEMENTED`; verify `TerminalError`. Mock a transient error; verify a plain error is returned.
+  - `preparePitrRestore`: mock `GetBackups` with a rack layout that does not match the DC; verify the error, no `RESTORE_MAPPING`, and DC not stopped.
+  - `preparePitrRestore`: same pod names gives `in_place: true` and an identity `host_map`. Different pod names with the same layout gives `in_place: false` and a `host_map` from each target pod to its source node. `pitr.node_backups` keys are unchanged in both cases.
+  - Drain gate: mock one pod with `pendingCount > 0`; verify the DC is not stopped and `Status.Message` names the pod. Mock all pods drained with `pendingCount == 0`; verify the DC is stopped. Verify drain is called before `GetCommitLogArchiveStatus`. Verify timeout fails the job terminally. Verify a backup restore and an out-of-place PITR restore never call the gate. Mock one pod with `running == false` on the pre-check; verify `TerminalError` and that drain is never called. Verify the gate is skipped once `Datacenter.Spec.Stopped` is true. Verify the timeout counts from `DrainStarted` when a drain call keeps failing.
+  - Out-of-place PITR with `pitr.enabled = false` on the target never calls `GetCommitLogArchiveStatus` or drain, and proceeds to stop the DC.
+  - `podTemplateSpecUpdateComplete` for PITR: verify it requires `BACKUP_NAME == ""` and `RESTORE_MAPPING` equal to the marshalled status mapping.
+  - `updateMedusaRestoreInitContainer` for PITR: a pre-existing `BACKUP_NAME` is cleared.
   - Full reconcile loop with PITR: verify rolling restart completes and status is set.
 - `controllers/k8ssandra/medusa_reconciler_test.go` (status polling):
   - Mock `GetCommitLogArchiveStatus` returning distinct responses for three pods; verify all three appear in `commitLogArchiveStatuses` keyed by pod name and `lastStatusPoll` is updated.
   - Verify polling is skipped when `time.Since(lastStatusPoll) < archiveIntervalSeconds`.
   - Mock one pod returning an error; verify that pod's entry records the error (`Running: false`, `Status: FAILED`, `LastError` populated) without keeping stale success data, the other two are updated normally, and no error is returned from the reconciler.
   - Verify entries for pods that no longer exist are removed from the map.
-- `pkg/medusa/hostmap_test.go`: existing tests must continue to pass. Add a test for `PodsMissingFromNodeBackups`: all present, one missing, extra keys ignored.
+  - Verify the reconcile result is `RequeueSoon(interval - elapsed)` when `pitr.enabled` is true, and `Done` when it is false.
+- `pkg/medusa/hostmap_test.go`: existing tests must continue to pass after the split. Add tests for `GetPitrHostMap`: same names (in place), different names (out of place), nodes of another DC ignored, rack count mismatch, rack names differ, source rack larger than target rack (an error, not a panic, also through `GetHostMap`), target pod without a source, backup name not found, node not in its backup.
 
 **Integration tests:**
-1. Create a `K8ssandraCluster` with `pitr.enabled: true`.
+1. Create a `K8ssandraCluster` without `pitr`. Take a backup. Then set `pitr.enabled: true`.
 2. Verify `medusa.ini` ConfigMap contains `[pitr]` section.
 3. Run workload; wait for archiver to upload segments on all nodes (poll until every entry in `commitLogArchiveStatuses` has `lastUploadTime > 0`).
 4. Record `targetTimestamp` mid-workload.
 5. After `targetTimestamp`, write a distinct set of rows (and delete some pre-target rows).
 6. Create a `MedusaRestoreJob` with `targetTimestamp` set (no `backup`). Verify the job drains the nodes and waits for `pendingCount == 0` on every pod before the DC stops. Verify no segment from the old timeline is uploaded after the restore.
-7. Verify `MedusaRestoreJob` completes; verify row counts at target timestamp. Assert the post-target rows are absent and the deleted pre-target rows are present. This catches a skipped SSTable step (§4.7 entrypoint contract).
+7. Verify `MedusaRestoreJob` completes; verify row counts at target timestamp. Assert the post-target rows are absent and the deleted pre-target rows are present. This catches a skipped SSTable step (§4.10 item 3).
+8. Create a second `K8ssandraCluster` with a different cluster name, the same DC name, rack names, and size, `storageProperties.prefix` set to the first cluster's prefix, and `pitr.enabled` unset. Create a `MedusaRestoreJob` with the same `targetTimestamp`. Verify no drain is called, `RESTORE_MAPPING` has `in_place: false`, and the rows match step 7. A row set equal to the base backup alone means replay was skipped (§4.10 item 4).
+9. Create a `MedusaRestoreJob` with a `targetTimestamp` between the step 1 backup and the first PITR-enabled backup. Verify the job fails at `PreparePitrRestore` and the DC is not stopped (§4.10 item 1).
 
 ---
 
 ## 7. Open Questions & Design Decisions
 
 1. **Archiving status polling mechanism and alternatives:**
-   - **Context:** For `CassandraDatacenter`, `k8ssandra-operator` watches the CR via Informers without polling pods directly. For Medusa PITR, the operator polls pods over gRPC directly, throttled to once per `archiveIntervalSeconds`. A separate `statusPollIntervalSeconds` knob was cut in eng review (2026-10-12); it can come back if a real need shows up.
+   - **Context:** For `CassandraDatacenter`, `k8ssandra-operator` watches the CR via Informers without polling pods directly. For Medusa PITR, the control plane polls pods over gRPC directly, once per `archiveIntervalSeconds`, and must be able to reach their pod IPs (§4.8). A separate `statusPollIntervalSeconds` knob was cut in eng review (2026-10-12); it can come back if a real need shows up.
    - **Question:** Is throttled gRPC polling from the cluster reconciler the best long-term mechanism, or is there a better way?
    - **Alternatives considered:**
      - *A. Dedicated status controller:* Run a separate background controller/timer in the data plane to decouple status polling from main reconcile triggers.
@@ -813,8 +880,6 @@ Reuse `GetHostMap` with a synthetic `MedusaRestoreJob`, using one of the backup 
 3. **PITR after PITR.**
 
 
-
-- pods can be renamed during restores. allows restoring to a different cluster.
 
 - pitr after pitr - we need to mark skipped commitlogs persisted in the storage, and make it part of the medusa docs. they cannot be replayed. no team agreement here, the functionality might also not be needed (and solved by documenting you shouldn't pitr after pitr)
 
