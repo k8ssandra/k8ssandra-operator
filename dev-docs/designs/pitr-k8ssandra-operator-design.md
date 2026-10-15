@@ -10,9 +10,9 @@
 
 ### Background
 
-k8ssandra-operator manages Cassandra clusters on Kubernetes. It already orchestrates snapshot-based backups and restores through Medusa: the operator creates `MedusaBackupJob` and `MedusaRestoreJob` CRDs, drives the Medusa gRPC sidecar on each pod, and injects `RESTORE_MAPPING` into the `medusa-restore` initContainer as an env var.
+k8ssandra-operator manages Cassandra clusters on Kubernetes. It already orchestrates backups and restores through Medusa: the operator creates `MedusaBackupJob` and `MedusaRestoreJob` CRDs, drives the Medusa gRPC sidecar on each pod, and injects `RESTORE_MAPPING` into the `medusa-restore` initContainer as an env var.
 
-Medusa is gaining PITR support — continuous archiving of Cassandra commitlog segments and a `PreparePitrRestore` RPC that resolves per-node base snapshots for a given target timestamp. The full Medusa contract is described in [`cassandra-medusa/docs/superpowers/specs/pitr-design-doc.md`](../../cassandra-medusa/docs/superpowers/specs/pitr-design-doc.md).
+Medusa is gaining PITR support — continuous archiving of Cassandra commitlog segments and a `PreparePitrRestore` RPC that resolves per-node base backups for a given target timestamp. The full Medusa contract is described in [`cassandra-medusa/docs/superpowers/specs/pitr-design-doc.md`](../../cassandra-medusa/docs/superpowers/specs/pitr-design-doc.md).
 
 The operator's role is narrowly defined:
 
@@ -57,14 +57,14 @@ Medusa's gRPC server now exposes `GetCommitLogArchiveStatus` and `PreparePitrRes
 
 - **G1:** Users enable PITR by setting one field (`spec.medusa.pitr.enabled: true`) on an existing CRD. No new CRD, no new controller, no new sidecar.
 - **G2:** `pitr.enabled: false` (the default) produces zero behaviour change — existing backup, restore, and purge flows are untouched.
-- **G3:** A PITR restore is driven through the same `MedusaRestoreJob` object and the same rolling-restart machinery that snapshot restores use today.
+- **G3:** A PITR restore is driven through the same `MedusaRestoreJob` object and the same rolling-restart machinery that backup restores use today.
 - **G4:** The operator never needs direct knowledge of commitlog internals. All PITR-specific logic runs inside Medusa; the operator only passes a timestamp and routes the result.
 - **G5:** Operators can observe archiving health from Kubernetes (`kubectl get k8ssandracluster`) without gRPC access.
 
 ### Non-Goals
 
 - **NG1:** Providing a use-case path for recovering individual tables or keyspaces — PITR targets the full cluster state at a point in time.
-- **NG2:** Recovering to a timestamp that falls before any available base snapshot — the operator surfaces a clear error; it does not synthesise missing data.
+- **NG2:** Recovering to a timestamp that falls before any available base backup — the operator surfaces a clear error; it does not synthesise missing data.
 - **NG3:** UI or CLI tooling beyond the CRD surface; all interaction is through Kubernetes objects.
 
 ### Success Criteria
@@ -91,7 +91,7 @@ The feature has three parts:
    - If any node in the cluster lacks an eligible base backup, Medusa returns `FAILED` immediately. The operator marks `MedusaRestoreJob` failed with a terminal error and stops reconciliation. No pods are stopped, no data is modified, and no StatefulSets are patched.
    - Only on success does the reconciler assemble `RESTORE_MAPPING` with the `pitr` block (`target_timestamp_s` and `node_backups`) and mark the restore prepared.
    - Then the reconciler runs the drain gate. It drains Cassandra on every pod, so no new commitlog segments are written. It waits until every Medusa archiver has uploaded its whole spool. A node does not go down before its commitlogs are in the bucket.
-   - Only then does the reconciler stop the datacenter and proceed with rolling restart. Inside each initContainer: `restore.py` downloads per-node base SSTables; `pitr_restore.py` queries object storage for commitlog segments archived since the base snapshot, stages them locally, and configures `commitlog_archiving.properties` for Cassandra replay up to the target timestamp.
+   - Only then does the reconciler stop the datacenter and proceed with rolling restart. Inside each initContainer: `restore.py` downloads per-node base SSTables; `pitr_restore.py` queries object storage for commitlog segments archived since the base backup, stages them locally, and configures `commitlog_archiving.properties` for Cassandra replay up to the target timestamp.
 
 3. **Archiving status surface:** A new `Medusa *MedusaStatus` field on `K8ssandraStatus` (`.status.datacenters[name]`), carrying a `map[string]CommitLogArchiveStatus` keyed by pod name and a `lastStatusPoll` timestamp. Polling runs during Medusa reconciliation when `pitr.enabled = true`, throttled to once per `archiveIntervalSeconds` (default: 60s). If the interval has not elapsed since `lastStatusPoll`, gRPC polling is skipped. When polling runs, if a pod fails, the reconciler logs a warning and records the failure directly in that pod's entry (`Running: false`, `Status: FAILED`, `LastError: <error-message>`). Stale success data is not retained. Polling errors do not block backup, restore, or purge operations.
 
@@ -258,7 +258,7 @@ type MedusaRestoreMapping struct {
     HostMap map[string]MappingSource `json:"host_map,omitempty"`
 
     // Pitr contains PITR-specific restore parameters.
-    // Present only for PITR restores; absent for standard snapshot restores.
+    // Present only for PITR restores; absent for backup restores.
     // +optional
     Pitr *PitrRestoreBlock `json:"pitr,omitempty"`
 }
@@ -389,11 +389,11 @@ When `Pitr` is nil or `Enabled` is false, no `[pitr]` section is emitted; Medusa
 #### 1. Pre-flight validation & request construction
 
 1. **`NewMedusaRestoreRequest`**:
-   - For snapshot restore (`spec.backup != ""`), it fetches the `MedusaBackup` CR.
+   - For backup restore (`spec.backup != ""`), it fetches the `MedusaBackup` CR.
    - For PITR restore (`spec.targetTimestamp != ""`), `spec.backup` is empty. `NewMedusaRestoreRequest` skips the `MedusaBackup` CR fetch and leaves `req.MedusaBackup` nil.
    - `req.MedusaBackup` is used in exactly three places today. Each one must branch on `spec.targetTimestamp`:
 
-     | Site | Snapshot restore | PITR restore |
+     | Site | Backup restore | PITR restore |
      |---|---|---|
      | `Reconcile`, `validateBackupForRestore(request.MedusaBackup, cassdc)` (line 114) | unchanged | skipped; run step 3 (PITR enablement) instead |
      | `podTemplateSpecUpdateComplete`, `req.MedusaBackup.Name` (line 257) | unchanged | check `RESTORE_MAPPING` instead (see below) |
@@ -438,7 +438,7 @@ func (r *MedusaRestoreJobReconciler) prepareRestore(
             return r.preparePitrRestore(ctx, request, client, logger)
         }
 
-        // Existing snapshot path
+        // Existing backup path
         hostMap, err := medusa.GetHostMap(request.Datacenter, *request.RestoreJob, client, ctx)
         if err != nil {
             return nil, err
@@ -488,7 +488,7 @@ func (r *MedusaRestoreJobReconciler) preparePitrRestore(
         return nil, fmt.Errorf("PreparePitrRestore gRPC call failed: %w", err)
     }
     if resp.Status == medusa.StatusType_FAILED {
-        return nil, fmt.Errorf("no eligible base snapshot for at least one node before timestamp %s", request.RestoreJob.Spec.TargetTimestamp)
+        return nil, fmt.Errorf("no eligible base backup for at least one node before timestamp %s", request.RestoreJob.Spec.TargetTimestamp)
     }
 
     // Every pod of the target DC must have a base backup. Fail now, before the DC is stopped.
@@ -515,7 +515,7 @@ func (r *MedusaRestoreJobReconciler) preparePitrRestore(
 
 **Why:** Each pod holds sealed commitlog segments in its spool. They are not in the bucket yet. Medusa's in-place restore cleans the commitlog directory, but not the spool. If the DC stops with a full spool, the archiver uploads those segments after the restore. They belong to the discarded timeline. A node that is still running also keeps writing new segments. So the gate does two things in order: stop new commitlogs, then upload the old ones.
 
-**Where:** In `Reconcile`, after `RestorePrepared` is `true` and before `stopDatacenterRestoreJob`. Only for PITR restores (`spec.targetTimestamp != ""`). Snapshot restores skip the gate.
+**Where:** In `Reconcile`, after `RestorePrepared` is `true` and before `stopDatacenterRestoreJob`. Only for PITR restores (`spec.targetTimestamp != ""`). Backup restores skip the gate.
 
 **Steps:**
 
@@ -736,19 +736,19 @@ Reuse `GetHostMap` with a synthetic `MedusaRestoreJob`, using one of the backup 
 ### 6.2 Security & Privacy
 
 - No new credentials. `PreparePitrRestore` and `GetCommitLogArchiveStatus` use the existing gRPC channel, which already handles optional mTLS via `GRPCEncryption`.
-- `RESTORE_MAPPING` is stored as an env var on the pod — the same channel used today for snapshot restores. The `pitr` block adds backup names and a timestamp to that env var. This is already sensitive data handled by existing RBAC.
+- `RESTORE_MAPPING` is stored as an env var on the pod — the same channel used today for backup restores. The `pitr` block adds backup names and a timestamp to that env var. This is already sensitive data handled by existing RBAC.
 
 ### 6.3 Observability & Monitoring
 
 - `commitLogArchiveStatuses` on the cluster status gives operators a per-node view of archiving health without requiring gRPC access. A single failing pod is immediately visible by name.
-- `MedusaRestoreJob.Status.Message` is populated with a human-readable error when `PreparePitrRestore` returns `FAILED` (e.g. "no eligible base snapshot for node X before 2024-07-15T12:30:00Z").
+- `MedusaRestoreJob.Status.Message` is populated with a human-readable error when `PreparePitrRestore` returns `FAILED` (e.g. "no eligible base backup for node X before 2024-07-15T12:30:00Z").
 - Existing restore job status fields (`StartTime`, `FinishTime`, `InProgress`, `Finished`, `Failed`) are reused.
 
 ### 6.4 Failure Modes
 
 | Scenario | Behaviour |
 |---|---|
-| `PreparePitrRestore` returns `FAILED` (no eligible base snapshot) | Terminal error. Reconciler sets `Status.FinishTime` and `Status.Message`, returns with no requeue. Datacenter is never stopped, data is never wiped. |
+| `PreparePitrRestore` returns `FAILED` (no eligible base backup) | Terminal error. Reconciler sets `Status.FinishTime` and `Status.Message`, returns with no requeue. Datacenter is never stopped, data is never wiped. |
 | `PreparePitrRestore` succeeds but `nodeBaseBackups` has no entry for a pod of the target DC | Same terminal error. `Status.Message` lists the missing pods. Datacenter is never stopped. |
 | `PreparePitrRestore` returns gRPC `UNIMPLEMENTED` | Terminal error with message "Medusa does not support PITR — upgrade the Medusa image." |
 | `PreparePitrRestore` returns transient network error | Reconciler returns with requeue after `DefaultDelay`; retries until success or pod unavailability. |
@@ -770,7 +770,7 @@ Reuse `GetHostMap` with a synthetic `MedusaRestoreJob`, using one of the backup 
   - `preparePitrRestore`: mock returning `FAILED`; verify reconciler sets `Status.Message` and does not requeue.
   - `preparePitrRestore`: mock returning success with `nodeBaseBackups` missing one pod; verify the error, no `RESTORE_MAPPING`, and DC not stopped.
   - `preparePitrRestore`: verify `in_place` is `true` and `host_map` is empty.
-  - Drain gate: mock one pod with `pendingCount > 0`; verify the DC is not stopped and `Status.Message` names the pod. Mock all pods drained with `pendingCount == 0`; verify the DC is stopped. Verify drain is called before `GetCommitLogArchiveStatus`. Verify timeout fails the job terminally. Verify a snapshot restore never calls the gate.
+  - Drain gate: mock one pod with `pendingCount > 0`; verify the DC is not stopped and `Status.Message` names the pod. Mock all pods drained with `pendingCount == 0`; verify the DC is stopped. Verify drain is called before `GetCommitLogArchiveStatus`. Verify timeout fails the job terminally. Verify a backup restore never calls the gate.
   - `podTemplateSpecUpdateComplete` for PITR: verify it checks `RESTORE_MAPPING` not `BACKUP_NAME`.
   - Full reconcile loop with PITR: verify rolling restart completes and status is set.
 - `controllers/k8ssandra/medusa_reconciler_test.go` (status polling):
@@ -808,7 +808,7 @@ Reuse `GetHostMap` with a synthetic `MedusaRestoreJob`, using one of the backup 
    - **Options:**
      - *A. Datacenter Ready condition (recommended):* Cassandra does not transition to `Ready` until startup and commitlog replay complete. The operator marks `MedusaRestoreJob` finished when `CassandraDatacenter` reaches `Ready`. This reuses existing restore reconciliation without sidecar polling.
      - *B. Explicit replay status probe:* Query Cassandra JMX or Medusa sidecar for an explicit replay completion marker before marking the job finished.
-   - **Current decision:** Option A. Reusing `CassandraDatacenterReady` keeps the restore loop simple and consistent with standard snapshot restores.
+   - **Current decision:** Option A. Reusing `CassandraDatacenterReady` keeps the restore loop simple and consistent with backup restores.
 
 3. **PITR after PITR.**
 
