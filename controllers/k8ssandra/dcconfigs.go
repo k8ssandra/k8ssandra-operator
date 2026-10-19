@@ -62,10 +62,8 @@ func (r *K8ssandraClusterReconciler) createDatacenterConfigs(
 			cassandra.ApplySystemReplication(dcConfig, systemReplication)
 		}
 
-		// Stargate has a bug when backed by Cassandra 4, unless `cassandra.allow_alter_rf_during_range_movement` is
-		// set (see https://github.com/stargate/stargate/issues/1274).
-		// Set the option preemptively (we don't check `kc.HasStargates()` explicitly, because that causes the operator
-		// to restart the whole DC whenever Stargate is added or removed).
+		// Datacenter removal requires replication changes while endpoints may not be in normal state.
+		// Configure this at startup so topology changes do not require an extra rolling restart.
 		if kc.Spec.Cassandra.ServerType.IsCassandra() && dcConfig.ServerVersion.Major() != 3 {
 			cassandra.AllowAlterRfDuringRangeMovement(dcConfig)
 		}

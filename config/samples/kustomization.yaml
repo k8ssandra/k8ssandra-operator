@@ -1,7 +1,6 @@
 ## Append samples you want in your CSV to this file as resources ##
 resources:
 - k8ssandra.io_v1alpha1_k8ssandracluster.yaml
-- _v1alpha1_stargate.yaml
 - k8ssandra.io_v1alpha1_replicatedsecret.yaml
 - medusa_v1alpha1_MedusaTask.yaml
 - medusa_v1alpha1_medusabackup.yaml
