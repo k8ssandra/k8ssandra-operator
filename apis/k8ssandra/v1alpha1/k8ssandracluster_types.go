@@ -20,7 +20,6 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
-	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
@@ -39,7 +38,7 @@ type K8ssandraClusterSpec struct {
 
 	// Whether to enable authentication in this cluster. The default is true; it is highly recommended to always leave
 	// authentication turned on. When enabled, authentication will be enforced not only on Cassandra nodes, but also on
-	// Reaper, Medusa and Stargate nodes, if any.
+	// Reaper and Medusa nodes, if any.
 	// +optional
 	// +kubebuilder:default=true
 	Auth *bool `json:"auth,omitempty"`
@@ -48,11 +47,6 @@ type K8ssandraClusterSpec struct {
 	// the number of datacenters, the k8s cluster where each DC should be deployed, node
 	// affinity (via racks), individual C* node settings, JVM settings, and more.
 	Cassandra *CassandraClusterTemplate `json:"cassandra,omitempty"`
-
-	// DEPRECATED Stargate defines the desired deployment characteristics for Stargate in this K8ssandraCluster.
-	// If this is non-nil, Stargate will be deployed on every Cassandra datacenter in this K8ssandraCluster.
-	// +optional
-	Stargate *stargateapi.StargateClusterTemplate `json:"stargate,omitempty"`
 
 	// Reaper defines the desired deployment characteristics for Reaper in this K8ssandraCluster.
 	// If this is non-nil, Reaper might be deployed on every Cassandra datacenter in this K8ssandraCluster, unless
@@ -67,7 +61,7 @@ type K8ssandraClusterSpec struct {
 
 	// During a migration the operator should alter keyspaces replication settings including the following external DCs.
 	// This avoids removing replicas from datacenters which are outside of the operator scope (not referenced in the CR).
-	// Replication settings changes will only apply to system_* keyspaces as well as reaper_db and data_endpoint_auth (Stargate).
+	// Replication settings changes will only apply to system_* keyspaces as well as reaper_db.
 	// +optional
 	ExternalDatacenters []string `json:"externalDatacenters,omitempty"`
 
@@ -99,7 +93,7 @@ type K8ssandraClusterStatus struct {
 
 	// Datacenters maps the CassandraDatacenter name to a K8ssandraStatus. The
 	// naming is a bit confusing but the mapping makes sense because we have a
-	// CassandraDatacenter and then define other components like Stargate and Reaper
+	// CassandraDatacenter and then define other components like Reaper
 	// relative to it. I wanted to inline the field but when I do it won't serialize.
 	//
 	// TODO Figure out how to inline this field
@@ -146,7 +140,6 @@ type K8ssandraStatus struct {
 	ContextName          string                               `json:"contextName,omitempty"`
 	DecommissionProgress DecommissionProgress                 `json:"decommissionProgress,omitempty"`
 	Cassandra            *cassdcapi.CassandraDatacenterStatus `json:"cassandra,omitempty"`
-	Stargate             *stargateapi.StargateStatus          `json:"stargate,omitempty"`
 	Reaper               *reaperapi.ReaperStatus              `json:"reaper,omitempty"`
 }
 
@@ -163,24 +156,6 @@ type K8ssandraCluster struct {
 
 	Spec   K8ssandraClusterSpec   `json:"spec,omitempty"`
 	Status K8ssandraClusterStatus `json:"status,omitempty"`
-}
-
-// HasStargates returns true if at least one Stargate resource will be created as part of the creation
-// of this K8ssandraCluster object.
-func (in *K8ssandraCluster) HasStargates() bool {
-	if in == nil {
-		return false
-	} else if in.Spec.Stargate != nil {
-		return true
-	} else if in.Spec.Cassandra == nil || len(in.Spec.Cassandra.Datacenters) == 0 {
-		return false
-	}
-	for _, dcTemplate := range in.Spec.Cassandra.Datacenters {
-		if dcTemplate.Stargate != nil {
-			return true
-		}
-	}
-	return false
 }
 
 // HasStoppedDatacenters returns true if at least one DC is flagged as stopped.
@@ -258,7 +233,7 @@ type CassandraClusterTemplate struct {
 	// here; otherwise, use IP addresses.
 	AdditionalSeeds []string `json:"additionalSeeds,omitempty"`
 
-	// Internode encryption stores which are used by Cassandra and Stargate.
+	// Internode encryption stores which are used by Cassandra.
 	// +optional
 	ServerEncryptionStores *encryption.Stores `json:"serverEncryptionStores,omitempty"`
 
@@ -285,7 +260,6 @@ type CassandraDatacenterTemplate struct {
 	DatacenterOptions `json:",inline"`
 
 	// Size is the number Cassandra pods to deploy in this datacenter.
-	// This number does not include Stargate instances.
 	// +kubebuilder:validation:Minimum=1
 	Size int32 `json:"size"`
 
@@ -296,11 +270,6 @@ type CassandraDatacenterTemplate struct {
 	// +optional
 	// +kubebuilder:default=false
 	Stopped bool `json:"stopped,omitempty"`
-
-	// DEPRECATED Stargate defines the desired deployment characteristics for Stargate in this datacenter. Leave nil to skip
-	// deploying Stargate in this datacenter.
-	// +optional
-	Stargate *stargateapi.StargateDatacenterTemplate `json:"stargate,omitempty"`
 
 	// PerNodeConfigMapRef is a reference to a ConfigMap that contains per-node configuration for
 	// this DC. The ConfigMap is expected to have entries in the following form:
