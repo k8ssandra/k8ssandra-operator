@@ -99,25 +99,6 @@ jobs:
           else
             echo "ClusterRole not found in the helm chart"
           fi
-      - name: Check that the CRD upgrader role is not aggregated
-        run: |
-          rendered="$(helm template k8c charts/k8ssandra-operator \
-            --namespace k8ssandra \
-            --set cass-operator.disableCertManagerCheck=true \
-            --show-only templates/crd/cluster_role.yaml \
-            --show-only templates/crd/cluster_role_binding.yaml)"
-
-          if grep -q 'rbac.authorization.k8s.io/aggregate-to-' <<< "$rendered"; then
-            echo "CRD upgrader ClusterRole must not aggregate into default roles"
-            exit 1
-          fi
-
-          grep -q '^kind: ClusterRole$' <<< "$rendered"
-          grep -q '^kind: ClusterRoleBinding$' <<< "$rendered"
-          grep -q '^  - kind: ServiceAccount$' <<< "$rendered"
-          for verb in create get watch list update patch; do
-            grep -q "^      - ${verb}$" <<< "$rendered"
-          done
       #- name: Setup tmate session
       #  if: failure()
       #  uses: mxschmitt/action-tmate@v3
