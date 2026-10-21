@@ -60,7 +60,6 @@ Verify that the following CRDs are installed:
 * `orders.acme.cert-manager.io`
 * `reapers.reaper.k8ssandra.io`
 * `replicatedsecrets.replication.k8ssandra.io`
-* `stargates.stargate.k8ssandra.io`
 
 
 Check that there are two Deployments. The output should look similar to this:
@@ -79,8 +78,7 @@ kubectl -n k8ssandra-operator get deployment k8ssandra-operator -o jsonpath='{.s
 ```
 
 ### Deploy a K8ssandraCluster
-Now we will deploy a K8ssandraCluster that consists of a 3-node Cassandra cluster and a 
-Stargate node.
+Now we will deploy a K8ssandraCluster that consists of a 3-node Cassandra cluster.
 
 ```sh
 cat <<EOF | kubectl -n k8ssandra-operator apply -f -
@@ -106,9 +104,6 @@ spec:
         config:
           jvmOptions:
             heapSize: 512M
-        stargate:
-          size: 1
-          heapSize: 256M
 EOF
 ```
 
@@ -165,20 +160,6 @@ Status:
       Cassandra:
         Cassandra Operator Progress:  Ready
       ...
-      Stargate:
-        Available Replicas:  1
-        Conditions:
-          Last Transition Time:  2021-09-28T03:32:07Z
-          Status:                True
-          Type:                  Ready
-        Deployment Refs:
-          demo-dc1-default-stargate-deployment
-        Progress:              Running
-        Ready Replicas:        1
-        Ready Replicas Ratio:  1/1
-        Replicas:              1
-        Service Ref:           demo-dc1-stargate-service
-        Updated Replicas:      1
 Events:                        <none>
 ```
 
@@ -186,4 +167,3 @@ Events:                        <none>
 
 * See other [local install]({{< relref "install/local/" >}}) options, including K8ssandra Operator in multi-cluster Kubernetes.
 * Also, dig into the K8ssandra Operator [components]({{< relref "components" >}}).
-

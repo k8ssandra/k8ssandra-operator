@@ -26,7 +26,6 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
-	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
@@ -102,7 +101,6 @@ func TestK8ssandraCluster(t *testing.T) {
 	t.Run("ApplyClusterTemplateConfigs", testEnv.ControllerTest(ctx, applyClusterTemplateConfigs))
 	t.Run("ApplyDatacenterTemplateConfigs", testEnv.ControllerTest(ctx, applyDatacenterTemplateConfigs))
 	t.Run("ApplyClusterTemplateAndDatacenterTemplateConfigs", testEnv.ControllerTest(ctx, applyClusterTemplateAndDatacenterTemplateConfigs))
-	t.Run("CreateSingleDcCassandra4ClusterWithStargate", testEnv.ControllerTest(ctx, createSingleDcCassandra4ClusterWithStargate))
 	t.Run("CreateMultiDcClusterWithReaper", testEnv.ControllerTest(ctx, createMultiDcClusterWithReaper))
 	t.Run("createMultiDcClusterWithControlPlaneReaper", testEnv.ControllerTest(ctx, createMultiDcClusterWithControlPlaneReaper))
 	t.Run("CreateMultiDcClusterWithMedusa", testEnv.ControllerTest(ctx, createMultiDcClusterWithMedusa))
@@ -341,7 +339,7 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 	kcPatch = client.MergeFrom(kc.DeepCopy())
 	kc.Spec.Cassandra.Datacenters[0].Telemetry = nil
 	if err := f.Client.Patch(ctx, kc, kcPatch); err != nil {
-		assert.Fail(t, "failed to patch stargate", "error", err)
+		assert.Fail(t, "failed to patch K8ssandraCluster", "error", err)
 	}
 	assert.Eventually(t, func() bool {
 		err := f.Get(ctx, smKey, sm)
@@ -1057,141 +1055,7 @@ func setReplicationStatusDone(ctx context.Context, t *testing.T, f *framework.Fr
 	require.NoError(t, err, "Failed to update ReplicationSecret status", "key", key)
 }
 
-func createSingleDcCassandra4ClusterWithStargate(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
-	require := require.New(t)
-
-	clusterName := "cluster-single-stargate"
-	kc := &api.K8ssandraCluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      clusterName,
-		},
-		Spec: api.K8ssandraClusterSpec{
-			Cassandra: &api.CassandraClusterTemplate{
-				DatacenterOptions: api.DatacenterOptions{
-					ServerVersion: "4.0.6",
-				},
-				Datacenters: []api.CassandraDatacenterTemplate{
-					{
-						Meta: api.EmbeddedObjectMeta{
-							Name: "dc1",
-						},
-						K8sContext: f.DataPlaneContexts[0],
-						Size:       3,
-						DatacenterOptions: api.DatacenterOptions{
-							ServerVersion: "4.0.6",
-							StorageConfig: &cassdcapi.StorageConfig{
-								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-									StorageClassName: &defaultStorageClass,
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	kcKey := framework.ClusterKey{K8sContext: f.ControlPlaneContext, NamespacedName: types.NamespacedName{Namespace: namespace, Name: clusterName}}
-	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
-	sg1Key := framework.ClusterKey{
-		K8sContext: f.DataPlaneContexts[0],
-		NamespacedName: types.NamespacedName{
-			Namespace: namespace,
-			Name:      kc.Name + "-" + dc1Key.Name + "-stargate"},
-	}
-
-	err := f.Client.Create(ctx, kc)
-	require.NoError(err, "failed to create K8ssandraCluster")
-
-	verifyFinalizerAdded(ctx, t, f, kc)
-	verifySuperuserSecretCreated(ctx, t, f, kc)
-	verifyReplicatedSecretReconciled(ctx, t, f, kc)
-	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
-
-	t.Log("check that dc1 was created")
-	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
-
-	t.Log("update datacenter status to scaling up")
-	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {
-		dc.SetCondition(cassdcapi.DatacenterCondition{
-			Type:               cassdcapi.DatacenterScalingUp,
-			Status:             corev1.ConditionTrue,
-			LastTransitionTime: metav1.Now(),
-		})
-	})
-	require.NoError(err, "failed to patch datacenter status")
-
-	t.Log("check that the K8ssandraCluster status is updated")
-	require.Eventually(func() bool {
-		kc := &api.K8ssandraCluster{}
-		err = f.Get(ctx, kcKey, kc)
-		if err != nil {
-			t.Logf("failed to get K8ssandraCluster: %v", err)
-			return false
-		}
-
-		if (&kc.Status).GetConditionStatus(api.CassandraInitialized) == corev1.ConditionTrue {
-			t.Logf("Did not expect status condition %s to be true", api.CassandraInitialized)
-			return false
-		}
-
-		if len(kc.Status.Datacenters) == 0 {
-			return false
-		}
-
-		k8ssandraStatus, found := kc.Status.Datacenters[dc1Key.Name]
-		if !found {
-			t.Logf("status for datacenter %s not found", dc1Key)
-			return false
-		}
-
-		condition := FindDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
-		return condition != nil || condition.Status != corev1.ConditionFalse
-	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
-
-	t.Log("update dc1 status to ready")
-	err = f.SetDatacenterStatusReady(ctx, dc1Key)
-	require.NoError(err, "failed to update dc1 status to ready")
-
-	// t.Log("check that stargate sg1 is created")
-	// require.Eventually(f.StargateExists(ctx, sg1Key), timeout, interval)
-
-	t.Log("check that cass DC sets allow_alter_rf_during_range_movement")
-	cassDc := &cassdcapi.CassandraDatacenter{}
-	err = f.Get(ctx, dc1Key, cassDc)
-	require.NoError(err, "failed to get CassandraDatacenter")
-	dcConfig, err := utils.UnmarshalToMap(cassDc.Spec.Config)
-	require.NoError(err, "failed to unmarshall CassandraDatacenter config")
-	jvmOpts := dcConfig["cassandra-env-sh"].(map[string]interface{})["additional-jvm-opts"].([]interface{})
-	require.Contains(jvmOpts, "-Dcassandra.allow_alter_rf_during_range_movement=true")
-
-	err = f.Get(ctx, kcKey, kc)
-	require.NoError(err, "failed to get K8ssandraCluster")
-	dcGeneration := kc.Status.Datacenters["dc1"].Cassandra.ObservedGeneration
-
-	t.Log("check that DC generation hasn't changed")
-	err = f.Get(ctx, kcKey, kc)
-	require.NoError(err, "failed to get K8ssandraCluster")
-	require.Equal(dcGeneration, kc.Status.Datacenters["dc1"].Cassandra.ObservedGeneration)
-
-	t.Log("check that cass DC still sets allow_alter_rf_during_range_movement")
-	cassDc = &cassdcapi.CassandraDatacenter{}
-	err = f.Get(ctx, dc1Key, cassDc)
-	require.NoError(err, "failed to get CassandraDatacenter")
-	dcConfig, err = utils.UnmarshalToMap(cassDc.Spec.Config)
-	require.NoError(err, "failed to unmarshall CassandraDatacenter config")
-	jvmOpts = dcConfig["cassandra-env-sh"].(map[string]interface{})["additional-jvm-opts"].([]interface{})
-	require.Contains(jvmOpts, "-Dcassandra.allow_alter_rf_during_range_movement=true")
-
-	t.Log("deleting K8ssandraCluster")
-	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
-	require.NoError(err, "failed to delete K8ssandraCluster")
-	f.AssertObjectDoesNotExist(ctx, t, dc1Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
-	f.AssertObjectDoesNotExist(ctx, t, sg1Key, &stargateapi.Stargate{}, timeout, interval)
-}
-
-// Create a cluster with encryption options and Stargate.
+// Create a cluster with encryption options.
 // Verify that volumes, mounts and config maps are correctly created.
 func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
@@ -1300,11 +1164,6 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 										"internode_encryption": "all",
 									},
 								},
-							},
-						},
-						Stargate: &stargateapi.StargateDatacenterTemplate{
-							StargateClusterTemplate: stargateapi.StargateClusterTemplate{
-								Size: 1,
 							},
 						},
 					},
@@ -1587,7 +1446,7 @@ func applyClusterWithEncryptionOptionsFail(t *testing.T, ctx context.Context, f 
 	f.AssertObjectDoesNotExist(ctx, t, dc1Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
 }
 
-// Create a cluster with encryption options and Stargate.
+// Create a cluster with encryption options.
 // Verify that volumes, mounts and config maps are correctly created.
 func applyClusterWithEncryptionOptionsExternalSecrets(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
@@ -1705,11 +1564,6 @@ func applyClusterWithEncryptionOptionsExternalSecrets(t *testing.T, ctx context.
 										"internode_encryption": "all",
 									},
 								},
-							},
-						},
-						Stargate: &stargateapi.StargateDatacenterTemplate{
-							StargateClusterTemplate: stargateapi.StargateClusterTemplate{
-								Size: 1,
 							},
 						},
 					},

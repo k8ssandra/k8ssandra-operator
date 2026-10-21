@@ -11,7 +11,7 @@ More information about Vector can be found in the [official documentation](https
 
 ## Enabling Vector agent
 
-Vector agent is enabled by default for Cassandra pods. To enable Vector agent for Stargate and Reaper, you need to add a `.spec.stargate.telemetry` and a `.spec.reaper.telemetry` sections respectively in the `K8ssandraCluster` manifest with `.vector.enabled: true`:
+Vector agent is enabled by default for Cassandra pods. To enable Vector agent for Reaper, you need to add a `.spec.reaper.telemetry` section in the `K8ssandraCluster` manifest with `.vector.enabled: true`:
 
 ```yaml
 apiVersion: k8ssandra.io/v1alpha1
@@ -101,7 +101,7 @@ If there are sources and transformers which are not used by any sinks, the opera
 
 ## Predefined Vector sources
 
-Metrics sources are predefined in the Vector configuration for Cassandra, Reaper and Stargate. These sources are named `cassandra_metrics`, `reaper_metrics` and `stargate_metrics` respectively.
+Metrics sources are predefined in the Vector configuration for Cassandra and Reaper. These sources are named `cassandra_metrics` and `reaper_metrics` respectively.
 They can be used as input in custom components added through configuration.
 
 `systemlog` input is defined as the default source for Cassandra logs.
@@ -111,7 +111,7 @@ This transform will parse the Cassandra logs and extract the log level, thread, 
 
 ## Custom Vector configuration
 
-To customize the Vector configuration, you can add [sources](https://vector.dev/docs/reference/configuration/sources/), [transforms](https://vector.dev/docs/reference/configuration/transforms/) and [sinks](https://vector.dev/docs/reference/configuration/sinks/) in a semi-structured way under `.spec.cassandra.telemetry.vector.components`, `.spec.reaper.telemetry.vector.components` and `.spec.stargate.telemetry.vector.components`:
+To customize the Vector configuration, you can add [sources](https://vector.dev/docs/reference/configuration/sources/), [transforms](https://vector.dev/docs/reference/configuration/transforms/) and [sinks](https://vector.dev/docs/reference/configuration/sinks/) in a semi-structured way under `.spec.cassandra.telemetry.vector.components` and `.spec.reaper.telemetry.vector.components`:
 
 ```yaml
 cassandra:  

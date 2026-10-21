@@ -248,7 +248,7 @@ func TestOperator(t *testing.T) {
 		testFunc: removeLocalDcFromCluster,
 		fixture:  framework.NewTestFixture("remove-local-dc-5.0", controlPlane),
 	}))
-	t.Run("CreateSingleReaperNoStargate", e2eTest(ctx, &e2eTestOpts{
+	t.Run("CreateSingleReaper", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createSingleReaper,
 		fixture:  framework.NewTestFixture("single-dc-reaper", controlPlane),
 	}))
@@ -313,10 +313,6 @@ func TestOperator(t *testing.T) {
 	t.Run("ConfigControllerRestarts", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                    controllerRestart,
 		skipK8ssandraClusterCleanup: true,
-	}))
-	t.Run("SingleDcEncryption", e2eTest(ctx, &e2eTestOpts{
-		testFunc: createSingleDatacenterClusterWithEncryption,
-		fixture:  framework.NewTestFixture("single-dc-encryption-stargate", controlPlane),
 	}))
 	t.Run("SingleDcEncryptionWithReaper", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createSingleReaperWithEncryption,
@@ -949,23 +945,6 @@ func createSingleDatacenterClusterWithUpgrade(t *testing.T, ctx context.Context,
 		err := f.Get(ctx, contactPointsEndpointsKey, endpoints)
 		return err != nil && errors.IsNotFound(err)
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "contact points endpoints should be deleted")
-}
-
-// createSingleDatacenterCluster creates a K8ssandraCluster with one CassandraDatacenter
-// that is deployed in the local cluster.
-func createSingleDatacenterClusterWithEncryption(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
-	require := require.New(t)
-	require.NoError(f.CreateCassandraEncryptionStoresSecret(namespace), "Failed to create the encryption secrets")
-
-	t.Log("check that the K8ssandraCluster was created")
-	k8ssandra := &api.K8ssandraCluster{}
-	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
-	err := f.Client.Get(ctx, kcKey, k8ssandra)
-	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
-
-	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
-	checkDatacenterReady(t, ctx, dcKey, f)
-	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
 }
 
 // createMultiDatacenterCluster creates a K8ssandraCluster with two CassandraDatacenters,
