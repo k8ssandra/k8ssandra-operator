@@ -40,7 +40,7 @@ spec:
       storageProvider: s3_compatible
       bucketName: k8ssandra-medusa
       prefix: test
-      host: minio-service.minio.svc.cluster.local
+      host: silo-service.silo.svc.cluster.local
       port: 9000
       secure: false
     serviceProperties:

@@ -45,7 +45,7 @@ image:
   pullPolicy: IfNotPresent
   # -- Tag of the k8ssandra-operator image to pull from image.repository
   tag: latest
-  # -- Docker registry containing all k8ssandra-operator related images, such as reaper/medusa/stargate. 
+  # -- Docker registry containing all k8ssandra-operator related images, such as reaper/medusa.
   # Setting this allows for usage of an internal registry without specifying image on all K8ssandraCluster objects.
   registryOverride:
 # -- References to secrets to use when pulling images. See:
@@ -95,6 +95,13 @@ affinity: {}
 ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/
 ##
 topologySpreadConstraints: []
+# -- metrics allows to change the configuration of how metrics are exposed. Default is
+# to expose /metrics endpoint at port :8080. If you wish to make this available only on
+# localhost (such as when using kube-rbac-proxy to secure access to them), set the value
+# to 127.0.0.1:8080
+metrics:
+  # -- Address where the metrics endpoint binds. Use "0" to disable metrics.
+  address: ":8080"
 # -- This client configuration is used for the CRD upgrader job only. Otherwise, modify
 # the global.imageConfig values to change k8ssandra-client
 client:

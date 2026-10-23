@@ -111,7 +111,6 @@ keyspaces to include replicas in `dc2`. Internal keyspaces includes the followin
 * `system_auth`
 * `system_traces`
 * `system_distributed`
-* `data_endpoint_auth`
 * `reaper_db`
 
 ### User Defined Keyspaces

@@ -185,9 +185,9 @@ func TestOperator(t *testing.T) {
 		fixture:  framework.NewTestFixture("single-dc-hcd", controlPlane),
 	}))
 	t.Run("CreateSingleDseSearchDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
-		testFunc:     createSingleDseSearchDatacenterCluster,
-		fixture:      framework.NewTestFixture("single-dc-dse-search", controlPlane),
-		installMinio: true,
+		testFunc:    createSingleDseSearchDatacenterCluster,
+		fixture:     framework.NewTestFixture("single-dc-dse-search", controlPlane),
+		installSilo: true,
 	}))
 	t.Run("CreateSingleDseGraphDatacenterCluster", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createSingleDseGraphDatacenterCluster,
@@ -204,7 +204,7 @@ func TestOperator(t *testing.T) {
 	t.Run("CreateMultiDatacenterClusterMedusa", e2eTest(ctx, &e2eTestOpts{
 		testFunc:             createMultiDatacenterMedusaCluster,
 		fixture:              framework.NewTestFixture("multi-dc-medusa", controlPlane),
-		installMinio:         true,
+		installSilo:          true,
 		clusterScoped:        true,
 		sutNamespace:         "multi-dc-medusa",
 		additionalNamespaces: []string{"separate-namespace"},
@@ -248,7 +248,7 @@ func TestOperator(t *testing.T) {
 		testFunc: removeLocalDcFromCluster,
 		fixture:  framework.NewTestFixture("remove-local-dc-5.0", controlPlane),
 	}))
-	t.Run("CreateSingleReaperNoStargate", e2eTest(ctx, &e2eTestOpts{
+	t.Run("CreateSingleReaper", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createSingleReaper,
 		fixture:  framework.NewTestFixture("single-dc-reaper", controlPlane),
 	}))
@@ -275,7 +275,7 @@ func TestOperator(t *testing.T) {
 			clusterScoped:        true,
 			sutNamespace:         "test-0",
 			additionalNamespaces: []string{"test-1", "test-2"},
-			installMinio:         true,
+			installSilo:          true,
 		}))
 	})
 	t.Run("CreateSingleMedusaJob", e2eTest(ctx, &e2eTestOpts{
@@ -283,28 +283,28 @@ func TestOperator(t *testing.T) {
 		fixture:                      framework.NewTestFixture("single-dc-encryption-medusa", controlPlane),
 		skipK8ssandraClusterCleanup:  false,
 		doCassandraDatacenterCleanup: false,
-		installMinio:                 true,
+		installSilo:                  true,
 	}))
 	t.Run("CreateMultiDcSingleMedusaJob", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createMultiDcSingleMedusaJob,
 		fixture:                      framework.NewTestFixture("single-dc-multi-cluster-medusa", controlPlane),
 		skipK8ssandraClusterCleanup:  false,
 		doCassandraDatacenterCleanup: false,
-		installMinio:                 true,
+		installSilo:                  true,
 	}))
 	t.Run("CreateSingleDseMedusaJob", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createSingleMedusaJob,
 		fixture:                      framework.NewTestFixture("single-dc-dse-medusa", controlPlane),
 		skipK8ssandraClusterCleanup:  false,
 		doCassandraDatacenterCleanup: false,
-		installMinio:                 true,
+		installSilo:                  true,
 	}))
 	t.Run("CreateMultiMedusaJob", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createMultiMedusaJob,
 		fixture:                      framework.NewTestFixture("multi-dc-encrypt-medusa", controlPlane),
 		skipK8ssandraClusterCleanup:  false,
 		doCassandraDatacenterCleanup: false,
-		installMinio:                 true,
+		installSilo:                  true,
 	}))
 	t.Run("MultiDcAuthOnOff", e2eTest(ctx, &e2eTestOpts{
 		testFunc: multiDcAuthOnOff,
@@ -313,10 +313,6 @@ func TestOperator(t *testing.T) {
 	t.Run("ConfigControllerRestarts", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                    controllerRestart,
 		skipK8ssandraClusterCleanup: true,
-	}))
-	t.Run("SingleDcEncryption", e2eTest(ctx, &e2eTestOpts{
-		testFunc: createSingleDatacenterClusterWithEncryption,
-		fixture:  framework.NewTestFixture("single-dc-encryption-stargate", controlPlane),
 	}))
 	t.Run("SingleDcEncryptionWithReaper", e2eTest(ctx, &e2eTestOpts{
 		testFunc: createSingleReaperWithEncryption,
@@ -431,8 +427,8 @@ type e2eTestOpts struct {
 	// an upgrade test.
 	initialVersion *string
 
-	// installMinio is used to specify if the e2e tests will require to install Minio before creating the k8c object.
-	installMinio bool
+	// installSilo is used to specify if the e2e tests will require to install Silo before creating the k8c object.
+	installSilo bool
 }
 
 type e2eTestFunc func(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework)
@@ -491,8 +487,8 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) erro
 		namespaces = append(namespaces, opts.additionalNamespaces...)
 	}
 
-	if opts.installMinio {
-		namespaces = append(namespaces, framework.MinioNamespace)
+	if opts.installSilo {
+		namespaces = append(namespaces, framework.SiloNamespace)
 	}
 
 	for _, namespace := range namespaces {
@@ -521,16 +517,16 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) erro
 		deploymentConfig.GithubKustomization = true
 	}
 
-	if opts.installMinio {
-		if err := f.CreateNamespace("minio"); err != nil {
-			t.Logf("failed to create namespace %s", "minio")
+	if opts.installSilo {
+		if err := f.CreateNamespace("silo"); err != nil {
+			t.Logf("failed to create namespace %s", "silo")
 			return err
 		}
-		if err := f.InstallMinio(); err != nil {
-			t.Log("failed to install Minio operator")
+		if err := f.InstallSilo(); err != nil {
+			t.Log("failed to install Silo")
 			return err
 		}
-		if err := f.CreateMedusaBucket(framework.MinioNamespace); err != nil {
+		if err := f.CreateMedusaBucket(framework.SiloNamespace); err != nil {
 			t.Log("failed to create Medusa bucket")
 			return err
 		}
@@ -686,10 +682,10 @@ func applyPollingDefaults() {
 	polling.reaperReady.timeout = 10 * time.Minute
 	polling.reaperReady.interval = 15 * time.Second
 
-	polling.medusaBackupDone.timeout = 10 * time.Minute
+	polling.medusaBackupDone.timeout = 15 * time.Minute
 	polling.medusaBackupDone.interval = 15 * time.Second
 
-	polling.medusaRestoreDone.timeout = 15 * time.Minute
+	polling.medusaRestoreDone.timeout = 20 * time.Minute
 	polling.medusaRestoreDone.interval = 15 * time.Second
 
 	polling.datacenterUpdating.timeout = 3 * time.Minute
@@ -949,23 +945,6 @@ func createSingleDatacenterClusterWithUpgrade(t *testing.T, ctx context.Context,
 		err := f.Get(ctx, contactPointsEndpointsKey, endpoints)
 		return err != nil && errors.IsNotFound(err)
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "contact points endpoints should be deleted")
-}
-
-// createSingleDatacenterCluster creates a K8ssandraCluster with one CassandraDatacenter
-// that is deployed in the local cluster.
-func createSingleDatacenterClusterWithEncryption(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
-	require := require.New(t)
-	require.NoError(f.CreateCassandraEncryptionStoresSecret(namespace), "Failed to create the encryption secrets")
-
-	t.Log("check that the K8ssandraCluster was created")
-	k8ssandra := &api.K8ssandraCluster{}
-	kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}
-	err := f.Client.Get(ctx, kcKey, k8ssandra)
-	require.NoError(err, "failed to get K8ssandraCluster in namespace %s", namespace)
-
-	dcKey := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
-	checkDatacenterReady(t, ctx, dcKey, f)
-	assertCassandraDatacenterK8cStatusReady(ctx, t, f, kcKey, dcKey.Name)
 }
 
 // createMultiDatacenterCluster creates a K8ssandraCluster with two CassandraDatacenters,

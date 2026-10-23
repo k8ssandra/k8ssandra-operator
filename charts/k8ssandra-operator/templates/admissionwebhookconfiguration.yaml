@@ -22,6 +22,16 @@ webhooks:
   objectSelector:
     matchLabels:
       app.kubernetes.io/created-by: cass-operator
+  {{- if .Values.global.watchNamespaces }}
+  namespaceSelector:
+    matchExpressions:
+    - key: kubernetes.io/metadata.name
+      operator: In
+      values:
+      {{- range .Values.global.watchNamespaces }}
+      - {{ . | quote }}
+      {{- end }}
+  {{- end }}
   rules:
   - apiGroups:
     - ""

@@ -22,7 +22,6 @@ import (
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
-	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
 	"github.com/k8ssandra/k8ssandra-operator/test/kustomize"
 	corev1 "k8s.io/api/core/v1"
@@ -39,11 +38,11 @@ import (
 )
 
 const (
-	repoName       = "k8ssandra"
-	relName        = "k8ssandra-operator"
-	chartName      = "k8ssandra-operator"
-	repoURL        = "https://helm.k8ssandra.io/stable"
-	MinioNamespace = "minio"
+	repoName      = "k8ssandra"
+	relName       = "k8ssandra-operator"
+	chartName     = "k8ssandra-operator"
+	repoURL       = "https://helm.k8ssandra.io/stable"
+	SiloNamespace = "silo"
 )
 
 type E2eFramework struct {
@@ -406,21 +405,21 @@ func (f *E2eFramework) CreateCassandraEncryptionStoresSecret(namespace string) e
 	return nil
 }
 
-func (f *E2eFramework) InstallMinio() error {
-	path := filepath.Join("..", "testdata", "fixtures", "minio.yaml")
+func (f *E2eFramework) InstallSilo() error {
+	path := filepath.Join("..", "testdata", "fixtures", "silo.yaml")
 	for _, k8sContext := range f.DataPlaneContexts {
-		options := kubectl.Options{Namespace: MinioNamespace, Context: k8sContext}
-		f.logger.Info("Install Minio", "Namespace", MinioNamespace, "Context", k8sContext)
+		options := kubectl.Options{Namespace: SiloNamespace, Context: k8sContext}
+		f.logger.Info("Install Silo", "Namespace", SiloNamespace, "Context", k8sContext)
 		if err := kubectl.Apply(options, path); err != nil {
 			return err
 		}
 
-		// Wait for the minio rollout to complete
-		opts := kubectl.Options{Namespace: MinioNamespace, Context: k8sContext}
+		// Wait for the silo rollout to complete
+		opts := kubectl.Options{Namespace: SiloNamespace, Context: k8sContext}
 		err := wait.PollUntilContextTimeout(context.Background(), 5*time.Second, 5*time.Minute, true, func(ctx context.Context) (bool, error) {
-			if err := kubectl.RolloutStatus(ctx, opts, "Deployment", "minio"); err != nil {
-				f.logger.Info("Waiting for minio rollout to complete: %s", err)
-				return false, err
+			if err := kubectl.RolloutStatus(ctx, opts, "Deployment", "silo"); err != nil {
+				f.logger.Info("Waiting for silo rollout to complete: %s", err)
+				return false, nil
 			}
 			return true, nil
 		})
@@ -433,7 +432,7 @@ func (f *E2eFramework) InstallMinio() error {
 }
 
 func (f *E2eFramework) CreateMedusaBucket(namespace string) error {
-	path := filepath.Join("..", "testdata", "fixtures", "minio-create-bucket.yaml")
+	path := filepath.Join("..", "testdata", "fixtures", "silo-create-bucket.yaml")
 
 	for _, k8sContext := range f.DataPlaneContexts {
 		options := kubectl.Options{Namespace: namespace, Context: k8sContext}
@@ -442,11 +441,11 @@ func (f *E2eFramework) CreateMedusaBucket(namespace string) error {
 			return err
 		}
 		// Wait for job to succeed
-		f.logger.Info("Waiting for setup-minio job to succeed")
+		f.logger.Info("Waiting for setup-silo job to succeed")
 		opts := kubectl.Options{Namespace: namespace, Context: k8sContext}
 		err := wait.PollUntilContextTimeout(context.Background(), 5*time.Second, 5*time.Minute, true, func(ctx context.Context) (bool, error) {
-			if err := kubectl.JobSuccess(ctx, opts, namespace, "setup-minio"); err != nil {
-				f.logger.Error(err, "Waiting for setup-minio job to succeed")
+			if err := kubectl.JobSuccess(ctx, opts, namespace, "setup-silo"); err != nil {
+				f.logger.Error(err, "Waiting for setup-silo job to succeed")
 				return false, nil
 			}
 			return true, nil
@@ -711,7 +710,7 @@ func (f *E2eFramework) DumpClusterInfo(test string, namespaces ...string) error 
 			}
 
 			// Dump all objects that we need to investigate failures as a flat list and as yaml manifests
-			for _, objectType := range []string{"K8ssandraCluster", "CassandraDatacenter", "Stargate", "Reaper", "StatefulSet", "Secrets",
+			for _, objectType := range []string{"K8ssandraCluster", "CassandraDatacenter", "Reaper", "StatefulSet", "Secrets",
 				"ReplicatedSecret", "ClientConfig", "CassandraTask", "MedusaBackup", "MedusaBackupJob", "MedusaRestoreJob", "MedusaTask", "ConfigMaps", "MedusaBackupSchedule"} {
 				if err := os.MkdirAll(fmt.Sprintf("%s/%s/objects/%s", outputDir, namespace, objectType), 0755); err != nil {
 					return err
@@ -777,19 +776,6 @@ func (f *E2eFramework) DeleteDatacenters(namespace string, timeout, interval tim
 		timeout,
 		interval,
 		client.HasLabels{cassdcapi.ClusterLabel},
-	)
-}
-
-// DeleteStargates deletes all Stargates in namespace in all remote clusters.
-// This function blocks until all pods from all Stargates have terminated.
-func (f *E2eFramework) DeleteStargates(namespace string, timeout, interval time.Duration) error {
-	f.logger.Info("deleting all Stargates", "Namespace", namespace)
-	return f.deleteAllResources(
-		namespace,
-		&stargateapi.Stargate{},
-		timeout,
-		interval,
-		client.HasLabels{stargateapi.StargateLabel},
 	)
 }
 

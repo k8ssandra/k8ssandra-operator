@@ -30,9 +30,6 @@ Beyond simply disabling Traefik, we must also pre-plan the ports that should be 
   is deployed you **must** add additional ports here.
 * `9142` - C* TLS traffic - Secure Cassandra traffic, multiple clusters may run
   behind this single port.
-* `8080` - Stargate GraphQL API
-* `8081` - Stargate Authorization REST API
-* `8082` - Stargate CRUD REST API
 
 ```bash
 $ k3d cluster create \
@@ -42,10 +39,7 @@ $ k3d cluster create \
   --port "443:32443@loadbalancer" \
   --port "9000:32090@loadbalancer" \
   --port "9042:32091@loadbalancer" \
-  --port "9142:32092@loadbalancer" \
-  --port "8880:30080@loadbalancer" \
-  --port "8881:30081@loadbalancer" \
-  --port "8882:30082@loadbalancer"
+  --port "9142:32092@loadbalancer"
 INFO[0000] Created network 'k3d-k3s-default'            
 INFO[0000] Created volume 'k3d-k3s-default-images'      
 INFO[0001] Creating node 'k3d-k3s-default-server-0'     

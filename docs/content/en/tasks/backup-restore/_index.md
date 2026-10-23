@@ -8,7 +8,7 @@ description: Use Medusa to backup and restore Apache Cassandra® data in Kuberne
 
 Medusa is a Cassandra backup and restore tool. It's packaged with K8ssandra Operator and supports a variety of backends. 
 
-These instructions use a local `minio` bucket as an example.
+These instructions use a local `silo` bucket as an example.
 
 ## Supported object storage types for backups
 
@@ -45,7 +45,7 @@ spec:
       # Prefix for this cluster in the storage bucket directory structure, used for multitenancy
       prefix: test
       # Host to connect to the storage backend (Omitted for GCS, S3, Azure and local).
-      host: minio.minio.svc.cluster.local
+      host: silo.silo.svc.cluster.local
       # Port to connect to the storage backend (Omitted for GCS, S3, Azure and local).
       port: 9000
       # Region of the storage bucket
@@ -103,8 +103,8 @@ stringData:
  # Note that this currently has to be set to credentials!
  credentials: |-
    [default]
-   aws_access_key_id = minio_key
-   aws_secret_access_key = minio_secret
+   aws_access_key_id = silo_key
+   aws_secret_access_key = silo_secret
 ```
 
 The file should always specify `credentials` as shown in the example above; in that section, provide the expected format and credential values that are expected by Medusa for the chosen storage backend. For more, refer to the [Medusa documentation](https://github.com/thelastpickle/cassandra-medusa/blob/master/docs/Installation.md) to know which file format should used for each supported storage backend.

@@ -107,8 +107,8 @@ func (r *MedusaTaskReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 
-	// First check to see if the task is already in progress
-	if !task.Status.StartTime.IsZero() {
+	// Sync runs synchronously and must resume until it explicitly sets its finish time.
+	if task.Spec.Operation != medusav1alpha1.OperationTypeSync && !task.Status.StartTime.IsZero() {
 		// If there is anything in progress, simply requeue the request
 		if len(task.Status.InProgress) > 0 {
 			logger.Info("Tasks already in progress")
@@ -260,11 +260,13 @@ func (r *MedusaTaskReconciler) executePodOperations(
 
 func (r *MedusaTaskReconciler) syncOperation(ctx context.Context, task *medusav1alpha1.MedusaTask, pods []corev1.Pod, cassdc *cassdcapi.CassandraDatacenter, logger logr.Logger) (reconcile.Result, error) {
 	logger.Info("Starting sync operation")
-	patch := client.MergeFrom(task.DeepCopy())
-	task.Status.StartTime = metav1.Now()
-	if err := r.Status().Patch(ctx, task, patch); err != nil {
-		logger.Error(err, "failed to patch status", "MedusaTask", fmt.Sprint(task))
-		return ctrl.Result{}, err
+	if task.Status.StartTime.IsZero() {
+		patch := client.MergeFrom(task.DeepCopy())
+		task.Status.StartTime = metav1.Now()
+		if err := r.Status().Patch(ctx, task, patch); err != nil {
+			logger.Error(err, "failed to patch status", "MedusaTask", fmt.Sprint(task))
+			return ctrl.Result{}, err
+		}
 	}
 	for _, pod := range pods {
 		logger.Info("Listing Backups...", "CassandraPod", pod.Name)
@@ -286,7 +288,6 @@ func (r *MedusaTaskReconciler) syncOperation(ctx context.Context, task *medusav1
 						if err := createMedusaBackup(logger, backup, task.Spec.CassandraDatacenter, task.Namespace, r, ctx); err != nil {
 							return ctrl.Result{}, err
 						}
-						return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 					} else {
 						logger.Error(err, "failed to get backup", "Backup", backup.BackupName)
 						return ctrl.Result{}, err

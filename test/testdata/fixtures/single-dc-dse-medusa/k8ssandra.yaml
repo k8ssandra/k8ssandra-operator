@@ -10,7 +10,7 @@ spec:
       prefix: test
       storageSecretRef:
         name: medusa-bucket-key
-      host: minio-service.minio.svc.cluster.local
+      host: silo-service.silo.svc.cluster.local
       port: 9000
       secure: false
       multiPartChunkSize: 1048576 # 10 MB
