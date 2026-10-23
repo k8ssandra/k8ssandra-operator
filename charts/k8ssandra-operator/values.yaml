@@ -85,6 +85,16 @@ nodeSelector: {}
 ## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
 ##
 tolerations: []
+# -- Affinity rules for operator pod assignment. Useful with replicaCount > 1 to
+# keep the operator pods on separate nodes.
+## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
+##
+affinity: {}
+# -- Topology spread constraints for operator pod assignment. Useful with
+# replicaCount > 1 to spread the operator pods across nodes or zones.
+## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/
+##
+topologySpreadConstraints: []
 # -- metrics allows to change the configuration of how metrics are exposed. Default is
 # to expose /metrics endpoint at port :8080. If you wish to make this available only on
 # localhost (such as when using kube-rbac-proxy to secure access to them), set the value
