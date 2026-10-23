@@ -400,12 +400,13 @@ spec:
                             default: G1GC
                             description: |-
                               The name of the garbage collector to use. Depending on the Cassandra version, not all values
-                              are supported: Cassandra 3.11 supports only G1GC and CMS; Cassandra 4.0 supports G1GC, ZGC,
-                              Shenandoah and Graal. This option will unlock the corresponding garbage collector with a
+                              are supported: Cassandra 3.11 supports only G1GC and CMS; Cassandra 4.0 and later support G1GC,
+                              ZGC, Shenandoah and Graal. This option will unlock the corresponding garbage collector with a
                               default configuration; to further tune the GC settings, use the additional JVM options field.
                               Use the special value Custom if you intend to use non-standard garbage collectors.
                               Cass Config Builder: supported for Cassandra 3.11 in jvm.options.
                               Cass Config Builder: supported for Cassandra 4.0 in jvm11-server.options.
+                              Cass Config Builder: supported for Cassandra 5.0 in jvm17-server.options.
                             enum:
                             - G1GC
                             - CMS
@@ -2599,12 +2600,13 @@ spec:
                                   default: G1GC
                                   description: |-
                                     The name of the garbage collector to use. Depending on the Cassandra version, not all values
-                                    are supported: Cassandra 3.11 supports only G1GC and CMS; Cassandra 4.0 supports G1GC, ZGC,
-                                    Shenandoah and Graal. This option will unlock the corresponding garbage collector with a
+                                    are supported: Cassandra 3.11 supports only G1GC and CMS; Cassandra 4.0 and later support G1GC,
+                                    ZGC, Shenandoah and Graal. This option will unlock the corresponding garbage collector with a
                                     default configuration; to further tune the GC settings, use the additional JVM options field.
                                     Use the special value Custom if you intend to use non-standard garbage collectors.
                                     Cass Config Builder: supported for Cassandra 3.11 in jvm.options.
                                     Cass Config Builder: supported for Cassandra 4.0 in jvm11-server.options.
+                                    Cass Config Builder: supported for Cassandra 5.0 in jvm17-server.options.
                                   enum:
                                   - G1GC
                                   - CMS

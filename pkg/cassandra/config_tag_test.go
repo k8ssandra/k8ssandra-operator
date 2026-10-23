@@ -300,6 +300,32 @@ func Test_parseCassConfigTag(t *testing.T) {
 			},
 		},
 		{
+			"version ranges split across paths",
+			"^4.x,hcd@>=1.x.x:jvm11-server-options/foo;>=5.x:jvm17-server-options/foo",
+			&cassConfigTag{
+				paths: map[string][]cassConfigTagPath{
+					"cassandra": {
+						{
+							constraint: newConstraint("^4.x"),
+							path:       "jvm11-server-options/foo",
+							segments:   []string{"jvm11-server-options", "foo"},
+						},
+						{
+							constraint: newConstraint(">=5.x"),
+							path:       "jvm17-server-options/foo",
+							segments:   []string{"jvm17-server-options", "foo"},
+						},
+					},
+					"hcd": {{
+						constraint: newConstraint(">=1.x.x"),
+						path:       "jvm11-server-options/foo",
+						segments:   []string{"jvm11-server-options", "foo"},
+					}},
+				},
+			},
+			assert.NoError,
+		},
+		{
 			"wrong constraint",
 			"wrong:foo/bar",
 			nil,
