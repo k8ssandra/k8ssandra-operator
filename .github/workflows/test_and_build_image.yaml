@@ -75,6 +75,11 @@ jobs:
             ' govulncheck.json
             exit 1
           fi
+      - name: Restore Go version from go.mod
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: 'go.mod'
+          cache: false
       - name: Run unit and integration tests
         run: |
           make test
