@@ -26,11 +26,11 @@ data:
         medusa:
             repository: "k8ssandra"
             name: "medusa"
-            tag: "0.30.1"
+            tag: "0.31.0"
         reaper:
             repository: "thelastpickle"
             name: "cassandra-reaper"
-            tag: "5.0.1"
+            tag: "5.1.0"
     # -- defaults are used when other no override is present for the configured image or image type. All these values can be overridden under any image or image type.
     defaults:
         registry: "docker.io"
