@@ -26,6 +26,12 @@ global:
         repository: "k8ssandra"
         name: "medusa"
         tag: "0.31.0"
+    types:
+      dse:
+        registry: "docker.io"
+        repository: "datastax"
+        name: "dse-mgmtapi-6_8"
+        suffix: "-ubi"
 # -- A name in place of the chart name which is used in the metadata.name of
 # objects created by this chart.
 nameOverride: ''

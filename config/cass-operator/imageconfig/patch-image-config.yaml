@@ -63,7 +63,7 @@ data:
             name: "hcd"
             suffix: "-ubi"
         dse:
-            registry: "cp.icr.io"
-            repository: "cp/ibm-ds-mission-control"
-            name: "dse-mgmtapi"
+            registry: "docker.io"
+            repository: "datastax"
+            name: "dse-mgmtapi-6_8"
             suffix: "-ubi"
