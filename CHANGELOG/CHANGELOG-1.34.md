@@ -15,6 +15,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [CHANGE] Upgrade cassandra-reaper to v5.1.0
 * [CHANGE] [#1786](https://github.com/k8ssandra/k8ssandra-operator/issues/1786) Remove support for Stargate as it has been deprecated for ages and will not function correctly.
 * [CHANGE] [#1823](https://github.com/k8ssandra/k8ssandra-operator/issues/1823) Bump cassandra-medusa to 0.31.0
 * [ENHANCEMENT] [#1808](https://github.com/k8ssandra/k8ssandra-operator/issues/1808) Add `metrics.address` to the Helm chart and declare the operator metrics container port when metrics are exposed
