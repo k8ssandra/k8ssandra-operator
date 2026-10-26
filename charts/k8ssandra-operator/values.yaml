@@ -17,10 +17,12 @@ global:
   imageConfig:
     images:
       reaper:
+        registry: "docker.io"
         repository: "thelastpickle"
         name: "cassandra-reaper"
         tag: "5.0.1"
       medusa:
+        registry: "docker.io"
         repository: "k8ssandra"
         name: "medusa"
         tag: "0.31.0"

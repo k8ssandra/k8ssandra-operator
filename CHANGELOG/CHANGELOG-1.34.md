@@ -17,6 +17,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 * [CHANGE] [#1786](https://github.com/k8ssandra/k8ssandra-operator/issues/1786) Remove support for Stargate as it has been deprecated for ages and will not function correctly.
 * [CHANGE] [#1823](https://github.com/k8ssandra/k8ssandra-operator/issues/1823) Bump cassandra-medusa to 0.31.0
+* [CHANGE] Update cass-operator to v1.33.0 (Helm chart 0.68.0)
 * [ENHANCEMENT] [#1808](https://github.com/k8ssandra/k8ssandra-operator/issues/1808) Add `metrics.address` to the Helm chart and declare the operator metrics container port when metrics are exposed
 * [ENHANCEMENT] [#1796](https://github.com/k8ssandra/k8ssandra-operator/issues/1796) Declare JMX container port (7199) on the Cassandra pod template when enabling remote JMX access for Reaper
 * [ENHANCEMENT] [#1754](https://github.com/k8ssandra/k8ssandra-operator/issues/1754) Use namespaceselector on the webhooks if watchNamespaces is used
