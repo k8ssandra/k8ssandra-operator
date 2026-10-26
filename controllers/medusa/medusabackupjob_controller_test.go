@@ -10,6 +10,7 @@ import (
 	"time"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
+	"github.com/k8ssandra/cass-operator/pkg/oplabels"
 	k8ss "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
@@ -594,11 +595,13 @@ func createDatacenterPods(t *testing.T, f *framework.Framework, ctx context.Cont
 		if err != nil {
 			if errors.IsNotFound(err) {
 				t.Logf("pod %s-%s-%d not found: %s", dc.Spec.ClusterName, dc.LabelResourceName(), i, dc.Name)
+				podLabels := dc.GetDatacenterLabels()
+				oplabels.AddOperatorLabels(podLabels, dc)
 				pod = &corev1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: dc.Namespace,
 						Name:      podName,
-						Labels:    dc.GetDatacenterLabels(),
+						Labels:    podLabels,
 					},
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{

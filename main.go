@@ -36,6 +36,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/leancache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 
@@ -140,8 +141,15 @@ func main() {
 		},
 	}
 
-	options.Cache = cache.Options{
-		DefaultNamespaces: map[string]cache.Config{},
+	// Bound the informer caches (see pkg/leancache). Remote clusters use the same
+	// configuration in ClientConfigReconciler.InitClientConfigs.
+	options.Cache = leancache.Options()
+	options.NewCache = leancache.NewCache
+	options.NewClient = leancache.NewClient
+	options.Client = client.Options{
+		Cache: &client.CacheOptions{
+			DisableFor: leancache.DisableFor(),
+		},
 	}
 
 	// Add support for MultiNamespace set in WATCH_NAMESPACE (e.g ns1,ns2)

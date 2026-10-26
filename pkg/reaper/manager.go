@@ -9,6 +9,7 @@ import (
 	"net/url"
 
 	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/leancache"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -94,7 +95,7 @@ type Manager interface {
 	AddClusterToReaper(ctx context.Context, cassdc *cassdcapi.CassandraDatacenter) error
 	VerifyClusterIsConfigured(ctx context.Context, cassdc *cassdcapi.CassandraDatacenter) (bool, error)
 	GetUiCredentials(ctx context.Context, uiUserSecretRef *corev1.LocalObjectReference, namespace string) (string, string, error)
-	SetK8sClient(client.Reader)
+	SetK8sClient(client.Client)
 }
 
 func NewManager() Manager {
@@ -103,10 +104,10 @@ func NewManager() Manager {
 
 type restReaperManager struct {
 	reaperClient reaperclient.Client
-	k8sClient    client.Reader
+	k8sClient    client.Client
 }
 
-func (r *restReaperManager) SetK8sClient(k8sClient client.Reader) {
+func (r *restReaperManager) SetK8sClient(k8sClient client.Client) {
 	r.k8sClient = k8sClient
 }
 
@@ -162,7 +163,7 @@ func (r *restReaperManager) httpClientOption(ctx context.Context, namespace stri
 		}
 
 		secret := &corev1.Secret{}
-		if err := r.k8sClient.Get(ctx, secretKey, secret); err != nil {
+		if err := leancache.Read(ctx, r.k8sClient, secretKey, secret); err != nil {
 			return nil, fmt.Errorf("failed to get client certificate secret %s: %w", encryption.ClientCertName, err)
 		}
 
@@ -236,7 +237,7 @@ func (r *restReaperManager) GetUiCredentials(ctx context.Context, uiUserSecretRe
 	secretKey := types.NamespacedName{Namespace: namespace, Name: uiUserSecretRef.Name}
 
 	secret := &corev1.Secret{}
-	err := r.k8sClient.Get(ctx, secretKey, secret)
+	err := leancache.Read(ctx, r.k8sClient, secretKey, secret)
 	if errors.IsNotFound(err) {
 		return "", "", fmt.Errorf("reaper ui secret does not exist")
 	} else if err != nil {

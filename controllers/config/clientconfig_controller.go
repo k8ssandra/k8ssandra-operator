@@ -23,6 +23,7 @@ import (
 	configapi "github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/leancache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 )
 
@@ -105,7 +106,10 @@ func (r *ClientConfigReconciler) SetupWithManager(mgr ctrl.Manager, cancelFunc c
 
 	cb := ctrl.NewControllerManagedBy(mgr).
 		For(&configapi.ClientConfig{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(toMatchingClientConfig))
+		// OnlyMetadata: the map fn only needs name/namespace; kubeconfig secret
+		// contents are read through the non-cached client anyway. The kubeconfig
+		// Secret is labelled watched in initAdditionalClusterConfig.
+		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(toMatchingClientConfig), builder.OnlyMetadata)
 
 	return cb.Complete(r)
 }
@@ -188,6 +192,15 @@ func (r *ClientConfigReconciler) initAdditionalClusterConfig(ctx context.Context
 		return nil, err
 	}
 
+	// The Secret watch only sees labelled Secrets (see pkg/leancache)
+	kubeconfigSecret := &corev1.Secret{}
+	if err := uncachedClient.Get(ctx, secretName, kubeconfigSecret); err != nil {
+		return nil, err
+	}
+	if err := leancache.EnsureWatched(ctx, uncachedClient, kubeconfigSecret); err != nil {
+		return nil, err
+	}
+
 	// Add the Secret to the cache
 	r.secretFilter[secretName] = cCfgName
 
@@ -201,6 +214,11 @@ func (r *ClientConfigReconciler) initAdditionalClusterConfig(ctx context.Context
 	var c cluster.Cluster
 	c, err = cluster.New(cfg, func(o *cluster.Options) {
 		o.Scheme = r.Scheme
+		// Mirror the local manager's cache configuration (see main.go and pkg/leancache).
+		o.Cache = leancache.Options()
+		o.NewCache = leancache.NewCache
+		o.NewClient = leancache.NewClient
+		o.Client.Cache = &client.CacheOptions{DisableFor: leancache.DisableFor()}
 		if len(namespaces) > 0 {
 			nsConfig := make(map[string]cache.Config)
 			for _, i := range namespaces {

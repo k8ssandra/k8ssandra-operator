@@ -9,6 +9,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	k8ssandralabels "github.com/k8ssandra/k8ssandra-operator/pkg/labels"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/leancache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/nodeconfig"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
@@ -48,11 +49,12 @@ func (r *K8ssandraClusterReconciler) reconcileDefaultPerNodeConfiguration(
 
 	desiredPerNodeConfig := nodeconfig.NewDefaultPerNodeConfigMap(kcKey, kc, dcConfig)
 	if desiredPerNodeConfig != nil {
+		leancache.MarkWatched(desiredPerNodeConfig)
 		annotations.AddHashAnnotation(desiredPerNodeConfig)
 	}
 
 	actualPerNodeConfig := &corev1.ConfigMap{}
-	err := remoteClient.Get(ctx, perNodeConfigKey, actualPerNodeConfig)
+	err := leancache.Read(ctx, remoteClient, perNodeConfigKey, actualPerNodeConfig)
 
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -130,7 +132,7 @@ func (r *K8ssandraClusterReconciler) reconcileUserProvidedPerNodeConfiguration(
 	dcLogger = dcLogger.WithValues("PerNodeConfigMap", perNodeConfigKey)
 
 	actualPerNodeConfig := &corev1.ConfigMap{}
-	err := remoteClient.Get(ctx, perNodeConfigKey, actualPerNodeConfig)
+	err := leancache.Read(ctx, remoteClient, perNodeConfigKey, actualPerNodeConfig)
 
 	if err == nil {
 		if !k8ssandralabels.IsWatchedByK8ssandraCluster(actualPerNodeConfig, kcKey) {

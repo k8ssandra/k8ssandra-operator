@@ -29,6 +29,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/leancache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -224,18 +225,22 @@ func (r *ReaperReconciler) reconcileDeployment(
 			if err = controllerutil.SetControllerReference(actualReaper, desiredDeployment, r.Scheme); err != nil {
 				logger.Error(err, "Failed to set owner on Reaper Deployment")
 				return ctrl.Result{}, err
-			} else if err = r.Create(ctx, desiredDeployment); err != nil {
-				if errors.IsAlreadyExists(err) {
-					// the read from the local cache didn't catch that the resource was created
-					// already; simply requeue until the cache is up-to-date
-					return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
-				} else {
-					logger.Error(err, "Failed to create Reaper Deployment")
-					return ctrl.Result{}, err
-				}
+			} else if err = r.Create(ctx, desiredDeployment); err == nil {
+				logger.Info("Reaper Deployment created successfully")
+				return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
+			} else if !errors.IsAlreadyExists(err) {
+				logger.Error(err, "Failed to create Reaper Deployment")
+				return ctrl.Result{}, err
 			}
-			logger.Info("Reaper Deployment created successfully")
-			return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
+			// Either the cache is behind, or the Deployment exists without the labels the cache
+			// selects on. Read it live so the update below adds the labels.
+			if err = leancache.APIReader(r.Client).Get(ctx, deploymentKey, actualDeployment); err != nil {
+				if errors.IsNotFound(err) {
+					return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
+				}
+				logger.Error(err, "Failed to get Reaper Deployment")
+				return ctrl.Result{}, err
+			}
 		} else {
 			logger.Error(err, "Failed to get Reaper Deployment")
 			return ctrl.Result{}, err
@@ -352,18 +357,22 @@ func (r *ReaperReconciler) reconcileService(
 				return ctrl.Result{}, err
 			}
 			logger.Info("Creating Reaper service")
-			if err = r.Create(ctx, desiredService); err != nil {
-				if errors.IsAlreadyExists(err) {
-					// the read from the local cache didn't catch that the resource was created
-					// already; simply requeue until the cache is up-to-date
-					return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
-				} else {
-					logger.Error(err, "Failed to create Reaper Service")
-					return ctrl.Result{}, err
-				}
+			if err = r.Create(ctx, desiredService); err == nil {
+				logger.Info("Reaper Service created successfully")
+				return ctrl.Result{}, nil
+			} else if !errors.IsAlreadyExists(err) {
+				logger.Error(err, "Failed to create Reaper Service")
+				return ctrl.Result{}, err
 			}
-			logger.Info("Reaper Service created successfully")
-			return ctrl.Result{}, nil
+			// Either the cache is behind, or the Service was created without labels by an older
+			// version and is not cached. Read it live so the update below adds the labels.
+			if err = leancache.APIReader(r.Client).Get(ctx, serviceKey, actualService); err != nil {
+				if errors.IsNotFound(err) {
+					return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
+				}
+				logger.Error(err, "Failed to get Reaper Service")
+				return ctrl.Result{}, err
+			}
 		} else {
 			logger.Error(err, "Failed to get Reaper Service")
 			return ctrl.Result{}, err
@@ -393,7 +402,7 @@ func (r *ReaperReconciler) reconcileService(
 
 func (r *ReaperReconciler) configureReaper(ctx context.Context, actualReaper *reaperapi.Reaper, actualDc *cassdcapi.CassandraDatacenter, logger logr.Logger) (ctrl.Result, error) {
 	manager := r.NewManager()
-	manager.SetK8sClient(r)
+	manager.SetK8sClient(r.Client)
 	// Get the Reaper UI secret username and password values if auth is enabled
 	if username, password, err := manager.GetUiCredentials(ctx, actualReaper.Spec.UiUserSecretRef, actualReaper.Namespace); err != nil {
 		return ctrl.Result{}, err
@@ -475,7 +484,7 @@ func (r *ReaperReconciler) collectAuthVarsForType(ctx context.Context, actualRea
 
 func (r *ReaperReconciler) getSecret(ctx context.Context, secretKey types.NamespacedName) (*corev1.Secret, error) {
 	secret := &corev1.Secret{}
-	err := r.Get(ctx, secretKey, secret)
+	err := leancache.Read(ctx, r.Client, secretKey, secret)
 	return secret, err
 }
 
