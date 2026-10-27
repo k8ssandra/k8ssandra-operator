@@ -100,8 +100,8 @@ github.com/gruntwork-io/terratest v0.54.0 h1:JOVATYDpU0NAPbEkgYUP50BR2m45UGiR4db
 github.com/gruntwork-io/terratest v0.54.0/go.mod h1:QvwQWZMTJmJB4E0d1Uc18quQm7+X53liKKp+fJSuaKA=
 github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnrnM=
 github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHmT4TnhNGBo=
-github.com/k8ssandra/cass-operator v1.33.0 h1:kQNqSa6X025uY27LVxmKRLABXYIntenP1b7/5abVcQs=
-github.com/k8ssandra/cass-operator v1.33.0/go.mod h1:qFSh9WYLiKwr07R0j+p32XDesAW5aGQmXM/N271eVBs=
+github.com/k8ssandra/cass-operator v1.33.1 h1:BLLglClBO19mdJr/q0QAESH9tZzGMvL6mk0i22LgekU=
+github.com/k8ssandra/cass-operator v1.33.1/go.mod h1:qFSh9WYLiKwr07R0j+p32XDesAW5aGQmXM/N271eVBs=
 github.com/k8ssandra/reaper-client-go v0.4.0 h1:8Ucco65qgGonYMUiY9wSN+KpR6IPLc09I/RtLHEMorE=
 github.com/k8ssandra/reaper-client-go v0.4.0/go.mod h1:EztqEX3nW6EfsVgQoI/BK7eTnXMxvNU/35NoELd6HuU=
 github.com/klauspost/compress v1.19.1 h1:VsB4HPswih7mmZ8WleSFQ75c/Ui1M4trX5oAsJnhSlk=
