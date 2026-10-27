@@ -43,7 +43,8 @@ func (d defaultManagementApiFactory) NewManagementApiFacade(
 	k8sClient client.Client,
 	logger logr.Logger,
 ) (ManagementApiFacade, error) {
-	if httpClient, err := httphelper.BuildManagementApiHttpClient(ctx, leancache.ReadingClient(k8sClient), dc, nil); err != nil {
+	// Secret reads go through leancache.Read, so the TLS Secret is labelled for our cache
+	if httpClient, err := httphelper.BuildManagementApiHttpClient(ctx, leancache.ReadingClient(k8sClient), leancache.APIReader(k8sClient), dc, nil); err != nil {
 		return nil, err
 	} else if protocol, err := httphelper.GetManagementApiProtocol(dc); err != nil {
 		return nil, err

@@ -18,6 +18,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [CHANGE] Upgrade cassandra-reaper to v5.1.0
 * [CHANGE] [#1786](https://github.com/k8ssandra/k8ssandra-operator/issues/1786) Remove support for Stargate as it has been deprecated for ages and will not function correctly.
 * [CHANGE] [#1823](https://github.com/k8ssandra/k8ssandra-operator/issues/1823) Bump cassandra-medusa to 0.31.0
+* [CHANGE] Update cass-operator to v1.33.1 (Helm chart 0.68.1)
 * [ENHANCEMENT] [#1808](https://github.com/k8ssandra/k8ssandra-operator/issues/1808) Add `metrics.address` to the Helm chart and declare the operator metrics container port when metrics are exposed
 * [ENHANCEMENT] [#1796](https://github.com/k8ssandra/k8ssandra-operator/issues/1796) Declare JMX container port (7199) on the Cassandra pod template when enabling remote JMX access for Reaper
 * [ENHANCEMENT] [#1752](https://github.com/k8ssandra/k8ssandra-operator/issues/1752) Bound the informer cache: Pods, StatefulSets, Deployments, Services, EndpointSlices and (when the Prometheus CRD is installed) ServiceMonitors are cached only when created by cass-operator or k8ssandra-operator, and Secrets/ConfigMaps only when labelled `k8ssandra.io/watched`, which the operator adds to the objects it creates or references. Strip managedFields and the last-applied annotation from cached operator-owned objects.

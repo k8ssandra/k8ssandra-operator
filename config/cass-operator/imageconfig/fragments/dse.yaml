@@ -1,0 +1,6 @@
+types:
+  dse:
+    registry: "docker.io"
+    repository: "datastax"
+    name: "dse-mgmtapi-6_8"
+    suffix: "-ubi"
