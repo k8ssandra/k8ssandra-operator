@@ -1,5 +1,6 @@
 images:
   medusa: 
+    registry: "docker.io"
     repository: "k8ssandra"
     name: "medusa"
     tag: "0.31.0"

@@ -12,7 +12,7 @@ data:
         system-logger:
             repository: "k8ssandra"
             name: "system-logger"
-            tag: "v1.32.0"
+            tag: "v1.33.1"
         config-builder:
             repository: "datastax"
             name: "cass-config-builder"
@@ -20,20 +20,22 @@ data:
         k8ssandra-client:
             repository: "k8ssandra"
             name: "k8ssandra-client"
-            tag: "v0.8.12"
+            tag: "v0.9.2"
             # pullSecret: "k8ssandra-client-pull-secret" # Use of pullSecret removes the default pullSecrets for this image
             # pullPolicy: Always
         medusa:
+            registry: "docker.io"
             repository: "k8ssandra"
             name: "medusa"
             tag: "0.31.0"
         reaper:
+            registry: "docker.io"
             repository: "thelastpickle"
             name: "cassandra-reaper"
             tag: "5.1.0"
     # -- defaults are used when other no override is present for the configured image or image type. All these values can be overridden under any image or image type.
     defaults:
-        registry: "docker.io"
+        registry: "ghcr.io"
         pullPolicy: IfNotPresent
         # -- pullSecrets allow configuring the secret to use for pulling images from private registries.
         # pullSecrets:
@@ -55,13 +57,13 @@ data:
             repository: "k8ssandra"
             name: "cass-management-api"
             suffix: "-ubi"
+        hcd:
+            registry: "cp.icr.io"
+            repository: "cp/ibm-ds-mission-control"
+            name: "hcd"
+            suffix: "-ubi"
         dse:
+            registry: "docker.io"
             repository: "datastax"
             name: "dse-mgmtapi-6_8"
             suffix: "-ubi"
-        # hcd:
-        #   repository: "datastax"
-        #   name: "hcd"
-        #   suffix: "-ubi"
-        #   pullSecret: "hcd-pull-secret" # Use of pullSecret removes the default pullSecrets for this image
-        #   pullPolicy: IfNotPresent
