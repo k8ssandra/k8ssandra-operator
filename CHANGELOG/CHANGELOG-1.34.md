@@ -15,12 +15,17 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [BUGFIX] [#1845](https://github.com/k8ssandra/k8ssandra-operator/issues/1845) Don't requeue MedusaBackupJobs that are already finished
+* [CHANGE] Upgrade cassandra-reaper to v5.1.0
 * [CHANGE] [#1786](https://github.com/k8ssandra/k8ssandra-operator/issues/1786) Remove support for Stargate as it has been deprecated for ages and will not function correctly.
+* [CHANGE] [#1823](https://github.com/k8ssandra/k8ssandra-operator/issues/1823) Bump cassandra-medusa to 0.31.0
+* [CHANGE] Update cass-operator to v1.33.1 (Helm chart 0.68.1)
 * [ENHANCEMENT] Add `affinity` and `topologySpreadConstraints` support to the k8ssandra-operator chart, allowing the operator pods to be spread across nodes when `replicaCount` is greater than 1
 * [ENHANCEMENT] [#1808](https://github.com/k8ssandra/k8ssandra-operator/issues/1808) Add `metrics.address` to the Helm chart and declare the operator metrics container port when metrics are exposed
 * [ENHANCEMENT] [#1796](https://github.com/k8ssandra/k8ssandra-operator/issues/1796) Declare JMX container port (7199) on the Cassandra pod template when enabling remote JMX access for Reaper
 * [ENHANCEMENT] [#1754](https://github.com/k8ssandra/k8ssandra-operator/issues/1754) Use namespaceselector on the webhooks if watchNamespaces is used
 * [ENHANCEMENT] [#1813](https://github.com/k8ssandra/k8ssandra-operator/issues/1813) Set `REAPER_HTTP_MANAGEMENT_PORT` from the Cassandra container's management API port so Reaper uses the correct port with HTTP management
+* [BUGFIX] [#1817](https://github.com/k8ssandra/k8ssandra-operator/issues/1817) Stop aggregating CRD upgrader permissions into default Kubernetes roles
 * [BUGFIX] [#1788](https://github.com/k8ssandra/k8ssandra-operator/issues/1788) Don't stop syncing Medusa backups even if there's a requeue
 * [TESTING] [#1804](https://github.com/k8ssandra/k8ssandra-operator/issues/1804) Slightly increase medusa-related timeouts in ITs
 * [TESTING] [#1806](https://github.com/k8ssandra/k8ssandra-operator/issues/1806) Replace minio with silo

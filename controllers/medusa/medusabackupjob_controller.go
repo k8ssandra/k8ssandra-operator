@@ -157,7 +157,7 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// If the backup is already finished, there is nothing to do.
 	if medusaBackupFinished(backupJob) {
 		logger.Info("Backup operation is already finished")
-		return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
+		return ctrl.Result{}, nil
 	}
 
 	// First check to see if the backup is already in progress
@@ -182,7 +182,7 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		// if there are failures, we will end here and not proceed with creating a backup object
 		if len(backupJob.Status.Failed) > 0 {
 			logger.Info("Backup failed on some nodes", "BackupName", backupJob.Name, "Failed", backupJob.Status.Failed)
-			return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
+			return ctrl.Result{}, nil
 		}
 
 		logger.Info("backup complete")

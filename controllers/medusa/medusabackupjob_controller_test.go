@@ -13,6 +13,7 @@ import (
 	k8ss "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/shared"
@@ -22,8 +23,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
@@ -650,4 +654,43 @@ func humanizeArbitrarySizes(t *testing.T) {
 	assert.Equal(t, "4.03 GB", humanize(4325130557))
 	assert.Equal(t, "7.67 TB", humanize(8434729356343))
 	assert.Equal(t, "1096.52 PB", humanize(1234567890123456790))
+}
+
+// A job that has finished, successfully or with failed nodes, has nothing left to do
+// and must not be requeued.
+func TestMedusaBackupJobNotRequeuedWhenDone(t *testing.T) {
+	tests := []struct {
+		name   string
+		status api.MedusaBackupJobStatus
+	}{
+		{name: "finished", status: api.MedusaBackupJobStatus{StartTime: metav1.Now(), FinishTime: metav1.Now(), Finished: []string{"pod1"}}},
+		{name: "failed on some nodes", status: api.MedusaBackupJobStatus{StartTime: metav1.Now(), Failed: []string{"pod1"}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			scheme := runtime.NewScheme()
+			require.NoError(t, corev1.AddToScheme(scheme))
+			require.NoError(t, cassdcapi.AddToScheme(scheme))
+			require.NoError(t, api.AddToScheme(scheme))
+			dc := &cassdcapi.CassandraDatacenter{ObjectMeta: metav1.ObjectMeta{Name: "dc1", Namespace: "test", UID: "dc1"}}
+			pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "pod1", Namespace: dc.Namespace, Labels: dc.GetDatacenterLabels()}}
+			job := &api.MedusaBackupJob{
+				ObjectMeta: metav1.ObjectMeta{Name: "backup", Namespace: dc.Namespace, OwnerReferences: []metav1.OwnerReference{{APIVersion: cassdcapi.GroupVersion.String(), Kind: "CassandraDatacenter", Name: dc.Name, UID: dc.UID}}},
+				Spec:       api.MedusaBackupJobSpec{CassandraDatacenter: dc.Name},
+				Status:     tt.status,
+			}
+			c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(dc, pod, job).WithStatusSubresource(&api.MedusaBackupJob{}).Build()
+			r := &MedusaBackupJobReconciler{Client: c, Scheme: scheme, ReconcilerConfig: &config.ReconcilerConfig{DefaultDelay: time.Second}}
+			req := reconcile.Request{NamespacedName: client.ObjectKeyFromObject(job)}
+
+			// The second pass goes through the "already finished" branch, since the
+			// first one sets FinishTime on the failed job.
+			for i := 0; i < 2; i++ {
+				result, err := r.Reconcile(ctx, req)
+				require.NoError(t, err)
+				require.Equal(t, reconcile.Result{}, result)
+			}
+		})
+	}
 }
