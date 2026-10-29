@@ -2,6 +2,7 @@ package medusa
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -12,6 +13,19 @@ import (
 )
 
 type mockgRPCClient struct{}
+
+func (client mockgRPCClient) GetBackup(ctx context.Context, name string) (*BackupSummary, error) {
+	backups, err := client.GetBackups(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, backup := range backups {
+		if backup.BackupName == name {
+			return backup, nil
+		}
+	}
+	return nil, fmt.Errorf("failed to get backup due to error: 'The backup %s does not exist'", name)
+}
 
 func (client mockgRPCClient) GetBackups(ctx context.Context) ([]*BackupSummary, error) {
 	return []*BackupSummary{

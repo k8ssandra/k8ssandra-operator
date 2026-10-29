@@ -26,5 +26,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [ENHANCEMENT] [#1813](https://github.com/k8ssandra/k8ssandra-operator/issues/1813) Set `REAPER_HTTP_MANAGEMENT_PORT` from the Cassandra container's management API port so Reaper uses the correct port with HTTP management
 * [BUGFIX] [#1817](https://github.com/k8ssandra/k8ssandra-operator/issues/1817) Stop aggregating CRD upgrader permissions into default Kubernetes roles
 * [BUGFIX] [#1788](https://github.com/k8ssandra/k8ssandra-operator/issues/1788) Don't stop syncing Medusa backups even if there's a requeue
+* [BUGFIX] [#1848](https://github.com/k8ssandra/k8ssandra-operator/issues/1848) Create the MedusaBackup before marking the MedusaBackupJob as finished, so that a transient failure no longer loses it permanently
+* [ENHANCEMENT] [#1848](https://github.com/k8ssandra/k8ssandra-operator/issues/1848) Look up a backup summary with the `GetBackup` gRPC call instead of listing every backup, which greatly reduces the memory the Medusa sidecar needs to answer
+* [BUGFIX] [#1848](https://github.com/k8ssandra/k8ssandra-operator/issues/1848) Report, instead of ignoring, a failure to read the MedusaBackup that a MedusaBackupJob is about to create
 * [TESTING] [#1804](https://github.com/k8ssandra/k8ssandra-operator/issues/1804) Slightly increase medusa-related timeouts in ITs
 * [TESTING] [#1806](https://github.com/k8ssandra/k8ssandra-operator/issues/1806) Replace minio with silo
