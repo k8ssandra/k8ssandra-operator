@@ -2,6 +2,7 @@ package medusa
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -659,6 +660,19 @@ func (c *fakeMedusaRestoreClient) Close() error {
 
 func (c *fakeMedusaRestoreClient) CreateBackup(ctx context.Context, name string, backupType string) (*medusa.BackupResponse, error) {
 	return nil, nil
+}
+
+func (c *fakeMedusaRestoreClient) GetBackup(ctx context.Context, name string) (*medusa.BackupSummary, error) {
+	backups, err := c.GetBackups(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, backup := range backups {
+		if backup.BackupName == name {
+			return backup, nil
+		}
+	}
+	return nil, fmt.Errorf("failed to get backup due to error: 'The backup %s does not exist'", name)
 }
 
 func (c *fakeMedusaRestoreClient) GetBackups(ctx context.Context) ([]*medusa.BackupSummary, error) {

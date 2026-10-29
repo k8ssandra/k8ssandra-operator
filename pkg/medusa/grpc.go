@@ -114,6 +114,8 @@ type Client interface {
 
 	CreateBackup(ctx context.Context, name string, backupType string) (*BackupResponse, error)
 
+	GetBackup(ctx context.Context, backupName string) (*BackupSummary, error)
+
 	GetBackups(ctx context.Context) ([]*BackupSummary, error)
 
 	PurgeBackups(ctx context.Context) (*PurgeBackupsResponse, error)
@@ -144,6 +146,14 @@ func (c *defaultClient) CreateBackup(ctx context.Context, name string, backupTyp
 	}
 
 	return resp, err
+}
+
+func (c *defaultClient) GetBackup(ctx context.Context, backupName string) (*BackupSummary, error) {
+	response, err := c.grpcClient.GetBackup(ctx, &GetBackupRequest{BackupName: backupName})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get backup %s: %s", backupName, err)
+	}
+	return response.Backup, nil
 }
 
 func (c *defaultClient) GetBackups(ctx context.Context) ([]*BackupSummary, error) {
