@@ -35,6 +35,7 @@ func (r *K8ssandraClusterReconciler) reconcileCassandraDCTelemetry(
 		MonitoringTargetNS:   actualDc.Namespace,
 		MonitoringTargetName: actualDc.Name,
 		ServiceMonitorName:   cassdcapi.CleanupForKubernetes(kc.CassClusterName() + "-" + actualDc.LabelResourceName() + "-" + "cass-servicemonitor"),
+		CassClusterName:      actualDc.Spec.ClusterName,
 		Logger:               logger,
 		CommonLabels:         mustLabels(kc.Name, kc.Namespace, actualDc.LabelResourceName(), commonLabels),
 	}
