@@ -264,7 +264,7 @@ func (r *K8ssandraClusterReconciler) addClusterToExternalReaper(
 	logger logr.Logger,
 ) result.ReconcileResult {
 	manager := reaper.NewManager()
-	manager.SetK8sClient(r)
+	manager.SetK8sClient(r.Client)
 	if username, password, err := manager.GetUiCredentials(ctx, kc.Spec.Reaper.UiUserSecretRef, kc.Namespace); err != nil {
 		logger.Error(err, "Failed to get Reaper UI user secret")
 		return result.Error(err)

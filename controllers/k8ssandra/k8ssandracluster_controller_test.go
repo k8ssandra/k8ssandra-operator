@@ -18,6 +18,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/leancache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -1716,7 +1717,10 @@ func superuserSecretLabels(f *framework.Framework, ctx context.Context, kluster 
 	if secret.Labels == nil || secret.Annotations == nil {
 		return false
 	}
-	if len(secret.Labels) != 4 || len(secret.Annotations) != 1 {
+	if len(secret.Labels) != 5 || len(secret.Annotations) != 1 {
+		return false
+	}
+	if secret.Labels[leancache.WatchedLabel] != "true" {
 		return false
 	}
 	if secret.Labels["k8ssandra.io/cluster-name"] != kluster.Name {
