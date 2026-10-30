@@ -27,7 +27,7 @@ data:
             registry: "docker.io"
             repository: "k8ssandra"
             name: "medusa"
-            tag: "0.31.0"
+            tag: "0.31.1"
         reaper:
             registry: "docker.io"
             repository: "thelastpickle"
