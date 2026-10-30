@@ -20,8 +20,12 @@ type PrometheusResourcer struct {
 	MonitoringTargetNS   string
 	MonitoringTargetName string
 	ServiceMonitorName   string
-	Logger               logr.Logger
-	CommonLabels         map[string]string
+	// CassClusterName is the Cassandra cluster name the datacenter pods are
+	// labelled with. It differs from the K8ssandraCluster name when
+	// spec.cassandra.clusterName is set.
+	CassClusterName string
+	Logger          logr.Logger
+	CommonLabels    map[string]string
 }
 
 func (cfg PrometheusResourcer) validate() error {

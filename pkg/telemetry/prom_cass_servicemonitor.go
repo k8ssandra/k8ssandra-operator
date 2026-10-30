@@ -370,6 +370,10 @@ func (cfg PrometheusResourcer) NewCassServiceMonitor(legacyEndpoints bool) (*pro
 	if !ok {
 		return nil, TelemetryConfigIncomplete{"PrometheusResourcer.CommonLabels[k8ssandraapi.K8ssandraClusterNameLabel]"}
 	}
+	// The pods are labelled with the Cassandra cluster name, not the K8ssandraCluster name.
+	if cfg.CassClusterName != "" {
+		clusterName = cfg.CassClusterName
+	}
 	var cassServiceMonitorTemplate *promapi.ServiceMonitor
 	if legacyEndpoints {
 		cassServiceMonitorTemplate = cassServiceMonitorTemplateLegacy.DeepCopy()
