@@ -289,6 +289,7 @@ func TestHandleEncryptionOptions(t *testing.T) {
 	assert.Equal(t, "client-image", passwordInit.Image)
 	assert.NotContains(t, passwordInit.Command[2], "test")
 	assert.Contains(t, passwordInit.Command[2], "load_str")
+	assert.Contains(t, passwordInit.VolumeMounts, corev1.VolumeMount{Name: "tmp", MountPath: "/tmp"})
 	assert.Contains(t, dcConfig.PodTemplateSpec.Spec.Containers[0].Env, corev1.EnvVar{
 		Name: clientKeystorePasswordEnvName,
 		ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{

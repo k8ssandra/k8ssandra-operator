@@ -24,6 +24,29 @@ import (
 	"k8s.io/utils/ptr"
 )
 
+func expectedClientEncryptionEnv() []corev1.EnvVar {
+	return []corev1.EnvVar{
+		{
+			Name: reaperKeystorePasswordEnvName,
+			ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{Name: "keystore-secret"},
+				Key:                  "keystore-password",
+			}},
+		},
+		{
+			Name: reaperTruststorePasswordEnvName,
+			ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{Name: "truststore-secret"},
+				Key:                  "truststore-password",
+			}},
+		},
+		{
+			Name:  "JAVA_OPTS",
+			Value: "-Djavax.net.ssl.keyStore=/mnt/client-keystore/keystore -Djavax.net.ssl.keyStorePassword=$(REAPER_CASS_CLIENT_KEYSTORE_PASSWORD) -Djavax.net.ssl.trustStore=/mnt/client-truststore/truststore -Djavax.net.ssl.trustStorePassword=$(REAPER_CASS_CLIENT_TRUSTSTORE_PASSWORD) -Dssl.enable=true -Ddatastax-java-driver.advanced.ssl-engine-factory.class=com.datastax.oss.driver.internal.core.ssl.DefaultSslEngineFactory -Ddatastax-java-driver.advanced.ssl-engine-factory.hostname-validation=false",
+		},
+	}
+}
+
 func TestNewDeployment(t *testing.T) {
 	mainImage := &images.Image{Repository: "test", Name: "reaper", Tag: "latest", PullPolicy: corev1.PullAlways}
 	reaper := newTestReaper()
@@ -140,7 +163,8 @@ func TestNewDeployment(t *testing.T) {
 	assert.NotNil(t, tempDirMount, "temp-dir volume mount not found in init container")
 	assert.Equal(t, "/tmp", tempDirMount.MountPath, "temp-dir volume mount path is not /tmp")
 
-	assert.ElementsMatch(t, container.Env, []corev1.EnvVar{
+	encryptionEnv := expectedClientEncryptionEnv()
+	expectedContainerEnv := append([]corev1.EnvVar{
 		{
 			Name:  "REAPER_STORAGE_TYPE",
 			Value: "cassandra",
@@ -170,24 +194,6 @@ func TestNewDeployment(t *testing.T) {
 			Value: "reaper_db",
 		},
 		{
-			Name: reaperKeystorePasswordEnvName,
-			ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
-				LocalObjectReference: corev1.LocalObjectReference{Name: "keystore-secret"},
-				Key:                  "keystore-password",
-			}},
-		},
-		{
-			Name: reaperTruststorePasswordEnvName,
-			ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
-				LocalObjectReference: corev1.LocalObjectReference{Name: "truststore-secret"},
-				Key:                  "truststore-password",
-			}},
-		},
-		{
-			Name:  "JAVA_OPTS",
-			Value: "-Djavax.net.ssl.keyStore=/mnt/client-keystore/keystore -Djavax.net.ssl.keyStorePassword=$(REAPER_CASS_CLIENT_KEYSTORE_PASSWORD) -Djavax.net.ssl.trustStore=/mnt/client-truststore/truststore -Djavax.net.ssl.trustStorePassword=$(REAPER_CASS_CLIENT_TRUSTSTORE_PASSWORD) -Dssl.enable=true -Ddatastax-java-driver.advanced.ssl-engine-factory.class=com.datastax.oss.driver.internal.core.ssl.DefaultSslEngineFactory -Ddatastax-java-driver.advanced.ssl-engine-factory.hostname-validation=false",
-		},
-		{
 			Name:  "REAPER_CASS_NATIVE_PROTOCOL_SSL_ENCRYPTION_ENABLED",
 			Value: "true",
 		},
@@ -199,14 +205,15 @@ func TestNewDeployment(t *testing.T) {
 			Name:  "REAPER_HTTP_MANAGEMENT_PORT",
 			Value: "8080",
 		},
-	})
+	}, encryptionEnv...)
+	assert.ElementsMatch(t, container.Env, expectedContainerEnv)
 
 	assert.Len(t, podSpec.InitContainers, 1)
 
 	initContainer := podSpec.InitContainers[0]
 	assert.Equal(t, "docker.io/test/reaper:latest", initContainer.Image)
 	assert.Equal(t, corev1.PullAlways, initContainer.ImagePullPolicy)
-	assert.ElementsMatch(t, initContainer.Env, []corev1.EnvVar{
+	expectedInitContainerEnv := append([]corev1.EnvVar{
 		{
 			Name:  "REAPER_STORAGE_TYPE",
 			Value: "cassandra",
@@ -232,24 +239,6 @@ func TestNewDeployment(t *testing.T) {
 			Value: "reaper_db",
 		},
 		{
-			Name: reaperKeystorePasswordEnvName,
-			ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
-				LocalObjectReference: corev1.LocalObjectReference{Name: "keystore-secret"},
-				Key:                  "keystore-password",
-			}},
-		},
-		{
-			Name: reaperTruststorePasswordEnvName,
-			ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
-				LocalObjectReference: corev1.LocalObjectReference{Name: "truststore-secret"},
-				Key:                  "truststore-password",
-			}},
-		},
-		{
-			Name:  "JAVA_OPTS",
-			Value: "-Djavax.net.ssl.keyStore=/mnt/client-keystore/keystore -Djavax.net.ssl.keyStorePassword=$(REAPER_CASS_CLIENT_KEYSTORE_PASSWORD) -Djavax.net.ssl.trustStore=/mnt/client-truststore/truststore -Djavax.net.ssl.trustStorePassword=$(REAPER_CASS_CLIENT_TRUSTSTORE_PASSWORD) -Dssl.enable=true -Ddatastax-java-driver.advanced.ssl-engine-factory.class=com.datastax.oss.driver.internal.core.ssl.DefaultSslEngineFactory -Ddatastax-java-driver.advanced.ssl-engine-factory.hostname-validation=false",
-		},
-		{
 			Name:  "REAPER_CASS_NATIVE_PROTOCOL_SSL_ENCRYPTION_ENABLED",
 			Value: "true",
 		},
@@ -261,7 +250,8 @@ func TestNewDeployment(t *testing.T) {
 			Name:  "REAPER_HTTP_MANAGEMENT_PORT",
 			Value: "8080",
 		},
-	})
+	}, encryptionEnv...)
+	assert.ElementsMatch(t, initContainer.Env, expectedInitContainerEnv)
 
 	assert.ElementsMatch(t, initContainer.Args, []string{"schema-migration"})
 

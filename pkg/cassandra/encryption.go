@@ -367,6 +367,7 @@ func addEncryptionPasswordInjection(template *DatacenterConfig, image string, cl
 		container.VolumeMounts = []corev1.VolumeMount{
 			{Name: "server-config", MountPath: "/config"},
 			{Name: encryptionPasswordsVolumeName, MountPath: encryptionPasswordsMountPath, ReadOnly: true},
+			{Name: "tmp", MountPath: "/tmp"},
 		}
 	})
 
