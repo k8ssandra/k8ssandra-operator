@@ -344,7 +344,9 @@ func addEncryptionPasswordInjection(template *DatacenterConfig, image string, cl
 	AddOrUpdateVolume(template, passwordVolume, index, found)
 
 	// Declare the config builder placeholder first so password injection runs after cassandra.yaml is generated.
-	UpdateInitContainer(&template.PodTemplateSpec, reconciliation.ServerConfigContainerName, func(*corev1.Container) {})
+	UpdateInitContainer(&template.PodTemplateSpec, reconciliation.ServerConfigContainerName, func(*corev1.Container) {
+		// The container only needs to be declared here to preserve init-container ordering.
+	})
 	UpdateInitContainer(&template.PodTemplateSpec, encryptionPasswordInitContainer, func(container *corev1.Container) {
 		container.Image = image
 		container.Command = []string{
