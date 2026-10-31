@@ -169,6 +169,14 @@ spec:
         name: client-encryption-stores
 ```
 
+### Encryption password Secret handling
+
+K8ssandra Operator mounts encryption store passwords from Kubernetes Secrets at pod startup. Password values are not copied into generated `CassandraDatacenter` resources or literal container environment variables. The operator removes `keystore_password` and `truststore_password` values from managed Cassandra encryption configuration; use Secret selectors instead.
+
+When no dedicated password selector is configured, the operator expects `keystore-password` and `truststore-password` in the Secrets referenced by `keystoreSecretRef` and `truststoreSecretRef`. If a password uses another Secret or key, configure `keystorePasswordSecretRef` or `truststorePasswordSecretRef` explicitly. A custom store file key is not used as the password key.
+
+Upgrading an existing encrypted cluster updates the pod template and can trigger a rolling restart. Verify that every referenced Secret and password key exists before upgrading.
+
 Enabling client-to-node encryption will also encrypt JMX communications. Running Cassandra `nodetool` commands will then require additional arguments to pass the encryption stores and their passwords.
 
 {{% alert title="Note" color="success" %}}
@@ -227,6 +235,8 @@ spec:
     deploymentMode: SINGLE
 ```
 
+When Reaper REST encryption is enabled, the operator verifies the server certificate's CA chain and DNS identity and requires TLS 1.2 or later. The certificate must include the generated Reaper Service name in its DNS subject alternative names. For a managed Reaper resource named `<cluster>-<datacenter>-reaper`, the expected name is `<cluster>-<datacenter>-reaper-service`. Reissue incompatible certificates before upgrading.
+
 ## Medusa encryption
 
 In order to work with a cluster that has client-to-node encryption enabled, Medusa needs to use a matching certificate (consisting of client certificate and key, as well as the root CA certificate) that the Python Driver can use.
@@ -266,6 +276,22 @@ spec:
 ```
 
 The `clientEncryptionStores` also feature `KeystorePasswordRef`, which is ignored in this case. When both `certificatesSecretRef` and `clientEncryptionStores` are set, the operator will use `certificatesSecretRef` and log a line about doing so.
+
+### Medusa gRPC TLS identity
+
+Medusa gRPC encryption requires an explicit certificate identity:
+
+```yaml
+spec:
+  medusa:
+    serviceProperties:
+      encryption:
+        clientSecretName: medusa-client-cert
+        serverSecretName: medusa-server-cert
+        serverName: medusa-server
+```
+
+`serverName` must match a DNS subject alternative name in the certificate stored by `serverSecretName`. The operator verifies both that identity and the configured CA chain and requires TLS 1.2 or later. Add `serverName` and reissue certificates that do not contain the matching DNS name before upgrading an existing encrypted Medusa deployment.
 
 ## Next steps
 

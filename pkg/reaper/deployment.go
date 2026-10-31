@@ -39,6 +39,9 @@ const (
 	MainContainerMemRequest = "256Mi"
 	MainContainerMemLimit   = "3Gi"
 	MainContainerCpuRequest = "100m"
+
+	reaperKeystorePasswordEnvName   = "REAPER_CASS_CLIENT_KEYSTORE_PASSWORD"
+	reaperTruststorePasswordEnvName = "REAPER_CASS_CLIENT_TRUSTSTORE_PASSWORD"
 )
 
 func computeEnvVars(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, registry cassimages.ImageRegistry) []corev1.EnvVar {
@@ -333,10 +336,16 @@ func computePodMeta(reaper *api.Reaper) metav1.ObjectMeta {
 	}
 }
 
-func configureClientEncryption(reaper *api.Reaper, envVars []corev1.EnvVar, volumes []corev1.Volume, volumeMounts []corev1.VolumeMount, keystorePassword *string, truststorePassword *string) ([]corev1.EnvVar, []corev1.Volume, []corev1.VolumeMount) {
+func configureClientEncryption(reaper *api.Reaper, envVars []corev1.EnvVar, volumes []corev1.Volume, volumeMounts []corev1.VolumeMount) ([]corev1.EnvVar, []corev1.Volume, []corev1.VolumeMount) {
 	// if client encryption is turned on, we need to mount the keystore and truststore volumes
 	// by client we mean a C* client, so this is only relevant if we are making a Deployment which uses C* as storage backend
-	if reaper.Spec.ClientEncryptionStores != nil && keystorePassword != nil && truststorePassword != nil {
+	if reaper.Spec.ClientEncryptionStores != nil && !reaper.Spec.UseExternalSecrets() {
+		keystorePassword := reaper.Spec.ClientEncryptionStores.PasswordSecretKeySelector(encryption.StoreNameKeystore)
+		truststorePassword := reaper.Spec.ClientEncryptionStores.PasswordSecretKeySelector(encryption.StoreNameTruststore)
+		if keystorePassword == nil || truststorePassword == nil {
+			return envVars, volumes, volumeMounts
+		}
+
 		keystoreVolume, truststoreVolume := cassandra.EncryptionVolumes(encryption.StoreTypeClient, *reaper.Spec.ClientEncryptionStores)
 		volumes = append(volumes, *keystoreVolume)
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
@@ -349,7 +358,17 @@ func configureClientEncryption(reaper *api.Reaper, envVars []corev1.EnvVar, volu
 			MountPath: cassandra.StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameTruststore),
 		})
 
-		javaOpts := fmt.Sprintf("-Djavax.net.ssl.keyStore=/mnt/client-keystore/keystore -Djavax.net.ssl.keyStorePassword=%s -Djavax.net.ssl.trustStore=/mnt/client-truststore/truststore -Djavax.net.ssl.trustStorePassword=%s -Dssl.enable=true -Ddatastax-java-driver.advanced.ssl-engine-factory.class=com.datastax.oss.driver.internal.core.ssl.DefaultSslEngineFactory -Ddatastax-java-driver.advanced.ssl-engine-factory.hostname-validation=false", *keystorePassword, *truststorePassword)
+		envVars = append(envVars,
+			corev1.EnvVar{
+				Name:      reaperKeystorePasswordEnvName,
+				ValueFrom: &corev1.EnvVarSource{SecretKeyRef: keystorePassword},
+			},
+			corev1.EnvVar{
+				Name:      reaperTruststorePasswordEnvName,
+				ValueFrom: &corev1.EnvVarSource{SecretKeyRef: truststorePassword},
+			},
+		)
+		javaOpts := fmt.Sprintf("-Djavax.net.ssl.keyStore=/mnt/client-keystore/keystore -Djavax.net.ssl.keyStorePassword=$(%s) -Djavax.net.ssl.trustStore=/mnt/client-truststore/truststore -Djavax.net.ssl.trustStorePassword=$(%s) -Dssl.enable=true -Ddatastax-java-driver.advanced.ssl-engine-factory.class=com.datastax.oss.driver.internal.core.ssl.DefaultSslEngineFactory -Ddatastax-java-driver.advanced.ssl-engine-factory.hostname-validation=false", reaperKeystorePasswordEnvName, reaperTruststorePasswordEnvName)
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  "JAVA_OPTS",
 			Value: javaOpts,
@@ -362,7 +381,7 @@ func configureClientEncryption(reaper *api.Reaper, envVars []corev1.EnvVar, volu
 	return envVars, volumes, volumeMounts
 }
 
-func computePodSpec(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, initContainerResources *corev1.ResourceRequirements, keystorePassword *string, truststorePassword *string, registry cassimages.ImageRegistry) corev1.PodSpec {
+func computePodSpec(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, initContainerResources *corev1.ResourceRequirements, registry cassimages.ImageRegistry) corev1.PodSpec {
 	envVars := computeEnvVars(reaper, dc, registry)
 	volumes, volumeMounts := computeVolumes(reaper)
 	mainImage := registry.Image("reaper")
@@ -373,9 +392,7 @@ func computePodSpec(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, initC
 
 	mainContainerResources := computeMainContainerResources(reaper.Spec.Resources)
 
-	if keystorePassword != nil && truststorePassword != nil {
-		envVars, volumes, volumeMounts = configureClientEncryption(reaper, envVars, volumes, volumeMounts, keystorePassword, truststorePassword)
-	}
+	envVars, volumes, volumeMounts = configureClientEncryption(reaper, envVars, volumes, volumeMounts)
 
 	var initContainers []corev1.Container
 	if initContainerResources != nil {
@@ -508,7 +525,7 @@ func NewStatefulSet(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, logge
 			Selector: makeSelector(reaper),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: computePodMeta(reaper),
-				Spec:       computePodSpec(reaper, dc, initContainerResources, nil, nil, registry),
+				Spec:       computePodSpec(reaper, dc, initContainerResources, registry),
 			},
 			VolumeClaimTemplates:                 computeVolumeClaims(reaper),
 			Replicas:                             ptr.To[int32](1),
@@ -526,7 +543,7 @@ func NewStatefulSet(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, logge
 	return statefulSet
 }
 
-func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keystorePassword *string, truststorePassword *string, logger logr.Logger, registry cassimages.ImageRegistry, authVars ...*corev1.EnvVar) *appsv1.Deployment {
+func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, logger logr.Logger, registry cassimages.ImageRegistry, authVars ...*corev1.EnvVar) *appsv1.Deployment {
 	if reaper.Spec.StorageType != api.StorageTypeCassandra {
 		logger.Error(fmt.Errorf("cannot be creating a Reaper deployment with storage type other than Cassandra"), "bad storage type", "storageType", reaper.Spec.StorageType)
 		return nil
@@ -540,7 +557,7 @@ func NewDeployment(reaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keysto
 			Selector: makeSelector(reaper),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: computePodMeta(reaper),
-				Spec:       computePodSpec(reaper, dc, initContainerResources, keystorePassword, truststorePassword, registry),
+				Spec:       computePodSpec(reaper, dc, initContainerResources, registry),
 			},
 		},
 	}
@@ -703,10 +720,10 @@ func MakeActualDeploymentType(actualReaper *api.Reaper) (client.Object, error) {
 	}
 }
 
-func MakeDesiredDeploymentType(actualReaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, keystorePassword *string, truststorePassword *string, logger logr.Logger, registry cassimages.ImageRegistry, authVars ...*corev1.EnvVar) (client.Object, error) {
+func MakeDesiredDeploymentType(actualReaper *api.Reaper, dc *cassdcapi.CassandraDatacenter, logger logr.Logger, registry cassimages.ImageRegistry, authVars ...*corev1.EnvVar) (client.Object, error) {
 	switch actualReaper.Spec.StorageType {
 	case api.StorageTypeCassandra:
-		return NewDeployment(actualReaper, dc, keystorePassword, truststorePassword, logger, registry, authVars...), nil
+		return NewDeployment(actualReaper, dc, logger, registry, authVars...), nil
 	case api.StorageTypeLocal:
 		// we're checking for this same thing in the k8ssandra-cluster webohooks
 		// but in tests (and in the future) we'll be creating reaper directly (not through k8ssandra-cluster)

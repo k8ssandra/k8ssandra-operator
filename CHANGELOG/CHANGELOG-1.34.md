@@ -15,6 +15,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [BUGFIX] Keep Cassandra and Reaper encryption-store passwords in Kubernetes Secrets instead of generated resource specs
+* [CHANGE] Verify Medusa and Reaper TLS server identities and require TLS 1.2 or later
 * [BUGFIX] [#1845](https://github.com/k8ssandra/k8ssandra-operator/issues/1845) Don't requeue MedusaBackupJobs that are already finished
 * [CHANGE] Upgrade cassandra-reaper to v5.1.0
 * [CHANGE] [#1786](https://github.com/k8ssandra/k8ssandra-operator/issues/1786) Remove support for Stargate as it has been deprecated for ages and will not function correctly.

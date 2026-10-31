@@ -2,8 +2,6 @@ package medusa
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
 
 	"google.golang.org/grpc"
@@ -11,6 +9,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/k8ssandra/k8ssandra-operator/pkg/tlsconfig"
 )
 
 type defaultClient struct {
@@ -20,7 +20,7 @@ type defaultClient struct {
 
 type ClientFactory interface {
 	NewClient(address string) (Client, error)
-	NewClientWithTLS(address string, secret *corev1.Secret) (Client, error)
+	NewClientWithTLS(address string, secret *corev1.Secret, serverName string) (Client, error)
 }
 
 type DefaultFactory struct {
@@ -36,8 +36,8 @@ func (f *DefaultFactory) NewClient(address string) (Client, error) {
 	return &defaultClient{connection: conn, grpcClient: NewMedusaClient(conn)}, nil
 }
 
-func (f *DefaultFactory) NewClientWithTLS(address string, secret *corev1.Secret) (Client, error) {
-	tlsCreds, err := f.transportCredentials(secret)
+func (f *DefaultFactory) NewClientWithTLS(address string, secret *corev1.Secret, serverName string) (Client, error) {
+	tlsCreds, err := f.transportCredentials(secret, serverName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create transport credentials from secret %s: %s", secret.Name, err)
 	}
@@ -50,63 +50,18 @@ func (f *DefaultFactory) NewClientWithTLS(address string, secret *corev1.Secret)
 	return &defaultClient{connection: conn, grpcClient: NewMedusaClient(conn)}, nil
 }
 
-func (f *DefaultFactory) transportCredentials(secret *corev1.Secret) (credentials.TransportCredentials, error) {
-	// Sadly the Sonarcloud does not understand how tls.Config work, so we have to use default settings here.
-	caCertPool := x509.NewCertPool()
-	if ok := caCertPool.AppendCertsFromPEM(secret.Data["ca.crt"]); !ok {
-		return nil, fmt.Errorf("no certificates found in %s when parsing 'ca.crt' value: %v",
-			secret.Name,
-			secret.Data["ca.crt"])
-	}
-
-	cert, err := tls.X509KeyPair(secret.Data["tls.crt"], secret.Data["tls.key"])
+func (f *DefaultFactory) transportCredentials(secret *corev1.Secret, serverName string) (credentials.TransportCredentials, error) {
+	tlsConfig, err := tlsconfig.NewMutualTLSClientConfig(
+		secret.Data["ca.crt"],
+		secret.Data["tls.crt"],
+		secret.Data["tls.key"],
+		serverName,
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	tlsConfig := &tls.Config{
-		Certificates:          []tls.Certificate{cert},
-		InsecureSkipVerify:    true,
-		VerifyPeerCertificate: buildVerifyPeerCertificateNoHostCheck(caCertPool),
-		RootCAs:               caCertPool,
-	}
-
 	return credentials.NewTLS(tlsConfig), nil
-}
-
-// Below implementation modified from:
-//
-// https://go-review.googlesource.com/c/go/+/193620/5/src/crypto/tls/example_test.go#210
-func buildVerifyPeerCertificateNoHostCheck(rootCAs *x509.CertPool) func([][]byte, [][]*x509.Certificate) error {
-	f := func(certificates [][]byte, _ [][]*x509.Certificate) error {
-		certs := make([]*x509.Certificate, len(certificates))
-		for i, asn1Data := range certificates {
-			cert, err := x509.ParseCertificate(asn1Data)
-			if err != nil {
-				return err
-			}
-			certs[i] = cert
-		}
-
-		_, err := verifyPeerCertificateNoHostCheck(certs, rootCAs)
-		return err
-	}
-	return f
-}
-
-func verifyPeerCertificateNoHostCheck(certificates []*x509.Certificate, rootCAs *x509.CertPool) ([][]*x509.Certificate, error) {
-	opts := x509.VerifyOptions{
-		Roots: rootCAs,
-		// Setting the DNSName to the empty string will cause
-		// Certificate.Verify() to skip hostname checking
-		DNSName:       "",
-		Intermediates: x509.NewCertPool(),
-	}
-	for _, cert := range certificates[1:] {
-		opts.Intermediates.AddCert(cert)
-	}
-	chains, err := certificates[0].Verify(opts)
-	return chains, err
 }
 
 type Client interface {

@@ -40,6 +40,7 @@ const (
 	CredentialsTypeRoleBased = "role-based"
 
 	MedusaClientSecretNameAnnotation = "medusa.k8ssandra.io/grpc-client-secret-name"
+	MedusaServerNameAnnotation       = "medusa.k8ssandra.io/grpc-server-name"
 	MedusaGRPCPortAnnotation         = "medusa.k8ssandra.io/grpc-port"
 )
 
@@ -163,6 +164,9 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster, dcConfig *cassandra.DatacenterCo
 
 	if kc.Spec.Medusa.ServiceProperties.Encryption != nil && kc.Spec.Medusa.ServiceProperties.Encryption.ClientSecretName != "" {
 		dcConfig.Meta.Annotations = goalesce.MustDeepMerge(dcConfig.Meta.Annotations, map[string]string{MedusaClientSecretNameAnnotation: kc.Spec.Medusa.ServiceProperties.Encryption.ClientSecretName})
+	}
+	if kc.Spec.Medusa.ServiceProperties.Encryption != nil {
+		dcConfig.Meta.Annotations = goalesce.MustDeepMerge(dcConfig.Meta.Annotations, map[string]string{MedusaServerNameAnnotation: kc.Spec.Medusa.ServiceProperties.Encryption.ServerName})
 	}
 
 	return medusaConfig
@@ -669,6 +673,7 @@ func defaultMedusaProbe(grpcPort int, encryption *api.GRPCEncryption) *corev1.Pr
 			"--tls-ca-cert=/etc/certificates/grpc-server-certs/ca.crt",
 			"--tls-client-cert=/etc/certificates/grpc-server-certs/tls.crt",
 			"--tls-client-key=/etc/certificates/grpc-server-certs/tls.key",
+			fmt.Sprintf("--tls-server-name=%s", encryption.ServerName),
 		)
 	}
 

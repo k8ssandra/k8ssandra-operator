@@ -1743,7 +1743,7 @@ func checkReaperApiReachableWithEncryption(t *testing.T, ctx context.Context, re
 					require.NotNil(t, tlsKey, "tls.key not found in secret %s", secretKey)
 					require.NotNil(t, caCert, "ca.crt not found in secret %s", secretKey)
 
-					httpClient, err := reaper.CreateHTTPClientWithMutualTLS(tlsCert, tlsKey, caCert)
+					httpClient, err := reaper.CreateHTTPClientWithMutualTLS(tlsCert, tlsKey, caCert, reaperHostAndPort.Host())
 					require.NoError(t, err)
 					opts = append(opts, reaperclient.WithHttpClient(httpClient))
 				}

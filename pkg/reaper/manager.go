@@ -3,12 +3,13 @@ package reaper
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"fmt"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/tlsconfig"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -21,71 +22,30 @@ import (
 	reaperclient "github.com/k8ssandra/reaper-client-go/reaper"
 )
 
-func createHTTPClientWithTLS() *http.Client {
+func createHTTPClientWithTLS(serverName string) *http.Client {
 	return &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: false,
+				ServerName: serverName,
+				MinVersion: tls.VersionTLS12,
 			},
 		},
+		Timeout: 10 * time.Second,
 	}
 }
 
-func CreateHTTPClientWithMutualTLS(tlsCert, tlsKey, caCert []byte) (*http.Client, error) {
-	cert, err := tls.X509KeyPair(tlsCert, tlsKey)
+func CreateHTTPClientWithMutualTLS(tlsCert, tlsKey, caCert []byte, serverName string) (*http.Client, error) {
+	tlsConfig, err := tlsconfig.NewMutualTLSClientConfig(caCert, tlsCert, tlsKey, serverName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load client certificate: %w", err)
-	}
-
-	caCertPool := x509.NewCertPool()
-	if !caCertPool.AppendCertsFromPEM(caCert) {
-		return nil, fmt.Errorf("failed to append CA certificate")
+		return nil, err
 	}
 
 	return &http.Client{
 		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				Certificates:          []tls.Certificate{cert},
-				RootCAs:               caCertPool,
-				InsecureSkipVerify:    true,
-				VerifyPeerCertificate: buildVerifyPeerCertificateNoHostCheck(caCertPool)},
+			TLSClientConfig: tlsConfig,
 		},
+		Timeout: 10 * time.Second,
 	}, nil
-}
-
-// Below implementation modified from:
-//
-// https://go-review.googlesource.com/c/go/+/193620/5/src/crypto/tls/example_test.go#210
-func buildVerifyPeerCertificateNoHostCheck(rootCAs *x509.CertPool) func([][]byte, [][]*x509.Certificate) error {
-	f := func(certificates [][]byte, _ [][]*x509.Certificate) error {
-		certs := make([]*x509.Certificate, len(certificates))
-		for i, asn1Data := range certificates {
-			cert, err := x509.ParseCertificate(asn1Data)
-			if err != nil {
-				return err
-			}
-			certs[i] = cert
-		}
-
-		_, err := verifyPeerCertificateNoHostCheck(certs, rootCAs)
-		return err
-	}
-	return f
-}
-
-func verifyPeerCertificateNoHostCheck(certificates []*x509.Certificate, rootCAs *x509.CertPool) ([][]*x509.Certificate, error) {
-	opts := x509.VerifyOptions{
-		Roots: rootCAs,
-		// Setting the DNSName to the empty string will cause
-		// Certificate.Verify() to skip hostname checking
-		DNSName:       "",
-		Intermediates: x509.NewCertPool(),
-	}
-	for _, cert := range certificates[1:] {
-		opts.Intermediates.AddCert(cert)
-	}
-	chains, err := certificates[0].Verify(opts)
-	return chains, err
 }
 
 type Manager interface {
@@ -120,17 +80,18 @@ func (r *restReaperManager) ConnectWithReaperRef(ctx context.Context, kc *v1alph
 	useTLS := false
 
 	reaperSpec := kc.Spec.Reaper
+	reaperServiceName := GetServiceName(kc.Spec.Reaper.ReaperRef.Name)
+	reaperSvc := fmt.Sprintf("%s.%s", reaperServiceName, namespace)
 
 	if reaperSpec.Encryption != nil {
 		useTLS = true
-		httpClientOption, err := r.httpClientOption(ctx, namespace, reaperSpec.Encryption)
+		httpClientOption, err := r.httpClientOption(ctx, namespace, reaperSpec.Encryption, reaperServiceName)
 		if err != nil {
 			return fmt.Errorf("failed to create HTTP client option: %w", err)
 		}
 		opts = append(opts, httpClientOption)
 	}
 
-	reaperSvc := fmt.Sprintf("%s.%s", GetServiceName(kc.Spec.Reaper.ReaperRef.Name), namespace)
 	return r.connect(ctx, reaperSvc, username, password, useTLS, opts...)
 }
 
@@ -139,21 +100,22 @@ func (r *restReaperManager) Connect(ctx context.Context, reaper *api.Reaper, use
 	useTLS := false
 
 	reaperSpec := reaper.Spec
+	reaperServiceName := GetServiceName(reaper.Name)
+	reaperSvc := fmt.Sprintf("%s.%s", reaperServiceName, reaper.Namespace)
 
 	if reaperSpec.Encryption != nil {
 		useTLS = true
-		httpClientOption, err := r.httpClientOption(ctx, reaper.Namespace, reaperSpec.Encryption)
+		httpClientOption, err := r.httpClientOption(ctx, reaper.Namespace, reaperSpec.Encryption, reaperServiceName)
 		if err != nil {
 			return fmt.Errorf("failed to create HTTP client option: %w", err)
 		}
 		opts = append(opts, httpClientOption)
 	}
 
-	reaperSvc := fmt.Sprintf("%s.%s", GetServiceName(reaper.Name), reaper.Namespace)
 	return r.connect(ctx, reaperSvc, username, password, useTLS, opts...)
 }
 
-func (r *restReaperManager) httpClientOption(ctx context.Context, namespace string, encryption *api.ReaperEncryption) (reaperclient.ClientCreateOption, error) {
+func (r *restReaperManager) httpClientOption(ctx context.Context, namespace string, encryption *api.ReaperEncryption, serverName string) (reaperclient.ClientCreateOption, error) {
 	if encryption.ClientCertName != "" {
 		// Client must use mutual TLS
 		secretKey := types.NamespacedName{
@@ -182,14 +144,14 @@ func (r *restReaperManager) httpClientOption(ctx context.Context, namespace stri
 		}
 
 		// Create HTTP client with mutual TLS
-		httpClient, err := CreateHTTPClientWithMutualTLS(tlsCert, tlsKey, caCert)
+		httpClient, err := CreateHTTPClientWithMutualTLS(tlsCert, tlsKey, caCert, serverName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create HTTP client with mutual TLS: %w", err)
 		}
 		return reaperclient.WithHttpClient(httpClient), nil
 	} else {
 		// Client uses TLS without mutual authentication
-		httpClient := createHTTPClientWithTLS()
+		httpClient := createHTTPClientWithTLS(serverName)
 		return reaperclient.WithHttpClient(httpClient), nil
 	}
 }

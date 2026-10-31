@@ -17,6 +17,7 @@ import (
 
 func newClient(ctx context.Context, c client.Client, cassdc *cassdcapi.CassandraDatacenter, pod *corev1.Pod, clientFactory medusa.ClientFactory) (medusa.Client, error) {
 	clientSecretName := medusaClientSecretName(cassdc)
+	serverName := medusaServerName(cassdc)
 
 	grpcPort := medusa.DefaultMedusaPort
 	explicitPort, found := cassandra.FindContainerPort(pod, "medusa", "grpc")
@@ -36,7 +37,7 @@ func newClient(ctx context.Context, c client.Client, cassdc *cassdcapi.Cassandra
 			return nil, fmt.Errorf("failed to get client secret %s: %w", secretKey, err)
 		}
 
-		return clientFactory.NewClientWithTLS(address, secret)
+		return clientFactory.NewClientWithTLS(address, secret, serverName)
 	}
 
 	return clientFactory.NewClient(address)
@@ -45,6 +46,13 @@ func newClient(ctx context.Context, c client.Client, cassdc *cassdcapi.Cassandra
 func medusaClientSecretName(cassdc *cassdcapi.CassandraDatacenter) string {
 	if metav1.HasAnnotation(cassdc.ObjectMeta, medusa.MedusaClientSecretNameAnnotation) {
 		return cassdc.Annotations[medusa.MedusaClientSecretNameAnnotation]
+	}
+	return ""
+}
+
+func medusaServerName(cassdc *cassdcapi.CassandraDatacenter) string {
+	if metav1.HasAnnotation(cassdc.ObjectMeta, medusa.MedusaServerNameAnnotation) {
+		return cassdc.Annotations[medusa.MedusaServerNameAnnotation]
 	}
 	return ""
 }
