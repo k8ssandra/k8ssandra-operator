@@ -2,11 +2,13 @@ package cassandra
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/unstructured"
@@ -49,26 +51,8 @@ func TestCheckMandatoryEncryptionFields(t *testing.T) {
 	assert.NoError(checkMandatoryEncryptionFields(dcConfig.ClientEncryptionStores))
 	assert.Error(checkMandatoryEncryptionFields(dcConfig.ServerEncryptionStores))
 
-	dcConfig = &DatacenterConfig{
-		CassandraConfig: api.CassandraConfig{
-			CassandraYaml: unstructured.Unstructured{
-				"client_encryption_options": map[string]interface{}{
-					"enabled": true,
-				},
-				"server_encryption_options": map[string]interface{}{
-					"internode_encryption": "all",
-				},
-			},
-		},
-		ServerKeystorePassword: "flintstones",
-		ClientKeystorePassword: "flightstones",
-	}
-
 	assert.True(ServerEncryptionEnabled(dcConfig))
 	assert.True(ClientEncryptionEnabled(dcConfig))
-
-	assert.Error(checkMandatoryEncryptionFields(dcConfig.ClientEncryptionStores))
-	assert.Error(checkMandatoryEncryptionFields(dcConfig.ServerEncryptionStores))
 }
 
 func TestOverrideOfMandatoryEncryptionCheck(t *testing.T) {
@@ -232,10 +216,14 @@ func TestHandleEncryptionOptions(t *testing.T) {
 		CassandraConfig: api.CassandraConfig{
 			CassandraYaml: unstructured.Unstructured{
 				"client_encryption_options": map[string]interface{}{
-					"enabled": true,
+					"enabled":             true,
+					"keystore_password":   "plaintext-password",
+					"truststore_password": "plaintext-password",
 				},
 				"server_encryption_options": map[string]interface{}{
 					"internode_encryption": "all",
+					"keystore_password":    "plaintext-password",
+					"truststore_password":  "plaintext-password",
 				},
 			},
 		},
@@ -255,15 +243,11 @@ func TestHandleEncryptionOptions(t *testing.T) {
 				Name: "server-truststore-secret",
 			}},
 		},
-		ClientKeystorePassword:   "test",
-		ClientTruststorePassword: "test",
-		ServerKeystorePassword:   "test",
-		ServerTruststorePassword: "test",
 	}
 
-	err := HandleEncryptionOptions(dcConfig)
+	err := HandleEncryptionOptions(dcConfig, "client-image")
 	require.NoError(t, err)
-	assert.Equal(t, 4, len(dcConfig.PodTemplateSpec.Spec.Volumes))
+	assert.Equal(t, 5, len(dcConfig.PodTemplateSpec.Spec.Volumes))
 	assert.True(t, volumeExists(dcConfig.PodTemplateSpec.Spec.Volumes, "client-keystore"))
 	assert.True(t, volumeHasSecretSource(dcConfig.PodTemplateSpec.Spec.Volumes, "client-keystore", "client-keystore-secret"))
 	assert.True(t, volumeExists(dcConfig.PodTemplateSpec.Spec.Volumes, "client-truststore"))
@@ -282,28 +266,44 @@ func TestHandleEncryptionOptions(t *testing.T) {
 		"-Dcom.sun.management.jmxremote.ssl.need.client.auth=true",
 		fmt.Sprintf("-Djavax.net.ssl.keyStore=%s/keystore", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameKeystore)),
 		fmt.Sprintf("-Djavax.net.ssl.trustStore=%s/truststore", StoreMountFullPath(encryption.StoreTypeClient, encryption.StoreNameTruststore)),
-		fmt.Sprintf("-Djavax.net.ssl.keyStorePassword=%s", dcConfig.ClientKeystorePassword),
-		fmt.Sprintf("-Djavax.net.ssl.trustStorePassword=%s", dcConfig.ClientTruststorePassword),
 	} {
 		assert.True(t, utils.SliceContains(dcConfig.CassandraConfig.JvmOptions.AdditionalOptions, jvmOption), fmt.Sprintf("JVM option %s not found", jvmOption))
 	}
 	expectedCassandraYaml := unstructured.Unstructured{
 		"client_encryption_options": map[string]interface{}{
-			"enabled":             true,
-			"keystore":            "/mnt/client-keystore/keystore",
-			"keystore_password":   "test",
-			"truststore":          "/mnt/client-truststore/truststore",
-			"truststore_password": "test",
+			"enabled":    true,
+			"keystore":   "/mnt/client-keystore/keystore",
+			"truststore": "/mnt/client-truststore/truststore",
 		},
 		"server_encryption_options": map[string]interface{}{
 			"internode_encryption": "all",
 			"keystore":             "/mnt/server-keystore/keystore",
-			"keystore_password":    "test",
 			"truststore":           "/mnt/server-truststore/truststore",
-			"truststore_password":  "test",
 		},
 	}
 	assert.Equal(t, expectedCassandraYaml, dcConfig.CassandraConfig.CassandraYaml)
+	require.Len(t, dcConfig.PodTemplateSpec.Spec.InitContainers, 2)
+	assert.Equal(t, reconciliation.ServerConfigContainerName, dcConfig.PodTemplateSpec.Spec.InitContainers[0].Name)
+	passwordInit := dcConfig.PodTemplateSpec.Spec.InitContainers[1]
+	assert.Equal(t, encryptionPasswordInitContainer, passwordInit.Name)
+	assert.Equal(t, "client-image", passwordInit.Image)
+	assert.NotContains(t, passwordInit.Command[2], "test")
+	assert.Contains(t, passwordInit.Command[2], "load_str")
+	assert.Contains(t, passwordInit.VolumeMounts, corev1.VolumeMount{Name: "tmp", MountPath: "/tmp"})
+	assert.Contains(t, dcConfig.PodTemplateSpec.Spec.Containers[0].Env, corev1.EnvVar{
+		Name: clientKeystorePasswordEnvName,
+		ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
+			LocalObjectReference: corev1.LocalObjectReference{Name: "client-keystore-secret"},
+			Key:                  "keystore-password",
+		}},
+	})
+	assert.Contains(t, dcConfig.PodTemplateSpec.Spec.Containers[0].Env, corev1.EnvVar{
+		Name:  "JAVA_TOOL_OPTIONS",
+		Value: "-Djavax.net.ssl.keyStorePassword=$(K8SSANDRA_CLIENT_KEYSTORE_PASSWORD) -Djavax.net.ssl.trustStorePassword=$(K8SSANDRA_CLIENT_TRUSTSTORE_PASSWORD)",
+	})
+	renderedConfig, err := json.Marshal(dcConfig)
+	require.NoError(t, err)
+	assert.NotContains(t, string(renderedConfig), "plaintext-password")
 }
 
 func TestHandleEncryptionOptionsWithExistingContainers(t *testing.T) {
@@ -347,13 +347,11 @@ func TestHandleEncryptionOptionsWithExistingContainers(t *testing.T) {
 				Name: "server-truststore-secret",
 			}},
 		},
-		ClientKeystorePassword:   "test",
-		ClientTruststorePassword: "test",
 	}
 
-	err := HandleEncryptionOptions(dcConfig)
+	err := HandleEncryptionOptions(dcConfig, "client-image")
 	require.NoError(t, err)
-	assert.Equal(t, 4, len(dcConfig.PodTemplateSpec.Spec.Volumes))
+	assert.Equal(t, 5, len(dcConfig.PodTemplateSpec.Spec.Volumes))
 
 	assert.True(t, volumeExists(dcConfig.PodTemplateSpec.Spec.Volumes, "client-keystore"))
 	assert.True(t, volumeHasSecretSource(dcConfig.PodTemplateSpec.Spec.Volumes, "client-keystore", "client-keystore-secret"))
@@ -385,11 +383,9 @@ func TestHandleNoEncryptionOptions(t *testing.T) {
 				},
 			},
 		},
-		ClientKeystorePassword:   "test",
-		ClientTruststorePassword: "test",
 	}
 
-	err := HandleEncryptionOptions(dcConfig)
+	err := HandleEncryptionOptions(dcConfig, "")
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(dcConfig.PodTemplateSpec.Spec.Volumes))
 	assert.Equal(t, 0, len(dcConfig.PodTemplateSpec.Spec.Containers))
@@ -417,11 +413,10 @@ func TestHandleFailedEncryptionOptions(t *testing.T) {
 				},
 			},
 		},
-		ClientKeystorePassword:   "test",
-		ClientTruststorePassword: "test",
+		ClientEncryptionStores: &encryption.Stores{},
 	}
 
-	err := HandleEncryptionOptions(dcConfig)
+	err := HandleEncryptionOptions(dcConfig, "client-image")
 	assert.Error(t, err)
 }
 
@@ -462,7 +457,7 @@ func keyToPathElemVolumeExist(volumes []corev1.Volume, name, key string) bool {
 	return false
 }
 
-func TestReadEncryptionStorePassword(t *testing.T) {
+func TestValidateEncryptionStorePassword(t *testing.T) {
 	// Test case when KeystorePasswordRef,TruststorePasswordSecretRef is configured
 	keystoreSecret := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
@@ -495,10 +490,11 @@ func TestReadEncryptionStorePassword(t *testing.T) {
 		}, Key: "client-keystore-password-key"},
 		TruststoreSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
 			Name: "client-truststore-secret",
+		}, Key: "client-truststore-key"},
+		TruststorePasswordSecretRef: &encryption.SecretKeySelector{LocalObjectReference: corev1.LocalObjectReference{
+			Name: "client-truststore-secret",
 		}, Key: "client-truststore-password-key"},
 	}
-	keyStorePassword, _ := ReadEncryptionStorePassword(context.Background(), "default", client, ClientEncryptionStores, encryption.StoreNameKeystore)
-	assert.Equal(t, "test-keystore-password", keyStorePassword)
-	trustStorePassword, _ := ReadEncryptionStorePassword(context.Background(), "default", client, ClientEncryptionStores, encryption.StoreNameTruststore)
-	assert.Equal(t, "test-truststore-password", trustStorePassword)
+	assert.NoError(t, validateEncryptionStorePassword(context.Background(), "default", client, ClientEncryptionStores, encryption.StoreNameKeystore))
+	assert.NoError(t, validateEncryptionStorePassword(context.Background(), "default", client, ClientEncryptionStores, encryption.StoreNameTruststore))
 }

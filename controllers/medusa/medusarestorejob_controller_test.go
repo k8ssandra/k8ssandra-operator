@@ -92,6 +92,7 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 					Encryption: &api.GRPCEncryption{
 						ClientSecretName: "medusa-client-secret",
 						ServerSecretName: "medusa-server-secret",
+						ServerName:       "medusa.test.svc",
 					},
 				},
 				CassandraUserSecretRef: corev1.LocalObjectReference{
@@ -160,6 +161,7 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 	require.NoError(f.Get(ctx, dc1Key, dc1))
 	require.True(metav1.HasAnnotation(dc1.ObjectMeta, medusa.MedusaClientSecretNameAnnotation))
 	require.Equal("medusa-client-secret", dc1.Annotations[medusa.MedusaClientSecretNameAnnotation])
+	require.Equal("medusa.test.svc", dc1.Annotations[medusa.MedusaServerNameAnnotation])
 
 	err = createCassandraPods(t, f, ctx, dc1Key, dc1)
 	require.NoError(err)
@@ -642,7 +644,7 @@ func (f *fakeMedusaRestoreClientFactory) NewClient(address string) (medusa.Clien
 	return f.clients[address], nil
 }
 
-func (f *fakeMedusaRestoreClientFactory) NewClientWithTLS(address string, secret *corev1.Secret) (medusa.Client, error) {
+func (f *fakeMedusaRestoreClientFactory) NewClientWithTLS(address string, secret *corev1.Secret, serverName string) (medusa.Client, error) {
 	return f.NewClient(address)
 }
 

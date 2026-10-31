@@ -50,6 +50,7 @@ spec:
     size: 2048
   dnsNames:
     - localhost
+    - medusa-server
   ipAddresses:
     - "127.0.0.1"
     - "::1"

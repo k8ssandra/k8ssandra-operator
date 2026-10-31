@@ -14,7 +14,7 @@ type Stores struct {
 
 	// ref to the secret that contains the truststore and optionally its password (which can also be specified through
 	//the truststorePasswordSecretRef field)
-	// if keys are not specified explicitly, "keystore" entry and a "keystore-password" entry will be used
+	// if keys are not specified explicitly, "truststore" entry and a "truststore-password" entry will be used
 	// +kubebuilder:validation:Required
 	TruststoreSecretRef *SecretKeySelector `json:"truststoreSecretRef"`
 
@@ -58,4 +58,40 @@ func (s *SecretKeySelector) GetSpecificKeyOrDefault(defaultVal string) (key stri
 		return s.Key
 	}
 	return defaultVal
+}
+
+// PasswordSecretKeySelector returns the Kubernetes Secret selector containing
+// the password for the requested store. A dedicated password reference takes
+// precedence over the Secret containing the store itself.
+func (s *Stores) PasswordSecretKeySelector(storeName StoreName) *corev1.SecretKeySelector {
+	if s == nil {
+		return nil
+	}
+
+	var storeRef, passwordRef *SecretKeySelector
+	switch storeName {
+	case StoreNameKeystore:
+		storeRef = s.KeystoreSecretRef
+		passwordRef = s.KeystorePasswordRef
+	case StoreNameTruststore:
+		storeRef = s.TruststoreSecretRef
+		passwordRef = s.TruststorePasswordSecretRef
+	default:
+		return nil
+	}
+
+	if passwordRef != nil {
+		return &corev1.SecretKeySelector{
+			LocalObjectReference: passwordRef.LocalObjectReference,
+			Key:                  passwordRef.GetSpecificKeyOrDefault(string(storeName) + "-password"),
+		}
+	}
+	if storeRef == nil {
+		return nil
+	}
+
+	return &corev1.SecretKeySelector{
+		LocalObjectReference: storeRef.LocalObjectReference,
+		Key:                  string(storeName) + "-password",
+	}
 }
