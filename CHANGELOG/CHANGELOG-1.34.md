@@ -15,6 +15,8 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+## v1.34.0 - 2026-10-30
+
 * [BUGFIX] [#1845](https://github.com/k8ssandra/k8ssandra-operator/issues/1845) Don't requeue MedusaBackupJobs that are already finished
 * [CHANGE] Upgrade cassandra-reaper to v5.1.0
 * [CHANGE] [#1786](https://github.com/k8ssandra/k8ssandra-operator/issues/1786) Remove support for Stargate as it has been deprecated for ages and will not function correctly.
