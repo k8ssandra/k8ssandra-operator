@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -262,7 +263,8 @@ func createAndVerifyMedusaBackup(dcKey framework.ClusterKey, dc *cassdcapi.Cassa
 		t.Log("verify that the backups start eventually")
 		verifyBackupJobStarted(require.Eventually, t, dc, f, ctx, backupKey)
 		if backupName != backupWithNilSummary {
-			// backup that will receive a nil summary will never finish, can't assert on that
+			// the backup that gets reported as in progress forever never finishes,
+			// so there is nothing to assert on
 			verifyBackupJobFinished(t, require, dc, f, ctx, backupKey, backupName)
 		}
 	} else {
@@ -458,63 +460,71 @@ func (c *fakeMedusaClient) CreateBackup(ctx context.Context, name string, backup
 	return &medusa.BackupResponse{BackupName: name, Status: medusa.StatusType_IN_PROGRESS}, nil
 }
 
+func (c *fakeMedusaClient) GetBackup(ctx context.Context, name string) (*medusa.BackupSummary, error) {
+	for _, requested := range c.RequestedBackups {
+		if requested == name {
+			return fakeBackupSummary(name), nil
+		}
+	}
+	// reproducing what the gRPC client would send, Medusa does not use a NotFound status here
+	return nil, fmt.Errorf("failed to get backup due to error: 'The backup %s does not exist'", name)
+}
+
 func (c *fakeMedusaClient) GetBackups(ctx context.Context) ([]*medusa.BackupSummary, error) {
 	backups := make([]*medusa.BackupSummary, 0)
 
 	for _, name := range c.RequestedBackups {
-		// return status based on the backup name
-		// since we're implementing altogether different method of the Medusa client, we cannot reuse the BackupStatus logic
-		// but we still want to "mock" failing backups
-		// this does not get called per node/pod, se we don't need to track counts of what we returned
-		var status medusa.StatusType
-		if strings.HasPrefix(name, "good") {
-			status = *medusa.StatusType_SUCCESS.Enum()
-		} else if strings.HasPrefix(name, "bad") {
-			status = *medusa.StatusType_FAILED.Enum()
-		} else if strings.HasPrefix(name, "missing") {
-			status = *medusa.StatusType_UNKNOWN.Enum()
-		} else {
-			status = *medusa.StatusType_IN_PROGRESS.Enum()
-		}
-
-		var backup *medusa.BackupSummary
-		if strings.HasPrefix(name, backupWithNilSummary) {
-			backup = nil
-		} else {
-			backup = &medusa.BackupSummary{
-				BackupName:    name,
-				StartTime:     0,
-				FinishTime:    10,
-				TotalNodes:    3,
-				FinishedNodes: 3,
-				TotalObjects:  fakeBackupFileCount,
-				TotalSize:     fakeBackupByteSize,
-				Status:        status,
-				Nodes: []*medusa.BackupNode{
-					{
-						Host:       "host1",
-						Tokens:     []int64{1, 2, 3},
-						Datacenter: "dc1",
-						Rack:       "rack1",
-					},
-					{
-						Host:       "host2",
-						Tokens:     []int64{1, 2, 3},
-						Datacenter: "dc1",
-						Rack:       "rack1",
-					},
-					{
-						Host:       "host3",
-						Tokens:     []int64{1, 2, 3},
-						Datacenter: "dc1",
-						Rack:       "rack1",
-					},
-				},
-			}
-		}
-		backups = append(backups, backup)
+		backups = append(backups, fakeBackupSummary(name))
 	}
 	return backups, nil
+}
+
+// the summary depends on the backup name, which is how we "mock" failing backups
+func fakeBackupSummary(name string) *medusa.BackupSummary {
+	var status medusa.StatusType
+	if strings.HasPrefix(name, "good") {
+		status = *medusa.StatusType_SUCCESS.Enum()
+	} else if strings.HasPrefix(name, "bad") {
+		status = *medusa.StatusType_FAILED.Enum()
+	} else if strings.HasPrefix(name, "missing") {
+		status = *medusa.StatusType_UNKNOWN.Enum()
+	} else {
+		status = *medusa.StatusType_IN_PROGRESS.Enum()
+	}
+
+	if strings.HasPrefix(name, backupWithNilSummary) {
+		return nil
+	}
+	return &medusa.BackupSummary{
+		BackupName:    name,
+		StartTime:     0,
+		FinishTime:    10,
+		TotalNodes:    3,
+		FinishedNodes: 3,
+		TotalObjects:  fakeBackupFileCount,
+		TotalSize:     fakeBackupByteSize,
+		Status:        status,
+		Nodes: []*medusa.BackupNode{
+			{
+				Host:       "host1",
+				Tokens:     []int64{1, 2, 3},
+				Datacenter: "dc1",
+				Rack:       "rack1",
+			},
+			{
+				Host:       "host2",
+				Tokens:     []int64{1, 2, 3},
+				Datacenter: "dc1",
+				Rack:       "rack1",
+			},
+			{
+				Host:       "host3",
+				Tokens:     []int64{1, 2, 3},
+				Datacenter: "dc1",
+				Rack:       "rack1",
+			},
+		},
+	}
 }
 
 func (c *fakeMedusaClient) BackupStatus(ctx context.Context, name string) (*medusa.BackupStatusResponse, error) {
@@ -693,4 +703,243 @@ func TestMedusaBackupJobNotRequeuedWhenDone(t *testing.T) {
 			}
 		})
 	}
+}
+
+// medusaClientWithFlakyGetBackup fails the first few GetBackup calls, then answers normally.
+type medusaClientWithFlakyGetBackup struct {
+	medusa.Client
+	factory *flakyMedusaClientFactory
+}
+
+func (c *medusaClientWithFlakyGetBackup) Close() error {
+	return nil
+}
+
+func (c *medusaClientWithFlakyGetBackup) GetBackup(ctx context.Context, name string) (*medusa.BackupSummary, error) {
+	c.factory.getBackupCalls = append(c.factory.getBackupCalls, name)
+	if c.factory.failures > 0 {
+		c.factory.failures--
+		if c.factory.failureMessage != "" {
+			return nil, fmt.Errorf("%s", c.factory.failureMessage)
+		}
+		return nil, fmt.Errorf("medusa sidecar is unreachable")
+	}
+	for _, summary := range c.factory.summaries {
+		if summary.BackupName == name {
+			return summary, nil
+		}
+	}
+	return nil, fmt.Errorf("failed to get backup due to error: 'The backup %s does not exist'", name)
+}
+
+func (c *medusaClientWithFlakyGetBackup) GetBackups(ctx context.Context) ([]*medusa.BackupSummary, error) {
+	c.factory.getBackupsCalls++
+	return c.factory.summaries, nil
+}
+
+type flakyMedusaClientFactory struct {
+	summaries       []*medusa.BackupSummary
+	failures        int
+	failureMessage  string
+	getBackupCalls  []string
+	getBackupsCalls int
+}
+
+func (f *flakyMedusaClientFactory) NewClient(address string) (medusa.Client, error) {
+	return &medusaClientWithFlakyGetBackup{factory: f}, nil
+}
+
+func (f *flakyMedusaClientFactory) NewClientWithTLS(address string, secret *corev1.Secret) (medusa.Client, error) {
+	return f.NewClient(address)
+}
+
+// The finish time makes a MedusaBackupJob terminal, so it must only be set once the MedusaBackup
+// exists.
+func TestMedusaBackupJobCreatesBackupBeforeFinishing(t *testing.T) {
+	const backupName = "backup"
+
+	summaryOf := func(name string) *medusa.BackupSummary {
+		return &medusa.BackupSummary{
+			BackupName:    name,
+			TotalNodes:    1,
+			FinishedNodes: 1,
+			TotalObjects:  fakeBackupFileCount,
+			TotalSize:     fakeBackupByteSize,
+			Status:        medusa.StatusType_SUCCESS,
+			Nodes:         []*medusa.BackupNode{{Host: "host1", Tokens: []int64{1}, Datacenter: "dc1", Rack: "rack1"}},
+		}
+	}
+
+	tests := []struct {
+		name             string
+		pods             int
+		failures         int
+		failureMessage   string
+		summaries        []*medusa.BackupSummary
+		reconciles       int
+		expectErr        bool
+		expectBackup     bool
+		expectFinishTime bool
+	}{
+		{
+			name: "retries after a transient failure", pods: 1, failures: 1,
+			summaries:  []*medusa.BackupSummary{summaryOf(backupName)},
+			reconciles: 1, expectErr: true, expectBackup: false, expectFinishTime: false,
+		},
+		{
+			name: "creates the backup on the retry", pods: 1, failures: 1,
+			summaries:  []*medusa.BackupSummary{summaryOf(backupName)},
+			reconciles: 2, expectErr: false, expectBackup: true, expectFinishTime: true,
+		},
+		{
+			name: "tolerates a pod that cannot be queried", pods: 2, failures: 1,
+			summaries:  []*medusa.BackupSummary{summaryOf(backupName)},
+			reconciles: 1, expectErr: false, expectBackup: true, expectFinishTime: true,
+		},
+		{
+			// the job is finished because retrying cannot help, but the error is still
+			// reported so that it does not go unnoticed
+			name: "finishes when the summary is genuinely absent", pods: 1, failures: 0,
+			summaries:  []*medusa.BackupSummary{summaryOf("some-other-backup")},
+			reconciles: 1, expectErr: true, expectBackup: false, expectFinishTime: true,
+		},
+		{
+			// only the backup being absent is terminal, not any failure that happens to
+			// mention something not existing
+			name: "retries when another thing does not exist", pods: 1, failures: 1,
+			failureMessage: "failed to get backup: the specified bucket does not exist",
+			summaries:      []*medusa.BackupSummary{summaryOf(backupName)},
+			reconciles:     1, expectErr: true, expectBackup: false, expectFinishTime: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			scheme := runtime.NewScheme()
+			require.NoError(t, corev1.AddToScheme(scheme))
+			require.NoError(t, cassdcapi.AddToScheme(scheme))
+			require.NoError(t, api.AddToScheme(scheme))
+
+			dc := &cassdcapi.CassandraDatacenter{ObjectMeta: metav1.ObjectMeta{Name: "dc1", Namespace: "test", UID: "dc1"}}
+			objects := []client.Object{dc}
+			finished := make([]string, 0, tt.pods)
+			for i := 0; i < tt.pods; i++ {
+				podName := fmt.Sprintf("pod%d", i)
+				objects = append(objects, &corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{Name: podName, Namespace: dc.Namespace, Labels: dc.GetDatacenterLabels()},
+				})
+				finished = append(finished, podName)
+			}
+			job := &api.MedusaBackupJob{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      backupName,
+					Namespace: dc.Namespace,
+					OwnerReferences: []metav1.OwnerReference{
+						{APIVersion: cassdcapi.GroupVersion.String(), Kind: "CassandraDatacenter", Name: dc.Name, UID: dc.UID},
+					},
+				},
+				Spec:   api.MedusaBackupJobSpec{CassandraDatacenter: dc.Name},
+				Status: api.MedusaBackupJobStatus{StartTime: metav1.Now(), Finished: finished},
+			}
+			objects = append(objects, job)
+
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(objects...).
+				WithStatusSubresource(&api.MedusaBackupJob{}, &api.MedusaBackup{}).
+				Build()
+			factory := &flakyMedusaClientFactory{summaries: tt.summaries, failures: tt.failures, failureMessage: tt.failureMessage}
+			r := &MedusaBackupJobReconciler{
+				Client:           c,
+				Scheme:           scheme,
+				ReconcilerConfig: &config.ReconcilerConfig{DefaultDelay: time.Second},
+				ClientFactory:    factory,
+			}
+			req := reconcile.Request{NamespacedName: client.ObjectKeyFromObject(job)}
+
+			var err error
+			for i := 0; i < tt.reconciles; i++ {
+				_, err = r.Reconcile(ctx, req)
+			}
+			if tt.expectErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+
+			backup := &api.MedusaBackup{}
+			getErr := c.Get(ctx, req.NamespacedName, backup)
+			if tt.expectBackup {
+				require.NoError(t, getErr, "the MedusaBackup should have been created")
+				require.Equal(t, fakeBackupFileCount, backup.Status.TotalFiles)
+				require.Equal(t, fakeBackupHumanSize, backup.Status.TotalSize)
+			} else {
+				require.True(t, errors.IsNotFound(getErr), "the MedusaBackup should not have been created")
+			}
+
+			updated := &api.MedusaBackupJob{}
+			require.NoError(t, c.Get(ctx, req.NamespacedName, updated))
+			require.Equal(t, tt.expectFinishTime, !updated.Status.FinishTime.IsZero(),
+				"the job must only be marked as finished once it has nothing left to do")
+
+			require.Zero(t, factory.getBackupsCalls, "the summary must be looked up by name, not by listing every backup")
+			for _, name := range factory.getBackupCalls {
+				require.Equal(t, backupName, name)
+			}
+		})
+	}
+}
+
+// A MedusaBackup lookup that fails for a reason other than the object being absent says nothing
+// about whether the object exists, so the job must not be marked as finished.
+func TestMedusaBackupJobKeepsGoingWhenTheBackupLookupFails(t *testing.T) {
+	ctx := context.Background()
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, cassdcapi.AddToScheme(scheme))
+	require.NoError(t, api.AddToScheme(scheme))
+
+	dc := &cassdcapi.CassandraDatacenter{ObjectMeta: metav1.ObjectMeta{Name: "dc1", Namespace: "test", UID: "dc1"}}
+	pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "pod1", Namespace: dc.Namespace, Labels: dc.GetDatacenterLabels()}}
+	job := &api.MedusaBackupJob{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "backup",
+			Namespace: dc.Namespace,
+			OwnerReferences: []metav1.OwnerReference{
+				{APIVersion: cassdcapi.GroupVersion.String(), Kind: "CassandraDatacenter", Name: dc.Name, UID: dc.UID},
+			},
+		},
+		Spec:   api.MedusaBackupJobSpec{CassandraDatacenter: dc.Name},
+		Status: api.MedusaBackupJobStatus{StartTime: metav1.Now(), Finished: []string{pod.Name}},
+	}
+
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(dc, pod, job).
+		WithStatusSubresource(&api.MedusaBackupJob{}, &api.MedusaBackup{}).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+				if _, ok := obj.(*api.MedusaBackup); ok {
+					return errors.NewInternalError(fmt.Errorf("the API server is unhappy"))
+				}
+				return cl.Get(ctx, key, obj, opts...)
+			},
+		}).
+		Build()
+
+	summary := &medusa.BackupSummary{BackupName: job.Name, Status: medusa.StatusType_SUCCESS}
+	r := &MedusaBackupJobReconciler{
+		Client:           c,
+		Scheme:           scheme,
+		ReconcilerConfig: &config.ReconcilerConfig{DefaultDelay: time.Second},
+		ClientFactory:    &flakyMedusaClientFactory{summaries: []*medusa.BackupSummary{summary}},
+	}
+
+	_, err := r.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(job)})
+	require.Error(t, err, "the failed lookup must be reported")
+
+	updated := &api.MedusaBackupJob{}
+	require.NoError(t, c.Get(ctx, client.ObjectKeyFromObject(job), updated))
+	require.True(t, updated.Status.FinishTime.IsZero(), "the job must stay reconcilable")
 }
