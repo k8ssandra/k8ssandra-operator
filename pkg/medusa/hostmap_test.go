@@ -73,6 +73,10 @@ func (c mockgRPCClient) PrepareRestore(ctx context.Context, datacenter, backupNa
 	return nil, nil
 }
 
+func (c mockgRPCClient) PreparePitrRestore(ctx context.Context, datacenter, targetTimestamp string) (*PreparePitrRestoreResponse, error) {
+	return nil, nil
+}
+
 func TestGetSourceRacksIPs(t *testing.T) {
 	mockgRPCClient := mockgRPCClient{}
 	medusaBackup := pkgtest.NewMedusaRestore("default", "local-backupname", "remote-backupname", "test-dc2", "test-cluster")
