@@ -24979,6 +24979,30 @@ spec:
                         type: string
                     type: object
                     x-kubernetes-map-type: atomic
+                  pitr:
+                    description: Pitr configures point-in-time restore (PITR).
+                    properties:
+                      archiveIntervalSeconds:
+                        description: |-
+                          ArchiveIntervalSeconds is the time, in seconds, between commit log archive runs.
+                          Must be at least 1. If unset, Medusa uses its own default (1 minute).
+                        minimum: 1
+                        type: integer
+                      enabled:
+                        default: false
+                        description: |-
+                          Enabled turns on PITR. The operator then configures Medusa to archive commit logs,
+                          accepts PITR restores, and configures Vector to scrape the archiving status from Medusa.
+                        type: boolean
+                      spoolDir:
+                        description: |-
+                          SpoolDir is the directory where Medusa keeps commit logs before archiving them.
+                          It must be on the same filesystem as the Cassandra commitlog directory.
+                          Defaults to /var/lib/cassandra/commitlog_spool_dir.
+                        type: string
+                    required:
+                    - enabled
+                    type: object
                   purgeBackups:
                     default: true
                     description: |-
