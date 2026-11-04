@@ -59,3 +59,39 @@ func (s *SecretKeySelector) GetSpecificKeyOrDefault(defaultVal string) (key stri
 	}
 	return defaultVal
 }
+
+// PasswordSecretKeySelector returns the Kubernetes Secret selector containing
+// the password for the requested store. A dedicated password reference takes
+// precedence over the Secret containing the store itself.
+func (s *Stores) PasswordSecretKeySelector(storeName StoreName) *corev1.SecretKeySelector {
+	if s == nil {
+		return nil
+	}
+
+	var storeRef, passwordRef *SecretKeySelector
+	switch storeName {
+	case StoreNameKeystore:
+		storeRef = s.KeystoreSecretRef
+		passwordRef = s.KeystorePasswordRef
+	case StoreNameTruststore:
+		storeRef = s.TruststoreSecretRef
+		passwordRef = s.TruststorePasswordSecretRef
+	default:
+		return nil
+	}
+
+	if passwordRef != nil {
+		return &corev1.SecretKeySelector{
+			LocalObjectReference: passwordRef.LocalObjectReference,
+			Key:                  passwordRef.GetSpecificKeyOrDefault(string(storeName) + "-password"),
+		}
+	}
+	if storeRef == nil {
+		return nil
+	}
+
+	return &corev1.SecretKeySelector{
+		LocalObjectReference: storeRef.LocalObjectReference,
+		Key:                  string(storeName) + "-password",
+	}
+}

@@ -478,7 +478,7 @@ func connectReaperApiWithEncryption(t *testing.T, ctx context.Context, k8sContex
 					require.NotNil(t, tlsKey)
 					require.NotNil(t, caCert)
 
-					httpClient, err := reaper.CreateHTTPClientWithMutualTLS(tlsCert, tlsKey, caCert)
+					httpClient, err := reaper.CreateHTTPClientWithMutualTLS(tlsCert, tlsKey, caCert, ingressConfigs[k8sContext].ReaperRest.Host())
 					require.NoError(t, err)
 					opts = append(opts, reaperclient.WithHttpClient(httpClient))
 				}

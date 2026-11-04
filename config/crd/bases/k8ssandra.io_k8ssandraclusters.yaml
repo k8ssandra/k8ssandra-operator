@@ -25338,10 +25338,16 @@ spec:
                         properties:
                           clientSecretName:
                             type: string
+                          serverName:
+                            description: ServerName is the DNS name that Medusa clients
+                              expect in the gRPC server certificate.
+                            minLength: 1
+                            type: string
                           serverSecretName:
                             type: string
                         required:
                         - clientSecretName
+                        - serverName
                         - serverSecretName
                         type: object
                       grpcPort:
