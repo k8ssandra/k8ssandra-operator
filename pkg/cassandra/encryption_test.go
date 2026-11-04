@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -497,4 +500,509 @@ func TestValidateEncryptionStorePassword(t *testing.T) {
 	}
 	assert.NoError(t, validateEncryptionStorePassword(context.Background(), "default", client, ClientEncryptionStores, encryption.StoreNameKeystore))
 	assert.NoError(t, validateEncryptionStorePassword(context.Background(), "default", client, ClientEncryptionStores, encryption.StoreNameTruststore))
+}
+
+func TestCheckMandatoryEncryptionFieldsBranches(t *testing.T) {
+	selector := &encryption.SecretKeySelector{
+		LocalObjectReference: corev1.LocalObjectReference{Name: "store"},
+	}
+	tests := []struct {
+		name          string
+		stores        *encryption.Stores
+		expectedError string
+	}{
+		{
+			name:          "nil stores",
+			expectedError: "EncryptionStores is required to set up encryption",
+		},
+		{
+			name:          "missing keystore reference",
+			stores:        &encryption.Stores{},
+			expectedError: "keystore secret ref is required when EncryptionStores is used",
+		},
+		{
+			name: "missing truststore reference",
+			stores: &encryption.Stores{
+				KeystoreSecretRef: selector,
+			},
+			expectedError: "truststore secret ref is required when EncryptionStores is used",
+		},
+		{
+			name: "valid stores",
+			stores: &encryption.Stores{
+				KeystoreSecretRef:   selector,
+				TruststoreSecretRef: selector,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := checkMandatoryEncryptionFields(tt.stores)
+			if tt.expectedError == "" {
+				require.NoError(t, err)
+			} else {
+				require.EqualError(t, err, tt.expectedError)
+			}
+		})
+	}
+}
+
+func TestRemoveEncryptionPasswordFields(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    unstructured.Unstructured
+		expected unstructured.Unstructured
+	}{
+		{
+			name:     "missing section",
+			input:    unstructured.Unstructured{},
+			expected: unstructured.Unstructured{},
+		},
+		{
+			name: "non-map section",
+			input: unstructured.Unstructured{
+				"client_encryption_options": "invalid",
+			},
+			expected: unstructured.Unstructured{
+				"client_encryption_options": "invalid",
+			},
+		},
+		{
+			name: "removes only password fields",
+			input: unstructured.Unstructured{
+				"client_encryption_options": map[string]interface{}{
+					"enabled":             true,
+					"keystore_password":   "keystore-password",
+					"truststore_password": "truststore-password",
+				},
+			},
+			expected: unstructured.Unstructured{
+				"client_encryption_options": map[string]interface{}{
+					"enabled": true,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			template := &DatacenterConfig{
+				CassandraConfig: api.CassandraConfig{CassandraYaml: *tt.input.DeepCopy()},
+			}
+
+			removeEncryptionPasswordFields(template, "client_encryption_options")
+
+			require.Equal(t, tt.expected, template.CassandraConfig.CassandraYaml)
+		})
+	}
+}
+
+func TestHandleEncryptionOptionsModes(t *testing.T) {
+	tests := []struct {
+		name                   string
+		clientEncryption       bool
+		serverEncryption       bool
+		externalSecrets        bool
+		expectedPasswordFiles  []string
+		expectCassandraEnvVars bool
+	}{
+		{
+			name:                   "client encryption",
+			clientEncryption:       true,
+			expectedPasswordFiles:  []string{clientKeystorePasswordFileName, clientTruststorePasswordFileName},
+			expectCassandraEnvVars: true,
+		},
+		{
+			name:                  "server encryption",
+			serverEncryption:      true,
+			expectedPasswordFiles: []string{serverKeystorePasswordFileName, serverTruststorePasswordFileName},
+		},
+		{
+			name:                   "client and server encryption",
+			clientEncryption:       true,
+			serverEncryption:       true,
+			expectedPasswordFiles:  []string{clientKeystorePasswordFileName, clientTruststorePasswordFileName, serverKeystorePasswordFileName, serverTruststorePasswordFileName},
+			expectCassandraEnvVars: true,
+		},
+		{
+			name:             "external secrets bypass",
+			clientEncryption: true,
+			serverEncryption: true,
+			externalSecrets:  true,
+		},
+		{
+			name: "no encryption",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			template := newTestEncryptionDatacenterConfig(tt.clientEncryption, tt.serverEncryption)
+			template.ExternalSecrets = tt.externalSecrets
+
+			err := HandleEncryptionOptions(template, "client-image")
+
+			require.NoError(t, err)
+			if tt.externalSecrets || (!tt.clientEncryption && !tt.serverEncryption) {
+				require.Empty(t, template.PodTemplateSpec.Spec.Volumes)
+				require.Empty(t, template.PodTemplateSpec.Spec.InitContainers)
+				if tt.externalSecrets {
+					require.Contains(t, template.CassandraConfig.JvmOptions.AdditionalOptions, "-Dcom.sun.management.jmxremote.ssl=true")
+				}
+				return
+			}
+
+			passwordVolume := requireVolume(t, template.PodTemplateSpec.Spec.Volumes, encryptionPasswordsVolumeName)
+			require.NotNil(t, passwordVolume.Projected)
+			require.Len(t, passwordVolume.Projected.Sources, len(tt.expectedPasswordFiles))
+			actualPasswordFiles := make([]string, 0, len(passwordVolume.Projected.Sources))
+			for _, source := range passwordVolume.Projected.Sources {
+				require.NotNil(t, source.Secret)
+				require.Len(t, source.Secret.Items, 1)
+				actualPasswordFiles = append(actualPasswordFiles, source.Secret.Items[0].Path)
+			}
+			require.ElementsMatch(t, tt.expectedPasswordFiles, actualPasswordFiles)
+
+			require.Len(t, template.PodTemplateSpec.Spec.InitContainers, 2)
+			require.Equal(t, reconciliation.ServerConfigContainerName, template.PodTemplateSpec.Spec.InitContainers[0].Name)
+			passwordInit := template.PodTemplateSpec.Spec.InitContainers[1]
+			require.Equal(t, encryptionPasswordInitContainer, passwordInit.Name)
+			require.Equal(t, "client-image", passwordInit.Image)
+			require.Equal(t, resource.MustParse("10m"), *passwordInit.Resources.Requests.Cpu())
+			require.Equal(t, resource.MustParse("16Mi"), *passwordInit.Resources.Requests.Memory())
+			require.Equal(t, resource.MustParse("100m"), *passwordInit.Resources.Limits.Cpu())
+			require.Equal(t, resource.MustParse("64Mi"), *passwordInit.Resources.Limits.Memory())
+			require.Contains(t, passwordInit.VolumeMounts, corev1.VolumeMount{
+				Name:      encryptionPasswordsVolumeName,
+				MountPath: encryptionPasswordsMountPath,
+				ReadOnly:  true,
+			})
+			for _, passwordFile := range tt.expectedPasswordFiles {
+				require.Contains(t, passwordInit.Command[2], encryptionPasswordsMountPath+"/"+passwordFile)
+			}
+
+			cassandraContainer := requireContainer(t, template.PodTemplateSpec.Spec.Containers, reconciliation.CassandraContainerName)
+			if tt.expectCassandraEnvVars {
+				require.NotNil(t, requireEnvVar(t, cassandraContainer.Env, clientKeystorePasswordEnvName).ValueFrom)
+				require.NotNil(t, requireEnvVar(t, cassandraContainer.Env, clientTruststorePasswordEnvName).ValueFrom)
+			} else {
+				require.Empty(t, cassandraContainer.Env)
+			}
+
+			renderedConfig, err := json.Marshal(template)
+			require.NoError(t, err)
+			require.NotContains(t, string(renderedConfig), "plaintext-password")
+		})
+	}
+}
+
+func TestHandleEncryptionOptionsRequiresPasswordInitImage(t *testing.T) {
+	template := newTestEncryptionDatacenterConfig(true, false)
+
+	err := HandleEncryptionOptions(template, "")
+
+	require.EqualError(t, err, "encryption password init container image must not be empty")
+}
+
+func TestHandleEncryptionOptionsRejectsInvalidServerStores(t *testing.T) {
+	template := newTestEncryptionDatacenterConfig(false, true)
+	template.ServerEncryptionStores.TruststoreSecretRef = nil
+
+	err := HandleEncryptionOptions(template, "client-image")
+
+	require.EqualError(t, err, "truststore secret ref is required when EncryptionStores is used")
+}
+
+func TestHandleEncryptionOptionsIsIdempotent(t *testing.T) {
+	template := newTestEncryptionDatacenterConfig(true, true)
+
+	require.NoError(t, HandleEncryptionOptions(template, "client-image"))
+	require.NoError(t, HandleEncryptionOptions(template, "client-image"))
+
+	require.Len(t, template.PodTemplateSpec.Spec.Volumes, 5)
+	require.Len(t, template.PodTemplateSpec.Spec.InitContainers, 2)
+	cassandraContainer := requireContainer(t, template.PodTemplateSpec.Spec.Containers, reconciliation.CassandraContainerName)
+	require.Equal(t, 1, countEnvVars(cassandraContainer.Env, clientKeystorePasswordEnvName))
+	require.Equal(t, 1, countEnvVars(cassandraContainer.Env, clientTruststorePasswordEnvName))
+	require.Equal(t, 1, countEnvVars(cassandraContainer.Env, "JAVA_TOOL_OPTIONS"))
+	require.Equal(t, 1, countStrings(template.CassandraConfig.JvmOptions.AdditionalOptions, "-Dcom.sun.management.jmxremote.ssl=true"))
+	require.Equal(t, 1, countStrings(template.CassandraConfig.JvmOptions.AdditionalOptions, "-Dcom.sun.management.jmxremote.ssl.need.client.auth=true"))
+}
+
+func TestHandleEncryptionOptionsPreservesJavaToolOptionsAndReplacesPasswordEnv(t *testing.T) {
+	template := newTestEncryptionDatacenterConfig(true, false)
+	template.PodTemplateSpec.Spec.Containers = []corev1.Container{{
+		Name: reconciliation.CassandraContainerName,
+		Env: []corev1.EnvVar{
+			{Name: "EXISTING", Value: "value"},
+			{Name: clientKeystorePasswordEnvName, Value: "old-keystore-password"},
+			{Name: clientTruststorePasswordEnvName, Value: "old-truststore-password"},
+			{Name: "JAVA_TOOL_OPTIONS", Value: " -Dfoo=bar "},
+		},
+	}}
+
+	require.NoError(t, HandleEncryptionOptions(template, "client-image"))
+
+	cassandraContainer := requireContainer(t, template.PodTemplateSpec.Spec.Containers, reconciliation.CassandraContainerName)
+	require.Contains(t, cassandraContainer.Env, corev1.EnvVar{Name: "EXISTING", Value: "value"})
+	require.Equal(t, 1, countEnvVars(cassandraContainer.Env, clientKeystorePasswordEnvName))
+	require.Equal(t, 1, countEnvVars(cassandraContainer.Env, clientTruststorePasswordEnvName))
+	javaToolOptions := requireEnvVar(t, cassandraContainer.Env, "JAVA_TOOL_OPTIONS")
+	require.Equal(
+		t,
+		"-Dfoo=bar -Djavax.net.ssl.keyStorePassword=$(K8SSANDRA_CLIENT_KEYSTORE_PASSWORD) -Djavax.net.ssl.trustStorePassword=$(K8SSANDRA_CLIENT_TRUSTSTORE_PASSWORD)",
+		javaToolOptions.Value,
+	)
+}
+
+func TestHandleEncryptionOptionsRejectsJavaToolOptionsValueFrom(t *testing.T) {
+	template := newTestEncryptionDatacenterConfig(true, false)
+	template.PodTemplateSpec.Spec.Containers = []corev1.Container{{
+		Name: reconciliation.CassandraContainerName,
+		Env: []corev1.EnvVar{{
+			Name: "JAVA_TOOL_OPTIONS",
+			ValueFrom: &corev1.EnvVarSource{
+				ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: "java-options"},
+					Key:                  "options",
+				},
+			},
+		}},
+	}}
+
+	err := HandleEncryptionOptions(template, "client-image")
+
+	require.EqualError(t, err, "cassandra container JAVA_TOOL_OPTIONS cannot use valueFrom when client encryption is enabled")
+}
+
+func TestEncryptionPasswordHelpersRejectMissingSelectors(t *testing.T) {
+	template := &DatacenterConfig{ClientEncryptionStores: &encryption.Stores{}}
+
+	err := addEncryptionPasswordInjection(template, "client-image", true, false)
+	require.EqualError(t, err, "password Secret reference for client-keystore-password is required")
+
+	err = addJmxPasswordEnvironment(template)
+	require.EqualError(t, err, "client encryption password Secret references are required")
+}
+
+func TestValidateEncryptionStoresSecrets(t *testing.T) {
+	ctx := context.Background()
+	datacenterKey := types.NamespacedName{Namespace: "test", Name: "dc1"}
+	logger := logr.Discard()
+
+	t.Run("external secrets bypass", func(t *testing.T) {
+		template := newTestEncryptionDatacenterConfig(true, true)
+		template.ExternalSecrets = true
+
+		err := ValidateEncryptionStoresSecrets(ctx, datacenterKey, template, fake.NewClientBuilder().Build(), logger)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("client encryption succeeds", func(t *testing.T) {
+		template := newTestEncryptionDatacenterConfig(true, false)
+		client := fake.NewClientBuilder().WithObjects(
+			newEncryptionPasswordSecret("test", "client-keystore-secret", "keystore-password"),
+			newEncryptionPasswordSecret("test", "client-truststore-secret", "truststore-password"),
+		).Build()
+
+		err := ValidateEncryptionStoresSecrets(ctx, datacenterKey, template, client, logger)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("client keystore secret is missing", func(t *testing.T) {
+		template := newTestEncryptionDatacenterConfig(true, false)
+
+		err := ValidateEncryptionStoresSecrets(ctx, datacenterKey, template, fake.NewClientBuilder().Build(), logger)
+
+		require.ErrorContains(t, err, "client-keystore-secret")
+	})
+
+	t.Run("client truststore secret is missing", func(t *testing.T) {
+		template := newTestEncryptionDatacenterConfig(true, false)
+		client := fake.NewClientBuilder().WithObjects(
+			newEncryptionPasswordSecret("test", "client-keystore-secret", "keystore-password"),
+		).Build()
+
+		err := ValidateEncryptionStoresSecrets(ctx, datacenterKey, template, client, logger)
+
+		require.ErrorContains(t, err, "client-truststore-secret")
+	})
+
+	t.Run("client password key is missing", func(t *testing.T) {
+		template := newTestEncryptionDatacenterConfig(true, false)
+		client := fake.NewClientBuilder().WithObjects(
+			newEncryptionPasswordSecret("test", "client-keystore-secret", "wrong-key"),
+		).Build()
+
+		err := ValidateEncryptionStoresSecrets(ctx, datacenterKey, template, client, logger)
+
+		require.ErrorContains(t, err, `missing required key "keystore-password"`)
+	})
+
+	t.Run("client stores are invalid", func(t *testing.T) {
+		template := newTestEncryptionDatacenterConfig(true, false)
+		template.ClientEncryptionStores.TruststoreSecretRef = nil
+
+		err := ValidateEncryptionStoresSecrets(ctx, datacenterKey, template, fake.NewClientBuilder().Build(), logger)
+
+		require.EqualError(t, err, "truststore secret ref is required when EncryptionStores is used")
+	})
+
+	t.Run("server encryption succeeds", func(t *testing.T) {
+		template := newTestEncryptionDatacenterConfig(false, true)
+		client := fake.NewClientBuilder().WithObjects(
+			newEncryptionPasswordSecret("test", "server-keystore-secret", "keystore-password"),
+			newEncryptionPasswordSecret("test", "server-truststore-secret", "truststore-password"),
+		).Build()
+
+		err := ValidateEncryptionStoresSecrets(ctx, datacenterKey, template, client, logger)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("server keystore secret is missing", func(t *testing.T) {
+		template := newTestEncryptionDatacenterConfig(false, true)
+
+		err := ValidateEncryptionStoresSecrets(ctx, datacenterKey, template, fake.NewClientBuilder().Build(), logger)
+
+		require.ErrorContains(t, err, "server-keystore-secret")
+	})
+
+	t.Run("server truststore secret is missing", func(t *testing.T) {
+		template := newTestEncryptionDatacenterConfig(false, true)
+		client := fake.NewClientBuilder().WithObjects(
+			newEncryptionPasswordSecret("test", "server-keystore-secret", "keystore-password"),
+		).Build()
+
+		err := ValidateEncryptionStoresSecrets(ctx, datacenterKey, template, client, logger)
+
+		require.ErrorContains(t, err, "server-truststore-secret")
+	})
+
+	t.Run("server stores are invalid", func(t *testing.T) {
+		template := newTestEncryptionDatacenterConfig(false, true)
+		template.ServerEncryptionStores.TruststoreSecretRef = nil
+
+		err := ValidateEncryptionStoresSecrets(ctx, datacenterKey, template, fake.NewClientBuilder().Build(), logger)
+
+		require.EqualError(t, err, "truststore secret ref is required when EncryptionStores is used")
+	})
+}
+
+func TestValidateEncryptionStorePasswordRejectsMissingSelector(t *testing.T) {
+	err := validateEncryptionStorePassword(
+		context.Background(),
+		"default",
+		fake.NewClientBuilder().Build(),
+		&encryption.Stores{},
+		encryption.StoreNameKeystore,
+	)
+
+	require.EqualError(t, err, "password Secret reference for keystore is required")
+}
+
+func newTestEncryptionDatacenterConfig(clientEncryption, serverEncryption bool) *DatacenterConfig {
+	clientOptions := map[string]interface{}{
+		"enabled": clientEncryption,
+	}
+	if clientEncryption {
+		clientOptions["keystore_password"] = "plaintext-password"
+		clientOptions["truststore_password"] = "plaintext-password"
+	}
+	serverOptions := map[string]interface{}{
+		"internode_encryption": "none",
+	}
+	if serverEncryption {
+		serverOptions["internode_encryption"] = "all"
+		serverOptions["keystore_password"] = "plaintext-password"
+		serverOptions["truststore_password"] = "plaintext-password"
+	}
+	cassandraYaml := unstructured.Unstructured{
+		"client_encryption_options": clientOptions,
+		"server_encryption_options": serverOptions,
+	}
+	template := &DatacenterConfig{
+		CassandraConfig: api.CassandraConfig{CassandraYaml: cassandraYaml},
+	}
+	if clientEncryption {
+		template.ClientEncryptionStores = newTestEncryptionStores("client")
+	}
+	if serverEncryption {
+		template.ServerEncryptionStores = newTestEncryptionStores("server")
+	}
+	return template
+}
+
+func newTestEncryptionStores(prefix string) *encryption.Stores {
+	return &encryption.Stores{
+		KeystoreSecretRef: &encryption.SecretKeySelector{
+			LocalObjectReference: corev1.LocalObjectReference{Name: prefix + "-keystore-secret"},
+		},
+		TruststoreSecretRef: &encryption.SecretKeySelector{
+			LocalObjectReference: corev1.LocalObjectReference{Name: prefix + "-truststore-secret"},
+		},
+	}
+}
+
+func newEncryptionPasswordSecret(namespace, name, key string) *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name},
+		Data:       map[string][]byte{key: []byte("password")},
+	}
+}
+
+func requireVolume(t *testing.T, volumes []corev1.Volume, name string) corev1.Volume {
+	t.Helper()
+	for _, volume := range volumes {
+		if volume.Name == name {
+			return volume
+		}
+	}
+	require.FailNow(t, "volume not found", name)
+	return corev1.Volume{}
+}
+
+func requireContainer(t *testing.T, containers []corev1.Container, name string) corev1.Container {
+	t.Helper()
+	for _, container := range containers {
+		if container.Name == name {
+			return container
+		}
+	}
+	require.FailNow(t, "container not found", name)
+	return corev1.Container{}
+}
+
+func requireEnvVar(t *testing.T, envVars []corev1.EnvVar, name string) corev1.EnvVar {
+	t.Helper()
+	for _, envVar := range envVars {
+		if envVar.Name == name {
+			return envVar
+		}
+	}
+	require.FailNow(t, "environment variable not found", name)
+	return corev1.EnvVar{}
+}
+
+func countEnvVars(envVars []corev1.EnvVar, name string) int {
+	count := 0
+	for _, envVar := range envVars {
+		if envVar.Name == name {
+			count++
+		}
+	}
+	return count
+}
+
+func countStrings(values []string, expected string) int {
+	count := 0
+	for _, value := range values {
+		if value == expected {
+			count++
+		}
+	}
+	return count
 }

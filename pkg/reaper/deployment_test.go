@@ -17,6 +17,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,6 +46,151 @@ func expectedClientEncryptionEnv() []corev1.EnvVar {
 			Value: "-Djavax.net.ssl.keyStore=/mnt/client-keystore/keystore -Djavax.net.ssl.keyStorePassword=$(REAPER_CASS_CLIENT_KEYSTORE_PASSWORD) -Djavax.net.ssl.trustStore=/mnt/client-truststore/truststore -Djavax.net.ssl.trustStorePassword=$(REAPER_CASS_CLIENT_TRUSTSTORE_PASSWORD) -Dssl.enable=true -Ddatastax-java-driver.advanced.ssl-engine-factory.class=com.datastax.oss.driver.internal.core.ssl.DefaultSslEngineFactory -Ddatastax-java-driver.advanced.ssl-engine-factory.hostname-validation=false",
 		},
 	}
+}
+
+func TestConfigureClientEncryption(t *testing.T) {
+	selector := func(name, key string) *encryption.SecretKeySelector {
+		return &encryption.SecretKeySelector{
+			LocalObjectReference: corev1.LocalObjectReference{Name: name},
+			Key:                  key,
+		}
+	}
+
+	tests := []struct {
+		name                    string
+		stores                  *encryption.Stores
+		externalSecrets         bool
+		expectedKeystoreSecret  string
+		expectedKeystoreKey     string
+		expectedTruststoreStore string
+		expectedTruststoreKey   string
+		expectedEnabled         bool
+	}{
+		{
+			name: "default password selectors",
+			stores: &encryption.Stores{
+				KeystoreSecretRef:   selector("keystore-secret", "custom-keystore"),
+				TruststoreSecretRef: selector("truststore-secret", "custom-truststore"),
+			},
+			expectedKeystoreSecret:  "keystore-secret",
+			expectedKeystoreKey:     "keystore-password",
+			expectedTruststoreStore: "truststore-secret",
+			expectedTruststoreKey:   "truststore-password",
+			expectedEnabled:         true,
+		},
+		{
+			name: "dedicated password selectors",
+			stores: &encryption.Stores{
+				KeystoreSecretRef:           selector("keystore-secret", ""),
+				TruststoreSecretRef:         selector("truststore-secret", ""),
+				KeystorePasswordRef:         selector("keystore-passwords", "custom-keystore-password"),
+				TruststorePasswordSecretRef: selector("truststore-passwords", "custom-truststore-password"),
+			},
+			expectedKeystoreSecret:  "keystore-passwords",
+			expectedKeystoreKey:     "custom-keystore-password",
+			expectedTruststoreStore: "truststore-passwords",
+			expectedTruststoreKey:   "custom-truststore-password",
+			expectedEnabled:         true,
+		},
+		{
+			name: "external secrets bypass",
+			stores: &encryption.Stores{
+				KeystoreSecretRef:   selector("keystore-secret", ""),
+				TruststoreSecretRef: selector("truststore-secret", ""),
+			},
+			externalSecrets: true,
+		},
+		{
+			name: "missing keystore selector",
+			stores: &encryption.Stores{
+				TruststoreSecretRef: selector("truststore-secret", ""),
+			},
+		},
+		{
+			name: "missing truststore selector",
+			stores: &encryption.Stores{
+				KeystoreSecretRef: selector("keystore-secret", ""),
+			},
+		},
+		{
+			name: "nil stores",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reaper := newTestReaper()
+			reaper.Spec.ClientEncryptionStores = tt.stores
+			if tt.externalSecrets {
+				reaper.Spec.SecretsProvider = "external"
+			}
+			baseEnv := []corev1.EnvVar{{Name: "BASE_ENV", Value: "base"}}
+			baseVolumes := []corev1.Volume{{Name: "base-volume"}}
+			baseMounts := []corev1.VolumeMount{{Name: "base-volume", MountPath: "/base"}}
+
+			envVars, volumes, mounts := configureClientEncryption(reaper, baseEnv, baseVolumes, baseMounts)
+
+			if !tt.expectedEnabled {
+				assert.Equal(t, baseEnv, envVars)
+				assert.Equal(t, baseVolumes, volumes)
+				assert.Equal(t, baseMounts, mounts)
+				return
+			}
+
+			assert.Contains(t, volumes, corev1.Volume{
+				Name: "client-keystore",
+				VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{
+					SecretName: "keystore-secret",
+					Items: []corev1.KeyToPath{{
+						Key:  tt.stores.KeystoreSecretRef.GetSpecificKeyOrDefault("keystore"),
+						Path: "keystore",
+					}},
+				}},
+			})
+			assert.Contains(t, volumes, corev1.Volume{
+				Name: "client-truststore",
+				VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{
+					SecretName: "truststore-secret",
+					Items: []corev1.KeyToPath{{
+						Key:  tt.stores.TruststoreSecretRef.GetSpecificKeyOrDefault("truststore"),
+						Path: "truststore",
+					}},
+				}},
+			})
+			assert.Contains(t, mounts, corev1.VolumeMount{Name: "client-keystore", MountPath: "/mnt/client-keystore"})
+			assert.Contains(t, mounts, corev1.VolumeMount{Name: "client-truststore", MountPath: "/mnt/client-truststore"})
+
+			keystorePassword := requireEnvVar(t, envVars, reaperKeystorePasswordEnvName)
+			require.Empty(t, keystorePassword.Value)
+			require.NotNil(t, keystorePassword.ValueFrom)
+			require.Equal(t, tt.expectedKeystoreSecret, keystorePassword.ValueFrom.SecretKeyRef.Name)
+			require.Equal(t, tt.expectedKeystoreKey, keystorePassword.ValueFrom.SecretKeyRef.Key)
+
+			truststorePassword := requireEnvVar(t, envVars, reaperTruststorePasswordEnvName)
+			require.Empty(t, truststorePassword.Value)
+			require.NotNil(t, truststorePassword.ValueFrom)
+			require.Equal(t, tt.expectedTruststoreStore, truststorePassword.ValueFrom.SecretKeyRef.Name)
+			require.Equal(t, tt.expectedTruststoreKey, truststorePassword.ValueFrom.SecretKeyRef.Key)
+
+			javaOpts := requireEnvVar(t, envVars, "JAVA_OPTS")
+			require.Contains(t, javaOpts.Value, "$(REAPER_CASS_CLIENT_KEYSTORE_PASSWORD)")
+			require.Contains(t, javaOpts.Value, "$(REAPER_CASS_CLIENT_TRUSTSTORE_PASSWORD)")
+			require.NotContains(t, javaOpts.Value, tt.expectedKeystoreKey)
+			require.NotContains(t, javaOpts.Value, tt.expectedTruststoreKey)
+			require.Equal(t, "true", requireEnvVar(t, envVars, "REAPER_CASS_NATIVE_PROTOCOL_SSL_ENCRYPTION_ENABLED").Value)
+		})
+	}
+}
+
+func requireEnvVar(t *testing.T, envVars []corev1.EnvVar, name string) corev1.EnvVar {
+	t.Helper()
+	for _, envVar := range envVars {
+		if envVar.Name == name {
+			return envVar
+		}
+	}
+	require.FailNow(t, "environment variable not found", name)
+	return corev1.EnvVar{}
 }
 
 func TestNewDeployment(t *testing.T) {
