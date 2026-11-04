@@ -14,7 +14,7 @@ type Stores struct {
 
 	// ref to the secret that contains the truststore and optionally its password (which can also be specified through
 	//the truststorePasswordSecretRef field)
-	// if keys are not specified explicitly, "truststore" entry and a "truststore-password" entry will be used
+	// if keys are not specified explicitly, "keystore" entry and a "keystore-password" entry will be used
 	// +kubebuilder:validation:Required
 	TruststoreSecretRef *SecretKeySelector `json:"truststoreSecretRef"`
 
