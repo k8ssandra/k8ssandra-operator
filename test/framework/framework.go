@@ -152,6 +152,11 @@ func (f *Framework) getRemoteClient(k8sContext string) (client.Client, error) {
 	return remoteClient, nil
 }
 
+// GetClient returns the client for the cluster specified by k8sContext.
+func (f *Framework) GetClient(k8sContext string) (client.Client, error) {
+	return f.getRemoteClient(k8sContext)
+}
+
 // Get fetches the object specified by key from the cluster specified by key. An error is
 // returned is ClusterKey.K8sContext is not set or if there is no corresponding client.
 func (f *Framework) Get(ctx context.Context, key ClusterKey, obj client.Object) error {
