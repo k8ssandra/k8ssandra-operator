@@ -337,3 +337,66 @@ func testCheckDeletion(t *testing.T, ctx context.Context, f *framework.Framework
 		require.True(c, errors.IsNotFound(err), "K8ssandraCluster should be deleted")
 	}, timeout, interval, "K8ssandraCluster should be deleted")
 }
+
+// TestCheckDeletionCleansUpStatusOnlyDatacenter verifies that deleting the K8ssandraCluster also deletes a datacenter
+// that was removed from the spec but whose decommission had not completed yet.
+func TestCheckDeletionCleansUpStatusOnlyDatacenter(t *testing.T) {
+	require.NoError(t, k8ssandraapi.AddToScheme(scheme.Scheme))
+	require.NoError(t, cassdcapi.AddToScheme(scheme.Scheme))
+	require.NoError(t, reaperapi.AddToScheme(scheme.Scheme))
+
+	ctx := context.Background()
+	logger := testlogr.NewTestLogger(t)
+	now := metav1.Now()
+
+	kc := &k8ssandraapi.K8ssandraCluster{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "test",
+			Namespace:         "test-namespace",
+			DeletionTimestamp: &now,
+			Finalizers:        []string{k8ssandra.K8ssandraClusterFinalizer},
+		},
+		Spec: k8ssandraapi.K8ssandraClusterSpec{
+			Cassandra: &k8ssandraapi.CassandraClusterTemplate{
+				Datacenters: []k8ssandraapi.CassandraDatacenterTemplate{{Meta: k8ssandraapi.EmbeddedObjectMeta{Name: "dc1"}}},
+			},
+		},
+		Status: k8ssandraapi.K8ssandraClusterStatus{
+			Datacenters: map[string]k8ssandraapi.K8ssandraStatus{
+				"dc1": {ContextName: "default"},
+				"dc2": {ContextName: "default", DecommissionProgress: k8ssandraapi.DecommUpdatingReplication},
+			},
+		},
+	}
+	// dc2 lives in another namespace, it can only be found through its labels
+	dc2 := &cassdcapi.CassandraDatacenter{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "dc2",
+			Namespace:  "other-namespace",
+			Labels:     k8ssandralabels.CleanedUpByLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}),
+			Finalizers: []string{k8ssandra.K8ssandraClusterFinalizer},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(kc, dc2).Build()
+	clientCache := clientcache.New(fakeClient, fakeClient, scheme.Scheme)
+	clientCache.AddClient("default", fakeClient)
+	reconciler := &K8ssandraClusterReconciler{
+		ReconcilerConfig: &config.ReconcilerConfig{DefaultDelay: time.Second},
+		Client:           fakeClient,
+		Scheme:           scheme.Scheme,
+		ClientCache:      clientCache,
+	}
+
+	res := reconciler.checkDeletion(ctx, kc, logger)
+	require.True(t, res.IsRequeue(), "should wait for the deletion of dc2")
+
+	err := fakeClient.Get(ctx, client.ObjectKeyFromObject(dc2), &cassdcapi.CassandraDatacenter{})
+	require.True(t, errors.IsNotFound(err), "dc2 should be deleted")
+
+	// Once dc2 is gone, the finalizer is removed
+	res = reconciler.checkDeletion(ctx, kc, logger)
+	require.False(t, res.IsError())
+	require.False(t, res.IsRequeue())
+	require.NotContains(t, kc.Finalizers, k8ssandra.K8ssandraClusterFinalizer)
+}

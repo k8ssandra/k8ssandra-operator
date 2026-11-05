@@ -3,6 +3,7 @@ package k8ssandra
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -36,9 +37,9 @@ func (r *K8ssandraClusterReconciler) checkDeletion(ctx context.Context, kc *k8ss
 
 	logger.Info("Starting deletion")
 
-	hasErrors := false
+	dcTemplates, hasErrors := r.datacentersForDeletion(ctx, kc, logger)
 
-	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
+	for _, dcTemplate := range dcTemplates {
 		namespace := utils.FirstNonEmptyString(dcTemplate.Meta.Namespace, kc.Namespace)
 
 		remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext)
@@ -85,6 +86,57 @@ func (r *K8ssandraClusterReconciler) checkDeletion(ctx context.Context, kc *k8ss
 	}
 
 	return result.Done()
+}
+
+// datacentersForDeletion returns the datacenters to clean up when the K8ssandraCluster is deleted. That includes the
+// datacenters of the spec, and those that were removed from the spec but are still in the status, because their
+// decommission has not completed yet. For the latter, the namespace is looked up from the CassandraDatacenter.
+// The returned boolean is true if some datacenter could not be looked up.
+func (r *K8ssandraClusterReconciler) datacentersForDeletion(ctx context.Context, kc *k8ssandraapi.K8ssandraCluster, logger logr.Logger) ([]k8ssandraapi.CassandraDatacenterTemplate, bool) {
+	dcTemplates := make([]k8ssandraapi.CassandraDatacenterTemplate, 0, len(kc.Spec.Cassandra.Datacenters))
+	dcTemplates = append(dcTemplates, kc.Spec.Cassandra.Datacenters...)
+
+	statusOnlyDcs := make([]string, 0)
+	for dcName := range kc.Status.Datacenters {
+		inSpec := false
+		for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
+			if dcTemplate.Meta.Name == dcName {
+				inSpec = true
+				break
+			}
+		}
+		if !inSpec {
+			statusOnlyDcs = append(statusOnlyDcs, dcName)
+		}
+	}
+	sort.Strings(statusOnlyDcs)
+
+	hasErrors := false
+	for _, dcName := range statusOnlyDcs {
+		contextName := kc.Status.Datacenters[dcName].ContextName
+		remoteClient, err := r.ClientCache.GetRemoteClient(contextName)
+		if err != nil {
+			logger.Error(err, "Failed to get remote client", "Context", contextName)
+			hasErrors = true
+			continue
+		}
+		dc, err := r.findDcForDeletion(ctx, utils.GetKey(kc), dcName, remoteClient)
+		if err != nil {
+			logger.Error(err, "Failed to find CassandraDatacenter for deletion", "CassandraDatacenter", dcName, "Context", contextName)
+			hasErrors = true
+			continue
+		}
+		if dc == nil {
+			continue
+		}
+		logger.Info("Deleting datacenter that is not in the spec anymore", "CassandraDatacenter", utils.GetKey(dc), "Context", contextName)
+		dcTemplates = append(dcTemplates, k8ssandraapi.CassandraDatacenterTemplate{
+			Meta:       k8ssandraapi.EmbeddedObjectMeta{Name: dc.Name, Namespace: dc.Namespace},
+			K8sContext: contextName,
+		})
+	}
+
+	return dcTemplates, hasErrors
 }
 
 // checkFinalizer ensures that the K8ssandraCluster has a finalizer.

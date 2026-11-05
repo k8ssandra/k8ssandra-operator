@@ -79,6 +79,10 @@ func deleteDcWithUserKeyspacesFails(ctx context.Context, t *testing.T, f *framew
 		}
 		return strings.Contains(kc.Status.Error, "cannot decommission DC dc2")
 	}, timeout, interval, "expected error on dc2 removal not found")
+
+	// dc2 is still being decommissioned, so deleting the K8ssandraCluster also deletes it. Remove the finalizer that
+	// simulates cass-operator, as cass-operator would once dc2 is deleted, so that the deletion can complete.
+	finishDatacenterDecommission(ctx, t, f, dc2Key)
 }
 
 func deleteDcWithUserKeyspacesSucceeds(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
