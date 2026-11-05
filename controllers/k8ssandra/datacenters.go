@@ -175,11 +175,10 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 
 			if !annotations.CompareHashAnnotations(actualDc, desiredDc) && !AllowUpdate(kc) {
 				logger.Info("Datacenter requires an update, but we're not allowed to do it", "CassandraDatacenter", dcKey)
-				// We're not allowed to update, but need to
-				patch := client.MergeFrom(kc.DeepCopy())
-				kc.Status.SetConditionStatus(api.ClusterRequiresUpdate, corev1.ConditionTrue)
-				if err := r.Client.Status().Patch(ctx, kc, patch); err != nil {
-					return result.Error(fmt.Errorf("failed to set %s condition: %v", api.ClusterRequiresUpdate, err)), actualDcs
+				// We're not allowed to update, but need to. The condition is persisted with the rest of the status at the
+				// end of the reconcile. Patching it here would replace the in-memory status with the stored one.
+				if kc.Status.GetConditionStatus(api.ClusterRequiresUpdate) != corev1.ConditionTrue {
+					kc.Status.SetConditionStatus(api.ClusterRequiresUpdate, corev1.ConditionTrue)
 				}
 			} else if !annotations.CompareHashAnnotations(actualDc, desiredDc) {
 				if actualDc.Spec.SuperuserSecretName != desiredDc.Spec.SuperuserSecretName {
@@ -410,7 +409,7 @@ func (r *K8ssandraClusterReconciler) checkRebuildAnnotation(ctx context.Context,
 	if !annotations.HasAnnotationWithValue(kc, api.RebuildDcAnnotation, dcName) && datacenterAddedToExistingCluster(kc, dcName) {
 		patch := client.MergeFromWithOptions(kc.DeepCopy())
 		annotations.AddAnnotation(kc, api.RebuildDcAnnotation, dcName)
-		if err := r.Patch(ctx, kc, patch); err != nil {
+		if err := r.patchPreservingStatus(ctx, kc, patch); err != nil {
 			return result.Error(fmt.Errorf("failed to add rebuild annotation: %v", err))
 		}
 	}
@@ -567,9 +566,19 @@ func dcUpgradePriority(dc *cassandra.DatacenterConfig) int {
 func (r *K8ssandraClusterReconciler) removeRebuildDcAnnotation(kc *api.K8ssandraCluster, ctx context.Context) result.ReconcileResult {
 	patch := client.MergeFrom(kc.DeepCopy())
 	delete(kc.Annotations, api.RebuildDcAnnotation)
-	if err := r.Patch(ctx, kc, patch); err != nil {
+	if err := r.patchPreservingStatus(ctx, kc, patch); err != nil {
 		err = fmt.Errorf("failed to remove %s annotation: %v", api.RebuildDcAnnotation, err)
 		return result.Error(err)
 	}
 	return result.Continue()
+}
+
+// patchPreservingStatus patches the main resource of the K8ssandraCluster. The client decodes the server response into kc,
+// which would replace the in-memory status changes of the current reconcile with the stored status. Those are restored
+// after the patch, so that they are written by the status update at the end of the reconcile.
+func (r *K8ssandraClusterReconciler) patchPreservingStatus(ctx context.Context, kc *api.K8ssandraCluster, patch client.Patch) error {
+	status := kc.Status.DeepCopy()
+	err := r.Patch(ctx, kc, patch)
+	kc.Status = *status
+	return err
 }

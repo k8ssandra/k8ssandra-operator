@@ -237,12 +237,18 @@ func updateStatus(ctx context.Context, r client.Client, kc *api.K8ssandraCluster
 		if metav1.HasAnnotation(kc.ObjectMeta, api.AutomatedUpdateAnnotation) {
 			if kc.Annotations[api.AutomatedUpdateAnnotation] == string(api.AllowUpdateOnce) {
 				delete(kc.Annotations, api.AutomatedUpdateAnnotation)
-				if err := r.Update(ctx, kc); err != nil {
+				// The client decodes the server response into kc, keep the in-memory status of this reconcile
+				status := kc.Status.DeepCopy()
+				err := r.Update(ctx, kc)
+				kc.Status = *status
+				if err != nil {
 					return result.Error(err)
 				}
 			}
 		}
-		kc.Status.SetConditionStatus(api.ClusterRequiresUpdate, corev1.ConditionFalse)
+		if kc.Status.GetConditionStatus(api.ClusterRequiresUpdate) != corev1.ConditionFalse {
+			kc.Status.SetConditionStatus(api.ClusterRequiresUpdate, corev1.ConditionFalse)
+		}
 	}
 
 	kc.Status.ObservedGeneration = kc.Generation

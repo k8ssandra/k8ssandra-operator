@@ -169,3 +169,72 @@ func TestDatacentersByTemplate(t *testing.T) {
 	_, err = datacentersByTemplate(kc, dcs[:1])
 	require.Error(t, err)
 }
+
+// TestMidPassWritesPreserveInMemoryStatus verifies that writes to the main K8ssandraCluster resource during a
+// reconcile do not replace the in-memory status with the stored one.
+func TestMidPassWritesPreserveInMemoryStatus(t *testing.T) {
+	s := newUnitTestScheme(t)
+	ctx := context.Background()
+
+	newKc := func() *api.K8ssandraCluster {
+		return &api.K8ssandraCluster{
+			ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "ns"},
+			Spec: api.K8ssandraClusterSpec{
+				Cassandra: &api.CassandraClusterTemplate{
+					Datacenters: []api.CassandraDatacenterTemplate{
+						{Meta: api.EmbeddedObjectMeta{Name: "dc1"}},
+						{Meta: api.EmbeddedObjectMeta{Name: "dc2"}},
+					},
+				},
+			},
+			Status: api.K8ssandraClusterStatus{
+				Datacenters: map[string]api.K8ssandraStatus{"dc1": {ContextName: "old"}},
+			},
+		}
+	}
+
+	setup := func(t *testing.T, kc *api.K8ssandraCluster) (*K8ssandraClusterReconciler, *api.K8ssandraCluster) {
+		c := fake.NewClientBuilder().WithScheme(s).WithObjects(kc).WithStatusSubresource(&api.K8ssandraCluster{}).Build()
+		r := &K8ssandraClusterReconciler{
+			ReconcilerConfig: &config.ReconcilerConfig{DefaultDelay: time.Second},
+			Client:           c,
+			Scheme:           s,
+		}
+		actual := &api.K8ssandraCluster{}
+		require.NoError(t, c.Get(ctx, client.ObjectKeyFromObject(kc), actual))
+		// This reconcile's in-memory status change
+		actual.Status.Datacenters["dc1"] = api.K8ssandraStatus{ContextName: "fresh"}
+		return r, actual
+	}
+
+	t.Run("checkRebuildAnnotation", func(t *testing.T) {
+		r, kc := setup(t, newKc())
+		res := r.checkRebuildAnnotation(ctx, kc, "dc2")
+		require.False(t, res.IsError())
+		require.Equal(t, "dc2", kc.Annotations[api.RebuildDcAnnotation])
+		require.Equal(t, "fresh", kc.Status.Datacenters["dc1"].ContextName)
+	})
+
+	t.Run("removeRebuildDcAnnotation", func(t *testing.T) {
+		kc := newKc()
+		kc.Annotations = map[string]string{api.RebuildDcAnnotation: "dc2"}
+		r, kc := setup(t, kc)
+		res := r.removeRebuildDcAnnotation(kc, ctx)
+		require.False(t, res.IsError())
+		require.NotContains(t, kc.Annotations, api.RebuildDcAnnotation)
+		require.Equal(t, "fresh", kc.Status.Datacenters["dc1"].ContextName)
+	})
+
+	t.Run("updateStatus", func(t *testing.T) {
+		kc := newKc()
+		kc.Annotations = map[string]string{api.AutomatedUpdateAnnotation: string(api.AllowUpdateOnce)}
+		r, kc := setup(t, kc)
+		res := updateStatus(ctx, r.Client, kc)
+		require.False(t, res.IsError())
+
+		stored := &api.K8ssandraCluster{}
+		require.NoError(t, r.Get(ctx, client.ObjectKeyFromObject(kc), stored))
+		require.NotContains(t, stored.Annotations, api.AutomatedUpdateAnnotation)
+		require.Equal(t, "fresh", stored.Status.Datacenters["dc1"].ContextName)
+	})
+}
