@@ -442,7 +442,7 @@ func (r *K8ssandraClusterReconciler) reconcileDcRebuild(
 			return r.removeRebuildDcAnnotation(kc, ctx)
 		} else {
 			logger.Info("Waiting for datacenter rebuild to complete", "Task", taskKey)
-			return result.RequeueSoon(15)
+			return result.RequeueSoon(r.DefaultDelay)
 		}
 	} else {
 		if errors.IsNotFound(err) {
@@ -451,7 +451,7 @@ func (r *K8ssandraClusterReconciler) reconcileDcRebuild(
 				logger.Error(err, "Failed to create rebuild task", "Task", taskKey)
 				return result.Error(err)
 			}
-			return result.RequeueSoon(15)
+			return result.RequeueSoon(r.DefaultDelay)
 		}
 		logger.Error(err, "Failed to get rebuild task", "Task", taskKey)
 		return result.Error(err)
