@@ -316,7 +316,8 @@ func (r *K8ssandraClusterReconciler) createPurgeSchedule(ctx context.Context, re
 		},
 		Spec: medusaapi.MedusaBackupScheduleSpec{
 			BackupSpec: medusaapi.MedusaBackupJobSpec{
-				CassandraDatacenter: dc.DatacenterName(),
+				// The MedusaBackupSchedule controller looks up the CassandraDatacenter by its object name
+				CassandraDatacenter: dc.Name,
 			},
 			CronSchedule:  "0 0 * * *",
 			OperationType: string(medusaapi.OperationTypePurge),
