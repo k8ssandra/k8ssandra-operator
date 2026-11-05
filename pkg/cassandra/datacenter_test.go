@@ -1372,6 +1372,31 @@ func TestNewDatacenter_McacDisabled_Set(t *testing.T) {
 	assert.True(t, found, "could not find expected MCAC disabled environment variable")
 }
 
+func TestNewDatacenter_PromMetricsLabel_PrometheusEnabled(t *testing.T) {
+	template := GetDatacenterConfig()
+	template.McacEnabled = false
+	template.Telemetry = &telemetryapi.TelemetrySpec{
+		Prometheus: &telemetryapi.PrometheusTelemetrySpec{Enabled: ptr.To(true)},
+	}
+	dc, err := NewDatacenter(
+		types.NamespacedName{Name: "testdc", Namespace: "test-namespace"},
+		&template,
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, "true", dc.Spec.AdditionalServiceConfig.AllPodsService.Labels[cassdcapi.PromMetricsLabel])
+}
+
+func TestNewDatacenter_PromMetricsLabel_PrometheusDisabled(t *testing.T) {
+	template := GetDatacenterConfig()
+	template.McacEnabled = false
+	dc, err := NewDatacenter(
+		types.NamespacedName{Name: "testdc", Namespace: "test-namespace"},
+		&template,
+	)
+	assert.NoError(t, err)
+	assert.NotContains(t, dc.Spec.AdditionalServiceConfig.AllPodsService.Labels, cassdcapi.PromMetricsLabel)
+}
+
 func TestNewDatacenter_MgmtAPIHeapSize_Unset(t *testing.T) {
 	template := GetDatacenterConfig()
 	dc, err := NewDatacenter(
