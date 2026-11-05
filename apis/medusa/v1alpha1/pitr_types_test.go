@@ -21,7 +21,7 @@ func TestMedusaRestoreMappingPitrJSON(t *testing.T) {
 	m := MedusaRestoreMapping{
 		InPlace: &inPlace,
 		Pitr: &PitrRestoreBlock{
-			TargetTimestampS: 1700000000,
+			TargetTimestamp: 1700000000,
 			NodeBackups:      map[string]string{"node1": "backup1"},
 		},
 	}

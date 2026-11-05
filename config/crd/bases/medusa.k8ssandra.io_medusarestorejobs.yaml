@@ -127,14 +127,14 @@ spec:
                         description: NodeBackups maps each node to the name of the
                           base backup it restores from.
                         type: object
-                      target_timestamp_s:
-                        description: TargetTimestampS is the restore point, in whole
+                      target_timestamp:
+                        description: TargetTimestamp is the restore point, in whole
                           seconds since the Unix epoch.
                         format: int64
                         type: integer
                     required:
                     - node_backups
-                    - target_timestamp_s
+                    - target_timestamp
                     type: object
                 type: object
               restorePrepared:

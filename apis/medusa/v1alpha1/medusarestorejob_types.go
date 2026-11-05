@@ -96,8 +96,8 @@ type MedusaRestoreMapping struct {
 
 // PitrRestoreBlock describes a point-in-time restore for the nodes of a datacenter.
 type PitrRestoreBlock struct {
-	// TargetTimestampS is the restore point, in whole seconds since the Unix epoch.
-	TargetTimestampS int64 `json:"target_timestamp_s"`
+	// TargetTimestamp is the restore point, in whole seconds since the Unix epoch.
+	TargetTimestamp int64 `json:"target_timestamp"`
 
 	// NodeBackups maps each node to the name of the base backup it restores from.
 	NodeBackups map[string]string `json:"node_backups"`
