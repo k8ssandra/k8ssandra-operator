@@ -284,6 +284,7 @@ func main() {
 		Scheme:        mgr.GetScheme(),
 		Clock:         &medusactrl.RealClock{},
 		ImageRegistry: registry,
+		Recorder:      mgr.GetEventRecorder("medusabackupschedule-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "MedusaBackupSchedule")
 		os.Exit(1)

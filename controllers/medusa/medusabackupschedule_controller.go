@@ -24,9 +24,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -49,6 +51,8 @@ type MedusaBackupScheduleReconciler struct {
 	Scheme        *runtime.Scheme
 	Clock         Clock
 	ImageRegistry cassimages.ImageRegistry
+	// Recorder is optional. When set, an event is emitted when a scheduled execution is postponed.
+	Recorder events.EventRecorder
 }
 
 type RealClock struct{}
@@ -116,7 +120,12 @@ func (r *MedusaBackupScheduleReconciler) Reconcile(ctx context.Context, req ctrl
 				return ctrl.Result{}, err
 			} else {
 				if activeTasks > 0 {
-					logger.V(1).Info("Postponing backup schedule due to an unfinished existing job", "MedusaBackupSchedule", req.NamespacedName)
+					logger.Info("Postponing backup schedule due to an unfinished existing job", "MedusaBackupSchedule", req.NamespacedName, "ActiveJobs", activeTasks)
+					if r.Recorder != nil {
+						r.Recorder.Eventf(backupSchedule, nil, corev1.EventTypeNormal, "ExecutionPostponed", "PostponeExecution",
+							"Postponing scheduled execution: %d unfinished job(s) exist for datacenter %s and concurrencyPolicy is %s",
+							activeTasks, dc.Name, batchv1.ForbidConcurrent)
+					}
 					return ctrl.Result{RequeueAfter: 1 * time.Minute}, nil
 				}
 			}
