@@ -1,9 +1,10 @@
 package cassandra
 
 import (
+	"testing"
+
 	"github.com/Masterminds/semver/v3"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func Test_parseCassConfigTag(t *testing.T) {

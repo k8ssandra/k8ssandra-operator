@@ -111,6 +111,9 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster, dcConfig *cassandra.DatacenterCo
     {{- if .Spec.Medusa.StorageProperties.MultiPartUploadThreshold }}
     multi_part_upload_threshold = {{ .Spec.Medusa.StorageProperties.MultiPartUploadThreshold }}
     {{- end }}
+    {{- if .Spec.Medusa.StorageProperties.MultiPartChunkSize }}
+    multipart_chunksize = {{ .Spec.Medusa.StorageProperties.MultiPartChunkSize }}
+    {{- end }}
 
     [grpc]
     enabled = 1
@@ -387,7 +390,7 @@ func medusaVolumeMounts(dcConfig *cassandra.DatacenterConfig, medusaSpec *api.Me
 		})
 	}
 
-	// Mount secret with Medusa storage backend credentials if the secret ref is provided.
+	// Mount replicated secret with Medusa storage backend credentials if the secret ref is provided.
 	if medusaSpec.StorageProperties.StorageSecretRef.Name != "" {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      medusaSpec.StorageProperties.StorageSecretRef.Name,
@@ -649,7 +652,7 @@ func generateMedusaProbe(configuredProbe *corev1.Probe, grpcPort int, encryption
 	if !reflect.DeepEqual(defaultProbe.ProbeHandler, mergedProbe.ProbeHandler) {
 		// If the user has configured a custom probe, use it
 		// Otherwise, use the default probe
-		return nil, fmt.Errorf("invalid probe configuration. You should not modify the probe handler.")
+		return nil, fmt.Errorf("invalid probe configuration. You should not modify the probe handler")
 	}
 
 	return &mergedProbe, nil

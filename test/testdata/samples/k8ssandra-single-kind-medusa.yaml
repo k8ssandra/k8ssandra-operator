@@ -31,6 +31,6 @@ spec:
       storageSecretRef: medusa-bucket-key
       bucketName: k8ssandra-medusa
       prefix: test
-      host: minio.minio.svc.cluster.local
+      host: silo-service.silo.svc.cluster.local
       port: 9000
       secure: false

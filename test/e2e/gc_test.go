@@ -13,7 +13,6 @@ import (
 
 func gcTest(gcName string) e2eTestFunc {
 	return func(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
-
 		t.Log("check that the K8ssandraCluster was created")
 		kc := &api.K8ssandraCluster{}
 		kcKey := types.NamespacedName{Namespace: namespace, Name: "test"}

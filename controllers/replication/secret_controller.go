@@ -63,7 +63,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 	rsec := &api.ReplicatedSecret{}
 	if err := localClient.Get(ctx, req.NamespacedName, rsec); err != nil {
 		if errors.IsNotFound(err) {
-			logger.Error(err, "Failed to get replicated secret, it may have been deleted", "ReplicatedSecret", req.NamespacedName)
+			logger.V(1).Info("Replicated secret not found, ignoring", "ReplicatedSecret", req.NamespacedName)
 			return reconcile.Result{}, nil
 		}
 		logger.Error(err, "Failed to get replicated secret", "ReplicatedSecret", req.NamespacedName)
@@ -105,7 +105,7 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 			logger.Error(err, "Failed to get add finalizer to replicated secret", "ReplicatedSecret", req.NamespacedName)
 			return ctrl.Result{}, err
 		}
-		return ctrl.Result{Requeue: true}, err
+		return ctrl.Result{RequeueAfter: s.DefaultDelay}, nil
 	}
 
 	// Add the new matcher rules also to our cache if not found
@@ -395,7 +395,7 @@ func (s *SecretSyncController) SetupWithManager(mgr ctrl.Manager, clusters []clu
 	}
 
 	// We should only reconcile objects that match the rules
-	toMatchingReplicates := func(ctx context.Context, secret client.Object) []reconcile.Request {
+	toMatchingReplicates := func(_ context.Context, secret client.Object) []reconcile.Request {
 		requests := []reconcile.Request{}
 		s.selectorMutex.RLock()
 		for k, v := range s.selectors {

@@ -282,7 +282,6 @@ func (rct *ReaperClusterTemplate) IsControlPlane() bool {
 }
 
 // CassandraDatacenterRef references the target Cassandra DC that Reaper should manage.
-// TODO this object could be used by Stargate too; which currently cannot locate DCs outside of its own namespace.
 type CassandraDatacenterRef struct {
 
 	// The datacenter name.
@@ -438,8 +437,4 @@ type ReaperList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Reaper `json:"items"`
-}
-
-func init() {
-	SchemeBuilder.Register(&Reaper{}, &ReaperList{})
 }

@@ -20,7 +20,6 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
-	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
@@ -39,7 +38,7 @@ type K8ssandraClusterSpec struct {
 
 	// Whether to enable authentication in this cluster. The default is true; it is highly recommended to always leave
 	// authentication turned on. When enabled, authentication will be enforced not only on Cassandra nodes, but also on
-	// Reaper, Medusa and Stargate nodes, if any.
+	// Reaper and Medusa nodes, if any.
 	// +optional
 	// +kubebuilder:default=true
 	Auth *bool `json:"auth,omitempty"`
@@ -48,11 +47,6 @@ type K8ssandraClusterSpec struct {
 	// the number of datacenters, the k8s cluster where each DC should be deployed, node
 	// affinity (via racks), individual C* node settings, JVM settings, and more.
 	Cassandra *CassandraClusterTemplate `json:"cassandra,omitempty"`
-
-	// DEPRECATED Stargate defines the desired deployment characteristics for Stargate in this K8ssandraCluster.
-	// If this is non-nil, Stargate will be deployed on every Cassandra datacenter in this K8ssandraCluster.
-	// +optional
-	Stargate *stargateapi.StargateClusterTemplate `json:"stargate,omitempty"`
 
 	// Reaper defines the desired deployment characteristics for Reaper in this K8ssandraCluster.
 	// If this is non-nil, Reaper might be deployed on every Cassandra datacenter in this K8ssandraCluster, unless
@@ -67,7 +61,7 @@ type K8ssandraClusterSpec struct {
 
 	// During a migration the operator should alter keyspaces replication settings including the following external DCs.
 	// This avoids removing replicas from datacenters which are outside of the operator scope (not referenced in the CR).
-	// Replication settings changes will only apply to system_* keyspaces as well as reaper_db and data_endpoint_auth (Stargate).
+	// Replication settings changes will only apply to system_* keyspaces as well as reaper_db.
 	// +optional
 	ExternalDatacenters []string `json:"externalDatacenters,omitempty"`
 
@@ -81,7 +75,7 @@ type K8ssandraClusterSpec struct {
 }
 
 // IsAuthEnabled returns true if auth is not specified by the user (auth by default)
-// or if the user has explicilty set Auth to true in the cluster spec
+// or if the user has explicitly set Auth to true in the cluster spec
 func (in K8ssandraClusterSpec) IsAuthEnabled() bool {
 	return in.Auth == nil || *in.Auth
 }
@@ -99,7 +93,7 @@ type K8ssandraClusterStatus struct {
 
 	// Datacenters maps the CassandraDatacenter name to a K8ssandraStatus. The
 	// naming is a bit confusing but the mapping makes sense because we have a
-	// CassandraDatacenter and then define other components like Stargate and Reaper
+	// CassandraDatacenter and then define other components like Reaper
 	// relative to it. I wanted to inline the field but when I do it won't serialize.
 	//
 	// TODO Figure out how to inline this field
@@ -146,7 +140,6 @@ type K8ssandraStatus struct {
 	ContextName          string                               `json:"contextName,omitempty"`
 	DecommissionProgress DecommissionProgress                 `json:"decommissionProgress,omitempty"`
 	Cassandra            *cassdcapi.CassandraDatacenterStatus `json:"cassandra,omitempty"`
-	Stargate             *stargateapi.StargateStatus          `json:"stargate,omitempty"`
 	Reaper               *reaperapi.ReaperStatus              `json:"reaper,omitempty"`
 }
 
@@ -163,24 +156,6 @@ type K8ssandraCluster struct {
 
 	Spec   K8ssandraClusterSpec   `json:"spec,omitempty"`
 	Status K8ssandraClusterStatus `json:"status,omitempty"`
-}
-
-// HasStargates returns true if at least one Stargate resource will be created as part of the creation
-// of this K8ssandraCluster object.
-func (in *K8ssandraCluster) HasStargates() bool {
-	if in == nil {
-		return false
-	} else if in.Spec.Stargate != nil {
-		return true
-	} else if in.Spec.Cassandra == nil || len(in.Spec.Cassandra.Datacenters) == 0 {
-		return false
-	}
-	for _, dcTemplate := range in.Spec.Cassandra.Datacenters {
-		if dcTemplate.Stargate != nil {
-			return true
-		}
-	}
-	return false
 }
 
 // HasStoppedDatacenters returns true if at least one DC is flagged as stopped.
@@ -258,7 +233,7 @@ type CassandraClusterTemplate struct {
 	// here; otherwise, use IP addresses.
 	AdditionalSeeds []string `json:"additionalSeeds,omitempty"`
 
-	// Internode encryption stores which are used by Cassandra and Stargate.
+	// Internode encryption stores which are used by Cassandra.
 	// +optional
 	ServerEncryptionStores *encryption.Stores `json:"serverEncryptionStores,omitempty"`
 
@@ -285,7 +260,6 @@ type CassandraDatacenterTemplate struct {
 	DatacenterOptions `json:",inline"`
 
 	// Size is the number Cassandra pods to deploy in this datacenter.
-	// This number does not include Stargate instances.
 	// +kubebuilder:validation:Minimum=1
 	Size int32 `json:"size"`
 
@@ -296,11 +270,6 @@ type CassandraDatacenterTemplate struct {
 	// +optional
 	// +kubebuilder:default=false
 	Stopped bool `json:"stopped,omitempty"`
-
-	// DEPRECATED Stargate defines the desired deployment characteristics for Stargate in this datacenter. Leave nil to skip
-	// deploying Stargate in this datacenter.
-	// +optional
-	Stargate *stargateapi.StargateDatacenterTemplate `json:"stargate,omitempty"`
 
 	// PerNodeConfigMapRef is a reference to a ConfigMap that contains per-node configuration for
 	// this DC. The ConfigMap is expected to have entries in the following form:
@@ -320,6 +289,22 @@ func (in *CassandraDatacenterTemplate) CassDcName() string {
 		return in.DatacenterName
 	}
 	return in.Meta.Name
+}
+
+// MergeTelemetry returns the cluster-level Cassandra telemetry settings merged with the
+// datacenter-level settings with datacenter values taking precedence.
+func (in *CassandraDatacenterTemplate) MergeTelemetry(clusterTemplate *CassandraClusterTemplate) *telemetryapi.TelemetrySpec {
+	var clusterTelemetry *telemetryapi.TelemetrySpec
+	if clusterTemplate != nil {
+		clusterTelemetry = clusterTemplate.Telemetry
+	}
+
+	var dcTelemetry *telemetryapi.TelemetrySpec
+	if in != nil {
+		dcTelemetry = in.Telemetry
+	}
+
+	return dcTelemetry.MergeWith(clusterTelemetry)
 }
 
 // DatacenterOptions are configuration settings that are can be set at the Cluster level and overridden for a single DC
@@ -453,6 +438,10 @@ type DatacenterOptions struct {
 	// ReadOnlyRootFilesystem makes the cassandra container to be run with a read-only root filesystem. Currently only functional when used with the
 	// new k8ssandra-client config builder (Cassandra 4.1 and newer and HCD)
 	ReadOnlyRootFilesystem *bool `json:"readOnlyRootFilesystem,omitempty"`
+
+	// Rebuild configures datacenter rebuild operations when adding a new DC to an existing cluster.
+	// +optional
+	Rebuild *Rebuild `json:"rebuild,omitempty"`
 }
 
 // NetworkingConfig is a copy of cass-operator's NetworkingConfig struct. It is copied here to
@@ -485,6 +474,22 @@ type K8ssandraVolumes struct {
 	// Such volumes are automatically mounted by cass-operator into the cassandra containers.
 	// +optional
 	PVCs []cassdcapi.AdditionalVolumes `json:"pvcs,omitempty"`
+}
+
+type Rebuild struct {
+	// SourceDC tells the operation the DC from which to stream when rebuilding a DC. If not set the operator will choose the first DC. The value for
+	// this field must specify the name of a CassandraDatacenter whose Ready condition is true.
+	// +optional
+	SourceDC string `json:"sourceDc,omitempty"`
+
+	// MaxConcurrentRebuilds specifies the maximum number of pods to rebuild
+	// concurrently per rack during datacenter rebuild operations.
+	// Defaults to 1 if not set.
+	// If set to a positive value, at most that many pods per rack will be rebuilt in parallel.
+	// If set to 0, all pods in the rack will be rebuilt in parallel.
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	MaxConcurrentRebuilds *int `json:"maxConcurrentRebuilds,omitempty"`
 }
 
 type EmbeddedObjectMeta struct {
@@ -546,10 +551,6 @@ func (s *K8ssandraClusterStatus) SetCondition(condition K8ssandraClusterConditio
 	s.Conditions = append(s.Conditions, condition)
 }
 
-func init() {
-	SchemeBuilder.Register(&K8ssandraCluster{}, &K8ssandraClusterList{})
-}
-
 type ServerDistribution string
 
 const (
@@ -591,7 +592,6 @@ func DcAdded(oldSpec K8ssandraClusterSpec, newSpec K8ssandraClusterSpec) bool {
 		}
 	}
 	return wasAdded
-
 }
 
 func DcRemoved(oldSpec K8ssandraClusterSpec, newSpec K8ssandraClusterSpec) bool {

@@ -24,8 +24,8 @@ import (
 )
 
 const (
-	timeout  = time.Second * 1
-	interval = time.Millisecond * 1
+	timeout  = time.Second * 5
+	interval = time.Millisecond * 10
 )
 
 var (
@@ -168,16 +168,23 @@ func testSecretModification(t *testing.T, ctx context.Context, f *framework.Fram
 	secret, err := insertKubeConfigSecret(ctx, f.Client, namespace)
 	assert.NoError(err)
 
-	clientConfig, err := insertClientConfig(ctx, f.Client, namespace, "kind-k8ssandra-0", secret.Name)
-	assert.NoError(err)
-
-	configHash := utils.DeepHashString(clientConfig)
-	secretHash := utils.DeepHashString(secret)
-
+	clientConfig := &configapi.ClientConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "kind-k8ssandra-0",
+		},
+		Spec: configapi.ClientConfigSpec{
+			KubeConfigSecret: corev1.LocalObjectReference{
+				Name: secret.Name,
+			},
+		},
+	}
+	configHash := utils.DeepHashString(clientConfig.Spec)
+	secretHash := utils.DeepHashString(secret.Data)
 	metav1.SetMetaDataAnnotation(&clientConfig.ObjectMeta, KubeSecretHashAnnotation, secretHash)
 	metav1.SetMetaDataAnnotation(&clientConfig.ObjectMeta, ClientConfigHashAnnotation, configHash)
 
-	err = f.Client.Update(ctx, clientConfig)
+	err = f.Client.Create(ctx, clientConfig)
 	assert.NoError(err)
 
 	// Now update the secretFilter

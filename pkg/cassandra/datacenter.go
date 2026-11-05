@@ -5,10 +5,10 @@ import (
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	telemetryapi "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	goalesceutils "github.com/k8ssandra/k8ssandra-operator/pkg/goalesce"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
@@ -115,9 +115,9 @@ type DatacenterConfig struct {
 	ServiceAccount            string
 	ExternalSecrets           bool
 	McacEnabled               bool
+	Telemetry                 *telemetryapi.TelemetrySpec
 	DatacenterName            string
 	ReadOnlyRootFilesystem    *bool
-
 	// InitialTokensByPodName is a list of initial tokens for the RF first pods in the cluster. It
 	// is only populated when num_tokens < 16 in the whole cluster. Used for generating default
 	// per-node configurations; not transferred directly to the CassandraDatacenter CRD but its
@@ -181,7 +181,7 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 			Users:                  template.Users,
 			Networking:             template.Networking,
 			PodTemplateSpec:        &template.PodTemplateSpec,
-			CDC:                    template.CDC,
+			DeprecatedCDC:          template.CDC,
 			DseWorkloads:           template.DseWorkloads,
 			ServiceAccountName:     template.ServiceAccount,
 			ReadOnlyRootFilesystem: template.ReadOnlyRootFilesystem,
@@ -227,8 +227,8 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 	}
 
 	m := template.Meta
-	dc.ObjectMeta.Labels = utils.MergeMap(dc.ObjectMeta.Labels, m.Labels)
-	dc.ObjectMeta.Annotations = utils.MergeMap(dc.ObjectMeta.Annotations, m.Annotations)
+	dc.Labels = utils.MergeMap(dc.Labels, m.Labels)
+	dc.Annotations = utils.MergeMap(dc.Annotations, m.Annotations)
 
 	if m.CommonLabels != nil {
 		dc.Spec.AdditionalLabels = m.CommonLabels
@@ -253,7 +253,7 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 
 	if !template.McacEnabled {
 		// MCAC needs to be disabled
-		setMcacDisabled(dc, template)
+		setMcacDisabled(dc)
 	}
 
 	dc.Spec.DatacenterName = template.DatacenterName
@@ -269,7 +269,7 @@ func setMgmtAPIHeap(dc *cassdcapi.CassandraDatacenter, heapSize *resource.Quanti
 	})
 }
 
-func setMcacDisabled(dc *cassdcapi.CassandraDatacenter, template *DatacenterConfig) {
+func setMcacDisabled(dc *cassdcapi.CassandraDatacenter) {
 	UpdateCassandraContainer(dc.Spec.PodTemplateSpec, func(c *corev1.Container) {
 		c.Env = append(
 			c.Env,
@@ -406,7 +406,8 @@ func Coalesce(clusterName string, clusterTemplate *api.CassandraClusterTemplate,
 	// we need to declare at least one container, otherwise the PodTemplateSpec struct will be invalid
 	UpdateCassandraContainer(&dcConfig.PodTemplateSpec, func(c *corev1.Container) {})
 
-	dcConfig.McacEnabled = mergedOptions.Telemetry.IsMcacEnabled()
+	dcConfig.Telemetry = dcTemplate.MergeTelemetry(clusterTemplate)
+	dcConfig.McacEnabled = dcConfig.Telemetry.IsMcacEnabled()
 
 	return dcConfig
 }
@@ -465,7 +466,6 @@ func AddPodTemplateSpecMeta(dcConfig *DatacenterConfig, m api.EmbeddedObjectMeta
 		Annotations: m.Pods.Annotations,
 		Labels:      m.Pods.Labels,
 	}
-
 }
 
 func FindContainer(dcPodTemplateSpec *corev1.PodTemplateSpec, containerName string) (int, bool) {
@@ -612,9 +612,9 @@ func AddOrUpdateVolumeToSpec(templateSpec *corev1.PodTemplateSpec, volume *corev
 	}
 }
 
-func AddOrUpdateAdditionalVolume(dcConfig *DatacenterConfig, volume *v1beta1.AdditionalVolumes, volumeIndex int, found bool) {
+func AddOrUpdateAdditionalVolume(dcConfig *DatacenterConfig, volume *cassdcapi.AdditionalVolumes, volumeIndex int, found bool) {
 	if dcConfig.StorageConfig.AdditionalVolumes == nil {
-		dcConfig.StorageConfig.AdditionalVolumes = make(v1beta1.AdditionalVolumesSlice, 0)
+		dcConfig.StorageConfig.AdditionalVolumes = make(cassdcapi.AdditionalVolumesSlice, 0)
 	}
 	if !found {
 		// volume doesn't exist, we need to add it

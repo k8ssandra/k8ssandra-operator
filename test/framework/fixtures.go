@@ -8,7 +8,6 @@ import (
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	coreapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
-	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/k8ssandra/k8ssandra-operator/test/yq"
 	"sigs.k8s.io/yaml"
@@ -68,14 +67,12 @@ type fixtureKustomization struct {
 	HostNetwork         bool
 	K8ssandraCluster    *coreapi.K8ssandraClusterSpec
 	CassandraDatacenter *cassdcapi.CassandraDatacenterSpec
-	Stargate            *stargateapi.StargateSpec
 	MedusaImageTag      string
 }
 
 // For now, we only read and kustomize:
 // - the single K8ssandraCluster declared in k8ssandra.yaml, if present;
 // - the single (standalone) CassandraDatacenter declared in cassdc.yaml, if present;
-// - the single (standalone) Stargate declared in stargate.yaml, if present.
 // If some fixtures in the future decide to create more resources, we'll have to revisit this and
 // create more fine-grained kustomizations.
 func generateFixtureKustomization(namespace string, fixture *TestFixture, contexts map[string]string, zones map[string]string, storage string, hostNetwork bool, medusaImageTag string) (*fixtureKustomization, error) {
@@ -98,11 +95,6 @@ func generateFixtureKustomization(namespace string, fixture *TestFixture, contex
 	} else if dc != nil {
 		kustomization.CassandraDatacenter = &dc.Spec
 	}
-	if sg, err := getFixtureStargate(fixture); err != nil {
-		return nil, err
-	} else if sg != nil {
-		kustomization.Stargate = &sg.Spec
-	}
 	return kustomization, nil
 }
 
@@ -120,14 +112,6 @@ func getFixtureCassandraDatacenter(fixture *TestFixture) (*cassdcapi.CassandraDa
 		return nil, err
 	}
 	return obj.(*cassdcapi.CassandraDatacenter), err
-}
-
-func getFixtureStargate(fixture *TestFixture) (*stargateapi.Stargate, error) {
-	obj, err := evalAndUnmarshal(fixture, "Stargate", &stargateapi.Stargate{})
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*stargateapi.Stargate), err
 }
 
 func evalAndUnmarshal(fixture *TestFixture, kind string, obj interface{}) (interface{}, error) {

@@ -193,7 +193,7 @@ either 0 or greater than the rack size, then all nodes in the rack will get upda
         <td><b><a href="#cassandradatacenterspeccdc">cdc</a></b></td>
         <td>object</td>
         <td>
-          CDC allows configuration of the change data capture agent which can run within the Management API container. Use it to send data to Pulsar.<br/>
+          Deprecated this field is deprecated and will be removed in the future. DeprecatedCDC allows configuration of the change data capture agent which can run within the Management API container. Use it to send data to Pulsar.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -286,6 +286,14 @@ roll out.<br/>
         <td>object</td>
         <td>
           Config for the Management API certificates<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>maxUnavailable</b></td>
+        <td>int or string</td>
+        <td>
+          MaxUnavailable sets the maximum number of rack pods that can be modified simultaneously during an update. This can at most target a single rack, so values higher than rack size will have no effect. Requires Kubernetes 1.35 or higher. Setting percentage will
+calculate against single rack's percentage of pods, not the entire datacenter.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -595,7 +603,7 @@ There are three important differences between dataSource and dataSourceRef:
         <td>object</td>
         <td>
           resources represents the minimum resources the volume should have.
-If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+Users are allowed to specify resource requirements
 that are lower than previous value but must still be higher than capacity recorded in the
 status field of the claim.
 More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources<br/>
@@ -781,7 +789,7 @@ Note that when a namespace is specified, a gateway.networking.k8s.io/ReferenceGr
 
 
 resources represents the minimum resources the volume should have.
-If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+Users are allowed to specify resource requirements
 that are lower than previous value but must still be higher than capacity recorded in the
 status field of the claim.
 More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
@@ -1100,7 +1108,7 @@ The volume gets re-resolved if the pod gets deleted and recreated, which means t
 A failure to resolve or pull the image during pod startup will block containers from starting and may add significant latency. Failures will be retried using normal volume backoff and will be reported on the pod reason and message.
 The types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.
 The OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.
-The volume will be mounted read-only (ro) and non-executable files (noexec).
+The volume will be mounted read-only (ro).
 Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.
 The field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.<br/>
         </td>
@@ -1145,8 +1153,7 @@ Deprecated: PhotonPersistentDisk is deprecated and the in-tree photonPersistentD
         <td>
           portworxVolume represents a portworx volume attached and mounted on kubelets host machine.
 Deprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type
-are redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate
-is on.<br/>
+are redirected to the pxd.portworx.com CSI driver.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -2223,7 +2230,7 @@ There are three important differences between dataSource and dataSourceRef:
         <td>object</td>
         <td>
           resources represents the minimum resources the volume should have.
-If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+Users are allowed to specify resource requirements
 that are lower than previous value but must still be higher than capacity recorded in the
 status field of the claim.
 More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources<br/>
@@ -2409,7 +2416,7 @@ Note that when a namespace is specified, a gateway.networking.k8s.io/ReferenceGr
 
 
 resources represents the minimum resources the volume should have.
-If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+Users are allowed to specify resource requirements
 that are lower than previous value but must still be higher than capacity recorded in the
 status field of the claim.
 More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
@@ -2996,7 +3003,7 @@ The volume gets re-resolved if the pod gets deleted and recreated, which means t
 A failure to resolve or pull the image during pod startup will block containers from starting and may add significant latency. Failures will be retried using normal volume backoff and will be reported on the pod reason and message.
 The types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.
 The OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.
-The volume will be mounted read-only (ro) and non-executable files (noexec).
+The volume will be mounted read-only (ro).
 Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.
 The field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.
 
@@ -3309,8 +3316,7 @@ Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.<br/>
 
 portworxVolume represents a portworx volume attached and mounted on kubelets host machine.
 Deprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type
-are redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate
-is on.
+are redirected to the pxd.portworx.com CSI driver.
 
 <table>
     <thead>
@@ -4054,6 +4060,25 @@ seconds (1 hour).  This constraint is enforced by kube-apiserver.
 longer than 24 hours.<br/>
           <br/>
             <i>Format</i>: int32<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>userAnnotations</b></td>
+        <td>map[string]string</td>
+        <td>
+          userAnnotations allow pod authors to pass additional information to
+the signer implementation.  Kubernetes does not restrict or validate this
+metadata in any way.
+
+These values are copied verbatim into the `spec.unverifiedUserAnnotations` field of
+the PodCertificateRequest objects that Kubelet creates.
+
+Entries are subject to the same validation as object metadata annotations,
+with the addition that all keys must be domain-prefixed. No restrictions
+are placed on values, except an overall size limitation on the entire field.
+
+Signers should document the keys and values they support. Signers should
+deny requests that contain keys they do not recognize.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -4896,7 +4921,7 @@ There are three important differences between dataSource and dataSourceRef:
         <td>object</td>
         <td>
           resources represents the minimum resources the volume should have.
-If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+Users are allowed to specify resource requirements
 that are lower than previous value but must still be higher than capacity recorded in the
 status field of the claim.
 More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources<br/>
@@ -5082,7 +5107,7 @@ Note that when a namespace is specified, a gateway.networking.k8s.io/ReferenceGr
 
 
 resources represents the minimum resources the volume should have.
-If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+Users are allowed to specify resource requirements
 that are lower than previous value but must still be higher than capacity recorded in the
 status field of the claim.
 More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
@@ -5431,7 +5456,7 @@ ServiceConfigAdditions exposes additional options for each service
 
 
 
-CDC allows configuration of the change data capture agent which can run within the Management API container. Use it to send data to Pulsar.
+Deprecated this field is deprecated and will be removed in the future. DeprecatedCDC allows configuration of the change data capture agent which can run within the Management API container. Use it to send data to Pulsar.
 
 <table>
     <thead>
@@ -6117,8 +6142,7 @@ for when the pod needs a feature only available to the host user namespace, such
 loading a kernel module with CAP_SYS_MODULE.
 When set to false, a new userns is created for the pod. Setting false is useful for
 mitigating container breakout vulnerabilities even allowing users to run their
-containers as root without actually having root privileges on the host.
-This field is alpha-level and is only honored by servers that enable the UserNamespacesSupport feature.<br/>
+containers as root without actually having root privileges on the host.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -6297,8 +6321,8 @@ and reserved before the Pod is allowed to start. The resources
 will be made available to those containers which consume them
 by name.
 
-This is an alpha field and requires enabling the
-DynamicResourceAllocation feature gate.
+This is a stable field but requires that the
+DynamicResourceAllocation feature gate is enabled.
 
 This field is immutable.<br/>
         </td>
@@ -6356,6 +6380,24 @@ If schedulingGates is not empty, the pod will stay in the SchedulingGated state 
 scheduler will not attempt to schedule the pod.
 
 SchedulingGates can only be set at pod creation time, and be removed only afterwards.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b><a href="#cassandradatacenterspecpodtemplatespecspecschedulinggroup">schedulingGroup</a></b></td>
+        <td>object</td>
+        <td>
+          SchedulingGroup provides a reference to the immediate scheduling runtime
+grouping object that this Pod belongs to.
+This field is used by the scheduler to identify the group and apply the
+correct group scheduling policies. The association with a group also
+impacts other lifecycle aspects of a Pod that are relevant in a wider context
+of scheduling like preemption, resource attachment, etc. If not specified,
+the Pod is treated as a single unit in all of these aspects.
+The group object referenced by this field may not exist at the time the
+Pod is created.
+This field is immutable, but a group object with the same name may be
+recreated with different policies. Doing this during pod scheduling
+may result in the placement not conforming to the expected policies.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -6595,7 +6637,8 @@ More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#cont
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspeccontainersindexresizepolicyindex">resizePolicy</a></b></td>
         <td>[]object</td>
         <td>
-          Resources resize policy for the container.<br/>
+          Resources resize policy for the container.
+This field cannot be set on ephemeral containers.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -8744,7 +8787,6 @@ Note that this field cannot be set when spec.os.name is windows.<br/>
           procMount denotes the type of proc mount to use for the containers.
 The default value is Default which uses the container runtime defaults for
 readonly paths and masked paths.
-This requires the ProcMountType feature flag to be enabled.
 Note that this field cannot be set when spec.os.name is windows.<br/>
         </td>
         <td>false</td>
@@ -13479,7 +13521,6 @@ Note that this field cannot be set when spec.os.name is windows.<br/>
           procMount denotes the type of proc mount to use for the containers.
 The default value is Default which uses the container runtime defaults for
 readonly paths and masked paths.
-This requires the ProcMountType feature flag to be enabled.
 Note that this field cannot be set when spec.os.name is windows.<br/>
         </td>
         <td>false</td>
@@ -14456,7 +14497,8 @@ More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#cont
         <td><b><a href="#cassandradatacenterspecpodtemplatespecspecinitcontainersindexresizepolicyindex">resizePolicy</a></b></td>
         <td>[]object</td>
         <td>
-          Resources resize policy for the container.<br/>
+          Resources resize policy for the container.
+This field cannot be set on ephemeral containers.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -16605,7 +16647,6 @@ Note that this field cannot be set when spec.os.name is windows.<br/>
           procMount denotes the type of proc mount to use for the containers.
 The default value is Default which uses the container runtime defaults for
 readonly paths and masked paths.
-This requires the ProcMountType feature flag to be enabled.
 Note that this field cannot be set when spec.os.name is windows.<br/>
         </td>
         <td>false</td>
@@ -17480,6 +17521,14 @@ for the pod.
 It adds a name to it that uniquely identifies the ResourceClaim inside the Pod.
 Containers that need access to the ResourceClaim reference it with this name.
 
+When the DRAWorkloadResourceClaims feature gate is enabled and this Pod
+belongs to a PodGroup, a PodResourceClaim is matched to a
+PodGroupResourceClaim if all of their fields are equal (Name,
+ResourceClaimName, and ResourceClaimTemplateName). A matched claim references
+a single ResourceClaim shared across all Pods in the PodGroup, reserved for
+the PodGroup in ResourceClaimStatus.ReservedFor rather than for individual
+Pods.
+
 <table>
     <thead>
         <tr>
@@ -17520,6 +17569,16 @@ be bound to this pod. When this pod is deleted, the ResourceClaim
 will also be deleted. The pod name and resource name, along with a
 generated component, will be used to form a unique name for the
 ResourceClaim, which will be recorded in pod.status.resourceClaimStatuses.
+
+When the DRAWorkloadResourceClaims feature gate is enabled and the pod
+belongs to a PodGroup that defines a PodGroupResourceClaim with the same
+Name and ResourceClaimTemplateName, this PodResourceClaim resolves to the
+ResourceClaim generated for the PodGroup. All pods in the group that
+define an equivalent PodResourceClaim matching the
+PodGroupResourceClaim's Name and ResourceClaimTemplateName share the same
+generated ResourceClaim. ResourceClaims generated for a PodGroup are
+owned by the PodGroup and their lifecycles are tied to the PodGroup
+instead of any individual pod.
 
 This field is immutable and no changes will be made to the
 corresponding ResourceClaim by the control plane after creating the
@@ -17654,6 +17713,46 @@ PodSchedulingGate is associated to a Pod to guard its scheduling.
 Each scheduling gate must have a unique name field.<br/>
         </td>
         <td>true</td>
+      </tr></tbody>
+</table>
+
+
+#### CassandraDatacenter.spec.podTemplateSpec.spec.schedulingGroup
+<sup><sup>[↩ Parent](#cassandradatacenterspecpodtemplatespecspec)</sup></sup>
+
+
+
+SchedulingGroup provides a reference to the immediate scheduling runtime
+grouping object that this Pod belongs to.
+This field is used by the scheduler to identify the group and apply the
+correct group scheduling policies. The association with a group also
+impacts other lifecycle aspects of a Pod that are relevant in a wider context
+of scheduling like preemption, resource attachment, etc. If not specified,
+the Pod is treated as a single unit in all of these aspects.
+The group object referenced by this field may not exist at the time the
+Pod is created.
+This field is immutable, but a group object with the same name may be
+recreated with different policies. Doing this during pod scheduling
+may result in the placement not conforming to the expected policies.
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>podGroupName</b></td>
+        <td>string</td>
+        <td>
+          PodGroupName specifies the name of the standalone PodGroup object
+that represents the runtime instance of this group.
+Must be a DNS subdomain.<br/>
+        </td>
+        <td>false</td>
       </tr></tbody>
 </table>
 
@@ -18121,9 +18220,10 @@ If the key is empty, operator must be Exists; this combination means to match al
         <td>string</td>
         <td>
           Operator represents a key's relationship to the value.
-Valid operators are Exists and Equal. Defaults to Equal.
+Valid operators are Exists, Equal, Lt, and Gt. Defaults to Equal.
 Exists is equivalent to wildcard for value, so that a pod can
-tolerate all taints of a particular category.<br/>
+tolerate all taints of a particular category.
+Lt and Gt perform numeric comparisons (requires feature gate TaintTolerationComparisonOperators).<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -18606,7 +18706,7 @@ The volume gets re-resolved if the pod gets deleted and recreated, which means t
 A failure to resolve or pull the image during pod startup will block containers from starting and may add significant latency. Failures will be retried using normal volume backoff and will be reported on the pod reason and message.
 The types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.
 The OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.
-The volume will be mounted read-only (ro) and non-executable files (noexec).
+The volume will be mounted read-only (ro).
 Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.
 The field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.<br/>
         </td>
@@ -18651,8 +18751,7 @@ Deprecated: PhotonPersistentDisk is deprecated and the in-tree photonPersistentD
         <td>
           portworxVolume represents a portworx volume attached and mounted on kubelets host machine.
 Deprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type
-are redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate
-is on.<br/>
+are redirected to the pxd.portworx.com CSI driver.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -19729,7 +19828,7 @@ There are three important differences between dataSource and dataSourceRef:
         <td>object</td>
         <td>
           resources represents the minimum resources the volume should have.
-If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+Users are allowed to specify resource requirements
 that are lower than previous value but must still be higher than capacity recorded in the
 status field of the claim.
 More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources<br/>
@@ -19915,7 +20014,7 @@ Note that when a namespace is specified, a gateway.networking.k8s.io/ReferenceGr
 
 
 resources represents the minimum resources the volume should have.
-If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+Users are allowed to specify resource requirements
 that are lower than previous value but must still be higher than capacity recorded in the
 status field of the claim.
 More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
@@ -20502,7 +20601,7 @@ The volume gets re-resolved if the pod gets deleted and recreated, which means t
 A failure to resolve or pull the image during pod startup will block containers from starting and may add significant latency. Failures will be retried using normal volume backoff and will be reported on the pod reason and message.
 The types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.
 The OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.
-The volume will be mounted read-only (ro) and non-executable files (noexec).
+The volume will be mounted read-only (ro).
 Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.
 The field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.
 
@@ -20815,8 +20914,7 @@ Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.<br/>
 
 portworxVolume represents a portworx volume attached and mounted on kubelets host machine.
 Deprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type
-are redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate
-is on.
+are redirected to the pxd.portworx.com CSI driver.
 
 <table>
     <thead>
@@ -21560,6 +21658,25 @@ seconds (1 hour).  This constraint is enforced by kube-apiserver.
 longer than 24 hours.<br/>
           <br/>
             <i>Format</i>: int32<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>userAnnotations</b></td>
+        <td>map[string]string</td>
+        <td>
+          userAnnotations allow pod authors to pass additional information to
+the signer implementation.  Kubernetes does not restrict or validate this
+metadata in any way.
+
+These values are copied verbatim into the `spec.unverifiedUserAnnotations` field of
+the PodCertificateRequest objects that Kubelet creates.
+
+Entries are subject to the same validation as object metadata annotations,
+with the addition that all keys must be domain-prefixed. No restrictions
+are placed on values, except an overall size limitation on the entire field.
+
+Signers should document the keys and values they support. Signers should
+deny requests that contain keys they do not recognize.<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -24216,9 +24333,10 @@ If the key is empty, operator must be Exists; this combination means to match al
         <td>string</td>
         <td>
           Operator represents a key's relationship to the value.
-Valid operators are Exists and Equal. Defaults to Equal.
+Valid operators are Exists, Equal, Lt, and Gt. Defaults to Equal.
 Exists is equivalent to wildcard for value, so that a pod can
-tolerate all taints of a particular category.<br/>
+tolerate all taints of a particular category.
+Lt and Gt perform numeric comparisons (requires feature gate TaintTolerationComparisonOperators).<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -24347,7 +24465,9 @@ with the management API<br/>
         <td><b>metadataVersion</b></td>
         <td>integer</td>
         <td>
-          <br/>
+          MetadataVersion records the latest completed operator migration.
+1: datacenter pod label migration completed.
+2: legacy additionalSeeds Endpoints cleanup completed.<br/>
           <br/>
             <i>Format</i>: int64<br/>
         </td>
@@ -24700,10 +24820,27 @@ can access<br/>
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>maxConcurrentPods</b></td>
+        <td>integer</td>
+        <td>
+          MaxConcurrentPods specifies the maximum number of pods to process concurrently in a rack.
+If not set or set to 0 defaults to 1.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>restartPolicy</b></td>
         <td>string</td>
         <td>
-          RestartPolicy indicates the behavior n case of failure. Default is Never.<br/>
+          RestartPolicy indicates the behavior n case of failure. Default is OnFailure.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>retries</b></td>
+        <td>integer</td>
+        <td>
+          Retries specifies the maximum number of times a failed pod operation can be retried.
+This is only relevant if the RestartPolicy is set to OnFailure. If not set,
+the default value is 1.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -24877,6 +25014,21 @@ Arguments are additional parameters for the command
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>fast</b></td>
+        <td>boolean</td>
+        <td>
+          Fast modifies the behavior of rolling restart to restart multiple nodes (or entire rack) at the same time.
+If the cluster is degraded in availability, the fast path isn't used<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>force</b></td>
+        <td>boolean</td>
+        <td>
+          Force is used to force the execution of a command even if the operator thinks it is unsafe<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>jobs</b></td>
         <td>integer</td>
         <td>
@@ -25022,6 +25174,14 @@ More info: https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b><a href="#cassandrataskstatuspodstatuseskey">podStatuses</a></b></td>
+        <td>map[string]object</td>
+        <td>
+          PodStatuses tracks the processing status of each pod for bookkeeping.
+Keys are pod names (not including pod UID to handle recreation scenarios).<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>startTime</b></td>
         <td>string</td>
         <td>
@@ -25115,6 +25275,72 @@ with respect to the current state of the instance.<br/>
           <br/>
             <i>Format</i>: int64<br/>
             <i>Minimum</i>: 0<br/>
+        </td>
+        <td>false</td>
+      </tr></tbody>
+</table>
+
+
+#### CassandraTask.status.podStatuses[key]
+<sup><sup>[↩ Parent](#cassandrataskstatus)</sup></sup>
+
+
+
+PodProcessingStatus represents the status of a pod being processed by a CassandraTask.
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>status</b></td>
+        <td>string</td>
+        <td>
+          Status of the pod processing.<br/>
+        </td>
+        <td>true</td>
+      </tr><tr>
+        <td><b>completionTime</b></td>
+        <td>string</td>
+        <td>
+          Represents time when the pod was completed (success or fail).<br/>
+          <br/>
+            <i>Format</i>: date-time<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>error</b></td>
+        <td>string</td>
+        <td>
+          Error message if failed.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>jobId</b></td>
+        <td>string</td>
+        <td>
+          JobID for async operations (mgmt-api).<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>retries</b></td>
+        <td>integer</td>
+        <td>
+          Retry count<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>startTime</b></td>
+        <td>string</td>
+        <td>
+          Represents time when the job controller started processing this pod.<br/>
+          <br/>
+            <i>Format</i>: date-time<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -25250,6 +25476,14 @@ can access<br/>
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>maxConcurrentPods</b></td>
+        <td>integer</td>
+        <td>
+          MaxConcurrentPods specifies the maximum number of pods to process concurrently in a rack.
+If not set or set to 0 defaults to 1.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>name</b></td>
         <td>string</td>
         <td>
@@ -25260,7 +25494,16 @@ can access<br/>
         <td><b>restartPolicy</b></td>
         <td>string</td>
         <td>
-          RestartPolicy indicates the behavior n case of failure. Default is Never.<br/>
+          RestartPolicy indicates the behavior n case of failure. Default is OnFailure.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>retries</b></td>
+        <td>integer</td>
+        <td>
+          Retries specifies the maximum number of times a failed pod operation can be retried.
+This is only relevant if the RestartPolicy is set to OnFailure. If not set,
+the default value is 1.<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -25431,6 +25674,21 @@ Arguments are additional parameters for the command
         <td>string</td>
         <td>
           <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>fast</b></td>
+        <td>boolean</td>
+        <td>
+          Fast modifies the behavior of rolling restart to restart multiple nodes (or entire rack) at the same time.
+If the cluster is degraded in availability, the fast path isn't used<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>force</b></td>
+        <td>boolean</td>
+        <td>
+          Force is used to force the execution of a command even if the operator thinks it is unsafe<br/>
         </td>
         <td>false</td>
       </tr><tr>

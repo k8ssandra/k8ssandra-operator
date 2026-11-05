@@ -1,6 +1,8 @@
 package reaper
 
 import (
+	"testing"
+
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -9,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"testing"
 )
 
 func TestAddReaperSettingsToDcConfig(t *testing.T) {
@@ -42,8 +43,9 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{
-							Name: reconciliation.CassandraContainerName,
-							Env:  []corev1.EnvVar{{Name: "LOCAL_JMX", Value: "no"}},
+							Name:  reconciliation.CassandraContainerName,
+							Env:   []corev1.EnvVar{{Name: "LOCAL_JMX", Value: "no"}},
+							Ports: []corev1.ContainerPort{{Name: "jmx", ContainerPort: 7199, Protocol: corev1.ProtocolTCP}},
 						}},
 					},
 				},
@@ -64,8 +66,9 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{
-							Name: reconciliation.CassandraContainerName,
-							Env:  []corev1.EnvVar{{Name: "LOCAL_JMX", Value: "no"}},
+							Name:  reconciliation.CassandraContainerName,
+							Env:   []corev1.EnvVar{{Name: "LOCAL_JMX", Value: "no"}},
+							Ports: []corev1.ContainerPort{{Name: "jmx", ContainerPort: 7199, Protocol: corev1.ProtocolTCP}},
 						}},
 					},
 				},
@@ -118,6 +121,7 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 									{Name: "ANOTHER_VAR", Value: "irrelevant"},
 									{Name: "LOCAL_JMX", Value: "no"},
 								},
+								Ports: []corev1.ContainerPort{{Name: "jmx", ContainerPort: 7199, Protocol: corev1.ProtocolTCP}},
 							},
 							{
 								Name: "another-container",
@@ -168,6 +172,7 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 									{Name: "ANOTHER_VAR", Value: "irrelevant"},
 									{Name: "LOCAL_JMX", Value: "no"},
 								},
+								Ports: []corev1.ContainerPort{{Name: "jmx", ContainerPort: 7199, Protocol: corev1.ProtocolTCP}},
 							},
 							{
 								Name: "another-container",
@@ -196,8 +201,9 @@ func TestAddReaperSettingsToDcConfig(t *testing.T) {
 				PodTemplateSpec: corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{
-							Name: reconciliation.CassandraContainerName,
-							Env:  []corev1.EnvVar{{Name: "LOCAL_JMX", Value: "no"}},
+							Name:  reconciliation.CassandraContainerName,
+							Env:   []corev1.EnvVar{{Name: "LOCAL_JMX", Value: "no"}},
+							Ports: []corev1.ContainerPort{{Name: "jmx", ContainerPort: 7199, Protocol: corev1.ProtocolTCP}},
 						}},
 					},
 				},

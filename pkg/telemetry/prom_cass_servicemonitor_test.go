@@ -1,9 +1,10 @@
 package telemetry
 
 import (
+	"testing"
+
 	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/require"
-	"testing"
 
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/stretchr/testify/assert"

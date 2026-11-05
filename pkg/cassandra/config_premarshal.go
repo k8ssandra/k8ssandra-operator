@@ -2,10 +2,11 @@ package cassandra
 
 import (
 	"fmt"
+	"reflect"
+
 	"github.com/Masterminds/semver/v3"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"reflect"
 )
 
 // preMarshalConfig expects val to be a struct, or a pointer thereto. It walks through the struct
@@ -59,9 +60,8 @@ func preMarshalConfig(val reflect.Value, version *semver.Version, serverType str
 							}
 						}
 					} else {
-						if fieldOut, err := getFieldValue(fieldVal); err != nil {
-							return nil, err
-						} else if err := utils.PutMapNested(false, out, fieldOut, path.segments[0], path.segments[1:]...); err != nil {
+						fieldOut := getFieldValue(fieldVal)
+						if err := utils.PutMapNested(false, out, fieldOut, path.segments[0], path.segments[1:]...); err != nil {
 							return nil, fmt.Errorf("field %v.%v: cannot put value: %w", t.String(), field.Name, err)
 						}
 					}
@@ -126,7 +126,7 @@ func getFieldValueRecursive(
 // applies a special conversion to resource.Quantity values and pointers thereto. More special
 // conversions could be added in the future, e.g. to handle the new throughput/rate syntax
 // introduced in Cassandra 4.1.
-func getFieldValue(fieldVal reflect.Value) (interface{}, error) {
+func getFieldValue(fieldVal reflect.Value) interface{} {
 	v := fieldVal.Interface()
 	switch vv := v.(type) {
 	case resource.Quantity:
@@ -134,7 +134,7 @@ func getFieldValue(fieldVal reflect.Value) (interface{}, error) {
 	case *resource.Quantity:
 		v = convertQuantity(vv)
 	}
-	return v, nil
+	return v
 }
 
 // convertQuantity converts a resource.Quantity to an int64 or float64, depending on the value. If

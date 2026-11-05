@@ -1,0 +1,62 @@
+# Deploys a new Silo (S3-compatible MinIO fork) Pod into the metadata.namespace Kubernetes namespace
+
+# The `spec.containers[0].args` contains the command run on the pod
+# The `/data` directory corresponds to the `spec.containers[0].volumeMounts[0].mountPath`
+# That mount path corresponds to a Kubernetes HostPath which binds `/data` to a local drive or volume on the worker node where the pod runs
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: silo
+  name: silo
+  namespace: silo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: silo
+  template:
+    metadata:
+      labels:
+        app: silo
+    spec:
+      containers:
+      - name: silo
+        image: docker.io/pgsty/silo:latest
+        command:
+        - /bin/bash
+        - -c
+        args:
+        - silo server /data --console-address :9090
+        env:
+        - name: MINIO_ROOT_USER
+          value: siloadmin
+        - name: MINIO_ROOT_PASSWORD
+          value: siloadmin
+        volumeMounts:
+        - mountPath: /data
+          name: localvolume
+      volumes:
+      - name: localvolume
+        emptyDir:
+          sizeLimit: 500Mi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: silo-service
+  namespace: silo
+spec:
+  selector:
+    app: silo
+  ports:
+    - protocol: TCP
+      name: api
+      port: 9000
+      targetPort: 9000
+    - protocol: TCP
+      name: admin-console
+      port: 9090
+      targetPort: 9090

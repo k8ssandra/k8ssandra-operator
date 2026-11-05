@@ -1,0 +1,44 @@
+# Changelog
+
+Changelog for the K8ssandra Operator, new PRs should update the `unreleased` section below with entries describing the changes like:
+
+```markdown
+* [CHANGE]
+* [FEATURE]
+* [ENHANCEMENT]
+* [BUGFIX]
+* [DOCS]
+* [TESTING]
+```
+
+## unreleased
+
+## v1.32.6 - 2026-08-07
+
+* [CHANGE] Bump cassandra-medusa to v0.30.0
+* [ENHANCEMENT] [#1760](https://github.com/k8ssandra/k8ssandra-operator/issues/1760) Allow setting Medusa's chunk size
+
+## v1.32.5 - 2026-07-08
+
+* [CHANGE] Bump medusa to v0.29.1
+* [CHANGE] Upgrade Reaper to v5.0.0
+
+## v1.32.4 - 2026-07-06
+
+* [CHANGE] Update cass-operator to v1.30.3 (0.64.4) and k8ssandra-client to v0.8.14
+
+## v1.32.3 - 2026-06-15
+
+* [BUGFIX] Upgrade Reaper to 4.2.5 (scheduler execution fix)
+
+## v1.32.1 - 2026-05-20
+
+* [CHANGE] Bump Reaper to v4.2.3
+
+## v1.32.0 - 2026-04-29
+
+* [CHANGE] [#1731](https://github.com/k8ssandra/k8ssandra-operator/issues/1713) Bump Medusa to 0.28.0
+* [CHANGE] [1706](https://github.com/k8ssandra/k8ssandra-operator/issues/1706) Bump Reaper to 4.2.1 (with sqlite-backed local storage)
+* [CHANGE] [#1720](https://github.com/k8ssandra/k8ssandra-operator/issues/1720) Do not retain Reaper's PVC once if Reaper uses local storage and gets deleted
+* [CHANGE] [#1725](https://github.com/k8ssandra/k8ssandra-operator/issues/1725) Bump cass-operator helm chart to 0.64.1
+* [BUGFIX] [#1717](https://github.com/k8ssandra/k8ssandra-operator/issues/1717) When creating Telemetry config for Vector, take into account Datacenter level as well as Cluster level settings

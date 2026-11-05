@@ -1,4 +1,4 @@
-// Package v1alpha1: Types in this package are instantiated in the other types in k8ssandra-operator, especially Stargate types and Cassandra types.
+// Package v1alpha1: Types in this package are instantiated in the other types in k8ssandra-operator, especially Cassandra types.
 // +kubebuilder:object:generate=true
 package v1alpha1
 
@@ -16,7 +16,7 @@ type TelemetrySpec struct {
 }
 
 type PrometheusTelemetrySpec struct {
-	// Enable the creation of Prometheus serviceMonitors for this resource (Cassandra or Stargate).
+	// Enable the creation of Prometheus serviceMonitors for this resource (Cassandra).
 	Enabled *bool `json:"enabled,omitempty"`
 	// CommonLabels are applied to all serviceMonitors created.
 	// +optional
@@ -24,7 +24,7 @@ type PrometheusTelemetrySpec struct {
 }
 
 type VectorSpec struct {
-	// Enabled enables the Vector agent for this resource (Cassandra, Reaper or Stargate).
+	// Enabled enables the Vector agent for this resource (Cassandra or Reaper).
 	// Enabling the vector agent will inject a sidecar container into the pod.
 	Enabled *bool `json:"enabled,omitempty"`
 
@@ -40,6 +40,11 @@ type VectorSpec struct {
 	// +optional
 	// kube:default=30s
 	ScrapeInterval *metav1.Duration `json:"scrapeInterval,omitempty"`
+
+	// Config is raw TOML merged into the generated Vector configuration.
+	// This can be used to set global Vector options or anything that does not fit the components model.
+	// +optional
+	Config string `json:"config,omitempty"`
 
 	Components *VectorComponentsSpec `json:"components,omitempty"`
 }

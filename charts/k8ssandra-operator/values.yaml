@@ -17,13 +17,21 @@ global:
   imageConfig:
     images:
       reaper:
+        registry: "docker.io"
         repository: "thelastpickle"
         name: "cassandra-reaper"
-        tag: "4.1.1"
+        tag: "5.1.0"
       medusa:
+        registry: "docker.io"
         repository: "k8ssandra"
         name: "medusa"
-        tag: "0.27.0"
+        tag: "0.31.1"
+    types:
+      dse:
+        registry: "docker.io"
+        repository: "datastax"
+        name: "dse-mgmtapi-6_8"
+        suffix: "-ubi"
 # -- A name in place of the chart name which is used in the metadata.name of
 # objects created by this chart.
 nameOverride: ''
@@ -45,7 +53,7 @@ image:
   pullPolicy: IfNotPresent
   # -- Tag of the k8ssandra-operator image to pull from image.repository
   tag: latest
-  # -- Docker registry containing all k8ssandra-operator related images, such as reaper/medusa/stargate. 
+  # -- Docker registry containing all k8ssandra-operator related images, such as reaper/medusa.
   # Setting this allows for usage of an internal registry without specifying image on all K8ssandraCluster objects.
   registryOverride:
 # -- References to secrets to use when pulling images. See:
@@ -85,6 +93,13 @@ nodeSelector: {}
 ## Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
 ##
 tolerations: []
+# -- metrics allows to change the configuration of how metrics are exposed. Default is
+# to expose /metrics endpoint at port :8080. If you wish to make this available only on
+# localhost (such as when using kube-rbac-proxy to secure access to them), set the value
+# to 127.0.0.1:8080
+metrics:
+  # -- Address where the metrics endpoint binds. Use "0" to disable metrics.
+  address: ":8080"
 # -- This client configuration is used for the CRD upgrader job only. Otherwise, modify
 # the global.imageConfig values to change k8ssandra-client
 client:
@@ -97,7 +112,7 @@ client:
     # -- Image repository for the client
     repository: k8ssandra/k8ssandra-client
     # -- Tag of the client image to pull from
-    tag: v0.8.6
+    tag: v0.9.0
     # -- Pull policy for the client container
     pullPolicy: IfNotPresent
   # -- HTTPS proxy address to use for communication to helm.k8ssandra.io

@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.16.4
+    controller-gen.kubebuilder.io/version: v0.21.0
   name: reapers.reaper.k8ssandra.io
 spec:
   group: reaper.k8ssandra.io
@@ -60,7 +60,9 @@ spec:
                     a Container.
                   properties:
                     name:
-                      description: Name of the environment variable. Must be a C_IDENTIFIER.
+                      description: |-
+                        Name of the environment variable.
+                        May consist of any printable ASCII characters except '='.
                       type: string
                     value:
                       description: |-
@@ -116,6 +118,43 @@ spec:
                               type: string
                           required:
                           - fieldPath
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        fileKeyRef:
+                          description: |-
+                            FileKeyRef selects a key of the env file.
+                            Requires the EnvFiles feature gate to be enabled.
+                          properties:
+                            key:
+                              description: |-
+                                The key within the env file. An invalid key will prevent the pod from starting.
+                                The keys defined within a source may consist of any printable ASCII characters except '='.
+                                During Alpha stage of the EnvFiles feature gate, the key size is limited to 128 characters.
+                              type: string
+                            optional:
+                              default: false
+                              description: |-
+                                Specify whether the file or its key must be defined. If the file or key
+                                does not exist, then the env var is not published.
+                                If optional is set to true and the specified key does not exist,
+                                the environment variable will not be set in the Pod's containers.
+
+                                If optional is set to false and the specified key does not exist,
+                                an error will be returned during Pod creation.
+                              type: boolean
+                            path:
+                              description: |-
+                                The path within the volume from which to select the file.
+                                Must be relative and may not contain the '..' path or start with '..'.
+                              type: string
+                            volumeName:
+                              description: The name of the volume mount containing
+                                the env file.
+                              type: string
+                          required:
+                          - key
+                          - path
+                          - volumeName
                           type: object
                           x-kubernetes-map-type: atomic
                         resourceFieldRef:
@@ -740,8 +779,8 @@ spec:
                           most preferred is the one with the greatest sum of weights, i.e.
                           for each node that meets all of the scheduling requirements (resource
                           request, requiredDuringScheduling anti-affinity expressions, etc.),
-                          compute a sum by iterating through the elements of this field and adding
-                          "weight" to the sum if the node has pods which matches the corresponding podAffinityTerm; the
+                          compute a sum by iterating through the elements of this field and subtracting
+                          "weight" from the sum if the node has pods which matches the corresponding podAffinityTerm; the
                           node(s) with the highest sum are the most preferred.
                         items:
                           description: The weights of all of the matched WeightedPodAffinityTerm
@@ -1445,7 +1484,7 @@ spec:
                       Claims lists the names of resources, defined in spec.resourceClaims,
                       that are used by this container.
 
-                      This is an alpha field and requires enabling the
+                      This field depends on the
                       DynamicResourceAllocation feature gate.
 
                       This field is immutable. It can only be set for containers.
@@ -1568,7 +1607,6 @@ spec:
                       procMount denotes the type of proc mount to use for the containers.
                       The default value is Default which uses the container runtime defaults for
                       readonly paths and masked paths.
-                      This requires the ProcMountType feature flag to be enabled.
                       Note that this field cannot be set when spec.os.name is windows.
                     type: string
                   readOnlyRootFilesystem:
@@ -2305,7 +2343,7 @@ spec:
                       Claims lists the names of resources, defined in spec.resourceClaims,
                       that are used by this container.
 
-                      This is an alpha field and requires enabling the
+                      This field depends on the
                       DynamicResourceAllocation feature gate.
 
                       This field is immutable. It can only be set for containers.
@@ -2437,7 +2475,6 @@ spec:
                       procMount denotes the type of proc mount to use for the containers.
                       The default value is Default which uses the container runtime defaults for
                       readonly paths and masked paths.
-                      This requires the ProcMountType feature flag to be enabled.
                       Note that this field cannot be set when spec.os.name is windows.
                     type: string
                   readOnlyRootFilesystem:
@@ -2657,7 +2694,7 @@ spec:
                   resources:
                     description: |-
                       resources represents the minimum resources the volume should have.
-                      If RecoverVolumeExpansionFailure feature is enabled users are allowed to specify resource requirements
+                      Users are allowed to specify resource requirements
                       that are lower than previous value but must still be higher than capacity recorded in the
                       status field of the claim.
                       More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#resources
@@ -2744,15 +2781,13 @@ spec:
                       volumeAttributesClassName may be used to set the VolumeAttributesClass used by this claim.
                       If specified, the CSI driver will create or update the volume with the attributes defined
                       in the corresponding VolumeAttributesClass. This has a different purpose than storageClassName,
-                      it can be changed after the claim is created. An empty string value means that no VolumeAttributesClass
-                      will be applied to the claim but it's not allowed to reset this field to empty string once it is set.
-                      If unspecified and the PersistentVolumeClaim is unbound, the default VolumeAttributesClass
-                      will be set by the persistentvolume controller if it exists.
+                      it can be changed after the claim is created. An empty string or nil value indicates that no
+                      VolumeAttributesClass will be applied to the claim. If the claim enters an Infeasible error state,
+                      this field can be reset to its previous value (including nil) to cancel the modification.
                       If the resource referred to by volumeAttributesClass does not exist, this PersistentVolumeClaim will be
                       set to a Pending state, as reflected by the modifyVolumeStatus field, until such as a resource
                       exists.
                       More info: https://kubernetes.io/docs/concepts/storage/volume-attributes-classes/
-                      (Beta) Using this field requires the VolumeAttributesClass feature gate to be enabled (off by default).
                     type: string
                   volumeMode:
                     description: |-
@@ -2800,44 +2835,86 @@ spec:
                       relabels:
                         items:
                           description: |-
-                            RelabelConfig allows dynamic rewriting of the label set, being applied to samples before ingestion.
-                            It defines `<metric_relabel_configs>`-section of Prometheus configuration.
-                            More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#metric_relabel_configs
+                            RelabelConfig allows dynamic rewriting of the label set for targets, alerts,
+                            scraped samples and remote write samples.
+
+                            More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config
                           properties:
                             action:
-                              description: Action to perform based on regex matching.
-                                Default is 'replace'
+                              default: replace
+                              description: |-
+                                action to perform based on the regex matching.
+
+                                `Uppercase` and `Lowercase` actions require Prometheus >= v2.36.0.
+                                `DropEqual` and `KeepEqual` actions require Prometheus >= v2.41.0.
+
+                                Default: "Replace"
+                              enum:
+                              - replace
+                              - Replace
+                              - keep
+                              - Keep
+                              - drop
+                              - Drop
+                              - hashmod
+                              - HashMod
+                              - labelmap
+                              - LabelMap
+                              - labeldrop
+                              - LabelDrop
+                              - labelkeep
+                              - LabelKeep
+                              - lowercase
+                              - Lowercase
+                              - uppercase
+                              - Uppercase
+                              - keepequal
+                              - KeepEqual
+                              - dropequal
+                              - DropEqual
                               type: string
                             modulus:
-                              description: Modulus to take of the hash of the source
-                                label values.
+                              description: |-
+                                modulus to take of the hash of the source label values.
+
+                                Only applicable when the action is `HashMod`.
                               format: int64
                               type: integer
                             regex:
-                              description: Regular expression against which the extracted
-                                value is matched. Default is '(.*)'
+                              description: regex defines the regular expression against
+                                which the extracted value is matched.
                               type: string
                             replacement:
                               description: |-
-                                Replacement value against which a regex replace is performed if the
-                                regular expression matches. Regex capture groups are available. Default is '$1'
+                                replacement value against which a Replace action is performed if the
+                                regular expression matches.
+
+                                Regex capture groups are available.
                               type: string
                             separator:
-                              description: Separator placed between concatenated source
-                                label values. default is ';'.
+                              description: separator defines the string between concatenated
+                                SourceLabels.
                               type: string
                             sourceLabels:
                               description: |-
-                                The source labels select values from existing labels. Their content is concatenated
-                                using the configured separator and matched against the configured regular expression
-                                for the replace, keep, and drop actions.
+                                sourceLabels defines the source labels select values from existing labels. Their content is
+                                concatenated using the configured Separator and matched against the
+                                configured regular expression.
                               items:
+                                description: |-
+                                  LabelName is a valid Prometheus label name.
+                                  For Prometheus 3.x, a label name is valid if it contains UTF-8 characters.
+                                  For Prometheus 2.x, a label name is only valid if it contains ASCII characters, letters, numbers, as well as underscores.
                                 type: string
                               type: array
                             targetLabel:
                               description: |-
-                                Label to which the resulting value is written in a replace action.
-                                It is mandatory for replace actions. Regex capture groups are available.
+                                targetLabel defines the label to which the resulting string is written in a replacement.
+
+                                It is mandatory for `Replace`, `HashMod`, `Lowercase`, `Uppercase`,
+                                `KeepEqual` and `DropEqual` actions.
+
+                                Regex capture groups are available.
                               type: string
                           type: object
                         type: array
@@ -2884,7 +2961,7 @@ spec:
                         type: object
                       enabled:
                         description: Enable the creation of Prometheus serviceMonitors
-                          for this resource (Cassandra or Stargate).
+                          for this resource (Cassandra).
                         type: boolean
                     type: object
                   vector:
@@ -2964,9 +3041,14 @@ spec:
                               type: object
                             type: array
                         type: object
+                      config:
+                        description: |-
+                          Config is raw TOML merged into the generated Vector configuration.
+                          This can be used to set global Vector options or anything that does not fit the components model.
+                        type: string
                       enabled:
                         description: |-
-                          Enabled enables the Vector agent for this resource (Cassandra, Reaper or Stargate).
+                          Enabled enables the Vector agent for this resource (Cassandra or Reaper).
                           Enabling the vector agent will inject a sidecar container into the pod.
                         type: boolean
                       image:
@@ -2982,7 +3064,7 @@ spec:
                               Claims lists the names of resources, defined in spec.resourceClaims,
                               that are used by this container.
 
-                              This is an alpha field and requires enabling the
+                              This field depends on the
                               DynamicResourceAllocation feature gate.
 
                               This field is immutable. It can only be set for containers.
@@ -3061,9 +3143,10 @@ spec:
                     operator:
                       description: |-
                         Operator represents a key's relationship to the value.
-                        Valid operators are Exists and Equal. Defaults to Equal.
+                        Valid operators are Exists, Equal, Lt, and Gt. Defaults to Equal.
                         Exists is equivalent to wildcard for value, so that a pod can
                         tolerate all taints of a particular category.
+                        Lt and Gt perform numeric comparisons (requires feature gate TaintTolerationComparisonOperators).
                       type: string
                     tolerationSeconds:
                       description: |-

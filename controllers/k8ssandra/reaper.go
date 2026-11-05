@@ -41,7 +41,6 @@ func (r *K8ssandraClusterReconciler) reconcileReaperSchema(
 	kc *api.K8ssandraCluster,
 	mgmtApi cassandra.ManagementApiFacade,
 	logger logr.Logger) result.ReconcileResult {
-
 	if kc.Spec.Reaper == nil {
 		return result.Continue()
 	}
@@ -78,7 +77,6 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 	logger logr.Logger,
 	remoteClient client.Client,
 ) result.ReconcileResult {
-
 	kcKey := client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}
 	reaperKey := types.NamespacedName{
 		Namespace: actualDc.Namespace,
@@ -142,10 +140,7 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 
 		actualReaper = actualReaper.DeepCopy()
 
-		if err := r.setStatusForReaper(kc, actualReaper, dcTemplate.Meta.Name); err != nil {
-			logger.Error(err, "Failed to update status for reaper")
-			return result.Error(err)
-		}
+		r.setStatusForReaper(kc, actualReaper, dcTemplate.Meta.Name)
 
 		if !annotations.CompareHashAnnotations(actualReaper, desiredReaper) {
 			logger.Info("Updating Reaper resource")
@@ -166,9 +161,7 @@ func (r *K8ssandraClusterReconciler) reconcileReaper(
 
 		logger.Info("Reaper is ready")
 		return result.Continue()
-
 	} else {
-
 		logger.Info("Reaper not present for DC " + actualDc.DatacenterName())
 
 		// Test if Reaper was removed
@@ -225,7 +218,7 @@ func (r *K8ssandraClusterReconciler) deleteReapers(
 	return
 }
 
-func (r *K8ssandraClusterReconciler) setStatusForReaper(kc *api.K8ssandraCluster, reaper *reaperapi.Reaper, dcName string) error {
+func (r *K8ssandraClusterReconciler) setStatusForReaper(kc *api.K8ssandraCluster, reaper *reaperapi.Reaper, dcName string) {
 	if len(kc.Status.Datacenters) == 0 {
 		kc.Status.Datacenters = make(map[string]api.K8ssandraStatus)
 	}
@@ -238,7 +231,6 @@ func (r *K8ssandraClusterReconciler) setStatusForReaper(kc *api.K8ssandraCluster
 			Reaper: reaper.Status.DeepCopy(),
 		}
 	}
-	return nil
 }
 
 func (r *K8ssandraClusterReconciler) removeReaperStatus(kc *api.K8ssandraCluster, dcName string) {

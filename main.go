@@ -60,14 +60,12 @@ import (
 	medusav1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
-	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	configctrl "github.com/k8ssandra/k8ssandra-operator/controllers/config"
 	k8ssandractrl "github.com/k8ssandra/k8ssandra-operator/controllers/k8ssandra"
 	medusactrl "github.com/k8ssandra/k8ssandra-operator/controllers/medusa"
 	reaperctrl "github.com/k8ssandra/k8ssandra-operator/controllers/reaper"
 	replicationctrl "github.com/k8ssandra/k8ssandra-operator/controllers/replication"
 	secretswebhook "github.com/k8ssandra/k8ssandra-operator/controllers/secrets-webhook"
-	stargatectrl "github.com/k8ssandra/k8ssandra-operator/controllers/stargate"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -92,7 +90,6 @@ func init() {
 	utilruntime.Must(cassdcapi.AddToScheme(scheme))
 	utilruntime.Must(cassctl.AddToScheme(scheme))
 	utilruntime.Must(replicationapi.AddToScheme(scheme))
-	utilruntime.Must(stargateapi.AddToScheme(scheme))
 	utilruntime.Must(configapi.AddToScheme(scheme))
 	utilruntime.Must(reaperapi.AddToScheme(scheme))
 	utilruntime.Must(promapi.AddToScheme(scheme))
@@ -210,9 +207,9 @@ func main() {
 			Scheme:           mgr.GetScheme(),
 			ClientCache:      clientCache,
 			ManagementApi:    cassandra.NewManagementApiFactory(),
-			Recorder:         mgr.GetEventRecorderFor("k8ssandracluster-controller"),
+			Recorder:         mgr.GetEventRecorder("k8ssandracluster-controller"),
 			ImageRegistry:    registry,
-		}).SetupWithManager(mgr, additionalClusters); err != nil {
+		}).SetupWithManager(ctx, mgr, additionalClusters); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "K8ssandraCluster")
 			os.Exit(1)
 		}
@@ -235,22 +232,11 @@ func main() {
 			Client:           mgr.GetClient(),
 			Scheme:           mgr.GetScheme(),
 			ClientCache:      clientCache,
-			Recorder:         mgr.GetEventRecorderFor("k8ssandratask-controller"),
+			Recorder:         mgr.GetEventRecorder("k8ssandratask-controller"),
 		}).SetupWithManager(mgr, additionalClusters); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "K8ssandraTask")
 			os.Exit(1)
 		}
-	}
-
-	if err = (&stargatectrl.StargateReconciler{
-		ReconcilerConfig: reconcilerConfig,
-		Client:           mgr.GetClient(),
-		Scheme:           mgr.GetScheme(),
-		ManagementApi:    cassandra.NewManagementApiFactory(),
-		Registry:         registry,
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Stargate")
-		os.Exit(1)
 	}
 
 	if err = (&reaperctrl.ReaperReconciler{
@@ -333,7 +319,6 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
-
 }
 
 func setupImageRegistry(ctx context.Context, uncachedClient client.Client) (cassimages.ImageRegistry, error) {

@@ -57,7 +57,7 @@ type ReplicationTarget struct {
 	// +optional
 	TargetPrefix string `json:"targetPrefix,omitempty"`
 
-	// DropLabels defines the labels to be dropped from the secret before replication, this is sometimes neccessary to avoid infinite replication.
+	// DropLabels defines the labels to be dropped from the secret before replication, this is sometimes necessary to avoid infinite replication.
 	DropLabels []string `json:"dropLabels,omitempty"`
 
 	// AddLabels adds labels to the target secret.
@@ -113,8 +113,4 @@ type ReplicatedSecretList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ReplicatedSecret `json:"items"`
-}
-
-func init() {
-	SchemeBuilder.Register(&ReplicatedSecret{}, &ReplicatedSecretList{})
 }

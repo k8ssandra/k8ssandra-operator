@@ -25,7 +25,7 @@ K8ssandra's Medusa supports:
 
 * All S3-compatible implementations, which include:
 
-  * MinIO 
+  * MinIO / Silo
   * IBM Cloud Object Storage
   * OVHCloud Object Storage
   * Riak S2

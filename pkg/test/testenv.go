@@ -40,14 +40,12 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
-	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 )
 
 const (
-	clustersToCreate          = 3
 	clusterProtoName          = "cluster-%d-%s"
-	cassOperatorVersion       = "v1.28.0"
-	prometheusOperatorVersion = "v0.9.0"
+	cassOperatorVersion       = "v1.32.0"
+	prometheusOperatorVersion = "v0.17.0"
 )
 
 type TestEnv struct {
@@ -78,7 +76,7 @@ func (e *TestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(
 		return err
 	}
 
-	webhookInstallOptions := &e.Environment.WebhookInstallOptions
+	webhookInstallOptions := &e.WebhookInstallOptions
 	whServer := webhook.NewServer(webhook.Options{
 		Port:    webhookInstallOptions.LocalServingPort,
 		Host:    webhookInstallOptions.LocalServingHost,
@@ -180,7 +178,6 @@ type MultiClusterTestEnv struct {
 }
 
 func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, controlPlaneReconcilers func(mgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error, dataPlaneReconcilers func(mgr manager.Manager, clientCache *clientcache.ClientCache, clusters []cluster.Cluster) error) error {
-
 	// if err := prepareCRDs(); err != nil {
 	// 	t.Fatalf("failed to prepare CRDs: %s", err)
 	// }
@@ -430,7 +427,6 @@ func prepareCRDs() error {
 	}
 	promOperatorCrdPath := filepath.Join(promOperatorTargetDir, "crd.yaml")
 	return os.WriteFile(promOperatorCrdPath, buf.Bytes(), 0644)
-
 }
 
 func registerApis() error {
@@ -443,10 +439,6 @@ func registerApis() error {
 	}
 
 	if err := cassctlapi.AddToScheme(scheme.Scheme); err != nil {
-		return err
-	}
-
-	if err := stargateapi.AddToScheme(scheme.Scheme); err != nil {
 		return err
 	}
 

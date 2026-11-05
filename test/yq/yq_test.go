@@ -57,12 +57,12 @@ func TestEval(t *testing.T) {
 		{
 			name: "empty line",
 			args: args{
-				expression: ".spec.cassandra.datacenters.[] | { .metadata.name : .k8sContext } | to_entries | .[] | .value // \"\"",
+				expression: ".spec.cassandra.datacenters.[] | { .metadata.name : .metadata.namespace } | to_entries | .[] | .value // \"\"",
 				files: []string{
 					"../testdata/fixtures/multi-dc-medusa/k8ssandra.yaml",
 				},
 			},
-			want: "\nkind-k8ssandra-1",
+			want: "separate-namespace\n",
 		},
 		{
 			name: "non existent file",

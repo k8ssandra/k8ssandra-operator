@@ -35,7 +35,7 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -71,7 +71,7 @@ type K8ssandraTaskReconciler struct {
 	client.Client
 	Scheme      *runtime.Scheme
 	ClientCache *clientcache.ClientCache
-	Recorder    record.EventRecorder
+	Recorder    events.EventRecorder
 }
 
 //+kubebuilder:rbac:groups=control.k8ssandra.io,namespace="k8ssandra",resources=k8ssandratasks,verbs=get;list;watch;create;update;patch;delete
@@ -108,10 +108,10 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if err := r.Update(ctx, kTask); err != nil {
 			return ctrl.Result{}, err
 		}
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 	}
 
-	if !kTask.ObjectMeta.DeletionTimestamp.IsZero() && controllerutil.ContainsFinalizer(kTask, k8ssandraTaskFinalizer) {
+	if !kTask.DeletionTimestamp.IsZero() && controllerutil.ContainsFinalizer(kTask, k8ssandraTaskFinalizer) {
 		// The task is getting deleted, and it's the first time we've noticed it.
 		// Clean up dependents and remove the finalizer.
 		if err := r.deleteCassandraTasks(ctx, kTask, kc, kcExists, logger); err != nil {
@@ -186,7 +186,7 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		kTask.RefreshGlobalStatus(len(dcs))
 		if err = r.Status().Update(ctx, kTask); err != nil {
 			if k8serrors.IsConflict(err) {
-				return ctrl.Result{Requeue: true}, nil
+				return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 			}
 			return ctrl.Result{}, err
 		}
@@ -194,7 +194,7 @@ func (r *K8ssandraTaskReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		// because we configured GenerationChangedPredicate in SetupWithManager(), we ignore our own status updates.
 		// Requeue manually just for this case.
 		if !kTask.Status.CompletionTime.IsZero() {
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 		}
 
 		return ctrl.Result{}, nil
@@ -244,8 +244,8 @@ func (r *K8ssandraTaskReconciler) deleteCassandraTasks(
 			if err := remoteClient.Delete(ctx, actualCTask); err != nil {
 				if !k8serrors.IsNotFound(err) {
 					return errors.Wrapf(err, "deleting CassandraTask %s.%s in context %s",
-						actualCTask.ObjectMeta.Namespace,
-						actualCTask.ObjectMeta.Name,
+						actualCTask.Namespace,
+						actualCTask.Name,
 						dc.K8sContext)
 				}
 			}
@@ -255,7 +255,6 @@ func (r *K8ssandraTaskReconciler) deleteCassandraTasks(
 }
 
 func filterDcs(kc *k8capi.K8ssandraCluster, dcNames []string) ([]k8capi.CassandraDatacenterTemplate, error) {
-
 	if len(dcNames) == 0 {
 		return kc.Spec.Cassandra.Datacenters, nil
 	}
@@ -331,8 +330,8 @@ func (r *K8ssandraTaskReconciler) recordCassandraTaskCreated(
 	if k8sContext != "" {
 		contextInfo = " in context " + k8sContext
 	}
-	r.Recorder.Event(kTask, "Normal", "CreateCassandraTask",
-		fmt.Sprintf("Created CassandraTask %s.%s%s", cTask.Namespace, cTask.Name, contextInfo))
+	r.Recorder.Eventf(kTask, nil, corev1.EventTypeNormal, "CreateCassandraTask", "CreateCassandraTask",
+		"Created CassandraTask %s.%s%s", cTask.Namespace, cTask.Name, contextInfo)
 }
 
 // reportInvalidSpec is called when the user provided an invalid K8ssandraTask spec. A warning event is emitted and the
@@ -343,7 +342,7 @@ func (r *K8ssandraTaskReconciler) reportInvalidSpec(
 	format string,
 	arguments ...interface{},
 ) (ctrl.Result, error) {
-	r.Recorder.Event(kTask, "Warning", "InvalidSpec", fmt.Sprintf(format, arguments...))
+	r.Recorder.Eventf(kTask, nil, corev1.EventTypeWarning, "InvalidSpec", "InvalidSpec", format, arguments...)
 
 	patch := client.MergeFrom(kTask.DeepCopy())
 	kTask.SetCondition(api.JobInvalid, metav1.ConditionTrue)
@@ -356,7 +355,7 @@ func (r *K8ssandraTaskReconciler) SetupWithManager(mgr ctrl.Manager, clusters []
 	cb := ctrl.NewControllerManagedBy(mgr).
 		For(&api.K8ssandraTask{}, builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 
-	kTaskLabelFilter := func(ctx context.Context, obj client.Object) []reconcile.Request {
+	kTaskLabelFilter := func(_ context.Context, obj client.Object) []reconcile.Request {
 		requests := make([]reconcile.Request, 0)
 
 		taskName := labels.GetLabel(obj, api.K8ssandraTaskNameLabel)

@@ -24,6 +24,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
+	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,16 +32,15 @@ import (
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 var (
 	clientCache                 *clientcache.ClientCache
 	ErrNumTokens                = fmt.Errorf("num_tokens value can't be changed")
+	ErrNoServerVersion          = fmt.Errorf("serverVersion should be set globally or at DC level")
 	ErrReaperKeyspace           = fmt.Errorf("reaper keyspace can not be changed")
 	ErrNoStorageConfig          = fmt.Errorf("storageConfig must be defined at cluster level or dc level")
 	ErrNoResourcesSet           = fmt.Errorf("softPodAntiAffinity requires Resources to be set")
@@ -60,43 +60,50 @@ var webhookLog = logf.Log.WithName("k8ssandracluster-webhook")
 
 func SetupK8ssandraClusterWebhookWithManager(mgr ctrl.Manager, cCache *clientcache.ClientCache) error {
 	clientCache = cCache
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&K8ssandraCluster{}).
+	return ctrl.NewWebhookManagedBy(mgr, &K8ssandraCluster{}).
 		WithValidator(&K8ssandraClusterCustomValidator{}).
 		Complete()
 }
 
-var _ webhook.CustomDefaulter = &K8ssandraClusterCustomDefaulter{}
+var _ admission.Defaulter[*K8ssandraCluster] = &K8ssandraClusterCustomDefaulter{}
 
 type K8ssandraClusterCustomDefaulter struct {
 }
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
-func (r *K8ssandraClusterCustomDefaulter) Default(ctx context.Context, obj runtime.Object) error {
+func (r *K8ssandraClusterCustomDefaulter) Default(ctx context.Context, obj *K8ssandraCluster) error {
 	return nil
 }
 
 //+kubebuilder:webhook:path=/validate-k8ssandra-io-v1alpha1-k8ssandracluster,mutating=false,failurePolicy=fail,sideEffects=None,groups=k8ssandra.io,resources=k8ssandraclusters,verbs=create;update,versions=v1alpha1,name=vk8ssandracluster.kb.io,admissionReviewVersions=v1
 
-var _ webhook.CustomValidator = &K8ssandraClusterCustomValidator{}
+var _ admission.Validator[*K8ssandraCluster] = &K8ssandraClusterCustomValidator{}
 
 type K8ssandraClusterCustomValidator struct {
 }
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (v *K8ssandraClusterCustomValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	r, ok := obj.(*K8ssandraCluster)
-	if !ok {
-		return nil, fmt.Errorf("expected a K8ssandraCluster object but got %T", obj)
+func (v *K8ssandraClusterCustomValidator) ValidateCreate(ctx context.Context, obj *K8ssandraCluster) (admission.Warnings, error) {
+	webhookLog.Info("validate K8ssandraCluster create", "K8ssandraCluster", obj.Name)
+
+	if err := validateK8ssandraCluster(obj); err != nil {
+		return nil, err
 	}
 
-	webhookLog.Info("validate K8ssandraCluster create", "K8ssandraCluster", r.Name)
+	return nil, validateServerVersion(obj.Spec.Cassandra)
+}
 
-	return ValidateDeprecatedFieldUsage(r), validateK8ssandraCluster(r)
+func validateServerVersion(cassandra *CassandraClusterTemplate) error {
+	for _, dc := range cassandra.Datacenters {
+		if dc.ServerVersion == "" && cassandra.ServerVersion == "" {
+			return ErrNoServerVersion
+		}
+	}
+	return nil
 }
 
 func validateK8ssandraCluster(r *K8ssandraCluster) error {
-	hasClusterStorageConfig := r.Spec.Cassandra.DatacenterOptions.StorageConfig != nil
+	hasClusterStorageConfig := r.Spec.Cassandra.StorageConfig != nil
 	for _, dc := range r.Spec.Cassandra.Datacenters {
 		dns1035Errs := validation.IsDNS1035Label(dc.Meta.Name)
 		if len(dns1035Errs) > 0 {
@@ -113,12 +120,12 @@ func validateK8ssandraCluster(r *K8ssandraCluster) error {
 		}
 
 		// StorageConfig must be set at DC or Cluster level
-		if dc.DatacenterOptions.StorageConfig == nil && !hasClusterStorageConfig {
+		if dc.StorageConfig == nil && !hasClusterStorageConfig {
 			return ErrNoStorageConfig
 		}
 		// From cass-operator, if AllowMultipleWorkersPerNode is set, Resources must be defined or cass-operator will reject this Datacenter
-		if dc.DatacenterOptions.SoftPodAntiAffinity != nil && *dc.DatacenterOptions.SoftPodAntiAffinity {
-			if dc.DatacenterOptions.Resources == nil {
+		if dc.SoftPodAntiAffinity != nil && *dc.SoftPodAntiAffinity {
+			if dc.Resources == nil {
 				return ErrNoResourcesSet
 			}
 		}
@@ -126,7 +133,7 @@ func validateK8ssandraCluster(r *K8ssandraCluster) error {
 
 	if metav1.HasAnnotation(r.ObjectMeta, AutomatedUpdateAnnotation) {
 		// Allow only always and once in the annotation
-		annotationValue := r.ObjectMeta.GetAnnotations()[AutomatedUpdateAnnotation]
+		annotationValue := r.GetAnnotations()[AutomatedUpdateAnnotation]
 		if annotationValue != string(AllowUpdateAlways) && annotationValue != string(AllowUpdateOnce) {
 			return fmt.Errorf("invalid value for %s annotation: %s", AutomatedUpdateAnnotation, annotationValue)
 		}
@@ -148,7 +155,7 @@ func validateK8ssandraCluster(r *K8ssandraCluster) error {
 }
 
 func validateStatefulsetNameSize(r *K8ssandraCluster) error {
-	clusterName := r.ObjectMeta.Name
+	clusterName := r.Name
 	if r.Spec.Cassandra.ClusterName != "" {
 		clusterName = r.Spec.Cassandra.ClusterName
 	}
@@ -181,40 +188,30 @@ func validateStatefulsetNameSize(r *K8ssandraCluster) error {
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (v *K8ssandraClusterCustomValidator) ValidateUpdate(ctx context.Context, old runtime.Object, new runtime.Object) (admission.Warnings, error) {
-	r, ok := new.(*K8ssandraCluster)
-	if !ok {
-		return nil, fmt.Errorf("expected a K8ssandraCluster object but got %T", new)
-	}
+func (v *K8ssandraClusterCustomValidator) ValidateUpdate(ctx context.Context, oldCluster *K8ssandraCluster, newCluster *K8ssandraCluster) (admission.Warnings, error) {
+	webhookLog.Info("validate K8ssandraCluster update", "K8ssandraCluster", newCluster.Name)
 
-	webhookLog.Info("validate K8ssandraCluster update", "K8ssandraCluster", r.Name)
-
-	if err := validateK8ssandraCluster(r); err != nil {
+	if err := validateK8ssandraCluster(newCluster); err != nil {
 		return nil, err
-	}
-
-	oldCluster, ok := old.(*K8ssandraCluster)
-	if !ok {
-		return nil, fmt.Errorf("previous object could not be casted to K8ssandraCluster")
 	}
 
 	// Verify Reaper keyspace is not changed
 	oldReaperSpec := oldCluster.Spec.Reaper
-	reaperSpec := r.Spec.Reaper
+	reaperSpec := newCluster.Spec.Reaper
 	if reaperSpec != nil && oldReaperSpec != nil {
 		if reaperSpec.Keyspace != oldReaperSpec.Keyspace {
 			return nil, ErrReaperKeyspace
 		}
 	}
 
-	if err := validateUpdateNumTokens(oldCluster.Spec.Cassandra, r.Spec.Cassandra); err != nil {
+	if err := validateUpdateNumTokens(oldCluster.Spec.Cassandra, newCluster.Spec.Cassandra); err != nil {
 		return nil, err
 	}
-	if DcRemoved(oldCluster.Spec, r.Spec) && DcAdded(oldCluster.Spec, r.Spec) {
+	if DcRemoved(oldCluster.Spec, newCluster.Spec) && DcAdded(oldCluster.Spec, newCluster.Spec) {
 		return nil, fmt.Errorf("renaming, as well as adding and removing DCs at the same time is prohibited as it can cause data loss")
 	}
 	// Verify that the cluster name override was not changed
-	if r.Spec.Cassandra.ClusterName != oldCluster.Spec.Cassandra.ClusterName {
+	if newCluster.Spec.Cassandra.ClusterName != oldCluster.Spec.Cassandra.ClusterName {
 		return nil, ErrClusterName
 	}
 
@@ -226,11 +223,11 @@ func (v *K8ssandraClusterCustomValidator) ValidateUpdate(ctx context.Context, ol
 	// TODO StorageConfig can not be modified (not Cluster or DC level) in existing datacenters
 	// TODO Racks can only be added and only at the end of the list - no other operation is allowed to racks
 
-	if err := validateStatefulsetNameSize(r); err != nil {
+	if err := validateStatefulsetNameSize(newCluster); err != nil {
 		return nil, err
 	}
 
-	return ValidateDeprecatedFieldUsage(r), nil
+	return nil, nil
 }
 
 func validateUpdateNumTokens(
@@ -257,7 +254,7 @@ func validateUpdateNumTokens(
 
 func numTokensPerDc(cassandra *CassandraClusterTemplate) (map[string]interface{}, error) {
 	var globalNumTokens interface{}
-	globalConfig := cassandra.DatacenterOptions.CassandraConfig
+	globalConfig := cassandra.CassandraConfig
 	if globalConfig != nil {
 		globalNumTokens = globalConfig.CassandraYaml["num_tokens"]
 	}
@@ -266,7 +263,7 @@ func numTokensPerDc(cassandra *CassandraClusterTemplate) (map[string]interface{}
 	for _, dc := range cassandra.Datacenters {
 		var numTokens interface{}
 		// Try to set from DC config
-		config := dc.DatacenterOptions.CassandraConfig
+		config := dc.CassandraConfig
 		if config != nil {
 			numTokens = config.CassandraYaml["num_tokens"]
 		}
@@ -281,7 +278,7 @@ func numTokensPerDc(cassandra *CassandraClusterTemplate) (map[string]interface{}
 				versionString = cassandra.ServerVersion
 			}
 			if versionString == "" {
-				return nil, errors.New("serverVersion should be set globally or at DC level")
+				return nil, ErrNoServerVersion
 			}
 			version, err := semver.NewVersion(versionString)
 			if err != nil {
@@ -299,7 +296,7 @@ func numTokensPerDc(cassandra *CassandraClusterTemplate) (map[string]interface{}
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (v *K8ssandraClusterCustomValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (v *K8ssandraClusterCustomValidator) ValidateDelete(ctx context.Context, obj *K8ssandraCluster) (admission.Warnings, error) {
 	return nil, nil
 }
 
@@ -307,33 +304,45 @@ func ValidateMedusa(r *K8ssandraCluster) error {
 	if r.Spec.Medusa == nil {
 		return nil
 	}
-
-	// Verify the Medusa storage prefix is explicitly set
-	// only relevant if Medusa is enabled and the MedusaConfiguration object is referenced
 	if r.Spec.Medusa.MedusaConfigurationRef.Name != "" {
-		if r.Spec.Medusa.StorageProperties.Prefix == "" {
-			return ErrNoStoragePrefix
-		}
-		// Verify that any referenced MedusaConfig is NS-local
-		if r.Spec.Medusa.MedusaConfigurationRef.Namespace != "" {
-			return errors.New("Medusa config must be namespace local")
-		}
-		if r.Spec.Medusa.MedusaConfigurationRef.APIVersion != "" ||
-			r.Spec.Medusa.MedusaConfigurationRef.Kind != "" ||
-			r.Spec.Medusa.MedusaConfigurationRef.FieldPath != "" ||
-			r.Spec.Medusa.MedusaConfigurationRef.ResourceVersion != "" ||
-			r.Spec.Medusa.MedusaConfigurationRef.UID != "" {
-			return errors.New("Medusa config invalid, invalid field used")
-		}
-	} else {
-		if r.Spec.Medusa.StorageProperties.StorageProvider == "" {
-			return ErrNoStorageProvider
-		}
-		if r.Spec.Medusa.StorageProperties.BucketName == "" {
-			return ErrNoBucketName
-		}
+		return validateMedusaWithConfigRef(r.Spec.Medusa)
 	}
+	return validateMedusaWithoutConfigRef(r.Spec.Medusa)
+}
 
+// validateMedusaWithConfigRef validates Medusa configuration when a MedusaConfigurationRef is provided.
+func validateMedusaWithConfigRef(medusa *medusaapi.MedusaClusterTemplate) error {
+	// Verify the Medusa storage prefix is explicitly set
+	if medusa.StorageProperties.Prefix == "" {
+		return ErrNoStoragePrefix
+	}
+	// Verify that the referenced MedusaConfig is namespace-local
+	if medusa.MedusaConfigurationRef.Namespace != "" {
+		return errors.New("Medusa config must be namespace local")
+	}
+	ref := medusa.MedusaConfigurationRef
+	if ref.APIVersion != "" ||
+		ref.Kind != "" ||
+		ref.FieldPath != "" ||
+		ref.ResourceVersion != "" ||
+		ref.UID != "" {
+		return errors.New("Medusa config invalid, invalid field used")
+	}
+	// Verify that only one of storage secret reference or MedusaConfiguration reference is provided
+	if medusa.StorageProperties.StorageSecretRef.Name != "" {
+		return errors.New("Both Medusa Configuration Reference and Storage Secret Reference cannot be specified at same time")
+	}
+	return nil
+}
+
+// validateMedusaWithoutConfigRef validates Medusa configuration when no MedusaConfigurationRef is provided.
+func validateMedusaWithoutConfigRef(medusa *medusaapi.MedusaClusterTemplate) error {
+	if medusa.StorageProperties.StorageProvider == "" {
+		return ErrNoStorageProvider
+	}
+	if medusa.StorageProperties.BucketName == "" {
+		return ErrNoBucketName
+	}
 	return nil
 }
 
@@ -362,34 +371,4 @@ func validateReaper(r *K8ssandraCluster) error {
 		return ErrNoReaperPerDcWithLocal
 	}
 	return nil
-}
-
-// ValidateDeprecatedFieldUsage adds warning about fields that are deprecated
-func ValidateDeprecatedFieldUsage(r *K8ssandraCluster) admission.Warnings {
-	warnings := admission.Warnings{}
-
-	if r.Spec.Stargate != nil {
-		warnings = append(warnings, deprecatedWarning("stargate", "", ""))
-	}
-
-	if r.Spec.Cassandra != nil && len(r.Spec.Cassandra.Datacenters) > 0 {
-		for _, dc := range r.Spec.Cassandra.Datacenters {
-			if dc.Stargate != nil {
-				warnings = append(warnings, deprecatedWarning("cassandra.datacenters.stargate", "", ""))
-			}
-		}
-	}
-
-	return warnings
-}
-
-func deprecatedWarning(field, instead, extra string) string {
-	warning := fmt.Sprintf("K8ssandraCluster is using deprecated field '%s'", field)
-	if instead != "" {
-		warning += fmt.Sprintf(", use '%s' instead", instead)
-	}
-	if extra != "" {
-		warning += ". %s"
-	}
-	return warning
 }

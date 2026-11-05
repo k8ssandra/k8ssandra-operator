@@ -4,8 +4,9 @@ package telemetry
 
 import (
 	"context"
-	"github.com/go-logr/logr/testr"
 	"testing"
+
+	"github.com/go-logr/logr/testr"
 
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 

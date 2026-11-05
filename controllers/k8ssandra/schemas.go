@@ -11,12 +11,12 @@ import (
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	kerrors "github.com/k8ssandra/k8ssandra-operator/pkg/errors"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/k8ssandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/stargate"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -35,7 +35,6 @@ func (r *K8ssandraClusterReconciler) checkSchemas(
 	dc *cassdcapi.CassandraDatacenter,
 	remoteClient client.Client,
 	logger logr.Logger) result.ReconcileResult {
-
 	mgmtApi, err := r.ManagementApi.NewManagementApiFacade(ctx, dc, remoteClient, logger)
 	if err != nil {
 		return result.Error(err)
@@ -45,15 +44,14 @@ func (r *K8ssandraClusterReconciler) checkSchemas(
 		return recResult
 	}
 
-	if recResult := r.reconcileStargateAuthSchema(ctx, kc, mgmtApi, logger); recResult.Completed() {
-		return recResult
-	}
-
 	// we only want to reconcile the Reaper schema if we're deploying Reaper together with k8ssandra cluster
 	// otherwise we just register the k8ssandra cluster with an external reaper (happens after reconciling the DCs)
 	if kc.Spec.Reaper != nil && !kc.Spec.Reaper.HasReaperRef() {
-		if recResult := r.reconcileReaperSchema(ctx, kc, mgmtApi, logger); recResult.Completed() {
-			return recResult
+		// and even in this case, we only want to do this if the cluster itself is going to be used for reaper's storage
+		if kc.Spec.Reaper.StorageType == reaperapi.StorageTypeCassandra {
+			if recResult := r.reconcileReaperSchema(ctx, kc, mgmtApi, logger); recResult.Completed() {
+				return recResult
+			}
 		}
 	}
 
@@ -80,7 +78,7 @@ func (r *K8ssandraClusterReconciler) checkSchemas(
 			}
 		}
 
-		dc, _, err = r.findDcForDeletion(ctx, kcKey, decommCassDcName, dcRemoteClient)
+		dc, err = r.findDcForDeletion(ctx, kcKey, decommCassDcName, dcRemoteClient)
 		if err != nil {
 			return result.Error(err)
 		}
@@ -113,7 +111,6 @@ func (r *K8ssandraClusterReconciler) checkInitialSystemReplication(
 	ctx context.Context,
 	kc *api.K8ssandraCluster,
 	logger logr.Logger) (cassandra.SystemReplication, error) {
-
 	replication := make(map[string]int)
 	if val := annotations.GetAnnotation(kc, api.InitialSystemReplicationAnnotation); val != "" {
 		if err := json.Unmarshal([]byte(val), &replication); err == nil {
@@ -168,7 +165,6 @@ func (r *K8ssandraClusterReconciler) updateReplicationOfSystemKeyspaces(
 	kc *api.K8ssandraCluster,
 	mgmtApi cassandra.ManagementApiFacade,
 	logger logr.Logger) result.ReconcileResult {
-
 	if recResult := r.versionCheck(ctx, kc); recResult.Completed() {
 		return recResult
 	}
@@ -223,7 +219,6 @@ func (r *K8ssandraClusterReconciler) updateUserKeyspacesReplication(
 	dc *cassdcapi.CassandraDatacenter,
 	mgmtApi cassandra.ManagementApiFacade,
 	logger logr.Logger) result.ReconcileResult {
-
 	jsonReplication := annotations.GetAnnotation(kc, api.DcReplicationAnnotation)
 	if jsonReplication == "" {
 		logger.Info(api.DcReplicationAnnotation + " not set. Replication for user keyspaces will not be updated")
@@ -289,7 +284,6 @@ func (r *K8ssandraClusterReconciler) checkUserKeyspacesReplicationForDecommissio
 	decommDc string,
 	mgmtApi cassandra.ManagementApiFacade,
 	logger logr.Logger) result.ReconcileResult {
-
 	logger.Info("Updating replication for user keyspaces for decommission")
 
 	userKeyspaces, err := getUserKeyspaces(mgmtApi, kc)
@@ -329,14 +323,9 @@ func getUserKeyspaces(mgmtApi cassandra.ManagementApiFacade, kc *api.K8ssandraCl
 	return userKeyspaces, nil
 }
 
-// getInternalKeyspaces returns all internal Cassandra keyspaces as well as the Stargate
-// auth and Reaper keyspaces if Stargate and Reaper are enabled.
+// getInternalKeyspaces returns internal Cassandra keyspaces and the Reaper keyspace when enabled.
 func getInternalKeyspaces(kc *api.K8ssandraCluster) []string {
 	keyspaces := api.SystemKeyspaces
-
-	if kc.HasStargates() {
-		keyspaces = append(keyspaces, stargate.AuthKeyspace)
-	}
 
 	if kc.Spec.Reaper != nil {
 		keyspaces = append(keyspaces, getReaperKeyspace(kc))

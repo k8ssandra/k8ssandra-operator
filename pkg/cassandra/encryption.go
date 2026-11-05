@@ -250,7 +250,6 @@ func ReadEncryptionStorePassword(ctx context.Context, namespace string, remoteCl
 		}
 	} else {
 		secretName, secretKey = storeSecretRef.Name, storeSecretRef.GetSpecificKeyOrDefault(fmt.Sprintf("%s-password", storeName))
-
 	}
 
 	passwordSecretObj := &corev1.Secret{}

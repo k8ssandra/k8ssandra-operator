@@ -311,9 +311,6 @@ spec:
           name: dc2
         k8sContext: kind-k8ssandra-2
         size: 3
-  stargate:
-     size: 1
-     heapSize: 512M
 ```
 
 Verify again that your context is set to the control plane cluster, which is in this example:
@@ -366,7 +363,6 @@ kubectl get pods -n k8ssandra-operator
 
 ```bash
 NAME                                                    READY   STATUS    RESTARTS   AGE
-demo-dc1-default-stargate-deployment-547df5877d-bvnz2   1/1     Running   0          66m
 demo-dc1-default-sts-0                                  2/2     Running   0          80m
 demo-dc1-default-sts-1                                  2/2     Running   0          80m
 demo-dc1-default-sts-2                                  2/2     Running   0          80m
@@ -384,7 +380,6 @@ kubectl get pods -n k8ssandra-operator
 
 ```bash
 NAME                                                    READY   STATUS    RESTARTS   AGE
-demo-dc2-default-stargate-deployment-86c5fc44ff-lt9ts   1/1     Running   0          65m
 demo-dc2-default-sts-0                                  2/2     Running   0          76m
 demo-dc2-default-sts-1                                  2/2     Running   0          76m
 demo-dc2-default-sts-2                                  2/2     Running   0          76m
@@ -602,7 +597,7 @@ Connected to demo at 127.0.0.1:9042
 Use HELP for help.
 demo-superuser@cqlsh> describe keyspaces;
 
-data_endpoint_auth  system_auth         system_schema  system_views
+system_auth         system_schema  system_views
 system              system_distributed  system_traces  system_virtual_schema
 
 demo-superuser@cqlsh> CREATE KEYSPACE test WITH replication = {'class': 'NetworkTopologyStrategy', 'dc1' : 3, 'dc2' : 3};
@@ -660,37 +655,8 @@ cassandra@k8ssandra-3-worker3:/$ exit
 exit
 ```
 
-Now use the Stargate API. 
 
-**Output plus cqlsh &amp; stargate-service example:**
-
-```bash
-kubectl config use-context kind-k8ssandra-2
-
-kubectl exec -it demo-dc2-default-sts-0 -n k8ssandra-operator -- /bin/bash
-
-Defaulted container "cassandra" out of: cassandra, server-system-logger, jmx-credentials (init), server-config-init (init)
-cassandra@k8ssandra-2-worker3:/$ cqlsh -u demo-superuser -p KT-ROFfbD-O9BzWS3Lxq demo-dc3-stargate-service
-Connected to demo at demo-dc2-stargate-service:9042
-[cqlsh 6.0.0 | Cassandra 4.0.1 | CQL spec 3.4.5 | Native protocol v4]
-Use HELP for help.
-demo-superuser@cqlsh> use test;
-demo-superuser@cqlsh:test> select * from users;
-
- email          | name          | state
-----------------+---------------+-------
- john@gamil.com |    John Smith |    NC
-  joe@gamil.com |     Joe Jones |    VA
-   sue@help.com |       Sue Sas |    CA
-    tom@yes.com | Tom and Jerry |    NV
-
-(4 rows)
-```
 ## Next steps
 
 * See other [local install]({{< relref "install/local/" >}}) options.
 * Also, dig into the K8ssandra Operator [components]({{< relref "components" >}}).
-
-
-
-

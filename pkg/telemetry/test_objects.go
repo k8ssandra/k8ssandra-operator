@@ -8,5 +8,4 @@ func NewTelemetrySpec() telemetryapi.TelemetrySpec {
 	return telemetryapi.TelemetrySpec{
 		Cassandra: &telemetryapi.CassandraAgentSpec{},
 	}
-
 }

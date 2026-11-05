@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var perNodeConfigNotOwnedByK8ssandraOperator = errors.New("per-node configuration already exists and is not owned by k8ssandra-operator")
+var errPerNodeConfigNotOwnedByK8ssandraOperator = errors.New("per-node configuration already exists and is not owned by k8ssandra-operator")
 
 func (r *K8ssandraClusterReconciler) reconcilePerNodeConfiguration(
 	ctx context.Context,
@@ -41,7 +41,6 @@ func (r *K8ssandraClusterReconciler) reconcileDefaultPerNodeConfiguration(
 	remoteClient client.Client,
 	dcLogger logr.Logger,
 ) result.ReconcileResult {
-
 	kcKey := utils.GetKey(kc)
 
 	perNodeConfigKey := nodeconfig.NewDefaultPerNodeConfigMapKey(kc, dcConfig)
@@ -56,7 +55,6 @@ func (r *K8ssandraClusterReconciler) reconcileDefaultPerNodeConfiguration(
 	err := remoteClient.Get(ctx, perNodeConfigKey, actualPerNodeConfig)
 
 	if err != nil {
-
 		if !apierrors.IsNotFound(err) {
 			dcLogger.Error(err, "Failed to get per-node configuration")
 			return result.Error(err)
@@ -78,14 +76,11 @@ func (r *K8ssandraClusterReconciler) reconcileDefaultPerNodeConfiguration(
 			}
 			dcLogger.Info("Created per-node configuration")
 		}
-
 	} else if desiredPerNodeConfig != nil {
-
 		// Update
 		if !k8ssandralabels.IsOwnedByK8ssandraController(actualPerNodeConfig) {
-			dcLogger.Error(perNodeConfigNotOwnedByK8ssandraOperator, "Failed to update per-node configuration")
+			dcLogger.Error(errPerNodeConfigNotOwnedByK8ssandraOperator, "Failed to update per-node configuration")
 			return result.Error(err)
-
 		} else if !annotations.CompareHashAnnotations(actualPerNodeConfig, desiredPerNodeConfig) {
 			resourceVersion := actualPerNodeConfig.GetResourceVersion()
 			desiredPerNodeConfig.DeepCopyInto(actualPerNodeConfig)
@@ -96,14 +91,11 @@ func (r *K8ssandraClusterReconciler) reconcileDefaultPerNodeConfiguration(
 			}
 			dcLogger.Info("Updated per-node configuration")
 		}
-
 	} else {
-
 		// Delete
 		if !k8ssandralabels.IsOwnedByK8ssandraController(actualPerNodeConfig) {
-			dcLogger.Error(perNodeConfigNotOwnedByK8ssandraOperator, "Failed to delete per-node configuration")
+			dcLogger.Error(errPerNodeConfigNotOwnedByK8ssandraOperator, "Failed to delete per-node configuration")
 			return result.Error(err)
-
 		} else if err = remoteClient.Delete(ctx, actualPerNodeConfig); err != nil {
 			dcLogger.Error(err, "Failed to delete per-node configuration")
 			return result.Error(err)
@@ -129,7 +121,6 @@ func (r *K8ssandraClusterReconciler) reconcileUserProvidedPerNodeConfiguration(
 	remoteClient client.Client,
 	dcLogger logr.Logger,
 ) result.ReconcileResult {
-
 	kcKey := utils.GetKey(kc)
 
 	perNodeConfigKey := types.NamespacedName{
@@ -142,9 +133,7 @@ func (r *K8ssandraClusterReconciler) reconcileUserProvidedPerNodeConfiguration(
 	err := remoteClient.Get(ctx, perNodeConfigKey, actualPerNodeConfig)
 
 	if err == nil {
-
 		if !k8ssandralabels.IsWatchedByK8ssandraCluster(actualPerNodeConfig, kcKey) {
-
 			// We set the configmap as managed by the operator so that we are notified of changes to
 			// its contents. Note that we do NOT set the configmap as owned by the operator, nor do
 			// we set our controller reference on it.
@@ -163,9 +152,7 @@ func (r *K8ssandraClusterReconciler) reconcileUserProvidedPerNodeConfiguration(
 		annotations.AddAnnotation(&dcConfig.PodTemplateSpec, k8ssandraapi.PerNodeConfigHashAnnotation, perNodeConfigMapHash)
 		nodeconfig.MountPerNodeConfig(dcConfig, r.ImageRegistry)
 		dcLogger.Info("Mounted per-node configuration")
-
 	} else {
-
 		dcLogger.Error(err, "Failed to retrieve user-provided per-node config")
 		return result.Error(err)
 	}

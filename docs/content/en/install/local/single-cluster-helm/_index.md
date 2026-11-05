@@ -211,9 +211,6 @@ spec:
         config:
           jvmOptions:
             heapSize: 512M
-        stargate:
-          size: 1
-          heapSize: 256M
 ```
 
 Create the K8ssandraCluster with `kubectl apply`:
@@ -238,7 +235,6 @@ kubectl get pods -n k8ssandra-operator
 
 ```
 NAME                                                    READY   STATUS    RESTARTS   AGE
-demo-dc1-default-stargate-deployment-7b6c9d8dcd-k65jx   1/1     Running   0          5m33s
 demo-dc1-default-sts-0                                  2/2     Running   0          10m
 demo-dc1-default-sts-1                                  2/2     Running   0          10m
 demo-dc1-default-sts-2                                  2/2     Running   0          10m
@@ -347,17 +343,6 @@ Metadata:
               f:quietPeriod:
               f:superUserUpserted:
               f:usersUpserted:
-            f:stargate:
-              .:
-              f:availableReplicas:
-              f:conditions:
-              f:deploymentRefs:
-              f:progress:
-              f:readyReplicas:
-              f:readyReplicasRatio:
-              f:replicas:
-              f:serviceRef:
-              f:updatedReplicas:
     Manager:         manager
     Operation:       Update
     Subresource:     status
@@ -378,15 +363,6 @@ Spec:
       Metadata:
         Name:  dc1
       Size:    3
-      Stargate:
-        Allow Stargate On Data Nodes:  false
-        Container Image:
-          Registry:       docker.io
-          Repository:     stargateio
-          Tag:            v1.0.45
-        Heap Size:        256M
-        Service Account:  default
-        Size:             1
       Storage Config:
         Cassandra Data Volume Claim Spec:
           Access Modes:
@@ -474,20 +450,6 @@ Status:
         Quiet Period:         2022-01-31T17:37:06Z
         Super User Upserted:  2022-01-31T17:37:00Z
         Users Upserted:       2022-01-31T17:37:00Z
-      Stargate:
-        Available Replicas:  1
-        Conditions:
-          Last Transition Time:  2022-01-31T17:37:48Z
-          Status:                True
-          Type:                  Ready
-        Deployment Refs:
-          demo-dc1-default-stargate-deployment
-        Progress:              Running
-        Ready Replicas:        1
-        Ready Replicas Ratio:  1/1
-        Replicas:              1
-        Service Ref:           demo-dc1-stargate-service
-        Updated Replicas:      1
 Events:                        <none>
 ```
 
@@ -596,34 +558,6 @@ Select data from the table:
 In the launched container's `cqlsh` session, notice we provide the extracted password for `demo-superuser`.
 
 ```cqlsh
- email          | name          | state
-----------------+---------------+-------
- john@gamil.com |    John Smith |    NC
-  joe@gamil.com |     Joe Jones |    VA
-   sue@help.com |       Sue Sas |    CA
-    tom@yes.com | Tom and Jerry |    NV
-
-(4 rows)
-```
-
-Now test an operation via the open-source Stargate API.
-
-```bash
-kubectl exec -it demo-dc1-default-sts-0 -n k8ssandra-operator -- /bin/bash
-```
-
-**Output plus cqlsh &amp; stargate-service example:**
-
-```bash
-Defaulted container "cassandra" out of: cassandra, server-system-logger, server-config-init (init)
-cassandra@k8ssandra-3-worker:/$ ping demo-dc3-stargate-service
-cassandra@demo-dc1-default-sts-0:/$ cqlsh -u demo-superuser -p ACK7dO9qpsghIme-wvfI demo-dc1-stargate-service
-Connected to demo at demo-dc1-stargate-service:9042
-[cqlsh 6.0.0 | Cassandra 4.0.1 | CQL spec 3.4.5 | Native protocol v4]
-Use HELP for help.
-demo-superuser@cqlsh> use test;
-demo-superuser@cqlsh:test> select * from users;
-
  email          | name          | state
 ----------------+---------------+-------
  john@gamil.com |    John Smith |    NC

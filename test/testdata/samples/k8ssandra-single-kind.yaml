@@ -22,6 +22,3 @@ spec:
       - metadata:
           name: dc1
         size: 3
-        stargate:
-          size: 1
-          heapSize: 256M

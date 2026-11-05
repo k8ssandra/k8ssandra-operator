@@ -1,11 +1,12 @@
 package goalesceutils
 
 import (
+	"reflect"
+
 	"github.com/adutra/goalesce"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"reflect"
 )
 
 // MergeCRs returns a new object built by merging the given objects, with the required options to

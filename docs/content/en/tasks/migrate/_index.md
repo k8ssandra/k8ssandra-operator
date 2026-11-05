@@ -55,7 +55,6 @@ That includes the following secrets:
 - Reaper JMX
 - Medusa
 - Medusa bucket key
-- Stargate
 
 There is no automation to copy secrets in kubernetes, so they need to be fully recreated either manually or through CD automation.
 
@@ -74,7 +73,6 @@ Alter the following keyspaces in the same way:
 - `system_auth`
 - `system_distributed`
 - `system_traces`
-- `data_endpoint_auth` (Stargate)
 - `reaper_db` (Reaper)
 
 
@@ -85,7 +83,7 @@ Client traffic should be restricted to `dc1` by selecting it as local datacenter
 ## Create a K8ssandraCluster resource
 The cluster is now ready for the expansion to a new datacenter created by k8ssandra-operator.
 
-We’ll need to create a `K8ssandraCluster` (k8c) object with the right settings and secret references. Here’s an example `k8c` object with Reaper, Medusa and Stargate enabled:
+We’ll need to create a `K8ssandraCluster` (k8c) object with the right settings and secret references. Here’s an example `k8c` object with Reaper and Medusa enabled:
 
 ```
 apiVersion: k8ssandra.io/v1alpha1
@@ -140,16 +138,13 @@ spec:
       maxBackupCount: 10
     cassandraUserSecretRef:
       name: medusa-secret
-  stargate:
-    size: 1
-    heapSize: 4Gi
 ```
 
 `metadata.name` needs to match the existing Cassandra cluster name so that the datacenters can connect together.
 
 The `additionalSeeds` section requires the IPs of a couple Cassandra nodes (or pods) from the existing datacenter. Those IPs must be reachable on port 7001, which is Cassandra’s storage port used by nodes to communicate with each other.
 
-K8ssandra-operator automatically manages the replication strategy for several keyspaces, such as `system_auth`, `data_endpoint_auth` or `reaper_db`, based on the list of datacenters in a k8c object. It allows safe automation for operations such as expansions to new datacenters. A migration involves one or more datacenters which are not referenced in the k8c object, requiring the addition of extra datacenters in the replication settings. This is what the `externalDatacenters` entry stands for, allowing us to keep replicas on the datacenters we are migrating from.
+K8ssandra-operator automatically manages the replication strategy for several keyspaces, such as `system_auth` or `reaper_db`, based on the list of datacenters in a k8c object. It allows safe automation for operations such as expansions to new datacenters. A migration involves one or more datacenters which are not referenced in the k8c object, requiring the addition of extra datacenters in the replication settings. This is what the `externalDatacenters` entry stands for, allowing us to keep replicas on the datacenters we are migrating from.
 
 Create the object in the same namespace as the operator:
 
@@ -194,7 +189,7 @@ UN  10.xx.xx.80  6.71 MiB  16      100.0%            db09fd06-e011-11ec-9d64-024
 
 ## Alter the keyspaces and rebuild the nodes
 
-k8ssandra-operator will fail fully going through with the expansion because `dc2` won’t have any replica for the `system_auth` keyspace. Cassandra will start but Reaper and Stargate won’t as long as replication wasn’t altered and rebuild was done.
+k8ssandra-operator will fail fully going through with the expansion because `dc2` won’t have any replica for the `system_auth` keyspace. Cassandra will start but Reaper won’t as long as replication wasn’t altered and rebuild was done.
 
 Once all nodes in the new DC have joined the cluster, alter the user created keyspaces to NTS with the same number of replicas on both DCs:
 
@@ -207,7 +202,6 @@ Run the above statement for the following keyspaces as well:
 - system_auth
 - system_distributed
 - system_traces
-- data_endpoint_auth (Stargate)
 - reaper_db (Reaper)
 
 Run the rebuild command in all the Cassandra pods (from the Cassandra container) in the new datacenter:
@@ -273,4 +267,4 @@ Connect to Reaper’s UI in `dc2`, and re-register the cluster, specifying only 
 ## Next steps
 
 * Explore other K8ssandra Operator [tasks]({{< relref "/tasks" >}}).
-* See the [Reference]({{< relref "/reference" >}}) topics for information about K8ssandra Operator Custom Resource Definitions (CRDs) and the single K8ssandra Operator Helm chart. 
+* See the [Reference]({{< relref "/reference" >}}) topics for information about K8ssandra Operator Custom Resource Definitions (CRDs) and the single K8ssandra Operator Helm chart.

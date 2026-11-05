@@ -26,7 +26,6 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	replicationapi "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
-	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
@@ -84,9 +83,9 @@ func TestK8ssandraCluster(t *testing.T) {
 			Scheme:           scheme.Scheme,
 			ClientCache:      clientCache,
 			ManagementApi:    managementApiFactory,
-			Recorder:         mgr.GetEventRecorderFor("k8ssandracluster-controller"),
+			Recorder:         mgr.GetEventRecorder("k8ssandracluster-controller"),
 			ImageRegistry:    getTestImageRegistry(),
-		}).SetupWithManager(mgr, clusters)
+		}).SetupWithManager(ctx, mgr, clusters)
 		return err
 	}, nil)
 	if err != nil {
@@ -102,7 +101,6 @@ func TestK8ssandraCluster(t *testing.T) {
 	t.Run("ApplyClusterTemplateConfigs", testEnv.ControllerTest(ctx, applyClusterTemplateConfigs))
 	t.Run("ApplyDatacenterTemplateConfigs", testEnv.ControllerTest(ctx, applyDatacenterTemplateConfigs))
 	t.Run("ApplyClusterTemplateAndDatacenterTemplateConfigs", testEnv.ControllerTest(ctx, applyClusterTemplateAndDatacenterTemplateConfigs))
-	t.Run("CreateSingleDcCassandra4ClusterWithStargate", testEnv.ControllerTest(ctx, createSingleDcCassandra4ClusterWithStargate))
 	t.Run("CreateMultiDcClusterWithReaper", testEnv.ControllerTest(ctx, createMultiDcClusterWithReaper))
 	t.Run("createMultiDcClusterWithControlPlaneReaper", testEnv.ControllerTest(ctx, createMultiDcClusterWithControlPlaneReaper))
 	t.Run("CreateMultiDcClusterWithMedusa", testEnv.ControllerTest(ctx, createMultiDcClusterWithMedusa))
@@ -115,6 +113,7 @@ func TestK8ssandraCluster(t *testing.T) {
 	t.Run("CreateSingleDcClusterAuth", testEnv.ControllerTest(ctx, createSingleDcClusterAuth))
 	t.Run("CreateSingleDcClusterAuthExternalSecrets", testEnv.ControllerTest(ctx, createSingleDcClusterAuthExternalSecrets))
 	t.Run("CreateSingleDcClusterExternalInternode", testEnv.ControllerTest(ctx, createSingleDcClusterExternalInternode))
+	t.Run("MedusaConfigurationChangeTriggersReconcile", testEnv.ControllerTest(ctx, medusaConfigurationChangeTriggersReconcile))
 
 	// If webhooks are installed, this testcase is handled by the webhook test
 	t.Run("ApplyClusterWithEncryptionOptions", testEnv.ControllerTest(ctx, applyClusterWithEncryptionOptions))
@@ -305,7 +304,7 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 
 	// Test that prometheus servicemonitor comes up when it is requested in the CassandraDatacenter.
 	kcPatch := client.MergeFrom(kc.DeepCopy())
-	kc.Spec.Cassandra.Datacenters[0].DatacenterOptions.Telemetry = &telemetryapi.TelemetrySpec{
+	kc.Spec.Cassandra.Datacenters[0].Telemetry = &telemetryapi.TelemetrySpec{
 		Prometheus: &telemetryapi.PrometheusTelemetrySpec{
 			Enabled: ptr.To(true),
 		},
@@ -338,9 +337,9 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 	assert.NotNil(t, sm.Spec.Endpoints)
 	// Ensure that removing the telemetry spec does delete the ServiceMonitor
 	kcPatch = client.MergeFrom(kc.DeepCopy())
-	kc.Spec.Cassandra.Datacenters[0].DatacenterOptions.Telemetry = nil
+	kc.Spec.Cassandra.Datacenters[0].Telemetry = nil
 	if err := f.Client.Patch(ctx, kc, kcPatch); err != nil {
-		assert.Fail(t, "failed to patch stargate", "error", err)
+		assert.Fail(t, "failed to patch K8ssandraCluster", "error", err)
 	}
 	assert.Eventually(t, func() bool {
 		err := f.Get(ctx, smKey, sm)
@@ -446,7 +445,7 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 	require.NoError(err, "failed to get dc1")
 
 	assert.Equal(kc.Name, dc1.Spec.ClusterName)
-	assert.Equal(kc.Spec.Cassandra.DatacenterOptions.ServerVersion, dc1.Spec.ServerVersion)
+	assert.Equal(kc.Spec.Cassandra.ServerVersion, dc1.Spec.ServerVersion)
 	// assert.Equal(*kc.Spec.Cassandra.DatacenterOptions.StorageConfig, dc1.Spec.StorageConfig)
 	assert.Equal(dc1Size, dc1.Spec.Size)
 	assert.Equal(dc1.Spec.SuperuserSecretName, superUserSecretName)
@@ -465,7 +464,7 @@ func applyClusterTemplateConfigs(t *testing.T, ctx context.Context, f *framework
 	require.NoError(err, "failed to get dc2")
 
 	assert.Equal(kc.Name, dc2.Spec.ClusterName)
-	assert.Equal(kc.Spec.Cassandra.DatacenterOptions.ServerVersion, dc2.Spec.ServerVersion)
+	assert.Equal(kc.Spec.Cassandra.ServerVersion, dc2.Spec.ServerVersion)
 	// assert.Equal(*kc.Spec.Cassandra.DatacenterOptions.StorageConfig, dc2.Spec.StorageConfig)
 	assert.Equal(dc2Size, dc2.Spec.Size)
 	assert.Equal(dc1.Spec.SuperuserSecretName, superUserSecretName)
@@ -609,12 +608,12 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 	assert.Equal(kc.Name, dc1.Spec.ClusterName)
 	assert.Equal(serverVersion, dc1.Spec.ServerVersion)
 	// assert.Equal(*kc.Spec.Cassandra.Datacenters[0].DatacenterOptions.StorageConfig, dc1.Spec.StorageConfig)
-	assert.Equal(kc.Spec.Cassandra.Datacenters[0].DatacenterOptions.Networking.ToCassNetworkingConfig(), dc1.Spec.Networking)
+	assert.Equal(kc.Spec.Cassandra.Datacenters[0].Networking.ToCassNetworkingConfig(), dc1.Spec.Networking)
 	assert.Equal(dc1Size, dc1.Spec.Size)
-	assert.Equal(dc1.Spec.ConfigBuilderResources.Limits.Cpu(), kc.Spec.Cassandra.DatacenterOptions.InitContainers[0].Resources.Limits.Cpu())
-	assert.Equal(dc1.Spec.ConfigBuilderResources.Limits.Memory(), kc.Spec.Cassandra.DatacenterOptions.InitContainers[0].Resources.Limits.Memory())
-	assert.Equal(dc1.Spec.ConfigBuilderResources.Requests.Cpu(), kc.Spec.Cassandra.DatacenterOptions.InitContainers[0].Resources.Requests.Cpu())
-	assert.Equal(dc1.Spec.ConfigBuilderResources.Requests.Memory(), kc.Spec.Cassandra.DatacenterOptions.InitContainers[0].Resources.Requests.Memory())
+	assert.Equal(dc1.Spec.ConfigBuilderResources.Limits.Cpu(), kc.Spec.Cassandra.InitContainers[0].Resources.Limits.Cpu())
+	assert.Equal(dc1.Spec.ConfigBuilderResources.Limits.Memory(), kc.Spec.Cassandra.InitContainers[0].Resources.Limits.Memory())
+	assert.Equal(dc1.Spec.ConfigBuilderResources.Requests.Cpu(), kc.Spec.Cassandra.InitContainers[0].Resources.Requests.Cpu())
+	assert.Equal(dc1.Spec.ConfigBuilderResources.Requests.Memory(), kc.Spec.Cassandra.InitContainers[0].Resources.Requests.Memory())
 
 	t.Log("update dc1 status to ready")
 	err = f.SetDatacenterStatusReady(ctx, dc1Key)
@@ -632,7 +631,7 @@ func applyDatacenterTemplateConfigs(t *testing.T, ctx context.Context, f *framew
 	assert.Equal(kc.Name, dc2.Spec.ClusterName)
 	assert.Equal(serverVersion, dc2.Spec.ServerVersion)
 	// assert.Equal(*kc.Spec.Cassandra.Datacenters[1].DatacenterOptions.StorageConfig, dc2.Spec.StorageConfig)
-	assert.Equal(kc.Spec.Cassandra.Datacenters[1].DatacenterOptions.Networking.ToCassNetworkingConfig(), dc2.Spec.Networking)
+	assert.Equal(kc.Spec.Cassandra.Datacenters[1].Networking.ToCassNetworkingConfig(), dc2.Spec.Networking)
 	assert.Equal(dc2Size, dc2.Spec.Size)
 
 	t.Log("deleting K8ssandraCluster")
@@ -759,7 +758,7 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 	assert.Equal(kc.Name, dc1.Spec.ClusterName)
 	assert.Equal(serverVersion, dc1.Spec.ServerVersion)
 	// assert.Equal(*kc.Spec.Cassandra.DatacenterOptions.StorageConfig, dc1.Spec.StorageConfig)
-	assert.Equal(kc.Spec.Cassandra.DatacenterOptions.Networking.ToCassNetworkingConfig(), dc1.Spec.Networking)
+	assert.Equal(kc.Spec.Cassandra.Networking.ToCassNetworkingConfig(), dc1.Spec.Networking)
 	assert.Equal(dc1Size, dc1.Spec.Size)
 
 	t.Log("update dc1 status to ready")
@@ -778,9 +777,9 @@ func applyClusterTemplateAndDatacenterTemplateConfigs(t *testing.T, ctx context.
 	assert.Equal(kc.Name, dc2.Spec.ClusterName)
 	assert.Equal(serverVersion, dc2.Spec.ServerVersion)
 	// assert.Equal(*kc.Spec.Cassandra.Datacenters[1].DatacenterOptions.StorageConfig, dc2.Spec.StorageConfig)
-	assert.Equal(kc.Spec.Cassandra.Datacenters[1].DatacenterOptions.Networking.ToCassNetworkingConfig(), dc2.Spec.Networking)
+	assert.Equal(kc.Spec.Cassandra.Datacenters[1].Networking.ToCassNetworkingConfig(), dc2.Spec.Networking)
 	assert.Equal(dc2Size, dc2.Spec.Size)
-	assert.Equal(*dc2.Spec.CDC.PulsarServiceUrl, "pulsar://test-url")
+	assert.Equal(*dc2.Spec.DeprecatedCDC.PulsarServiceUrl, "pulsar://test-url")
 
 	t.Log("deleting K8ssandraCluster")
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
@@ -873,10 +872,10 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 			t.Logf("failed to get contact-points Service: %v", err)
 			return false
 		}
-		if service.ObjectMeta.Labels["testLabel"] != "testValue" {
+		if service.Labels["testLabel"] != "testValue" {
 			return false
 		}
-		if service.ObjectMeta.Annotations["testAnnotation"] != "testValue" {
+		if service.Annotations["testAnnotation"] != "testValue" {
 			return false
 		}
 
@@ -903,7 +902,7 @@ func createMultiDcCluster(t *testing.T, ctx context.Context, f *framework.Framew
 	require.NoError(err, "failed to set dc2 status ready")
 
 	t.Log("check that dc2 was rebuilt")
-	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key)
+	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key, kc)
 	rebuildTaskKey := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, "dc2-rebuild")
 	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey, dc2Key)
 
@@ -1056,141 +1055,7 @@ func setReplicationStatusDone(ctx context.Context, t *testing.T, f *framework.Fr
 	require.NoError(t, err, "Failed to update ReplicationSecret status", "key", key)
 }
 
-func createSingleDcCassandra4ClusterWithStargate(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
-	require := require.New(t)
-
-	clusterName := "cluster-single-stargate"
-	kc := &api.K8ssandraCluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      clusterName,
-		},
-		Spec: api.K8ssandraClusterSpec{
-			Cassandra: &api.CassandraClusterTemplate{
-				DatacenterOptions: api.DatacenterOptions{
-					ServerVersion: "4.0.6",
-				},
-				Datacenters: []api.CassandraDatacenterTemplate{
-					{
-						Meta: api.EmbeddedObjectMeta{
-							Name: "dc1",
-						},
-						K8sContext: f.DataPlaneContexts[0],
-						Size:       3,
-						DatacenterOptions: api.DatacenterOptions{
-							ServerVersion: "4.0.6",
-							StorageConfig: &cassdcapi.StorageConfig{
-								CassandraDataVolumeClaimSpec: &corev1.PersistentVolumeClaimSpec{
-									StorageClassName: &defaultStorageClass,
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	kcKey := framework.ClusterKey{K8sContext: f.ControlPlaneContext, NamespacedName: types.NamespacedName{Namespace: namespace, Name: clusterName}}
-	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
-	sg1Key := framework.ClusterKey{
-		K8sContext: f.DataPlaneContexts[0],
-		NamespacedName: types.NamespacedName{
-			Namespace: namespace,
-			Name:      kc.Name + "-" + dc1Key.Name + "-stargate"},
-	}
-
-	err := f.Client.Create(ctx, kc)
-	require.NoError(err, "failed to create K8ssandraCluster")
-
-	verifyFinalizerAdded(ctx, t, f, kc)
-	verifySuperuserSecretCreated(ctx, t, f, kc)
-	verifyReplicatedSecretReconciled(ctx, t, f, kc)
-	verifySystemReplicationAnnotationSet(ctx, t, f, kc)
-
-	t.Log("check that dc1 was created")
-	require.Eventually(f.DatacenterExists(ctx, dc1Key), timeout, interval)
-
-	t.Log("update datacenter status to scaling up")
-	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {
-		dc.SetCondition(cassdcapi.DatacenterCondition{
-			Type:               cassdcapi.DatacenterScalingUp,
-			Status:             corev1.ConditionTrue,
-			LastTransitionTime: metav1.Now(),
-		})
-	})
-	require.NoError(err, "failed to patch datacenter status")
-
-	t.Log("check that the K8ssandraCluster status is updated")
-	require.Eventually(func() bool {
-		kc := &api.K8ssandraCluster{}
-		err = f.Get(ctx, kcKey, kc)
-		if err != nil {
-			t.Logf("failed to get K8ssandraCluster: %v", err)
-			return false
-		}
-
-		if (&kc.Status).GetConditionStatus(api.CassandraInitialized) == corev1.ConditionTrue {
-			t.Logf("Did not expect status condition %s to be true", api.CassandraInitialized)
-			return false
-		}
-
-		if len(kc.Status.Datacenters) == 0 {
-			return false
-		}
-
-		k8ssandraStatus, found := kc.Status.Datacenters[dc1Key.Name]
-		if !found {
-			t.Logf("status for datacenter %s not found", dc1Key)
-			return false
-		}
-
-		condition := FindDatacenterCondition(k8ssandraStatus.Cassandra, cassdcapi.DatacenterScalingUp)
-		return !(condition == nil && condition.Status == corev1.ConditionFalse)
-	}, timeout, interval, "timed out waiting for K8ssandraCluster status update")
-
-	t.Log("update dc1 status to ready")
-	err = f.SetDatacenterStatusReady(ctx, dc1Key)
-	require.NoError(err, "failed to update dc1 status to ready")
-
-	// t.Log("check that stargate sg1 is created")
-	// require.Eventually(f.StargateExists(ctx, sg1Key), timeout, interval)
-
-	t.Log("check that cass DC sets allow_alter_rf_during_range_movement")
-	cassDc := &cassdcapi.CassandraDatacenter{}
-	err = f.Get(ctx, dc1Key, cassDc)
-	require.NoError(err, "failed to get CassandraDatacenter")
-	dcConfig, err := utils.UnmarshalToMap(cassDc.Spec.Config)
-	require.NoError(err, "failed to unmarshall CassandraDatacenter config")
-	jvmOpts := dcConfig["cassandra-env-sh"].(map[string]interface{})["additional-jvm-opts"].([]interface{})
-	require.Contains(jvmOpts, "-Dcassandra.allow_alter_rf_during_range_movement=true")
-
-	err = f.Get(ctx, kcKey, kc)
-	require.NoError(err, "failed to get K8ssandraCluster")
-	dcGeneration := kc.Status.Datacenters["dc1"].Cassandra.ObservedGeneration
-
-	t.Log("check that DC generation hasn't changed")
-	err = f.Get(ctx, kcKey, kc)
-	require.NoError(err, "failed to get K8ssandraCluster")
-	require.Equal(dcGeneration, kc.Status.Datacenters["dc1"].Cassandra.ObservedGeneration)
-
-	t.Log("check that cass DC still sets allow_alter_rf_during_range_movement")
-	cassDc = &cassdcapi.CassandraDatacenter{}
-	err = f.Get(ctx, dc1Key, cassDc)
-	require.NoError(err, "failed to get CassandraDatacenter")
-	dcConfig, err = utils.UnmarshalToMap(cassDc.Spec.Config)
-	require.NoError(err, "failed to unmarshall CassandraDatacenter config")
-	jvmOpts = dcConfig["cassandra-env-sh"].(map[string]interface{})["additional-jvm-opts"].([]interface{})
-	require.Contains(jvmOpts, "-Dcassandra.allow_alter_rf_during_range_movement=true")
-
-	t.Log("deleting K8ssandraCluster")
-	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
-	require.NoError(err, "failed to delete K8ssandraCluster")
-	f.AssertObjectDoesNotExist(ctx, t, dc1Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
-	f.AssertObjectDoesNotExist(ctx, t, sg1Key, &stargateapi.Stargate{}, timeout, interval)
-}
-
-// Create a cluster with encryption options and Stargate.
+// Create a cluster with encryption options.
 // Verify that volumes, mounts and config maps are correctly created.
 func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
@@ -1301,11 +1166,6 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 								},
 							},
 						},
-						Stargate: &stargateapi.StargateDatacenterTemplate{
-							StargateClusterTemplate: stargateapi.StargateClusterTemplate{
-								Size: 1,
-							},
-						},
 					},
 				},
 				ServerEncryptionStores: &encryption.Stores{
@@ -1374,16 +1234,17 @@ func applyClusterWithEncryptionOptions(t *testing.T, ctx context.Context, f *fra
 	var serverKeystoreMount *corev1.VolumeMount
 	var serverTruststoreMount *corev1.VolumeMount
 	for _, mount := range cassContainer.VolumeMounts {
-		if mount.Name == "client-keystore" {
+		switch mount.Name {
+		case "client-keystore":
 			clientKeystoreMount = &mount
 			assert.Equal("/mnt/client-keystore", clientKeystoreMount.MountPath, "client-keystore isn't mounted correctly")
-		} else if mount.Name == "client-truststore" {
+		case "client-truststore":
 			clientTruststoreMount = &mount
 			assert.Equal("/mnt/client-truststore", clientTruststoreMount.MountPath, "client-truststore isn't mounted correctly")
-		} else if mount.Name == "server-keystore" {
+		case "server-keystore":
 			serverKeystoreMount = &mount
 			assert.Equal("/mnt/server-keystore", serverKeystoreMount.MountPath, "server-keystore isn't mounted correctly")
-		} else if mount.Name == "server-truststore" {
+		case "server-truststore":
 			serverTruststoreMount = &mount
 			assert.Equal("/mnt/server-truststore", serverTruststoreMount.MountPath, "server-truststore isn't mounted correctly")
 		}
@@ -1585,7 +1446,7 @@ func applyClusterWithEncryptionOptionsFail(t *testing.T, ctx context.Context, f 
 	f.AssertObjectDoesNotExist(ctx, t, dc1Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
 }
 
-// Create a cluster with encryption options and Stargate.
+// Create a cluster with encryption options.
 // Verify that volumes, mounts and config maps are correctly created.
 func applyClusterWithEncryptionOptionsExternalSecrets(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
@@ -1705,11 +1566,6 @@ func applyClusterWithEncryptionOptionsExternalSecrets(t *testing.T, ctx context.
 								},
 							},
 						},
-						Stargate: &stargateapi.StargateDatacenterTemplate{
-							StargateClusterTemplate: stargateapi.StargateClusterTemplate{
-								Size: 1,
-							},
-						},
 					},
 				},
 			},
@@ -1763,16 +1619,17 @@ func applyClusterWithEncryptionOptionsExternalSecrets(t *testing.T, ctx context.
 	var serverKeystoreMount *corev1.VolumeMount
 	var serverTruststoreMount *corev1.VolumeMount
 	for _, mount := range cassContainer.VolumeMounts {
-		if mount.Name == "client-keystore" {
+		switch mount.Name {
+		case "client-keystore":
 			clientKeystoreMount = &mount
 			assert.Equal("/mnt/client-keystore", clientKeystoreMount.MountPath, "client-keystore isn't mounted correctly")
-		} else if mount.Name == "client-truststore" {
+		case "client-truststore":
 			clientTruststoreMount = &mount
 			assert.Equal("/mnt/client-truststore", clientTruststoreMount.MountPath, "client-truststore isn't mounted correctly")
-		} else if mount.Name == "server-keystore" {
+		case "server-keystore":
 			serverKeystoreMount = &mount
 			assert.Equal("/mnt/server-keystore", serverKeystoreMount.MountPath, "server-keystore isn't mounted correctly")
-		} else if mount.Name == "server-truststore" {
+		case "server-truststore":
 			serverTruststoreMount = &mount
 			assert.Equal("/mnt/server-truststore", serverTruststoreMount.MountPath, "server-truststore isn't mounted correctly")
 		}
@@ -1995,7 +1852,7 @@ func verifyClusterReconcileFinished(ctx context.Context, t *testing.T, f *framew
 			t.Logf("failed to get K8ssandraCluster: %v", err)
 			return false
 		}
-		return kc.ObjectMeta.Generation == kc.Status.ObservedGeneration
+		return kc.Generation == kc.Status.ObservedGeneration
 	}, timeout, interval, "cluster hasn't finished reconciliation")
 }
 

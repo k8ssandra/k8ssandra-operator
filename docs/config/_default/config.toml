@@ -111,9 +111,9 @@ version = "K8ssandra"
 url_latest_version = "https://docs.k8ssandra.io"
 
 # Repository configuration (URLs for in-page links to opening issues and suggesting changes)
-github_repo = "https://github.com/k8ssandra/k8ssandra"
+github_repo = "https://github.com/k8ssandra/k8ssandra-operator"
 # An optional link to a related project repo. For example, the sibling repository where your product code lives.
-github_project_repo = "https://github.com/k8ssandra/k8ssandra"
+github_project_repo = "https://github.com/k8ssandra/k8ssandra-operator"
 # Main branch
 github_branch = "main"
 
@@ -152,8 +152,8 @@ footer_about_disable = false
 [params.ui.feedback]
 enable = true
 # The responses that the user sees after clicking "yes" (the page was helpful) or "no" (the page was not helpful).
-yes = 'Glad to hear it! Please <a href="https://github.com/k8ssandra/k8ssandra/issues/new">tell us how we can improve</a>.'
-no = 'Sorry to hear that. Please <a href="https://github.com/k8ssandra/k8ssandra/issues/new">tell us how we can improve</a>.'
+yes = 'Glad to hear it! Please <a href="https://github.com/k8ssandra/k8ssandra-operator/issues/new">tell us how we can improve</a>.'
+no = 'Sorry to hear that. Please <a href="https://github.com/k8ssandra/k8ssandra-operator/issues/new">tell us how we can improve</a>.'
 
 # Adds a reading time to the top of each doc.
 # If you want this feature, but occasionally need to remove the Reading time from a single page, 
@@ -162,26 +162,10 @@ no = 'Sorry to hear that. Please <a href="https://github.com/k8ssandra/k8ssandra
 enable = false
 
 [params.links]
-# End user relevant links. These will show up on left side of footer and in the community page if you have one.
-[[params.links.user]]
-	name = "User mailing list"
-	url = "https://groups.google.com/g/k8ssandra-users"
-	icon = "fa fa-envelope"
-	desc = "Discussion and help from your fellow users"
-[[params.links.user]]
-	name ="Twitter"
-	url = "https://twitter.com/k8ssandra"
-	icon = "fab fa-twitter"
-        desc = "Follow us on Twitter to get the latest news!"
-# [[params.links.user]]
-# 	name = "Stack Overflow"
-# 	url = "https://example.org/stack"
-# 	icon = "fab fa-stack-overflow"
-# 	desc = "Practical questions and curated answers"
 # Developer relevant links. These will show up on right side of footer and in the community page if you have one.
 [[params.links.developer]]
 	name = "GitHub"
-	url = "https://github.com/k8ssandra/k8ssandra"
+	url = "https://github.com/k8ssandra/k8ssandra-operator"
 	icon = "fab fa-github"
 	desc = "Development takes place here!"
 # [[params.links.developer]]
@@ -191,13 +175,8 @@ enable = false
 #   desc = "Chat with other project developers"
 [[params.links.developer]]
 	name = "Discord"
-	url = "https://discord.gg/y4s64xC9"
+	url = "https://discord.gg/kUMV24u9u"
 	icon = "fab fa-discord"
-[[params.links.developer]]
-	name ="Twitter"
-	url = "https://twitter.com/k8ssandra"
-	icon = "fab fa-twitter"
-  desc = "Follow us on Twitter to get the latest news!"
   
 [sitemap]
 changefreq = "daily"
@@ -245,72 +224,6 @@ gzip = false
 [[deployment.matchers]]
 pattern = "^.+\\.(html|xml|json)$"
 gzip = true
-
-#  Adding Menu to match K8ssandra.io wp site
-[[menu.main]]
-    name = "About"
-    weight = 10
-    url = "https://k8ssandra.io/about"
-
-[[menu.main]]
-  name = "Get Started"
-  weight = 15
-  url = "https://k8ssandra.io/get-started"
-
-[[menu.main]]
-  name = "Community"
-  weight = 60
-  url = "https://k8ssandra.io/community"
-
-[[menu.main]]
-  name = "Forum"
-  weight = 70
-  url = "https://forum.k8ssandra.io/"
-
-[[menu.main]]
-  name = "Blog"
-  weight = 80
-  url = "https://k8ssandra.io/blog"
-
-[[menu.main]]
-  name = "Events"
-  weight = 90
-  url = "https://k8ssandra.io/blog/category/events/"
-
-[[menu.footer]]
-    name = "About"
-    weight = 10
-    url = "https://k8ssandra.io/about"
-
-[[menu.footer]]
-  name = "Get Started"
-  weight = 15
-  url = "https://k8ssandra.io/get-started"
-
-[[menu.footer]]
-  name = "Community"
-  weight = 80
-  url = "https://k8ssandra.io/community"
-
-[[menu.second]]
-  name = "Forum"
-  weight = 70
-  url = "https://forum.k8ssandra.io/"
-
-[[menu.second]]
-  name = "Blog"
-  weight = 80
-  url = "https://k8ssandra.io/blog"
-
-[[menu.second]]
-  name = "Events"
-  weight = 90
-  url = "https://k8ssandra.io/blog/category/events/"
-
-[[menu.second]]
-  name = "Brand"
-  weight = 95
-  url = "https://k8ssandra.io/brand-resources/"
 
 [module]
   [module.hugoVersion]

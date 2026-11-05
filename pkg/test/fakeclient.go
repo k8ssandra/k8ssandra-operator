@@ -8,7 +8,6 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
-	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -18,21 +17,15 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/scheme"
 )
 
 // NewFakeClient gets a fake client loaded up with a scheme that contains all the APIs used in this project.
 func NewFakeClient(initRuntimeObjs ...runtime.Object) (client.Client, error) {
-	schemeBuilder := scheme.Builder{}
-	testScheme, err := schemeBuilder.Build()
-	if err != nil {
-		return nil, err
-	}
+	testScheme := runtime.NewScheme()
 	utilruntime.Must(promapi.AddToScheme(testScheme))
 	utilruntime.Must(cassdcapi.AddToScheme(testScheme))
 	utilruntime.Must(k8ssandraapi.AddToScheme(testScheme))
 	utilruntime.Must(reaperapi.AddToScheme(testScheme))
-	utilruntime.Must(stargateapi.AddToScheme(testScheme))
 	utilruntime.Must(corev1.AddToScheme(testScheme))
 	utilruntime.Must(appsv1.AddToScheme(testScheme))
 	utilruntime.Must(certmanagerapi.AddToScheme(testScheme))

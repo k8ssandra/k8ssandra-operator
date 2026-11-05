@@ -60,7 +60,3 @@ type ClientConfigList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ClientConfig `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&ClientConfig{}, &ClientConfigList{})
-}

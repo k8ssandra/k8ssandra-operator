@@ -73,6 +73,10 @@ func (c mockgRPCClient) PrepareRestore(ctx context.Context, datacenter, backupNa
 	return nil, nil
 }
 
+func (c mockgRPCClient) PreparePitrRestore(ctx context.Context, datacenter, targetTimestamp string) (*PreparePitrRestoreResponse, error) {
+	return nil, nil
+}
+
 func TestGetSourceRacksIPs(t *testing.T) {
 	mockgRPCClient := mockgRPCClient{}
 	medusaBackup := pkgtest.NewMedusaRestore("default", "local-backupname", "remote-backupname", "test-dc2", "test-cluster")
@@ -100,8 +104,7 @@ func TestGetTargetRackFQDNs(t *testing.T) {
 		},
 	}
 
-	result, err := getTargetRackFQDNs(cassDc)
-	assert.NoError(t, err, err)
+	result := getTargetRackFQDNs(cassDc)
 	expectedSourceRacks := map[NodeLocation][]string{
 		{Rack: "default", DC: "test-dc2"}: {"test-cluster-dc2-default-sts-0", "test-cluster-dc2-default-sts-1", "test-cluster-dc2-default-sts-2"},
 	}
@@ -116,8 +119,7 @@ func TestGetTargetRackFQDNs(t *testing.T) {
 		{Rack: "rack2", DC: "test-dc2"}: {"test-cluster-dc2-rack2-sts-0"},
 		{Rack: "rack3", DC: "test-dc2"}: {"test-cluster-dc2-rack3-sts-0"},
 	}
-	result, err = getTargetRackFQDNs(cassDc)
-	assert.NoError(t, err, err)
+	result = getTargetRackFQDNs(cassDc)
 	assert.Equal(t, expectedSourceRacks, result)
 }
 
@@ -137,8 +139,7 @@ func TestGetTargetRackFQDNsExistingOverride(t *testing.T) {
 		},
 	}
 
-	result, err := getTargetRackFQDNs(cassDc)
-	assert.NoError(t, err, err)
+	result := getTargetRackFQDNs(cassDc)
 	expectedSourceRacks := map[NodeLocation][]string{
 		{Rack: "default", DC: "test-dc2"}: {"test-cluster-test-dc2-default-sts-0", "test-cluster-test-dc2-default-sts-1", "test-cluster-test-dc2-default-sts-2"},
 	}
@@ -153,8 +154,7 @@ func TestGetTargetRackFQDNsExistingOverride(t *testing.T) {
 		{Rack: "rack2", DC: "test-dc2"}: {"test-cluster-test-dc2-rack2-sts-0"},
 		{Rack: "rack3", DC: "test-dc2"}: {"test-cluster-test-dc2-rack3-sts-0"},
 	}
-	result, err = getTargetRackFQDNs(cassDc)
-	assert.NoError(t, err, err)
+	result = getTargetRackFQDNs(cassDc)
 	assert.Equal(t, expectedSourceRacks, result)
 }
 
@@ -171,8 +171,7 @@ func TestGetTargetRackFQDNsOverrides(t *testing.T) {
 		},
 	}
 
-	result, err := getTargetRackFQDNs(cassDc)
-	assert.NoError(t, err, err)
+	result := getTargetRackFQDNs(cassDc)
 	expectedSourceRacks := map[NodeLocation][]string{
 		{Rack: "default", DC: "Test DC2"}: {"testcluster-test-dc2-default-sts-0", "testcluster-test-dc2-default-sts-1", "testcluster-test-dc2-default-sts-2"},
 	}
@@ -187,8 +186,7 @@ func TestGetTargetRackFQDNsOverrides(t *testing.T) {
 		{Rack: "rack2", DC: "Test DC2"}: {"testcluster-test-dc2-rack2-sts-0"},
 		{Rack: "rack3", DC: "Test DC2"}: {"testcluster-test-dc2-rack3-sts-0"},
 	}
-	result, err = getTargetRackFQDNs(cassDc)
-	assert.NoError(t, err, err)
+	result = getTargetRackFQDNs(cassDc)
 	assert.Equal(t, expectedSourceRacks, result)
 }
 
@@ -236,7 +234,7 @@ func TestGetHostMap(t *testing.T) {
 	}
 	// Make DC name = "test-dc2" which is our test DC which has racks.
 	medusaBackup = pkgtest.NewMedusaRestore("default", "local-backupname", "remote-backupname", "test-dc2", "test-cluster")
-	cassDc.ObjectMeta.Name = "test-dc2"
+	cassDc.Name = "test-dc2"
 	expected = HostMappingSlice{
 		{
 			Source: "test-cluster-test-dc2-test-rack1-sts-0",

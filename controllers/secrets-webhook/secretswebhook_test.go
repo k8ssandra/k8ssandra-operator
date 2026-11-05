@@ -37,7 +37,7 @@ func TestHandleInjectSecretSuccess(t *testing.T) {
 	req := createRequest(t, pod)
 
 	resp := p.Handle(context.Background(), req)
-	assert.True(resp.AdmissionResponse.Allowed)
+	assert.True(resp.Allowed)
 	// 2 patches for addition of volume and volumeMount, but the order of the patches may vary
 	assert.Equal(len(resp.Patches), 2)
 
@@ -69,7 +69,7 @@ func TestHandleInjectSecretNoPatch(t *testing.T) {
 	req := createRequest(t, pod)
 
 	resp := p.Handle(context.Background(), req)
-	assert.Equal(t, true, resp.AdmissionResponse.Allowed)
+	assert.Equal(t, true, resp.Allowed)
 	// no injection annotation, no patch
 	assert.Equal(t, len(resp.Patches), 0)
 }
@@ -118,7 +118,7 @@ func TestMutatePodsSingleSecret(t *testing.T) {
 	p := &podSecretsInjector{}
 
 	ctx := context.Background()
-	err := p.mutatePods(ctx, pod, log.FromContext(ctx))
+	err := p.mutatePods(pod, log.FromContext(ctx))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -189,7 +189,7 @@ func TestMutatePodsMutliSecret(t *testing.T) {
 	p := &podSecretsInjector{}
 
 	ctx := context.Background()
-	err := p.mutatePods(ctx, pod, log.FromContext(ctx))
+	err := p.mutatePods(pod, log.FromContext(ctx))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -271,7 +271,7 @@ func TestMutatePodsExpandKey(t *testing.T) {
 	p := &podSecretsInjector{}
 
 	ctx := context.Background()
-	err := p.mutatePods(ctx, pod, log.FromContext(ctx))
+	err := p.mutatePods(pod, log.FromContext(ctx))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -338,7 +338,7 @@ func TestMutatePodsSpecifyContainer(t *testing.T) {
 	p := &podSecretsInjector{}
 
 	ctx := context.Background()
-	err := p.mutatePods(ctx, pod, log.FromContext(ctx))
+	err := p.mutatePods(pod, log.FromContext(ctx))
 	if err != nil {
 		t.Fatal(err)
 	}

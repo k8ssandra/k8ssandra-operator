@@ -18,7 +18,6 @@ import (
 )
 
 func multiDcAuthOnOff(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
-
 	kcKey := types.NamespacedName{Namespace: namespace, Name: "cluster1"}
 
 	dc1Key := framework.ClusterKey{K8sContext: f.DataPlaneContexts[0], NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}}
@@ -47,15 +46,14 @@ func multiDcAuthOnOff(t *testing.T, ctx context.Context, namespace string, f *fr
 
 	pod1Name := fmt.Sprintf("%s-default-sts-0", DcPrefix(t, f, dc1Key))
 	pod2Name := fmt.Sprintf("%s-default-sts-0", DcPrefix(t, f, dc2Key))
-	replication := map[string]int{DcName(t, f, dc1Key): 1, DcName(t, f, dc2Key): 1}
 
-	testAuthenticationDisabled(t, f, ctx, namespace, replication, pod1Name, pod2Name)
+	testAuthenticationDisabled(t, f, ctx, namespace, pod1Name, pod2Name)
 
 	// turn auth on
 	toggleAuthentication(t, f, ctx, kcKey, true)
 	verifyClusterReconcileFinished(ctx, t, f, kcKey)
 	waitForAllComponentsReady(t, f, ctx, kcKey, dc1Key, dc2Key, reaper1Key, reaper2Key)
-	testAuthenticationEnabled(t, f, ctx, namespace, kcKey, reaperUiSecretKey, replication, pod1Name, pod2Name, DcPrefix(t, f, dc1Key), DcPrefixOverride(t, f, dc2Key))
+	testAuthenticationEnabled(t, f, ctx, namespace, kcKey, reaperUiSecretKey, pod1Name, pod2Name)
 }
 
 func waitForAllComponentsReady(
@@ -97,7 +95,6 @@ func testAuthenticationDisabled(
 	f *framework.E2eFramework,
 	ctx context.Context,
 	namespace string,
-	replication map[string]int,
 	pod1Name, pod2Name string,
 ) {
 	t.Run("TestJmxAccessAuthDisabled", func(t *testing.T) {
@@ -134,9 +131,7 @@ func testAuthenticationEnabled(
 	ctx context.Context,
 	namespace string,
 	kcKey, reaperUiSecretKey types.NamespacedName,
-	replication map[string]int,
 	pod1Name, pod2Name string,
-	dc1Prefix, dc2Prefix string,
 ) {
 	t.Log("retrieve superuser credentials")
 	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], kcKey.Namespace, "cluster1")

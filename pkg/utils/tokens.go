@@ -58,7 +58,6 @@ func ComputeTokens(dcCounts []int, partitioner Partitioner) [][]string {
 // DC from a "zero" point, and distribute its tokens evenly across the ring; however nodes cannot share tokens, so the
 // "zeros" must be slightly apart.
 func computeDcOffset(dcCounts []int, partitioner Partitioner) *big.Int {
-
 	maxDcCount := 0
 	for _, dcCount := range dcCounts {
 		if dcCount > maxDcCount {

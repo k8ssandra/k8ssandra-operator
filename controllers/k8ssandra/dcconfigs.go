@@ -23,12 +23,10 @@ func (r *K8ssandraClusterReconciler) createDatacenterConfigs(
 	logger logr.Logger,
 	systemReplication cassandra.SystemReplication,
 ) ([]*cassandra.DatacenterConfig, error) {
-
 	kcKey := utils.GetKey(kc)
 	var dcConfigs []*cassandra.DatacenterConfig
 
 	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
-
 		dcConfig := cassandra.Coalesce(kc.CassClusterName(), kc.Spec.Cassandra.DeepCopy(), dcTemplate.DeepCopy())
 		dcConfig.ExternalSecrets = kc.Spec.UseExternalSecrets()
 		dcConfig.SuperuserSecretRef.Name = SuperuserSecretName(kc)
@@ -64,10 +62,8 @@ func (r *K8ssandraClusterReconciler) createDatacenterConfigs(
 			cassandra.ApplySystemReplication(dcConfig, systemReplication)
 		}
 
-		// Stargate has a bug when backed by Cassandra 4, unless `cassandra.allow_alter_rf_during_range_movement` is
-		// set (see https://github.com/stargate/stargate/issues/1274).
-		// Set the option preemptively (we don't check `kc.HasStargates()` explicitly, because that causes the operator
-		// to restart the whole DC whenever Stargate is added or removed).
+		// Datacenter removal requires replication changes while endpoints may not be in normal state.
+		// Configure this at startup so topology changes do not require an extra rolling restart.
 		if kc.Spec.Cassandra.ServerType.IsCassandra() && dcConfig.ServerVersion.Major() != 3 {
 			cassandra.AllowAlterRfDuringRangeMovement(dcConfig)
 		}
@@ -78,19 +74,18 @@ func (r *K8ssandraClusterReconciler) createDatacenterConfigs(
 		}
 
 		// Inject MCAC metrics filters
-		if kc.Spec.Cassandra.Telemetry.IsMcacEnabled() {
-			telemetry.InjectCassandraTelemetryFilters(kc.Spec.Cassandra.Telemetry, dcConfig)
+		if dcConfig.Telemetry.IsMcacEnabled() {
+			telemetry.InjectCassandraTelemetryFilters(dcConfig.Telemetry, dcConfig)
 		}
 
 		// The new metrics endpoint is available since 3.11.13 and 4.0.4.
 		// If MCAC is disabled and the new metrics endpoint is not available then we should return an error.
-		mergedTelemetrySpec := MergeTelemetrySpecs(kc, dcTemplate)
-		if !mergedTelemetrySpec.IsMcacEnabled() && !telemetry.IsNewMetricsEndpointAvailable(dcConfig.ServerVersion.String()) && kc.Spec.Cassandra.ServerType == api.ServerDistributionCassandra {
+		if !dcConfig.Telemetry.IsMcacEnabled() && !telemetry.IsNewMetricsEndpointAvailable(dcConfig.ServerVersion.String()) && kc.Spec.Cassandra.ServerType == api.ServerDistributionCassandra {
 			return dcConfigs, errors.New("new metrics endpoint is only available since Cassandra 3.11.13/4.0.4, so MCAC cannot be disabled")
 		}
 
 		// Inject Vector agent
-		if err = telemetry.InjectCassandraVectorAgentConfig(kc.Spec.Cassandra.Telemetry, dcConfig, kc.SanitizedName(), dcLogger); err != nil {
+		if err = telemetry.InjectCassandraVectorAgentConfig(dcConfig.Telemetry, dcConfig, kc.SanitizedName(), dcLogger); err != nil {
 			return nil, err
 		}
 

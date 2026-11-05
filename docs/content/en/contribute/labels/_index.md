@@ -16,7 +16,7 @@ From [recommended labels](https://kubernetes.io/docs/concepts/overview/working-w
 |-------------------------------|----------------------------------------------------------|
 | `app.kubernetes.io/name`      | `k8ssandra-operator`                                     |
 | `app.kubernetes.io/part-of`   | `k8ssandra`                                              |
-| `app.kubernetes.io/component` | One of: `cassandra`, `stargate`, `reaper` or `telemetry` |
+| `app.kubernetes.io/component` | One of: `cassandra`, `reaper` or `telemetry` |
 
 These labels are purely informational.
 

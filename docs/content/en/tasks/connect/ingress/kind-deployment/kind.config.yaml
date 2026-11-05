@@ -21,12 +21,6 @@ nodes:
   - containerPort: 32090
     hostPort: 9000
     protocol: TCP
-  - containerPort: 30081
-    hostPort: 8081
-    protocol: TCP
-  - containerPort: 30082
-    hostPort: 8082
-    protocol: TCP
   - containerPort: 32091
     hostPort: 9042
     protocol: TCP

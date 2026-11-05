@@ -52,10 +52,6 @@ kubectl get secret k8ssandra-superuser -o json | jq -r '.data.password' | base64
 
 For more, see the [secrets]({{< relref "#secrets" >}}) section of this security topic.
 
-## Stargate security
-
-Stargate has no specific credentials. It uses the same superuser as defined for Cassandra.
-
 ## Reaper security
 
 With authentication enabled, K8ssandra creates three distinct users for Reaper:
@@ -191,4 +187,4 @@ JMX authorization is supported since k8ssandra-operator v1.5.0 through the use o
 ## Next steps
 
 * Explore other K8ssandra Operator [tasks]({{< relref "/tasks" >}}).
-* See the [Reference]({{< relref "/reference" >}}) topics for information about K8ssandra Operator Custom Resource Definitions (CRDs) and the single K8ssandra Operator Helm chart. 
+* See the [Reference]({{< relref "/reference" >}}) topics for information about K8ssandra Operator Custom Resource Definitions (CRDs) and the single K8ssandra Operator Helm chart.

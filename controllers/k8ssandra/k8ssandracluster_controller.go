@@ -27,8 +27,8 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassimages "github.com/k8ssandra/cass-operator/pkg/images"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
-	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
@@ -39,7 +39,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -51,6 +51,23 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
+// indexK8ssandraClusterByMedusaConfigRef registers a field index on K8ssandraCluster so that
+// the controller can efficiently query which clusters reference a given MedusaConfiguration.
+func indexK8ssandraClusterByMedusaConfigRef(ctx context.Context, mgr ctrl.Manager) error {
+	return mgr.GetFieldIndexer().IndexField(
+		ctx,
+		&api.K8ssandraCluster{},
+		MedusaConfigurationRefIndex,
+		func(obj client.Object) []string {
+			kc := obj.(*api.K8ssandraCluster)
+			if kc.Spec.Medusa == nil || kc.Spec.Medusa.MedusaConfigurationRef.Name == "" {
+				return nil
+			}
+			return []string{kc.Spec.Medusa.MedusaConfigurationRef.Name}
+		},
+	)
+}
+
 // K8ssandraClusterReconciler reconciles a K8ssandraCluster object
 type K8ssandraClusterReconciler struct {
 	*config.ReconcilerConfig
@@ -58,7 +75,7 @@ type K8ssandraClusterReconciler struct {
 	Scheme        *runtime.Scheme
 	ClientCache   *clientcache.ClientCache
 	ManagementApi cassandra.ManagementApiFactory
-	Recorder      record.EventRecorder
+	Recorder      events.EventRecorder
 	// ImageRegistry provides access to container image settings loaded from ImageConfig (v1beta2).
 	ImageRegistry cassimages.ImageRegistry
 }
@@ -69,9 +86,9 @@ type K8ssandraClusterReconciler struct {
 // +kubebuilder:rbac:groups=k8ssandra.io,namespace="k8ssandra",resources=k8ssandraclusters/finalizers,verbs=update
 // +kubebuilder:rbac:groups=cassandra.datastax.com,namespace="k8ssandra",resources=cassandradatacenters,verbs=get;list;watch;create;update;delete;patch
 // +kubebuilder:rbac:groups=control.k8ssandra.io,namespace="k8ssandra",resources=cassandratasks,verbs=get;list;watch;create;update;delete;patch
-// +kubebuilder:rbac:groups=stargate.k8ssandra.io,namespace="k8ssandra",resources=stargates,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=reaper.k8ssandra.io,namespace="k8ssandra",resources=reapers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=pods;secrets,verbs=get;list;watch
+// +kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=endpoints;endpoints/restricted,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=discovery.k8s.io,namespace="k8ssandra",resources=endpointslices;endpointslices/restricted,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=monitoring.coreos.com,namespace="k8ssandra",resources=servicemonitors,verbs=get;list;watch;create;update;patch;delete;deletecollection
@@ -88,7 +105,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		if errors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
-		return ctrl.Result{RequeueAfter: r.ReconcilerConfig.DefaultDelay}, err
+		return ctrl.Result{}, err
 	}
 
 	kc = kc.DeepCopy()
@@ -97,7 +114,7 @@ func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	if kc.GetDeletionTimestamp() == nil {
 		if err != nil {
 			kc.Status.Error = err.Error()
-			r.Recorder.Event(kc, corev1.EventTypeWarning, "Reconcile Error", err.Error())
+			r.Recorder.Eventf(kc, nil, corev1.EventTypeWarning, "ReconcileError", "ReconcileError", err.Error())
 		} else {
 			kc.Status.Error = "None"
 		}
@@ -148,6 +165,10 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 		return recResult.Output()
 	}
 
+	if medusaRecResult := r.reconcileMedusaReplicatedSecret(ctx, kc, kcLogger); medusaRecResult.Completed() {
+		return medusaRecResult.Output()
+	}
+
 	var actualDcs []*cassdcapi.CassandraDatacenter
 	if recResult, dcs := r.reconcileDatacenters(ctx, kc, kcLogger); recResult.Completed() {
 		return recResult.Output()
@@ -175,13 +196,11 @@ func (r *K8ssandraClusterReconciler) afterCassandraReconciled(ctx context.Contex
 		dc := dcs[i]
 		dcKey := utils.GetKey(dc)
 		logger := logger.WithValues("CassandraDatacenter", dcKey)
-		logger.Info("Reconciling Stargate and Reaper for dc " + dc.DatacenterName())
+		logger.Info("Reconciling Reaper for dc " + dc.DatacenterName())
 		if remoteClient, err := r.ClientCache.GetRemoteClient(dcTemplate.K8sContext); err != nil {
 			logger.Error(err, "Failed to get remote client")
 			return result.Error(err)
 		} else if recResult := r.reconcileCassandraDCTelemetry(ctx, kc, dcTemplate, dc, logger, remoteClient); recResult.Completed() {
-			return recResult
-		} else if recResult := r.reconcileStargate(ctx, kc, dcTemplate, dc, logger, remoteClient); recResult.Completed() {
 			return recResult
 		} else if recResult := r.reconcileReaper(ctx, kc, dcTemplate, dc, logger, remoteClient); recResult.Completed() {
 			return recResult
@@ -194,7 +213,7 @@ func updateStatus(ctx context.Context, r client.Client, kc *api.K8ssandraCluster
 	if AllowUpdate(kc) {
 		if metav1.HasAnnotation(kc.ObjectMeta, api.AutomatedUpdateAnnotation) {
 			if kc.Annotations[api.AutomatedUpdateAnnotation] == string(api.AllowUpdateOnce) {
-				delete(kc.ObjectMeta.Annotations, api.AutomatedUpdateAnnotation)
+				delete(kc.Annotations, api.AutomatedUpdateAnnotation)
 				if err := r.Update(ctx, kc); err != nil {
 					return result.Error(err)
 				}
@@ -212,11 +231,15 @@ func updateStatus(ctx context.Context, r client.Client, kc *api.K8ssandraCluster
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters []cluster.Cluster) error {
+func (r *K8ssandraClusterReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, clusters []cluster.Cluster) error {
+	if err := indexK8ssandraClusterByMedusaConfigRef(ctx, mgr); err != nil {
+		return err
+	}
+
 	cb := ctrl.NewControllerManagedBy(mgr).
 		For(&api.K8ssandraCluster{}, builder.WithPredicates(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})))
 
-	clusterLabelFilter := func(ctx context.Context, mapObj client.Object) []reconcile.Request {
+	clusterLabelFilter := func(_ context.Context, mapObj client.Object) []reconcile.Request {
 		requests := make([]reconcile.Request, 0)
 
 		kcName := labels.GetLabel(mapObj, api.K8ssandraClusterNameLabel)
@@ -241,9 +264,26 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters
 		return requests
 	}
 
+	// When a MedusaConfiguration changes, find all K8ssandraCluster objects that reference it by name via the field index and enqueue them for reconciliation.
+	medusaConfigFilter := func(ctx context.Context, obj client.Object) []reconcile.Request {
+		kcList := &api.K8ssandraClusterList{}
+		if err := r.List(ctx, kcList,
+			client.InNamespace(obj.GetNamespace()),
+			client.MatchingFields{MedusaConfigurationRefIndex: obj.GetName()},
+		); err != nil {
+			return nil
+		}
+		requests := make([]reconcile.Request, len(kcList.Items))
+		for i, kc := range kcList.Items {
+			requests[i] = reconcile.Request{NamespacedName: types.NamespacedName{
+				Namespace: kc.Namespace,
+				Name:      kc.Name,
+			}}
+		}
+		return requests
+	}
+
 	cb = cb.Watches(&cassdcapi.CassandraDatacenter{},
-		handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
-	cb = cb.Watches(&stargateapi.Stargate{},
 		handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
 	cb = cb.Watches(&reaperapi.Reaper{},
 		handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
@@ -251,14 +291,12 @@ func (r *K8ssandraClusterReconciler) SetupWithManager(mgr ctrl.Manager, clusters
 		handler.EnqueueRequestsFromMapFunc(clusterLabelFilter))
 	cb = cb.Watches(&discoveryv1.EndpointSlice{},
 		handler.EnqueueRequestsFromMapFunc(endpointsFilter))
+	cb = cb.Watches(&medusaapi.MedusaConfiguration{},
+		handler.EnqueueRequestsFromMapFunc(medusaConfigFilter), builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 
 	for _, c := range clusters {
 		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &cassdcapi.CassandraDatacenter{},
 			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, obj *cassdcapi.CassandraDatacenter) []reconcile.Request {
-				return clusterLabelFilter(ctx, obj)
-			})))
-		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &stargateapi.Stargate{},
-			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, obj *stargateapi.Stargate) []reconcile.Request {
 				return clusterLabelFilter(ctx, obj)
 			})))
 		cb = cb.WatchesRawSource(source.Kind(c.GetCache(), &reaperapi.Reaper{},

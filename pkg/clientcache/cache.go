@@ -29,7 +29,6 @@ type ClientCache struct {
 }
 
 func New(localClient client.Client, noCacheClient client.Client, scheme *runtime.Scheme) *ClientCache {
-
 	// Call to create new RemoteClients here?
 	return &ClientCache{
 		localClient:   localClient,
@@ -91,7 +90,6 @@ func (c *ClientCache) createClient(contextName string, restConfig *rest.Config) 
 	// Store for later use and return to the caller
 	c.remoteClients[contextName] = remoteClient
 	return remoteClient, nil
-
 }
 
 // CreateRemoteClientsFromSecret is a convenience method for testing purposes

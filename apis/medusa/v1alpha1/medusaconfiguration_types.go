@@ -116,7 +116,3 @@ type MedusaConfigurationList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []MedusaConfiguration `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&MedusaConfiguration{}, &MedusaConfigurationList{})
-}

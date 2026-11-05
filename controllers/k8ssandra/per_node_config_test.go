@@ -158,7 +158,6 @@ func perNodeConfigTest(ctx context.Context, f *framework.Framework, test perNode
 }
 
 func defaultPerNodeConfiguration(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
-
 	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test1",
@@ -288,7 +287,6 @@ func defaultPerNodeConfiguration(t *testing.T, ctx context.Context, f *framework
 }
 
 func userDefinedPerNodeConfiguration(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
-
 	perNodeConfig := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "user-provided-per-node-config",

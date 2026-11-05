@@ -95,7 +95,7 @@ func getSourceRacksIPs(k8sRestore medusaapi.MedusaRestoreJob, client Client, ctx
 				Rack: i.Rack,
 				DC:   i.Datacenter,
 			}
-			DNSOrIP := string(i.Host)
+			DNSOrIP := i.Host
 			_, exists := out[location]
 			if exists {
 				out[location] = append(out[location], DNSOrIP)
@@ -147,7 +147,7 @@ func sortLocations(m map[NodeLocation][]string) []rack {
 
 // getClusterRackFQDNs gets a map of racks to FQDNs from the current K8ssandraCluster k8s object. The CassDC does not exist yet, so we cannot refer to it for names.
 // We refer to the following code for how to calculate pod names: // https://github.com/k8ssandra/cass-operator/blob/master/pkg/reconciliation/construct_statefulset.go#L39
-func getTargetRackFQDNs(dc *cassdcapi.CassandraDatacenter) (map[NodeLocation][]string, error) {
+func getTargetRackFQDNs(dc *cassdcapi.CassandraDatacenter) map[NodeLocation][]string {
 	racks := dc.GetRacks()
 	rackNodeCounts := cassdcapi.SplitRacks(int(dc.Spec.Size), len(racks))
 	out := make(map[NodeLocation][]string)
@@ -165,7 +165,7 @@ func getTargetRackFQDNs(dc *cassdcapi.CassandraDatacenter) (map[NodeLocation][]s
 		out[location] = podNames
 	}
 
-	return out, nil
+	return out
 }
 
 // GetHostMap gets the hostmap for a given CassandraBackup from IP or DNS name sources to DNS named targets from the K8ssandraCluster and the backups returned by the Medusa gRPC client.
@@ -174,10 +174,7 @@ func GetHostMap(cassDC *cassdcapi.CassandraDatacenter, k8sbackup medusaapi.Medus
 	if err != nil {
 		return nil, err
 	}
-	destRacks, err := getTargetRackFQDNs(cassDC)
-	if err != nil {
-		return nil, err
-	}
+	destRacks := getTargetRackFQDNs(cassDC)
 	sortedSource := sortLocations(sourceRacks)
 	sortedDests := sortLocations(destRacks)
 	if len(sortedDests) != len(sortedSource) {

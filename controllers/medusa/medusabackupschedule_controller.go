@@ -100,11 +100,7 @@ func (r *MedusaBackupScheduleReconciler) Reconcile(ctx context.Context, req ctrl
 
 	defaults(backupSchedule)
 
-	previousExecution, err := getPreviousExecutionTime(ctx, backupSchedule)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
+	previousExecution := getPreviousExecutionTime(backupSchedule)
 	now := r.Clock.Now().UTC()
 
 	// Calculate the next execution time
@@ -154,7 +150,7 @@ func (r *MedusaBackupScheduleReconciler) Reconcile(ctx context.Context, req ctrl
 			Spec: backupSchedule.Spec.BackupSpec,
 		}
 
-		if err := r.Client.Create(ctx, backupJob); err != nil {
+		if err := r.Create(ctx, backupJob); err != nil {
 			// We've already updated the Status times.. we'll miss this job now?
 			return ctrl.Result{}, err
 		}
@@ -175,7 +171,7 @@ func (r *MedusaBackupScheduleReconciler) Reconcile(ctx context.Context, req ctrl
 			},
 		}
 
-		if err := r.Client.Create(ctx, purgeJob); err != nil {
+		if err := r.Create(ctx, purgeJob); err != nil {
 			// We've already updated the Status times.. we'll miss this job now?
 			return ctrl.Result{}, err
 		}
@@ -186,7 +182,7 @@ func (r *MedusaBackupScheduleReconciler) Reconcile(ctx context.Context, req ctrl
 	return ctrl.Result{RequeueAfter: nextRunTime}, nil
 }
 
-func getPreviousExecutionTime(ctx context.Context, backupSchedule *medusav1alpha1.MedusaBackupSchedule) (time.Time, error) {
+func getPreviousExecutionTime(backupSchedule *medusav1alpha1.MedusaBackupSchedule) time.Time {
 	previousExecution := backupSchedule.Status.LastExecution
 
 	if previousExecution.IsZero() {
@@ -194,7 +190,7 @@ func getPreviousExecutionTime(ctx context.Context, backupSchedule *medusav1alpha
 		previousExecution = backupSchedule.CreationTimestamp
 	}
 
-	return previousExecution.Time.UTC(), nil
+	return previousExecution.UTC()
 }
 
 func defaults(backupSchedule *medusav1alpha1.MedusaBackupSchedule) {
@@ -206,7 +202,7 @@ func defaults(backupSchedule *medusav1alpha1.MedusaBackupSchedule) {
 func (r *MedusaBackupScheduleReconciler) activeTasks(backupSchedule *medusav1alpha1.MedusaBackupSchedule, dc *cassdcapi.CassandraDatacenter, operationType string) (int, error) {
 	if operationType == "" || operationType == "backup" {
 		backupJobs := &medusav1alpha1.MedusaBackupJobList{}
-		if err := r.Client.List(context.Background(), backupJobs, client.InNamespace(backupSchedule.Namespace), client.MatchingLabels(dc.GetDatacenterLabels())); err != nil {
+		if err := r.List(context.Background(), backupJobs, client.InNamespace(backupSchedule.Namespace), client.MatchingLabels(dc.GetDatacenterLabels())); err != nil {
 			return 0, err
 		}
 		activeJobs := make([]medusav1alpha1.MedusaBackupJob, 0)
@@ -219,7 +215,7 @@ func (r *MedusaBackupScheduleReconciler) activeTasks(backupSchedule *medusav1alp
 		return len(activeJobs), nil
 	} else if operationType == string(medusav1alpha1.OperationTypePurge) {
 		medusaTasks := &medusav1alpha1.MedusaTaskList{}
-		if err := r.Client.List(context.Background(), medusaTasks, client.InNamespace(backupSchedule.Namespace), client.MatchingLabels(dc.GetDatacenterLabels())); err != nil {
+		if err := r.List(context.Background(), medusaTasks, client.InNamespace(backupSchedule.Namespace), client.MatchingLabels(dc.GetDatacenterLabels())); err != nil {
 			return 0, err
 		}
 		activeJobs := make([]medusav1alpha1.MedusaTask, 0)

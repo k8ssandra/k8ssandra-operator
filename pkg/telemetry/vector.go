@@ -78,18 +78,18 @@ func (p *PrometheusScrapeConfig) String() string {
 		protocol = "https"
 	}
 
-	sb.WriteString(fmt.Sprintf("endpoints = [ \"%s://%s:%v%s\" ]\n", protocol, p.ScrapeAddress, p.ScrapePort, p.ScrapeEndpoint))
-	sb.WriteString(fmt.Sprintf("scrape_interval_secs = %v", p.ScrapeInterval))
+	fmt.Fprintf(&sb, "endpoints = [ \"%s://%s:%v%s\" ]\n", protocol, p.ScrapeAddress, p.ScrapePort, p.ScrapeEndpoint)
+	fmt.Fprintf(&sb, "scrape_interval_secs = %v", p.ScrapeInterval)
 
 	if p.TLS != nil {
 		if p.TLS.CAFile != "" {
-			sb.WriteString(fmt.Sprintf("\ntls.ca_file = \"%s\"", p.TLS.CAFile))
+			fmt.Fprintf(&sb, "\ntls.ca_file = \"%s\"", p.TLS.CAFile)
 		}
 		if p.TLS.CertFile != "" {
-			sb.WriteString(fmt.Sprintf("\ntls.crt_file = \"%s\"", p.TLS.CertFile))
+			fmt.Fprintf(&sb, "\ntls.crt_file = \"%s\"", p.TLS.CertFile)
 		}
 		if p.TLS.KeyFile != "" {
-			sb.WriteString(fmt.Sprintf("\ntls.key_file = \"%s\"", p.TLS.KeyFile))
+			fmt.Fprintf(&sb, "\ntls.key_file = \"%s\"", p.TLS.KeyFile)
 		}
 	}
 
@@ -286,7 +286,7 @@ encoding.codec = "text"
 	return sources, transformers, sinks
 }
 
-// FilterUnusedPipelines removes sources that have no destination in the sinks. If there are duplicate transformer, source or sink names, only the first occurence wins
+// FilterUnusedPipelines removes sources that have no destination in the sinks. If there are duplicate transformer, source or sink names, only the first occurrence wins
 func FilterUnusedPipelines(sources []telemetry.VectorSourceSpec, transformers []telemetry.VectorTransformSpec, sinks []telemetry.VectorSinkSpec) ([]telemetry.VectorSourceSpec, []telemetry.VectorTransformSpec, []telemetry.VectorSinkSpec) {
 	// Every source must be mapped to at least one transformer or sink
 
@@ -370,6 +370,13 @@ Clean:
 
 func BuildCustomVectorToml(telemetrySpec *telemetry.TelemetrySpec) string {
 	vectorConfigToml := ""
+	if telemetrySpec.Vector.Config != "" {
+		vectorConfigToml += telemetrySpec.Vector.Config
+		if !strings.HasSuffix(vectorConfigToml, "\n") {
+			vectorConfigToml += "\n"
+		}
+	}
+
 	for _, source := range telemetrySpec.Vector.Components.Sources {
 		vectorConfigToml += fmt.Sprintf("\n[sources.%s]\n", source.Name)
 		vectorConfigToml += fmt.Sprintf("type = \"%s\"\n", source.Type)

@@ -2,6 +2,8 @@ package e2e
 
 import (
 	"context"
+	"testing"
+
 	ctaskapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
 	ktaskapi "github.com/k8ssandra/k8ssandra-operator/apis/control/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -12,7 +14,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"testing"
 )
 
 func createMultiDatacenterTask(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {

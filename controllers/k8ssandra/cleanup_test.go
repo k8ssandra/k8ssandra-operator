@@ -9,7 +9,6 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
-	stargateapi "github.com/k8ssandra/k8ssandra-operator/apis/stargate/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/k8ssandra"
@@ -105,7 +104,6 @@ func TestK8ssandraClusterReconciler_DeleteDeployments(t *testing.T) {
 	if err == nil || !errors.IsNotFound(err) {
 		t.Errorf("Deployment was not deleted: %v", err)
 	}
-
 }
 
 func TestK8ssandraClusterReconciler_CheckDeletion(t *testing.T) {
@@ -113,7 +111,6 @@ func TestK8ssandraClusterReconciler_CheckDeletion(t *testing.T) {
 	require.NoError(t, k8ssandraapi.AddToScheme(scheme.Scheme))
 	require.NoError(t, cassdcapi.AddToScheme(scheme.Scheme))
 	require.NoError(t, reaperapi.AddToScheme(scheme.Scheme))
-	require.NoError(t, stargateapi.AddToScheme(scheme.Scheme))
 
 	ctx := context.Background()
 	logger := testlogr.NewTestLogger(t)
@@ -274,7 +271,6 @@ func TestK8ssandraClusterReconciler_CheckDeletion(t *testing.T) {
 }
 
 func testCheckDeletion(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
-
 	// Create a K8ssandraCluster with deletion timestamp and finalizer
 	kc := &k8ssandraapi.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{

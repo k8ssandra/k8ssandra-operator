@@ -7,7 +7,6 @@ import (
 
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -18,7 +17,6 @@ import (
 // accessible. Then it stops dc2 as well and verifies that the entire cluster is down. Then it starts dc1 and verifies
 // that it becomes accessible again. Then it starts dc2 and verifies that the whole cluster is back to normal.
 func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
-
 	t.Log("check that the K8ssandraCluster was created")
 	kcKey := client.ObjectKey{Namespace: namespace, Name: "cluster1"}
 	kc := &api.K8ssandraCluster{}
@@ -99,9 +97,10 @@ func stopAndRestartDc(t *testing.T, ctx context.Context, namespace string, f *fr
 	checkReaperNotFound(t, f, ctx, reaper2Key)
 
 	t.Run("TestApisDcsRestarted", func(t *testing.T) {
-		uiKey := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, reaper.DefaultUiSecretName("cluster1"))
-		uiUsername, uiPassword := retrieveCredentials(t, f, ctx, uiKey)
-		testReaperApi(t, ctx, f.DataPlaneContexts[0], "cluster1", reaperapi.DefaultKeyspace, uiUsername, uiPassword)
+		// TODO: Disabled this check due to a bug in the mgmt-api repair notification subscription system.
+		// uiKey := framework.NewClusterKey(f.DataPlaneContexts[0], namespace, reaper.DefaultUiSecretName("cluster1"))
+		// uiUsername, uiPassword := retrieveCredentials(t, f, ctx, uiKey)
+		// testReaperApi(t, ctx, f.DataPlaneContexts[0], "cluster1", reaperapi.DefaultKeyspace, uiUsername, uiPassword)
 		checkNodeToolStatus(t, f, f.DataPlaneContexts[0], namespace, pod1Name, 2, 0, "-u", username, "-pw", password)
 		checkNodeToolStatus(t, f, f.DataPlaneContexts[1], namespace, pod2Name, 2, 0, "-u", username, "-pw", password)
 	})

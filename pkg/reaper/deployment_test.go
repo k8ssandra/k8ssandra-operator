@@ -181,6 +181,10 @@ func TestNewDeployment(t *testing.T) {
 			Name:  "REAPER_HTTP_MANAGEMENT_ENABLE",
 			Value: "true",
 		},
+		{
+			Name:  "REAPER_HTTP_MANAGEMENT_PORT",
+			Value: "8080",
+		},
 	})
 
 	assert.Len(t, podSpec.InitContainers, 1)
@@ -225,6 +229,10 @@ func TestNewDeployment(t *testing.T) {
 			Name:  "REAPER_HTTP_MANAGEMENT_ENABLE",
 			Value: "true",
 		},
+		{
+			Name:  "REAPER_HTTP_MANAGEMENT_PORT",
+			Value: "8080",
+		},
 	})
 
 	assert.ElementsMatch(t, initContainer.Args, []string{"schema-migration"})
@@ -246,7 +254,7 @@ func TestNewDeployment(t *testing.T) {
 	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
 	podSpec = deployment.Spec.Template.Spec
 	container = podSpec.Containers[0]
-	assert.Len(t, container.Env, 8)
+	assert.Len(t, container.Env, 9)
 
 	assert.Contains(t, container.Env, corev1.EnvVar{
 		Name:  "REAPER_CASS_KEYSPACE",
@@ -257,7 +265,7 @@ func TestNewDeployment(t *testing.T) {
 	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
 	podSpec = deployment.Spec.Template.Spec
 	container = podSpec.Containers[0]
-	assert.Len(t, container.Env, 18)
+	assert.Len(t, container.Env, 19)
 
 	assert.Contains(t, container.Env, corev1.EnvVar{
 		Name:  "REAPER_AUTO_SCHEDULING_ADAPTIVE",
@@ -384,7 +392,6 @@ func TestNewStatefulSetForControlPlane(t *testing.T) {
 			Value: "true",
 		},
 	})
-
 }
 
 func TestHttpManagementConfiguration(t *testing.T) {
@@ -419,6 +426,30 @@ func TestHttpManagementConfiguration(t *testing.T) {
 				SecretName: reaper.Spec.HttpManagement.Keystores.Name,
 			},
 		},
+	})
+}
+
+func TestHttpManagementCustomPort(t *testing.T) {
+	reaper := newTestReaper()
+	reaper.Spec.HttpManagement.Enabled = true
+	dc := newTestDatacenter()
+	dc.Spec.PodTemplateSpec = &corev1.PodTemplateSpec{
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				{
+					Name:  "cassandra",
+					Ports: []corev1.ContainerPort{{Name: "mgmt-api-http", ContainerPort: 8085}},
+				},
+			},
+		},
+	}
+	logger := testlogr.NewTestLogger(t)
+
+	deployment := NewDeployment(reaper, dc, nil, nil, logger, getTestImageRegistry(t))
+
+	assert.Contains(t, deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
+		Name:  "REAPER_HTTP_MANAGEMENT_PORT",
+		Value: "8085",
 	})
 }
 
@@ -656,21 +687,22 @@ func TestDeploymentTypes(t *testing.T) {
 
 	// reaper with cassandra backend becomes a deployment
 	reaper := newTestReaper()
-	reaper.Spec.ReaperTemplate.StorageType = reaperapi.StorageTypeCassandra
+	reaper.Spec.StorageType = reaperapi.StorageTypeCassandra
 	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
 	assert.Len(t, deployment.Spec.Template.Spec.Containers, 1)
+	assert.Len(t, deployment.Spec.Template.Spec.InitContainers, 1)
 	assert.Equal(t, reaperapi.StorageTypeCassandra, deployment.Spec.Template.Spec.Containers[0].Env[0].Value)
 
 	// asking for a deployment with memory backend does not work
 	reaper = newTestReaper()
-	reaper.Spec.ReaperTemplate.StorageType = reaperapi.StorageTypeLocal
+	reaper.Spec.StorageType = reaperapi.StorageTypeLocal
 	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
 	assert.Nil(t, deployment)
 
 	// reaper with memory backend becomes a stateful set
 	reaper = newTestReaper()
-	reaper.Spec.ReaperTemplate.StorageType = reaperapi.StorageTypeLocal
-	reaper.Spec.ReaperTemplate.StorageConfig = &corev1.PersistentVolumeClaimSpec{
+	reaper.Spec.StorageType = reaperapi.StorageTypeLocal
+	reaper.Spec.StorageConfig = &corev1.PersistentVolumeClaimSpec{
 		StorageClassName: func() *string { s := "test"; return &s }(),
 		AccessModes:      []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 		Resources: corev1.VolumeResourceRequirements{
@@ -681,11 +713,12 @@ func TestDeploymentTypes(t *testing.T) {
 	}
 	sts := NewStatefulSet(reaper, newTestDatacenter(), logger, getTestImageRegistry(t))
 	assert.Len(t, sts.Spec.Template.Spec.Containers, 1)
+	assert.Len(t, sts.Spec.Template.Spec.InitContainers, 1)
 	assert.Equal(t, "memory", sts.Spec.Template.Spec.Containers[0].Env[0].Value)
 
 	// asking for a stateful set with cassandra backend does not work
 	reaper = newTestReaper()
-	reaper.Spec.ReaperTemplate.StorageType = reaperapi.StorageTypeCassandra
+	reaper.Spec.StorageType = reaperapi.StorageTypeCassandra
 	sts = NewStatefulSet(reaper, newTestDatacenter(), logger, getTestImageRegistry(t))
 	assert.Nil(t, sts)
 }
@@ -1251,4 +1284,28 @@ func getTestImageRegistry(t testing.TB) cassimages.ImageRegistry {
 		imageRegistryTest = r
 	})
 	return imageRegistryTest
+}
+
+func TestPvcReclaimPolicy(t *testing.T) {
+	reaper := newTestReaper()
+	reaper.Spec.StorageType = reaperapi.StorageTypeLocal
+	reaper.Spec.StorageConfig = newTestStorageConfig()
+	logger := testlogr.NewTestLogger(t)
+
+	// Test that StatefulSet with local storage has PVC retention policy set
+	sts := NewStatefulSet(reaper, newTestDatacenter(), logger, getTestImageRegistry(t))
+	assert.NotNil(t, sts, "expected StatefulSet to be created")
+	assert.NotNil(t, sts.Spec.PersistentVolumeClaimRetentionPolicy, "expected PVC retention policy to be set")
+	assert.Equal(t, appsv1.DeletePersistentVolumeClaimRetentionPolicyType, sts.Spec.PersistentVolumeClaimRetentionPolicy.WhenDeleted, "expected WhenDeleted to be Delete")
+	assert.Equal(t, appsv1.DeletePersistentVolumeClaimRetentionPolicyType, sts.Spec.PersistentVolumeClaimRetentionPolicy.WhenScaled, "expected WhenScaled to be Delete")
+
+	// cannot have STS with something else than local storage
+
+	// Test that Deployment with Cassandra storage does not have PVC retention policy
+	reaper.Spec.StorageType = reaperapi.StorageTypeCassandra
+	reaper.Spec.StorageConfig = nil
+	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
+	assert.NotNil(t, deployment, "expected Deployment to be created")
+	// Deployments don't have PersistentVolumeClaimRetentionPolicy field, so we just verify it's a Deployment
+	assert.IsType(t, &appsv1.Deployment{}, deployment)
 }

@@ -74,8 +74,8 @@ func multiDcMultiCluster(t *testing.T, ctx context.Context, klusterNamespace str
 	}, polling.k8ssandraClusterStatus.timeout, polling.k8ssandraClusterStatus.interval, "timed out waiting for K8ssandraCluster status to get updated")
 
 	t.Log("check replicated secret mounted")
-	checkReplicatedSecretMounted(t, ctx, f, dc1Key, multiClusterBucketSecretName)
-	checkReplicatedSecretMounted(t, ctx, f, dc2Key, multiClusterBucketSecretName)
+	checkReplicatedSecretMounted(t, ctx, f, dc1Key, k8ssandra.SanitizedName()+"-"+multiClusterBucketSecretName)
+	checkReplicatedSecretMounted(t, ctx, f, dc2Key, k8ssandra.SanitizedName()+"-"+multiClusterBucketSecretName)
 
 	t.Log("retrieve database credentials")
 	username, password, err := f.RetrieveDatabaseCredentials(ctx, f.DataPlaneContexts[0], dc1Namespace, k8ssandra.SanitizedName())

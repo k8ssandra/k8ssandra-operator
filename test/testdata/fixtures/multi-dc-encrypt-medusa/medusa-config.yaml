@@ -1,0 +1,14 @@
+apiVersion: medusa.k8ssandra.io/v1alpha1
+kind: MedusaConfiguration
+metadata:
+  name: global-medusa-config
+spec:
+  storageProperties:
+    storageProvider: s3_compatible
+    bucketName: k8ssandra-medusa
+    storageSecretRef:
+      name: medusa-bucket-key
+    host: silo-service.silo.svc.cluster.local
+    port: 9000
+    secure: false
+    concurrentTransfers: 2

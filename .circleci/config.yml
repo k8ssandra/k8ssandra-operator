@@ -84,9 +84,7 @@ workflows:
           matrix:
             parameters:
               e2e-test: 
-                - SingleDcEncryptionWithStargate
                 - CreateSingleDatacenterCluster
-                - CreateStargateAndDatacenter
                 - CreateSingleReaper
                 - CreateReaperAndDatacenter
                 - CreateSingleMedusa
@@ -102,9 +100,6 @@ workflows:
                 - CreateMultiReaper
                 - CreateMultiDatacenterCluster
                 - RemoveDcFromCluster
-                - CheckStargateApisWithMultiDcCluster
-                - CreateMultiStargateAndDatacenter
                 - CreateMultiMedusa
                 - MultiDcAuthOnOff
-                - MultiDcEncryptionWithStargate
                 - MultiDcEncryptionWithReaper

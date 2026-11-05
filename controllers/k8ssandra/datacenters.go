@@ -3,6 +3,7 @@ package k8ssandra
 import (
 	"context"
 	"fmt"
+	"math"
 	"sort"
 	"strconv"
 	"strings"
@@ -27,7 +28,9 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -68,7 +71,6 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 
 	// Reconcile CassandraDatacenter objects only
 	for idx, dcConfig := range sortDatacentersByPriority(dcConfigs) {
-
 		if !kc.Spec.UseExternalSecrets() && !secret.HasReplicatedSecrets(ctx, r.Client, kcKey, dcConfig.K8sContext) {
 			// ReplicatedSecret has not replicated yet, wait until it has
 			logger.Info("Waiting for replication to complete")
@@ -108,7 +110,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			desiredDc.Annotations[cassdcapi.SkipUserCreationAnnotation] = "true"
 		}
 
-		mergedTelemetrySpec := kc.Spec.Cassandra.Datacenters[idx].Telemetry.MergeWith(kc.Spec.Cassandra.Telemetry)
+		mergedTelemetrySpec := dcConfig.Telemetry
 		if mergedTelemetrySpec == nil {
 			mergedTelemetrySpec = &telemetryapi.TelemetrySpec{}
 		}
@@ -131,8 +133,13 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		}
 
 		// merge in common L&A from the k8ssandra spec
-		desiredDc.SetLabels(goalesce.MustDeepMerge(desiredDc.GetLabels(), kc.Spec.Cassandra.Meta.Tags.Labels))
-		desiredDc.SetAnnotations(goalesce.MustDeepMerge(desiredDc.GetAnnotations(), kc.Spec.Cassandra.Meta.Tags.Annotations))
+		desiredDc.SetLabels(goalesce.MustDeepMerge(desiredDc.GetLabels(), kc.Spec.Cassandra.Meta.Labels))
+		desiredDc.SetAnnotations(goalesce.MustDeepMerge(desiredDc.GetAnnotations(), kc.Spec.Cassandra.Meta.Annotations))
+
+		if err := r.setDatacenterOwnership(kc, desiredDc, dcConfig); err != nil {
+			dcLogger.Error(err, "Failed to set owner reference on CassandraDatacenter")
+			return result.Error(err), actualDcs
+		}
 
 		// Note: desiredDc should not be modified from now on
 		annotations.AddHashAnnotation(desiredDc)
@@ -230,7 +237,6 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			actualDcs = append(actualDcs, actualDc)
 
 			if !actualDc.Spec.Stopped {
-
 				if recResult := r.checkSchemas(ctx, kc, actualDc, remoteClient, dcLogger); recResult.Completed() {
 					return recResult, actualDcs
 				}
@@ -264,7 +270,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		dcsRequiringUpdate := make([]string, 0, len(actualDcs))
 		for _, dc := range actualDcs {
 			if dc.Status.GetConditionStatus(cassdcapi.DatacenterRequiresUpdate) == corev1.ConditionTrue {
-				dcsRequiringUpdate = append(dcsRequiringUpdate, dc.ObjectMeta.Name)
+				dcsRequiringUpdate = append(dcsRequiringUpdate, dc.Name)
 			}
 		}
 
@@ -301,7 +307,6 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 				}
 
 				return result.RequeueSoon(r.DefaultDelay), actualDcs
-
 			} else if internalTask.Status.CompletionTime.IsZero() {
 				return result.RequeueSoon(r.DefaultDelay), actualDcs
 			}
@@ -317,6 +322,19 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 	}
 
 	return result.Continue(), actualDcs
+}
+
+// setDatacenterOwnership sets the K8ssandraCluster as an owner of the CassandraDatacenter,
+// but only when the DC is co-located (same namespace and same Kubernetes cluster). Owner
+// references cannot cross namespace or cluster boundaries, so cluster-scoped and multi-cluster
+// deployments keep relying on labels and finalizers for cleanup.
+func (r *K8ssandraClusterReconciler) setDatacenterOwnership(kc *api.K8ssandraCluster, dc *cassdcapi.CassandraDatacenter, dcConfig *cassandra.DatacenterConfig) error {
+	sameCluster := dcConfig.K8sContext == ""
+	sameNamespace := dc.Namespace == kc.Namespace
+	if sameCluster && sameNamespace {
+		return controllerutil.SetOwnerReference(kc, dc, r.Scheme)
+	}
+	return nil
 }
 
 func (r *K8ssandraClusterReconciler) setStatusForDatacenter(kc *api.K8ssandraCluster, dc *cassdcapi.CassandraDatacenter, targetContext string) {
@@ -358,7 +376,8 @@ func getSourceDatacenterName(targetDc *cassdcapi.CassandraDatacenter, kc *api.K8
 		}
 	}
 
-	if rebuildFrom, found := kc.Annotations[api.RebuildSourceDcAnnotation]; found {
+	rebuildFrom := resolveBuildFrom(kc)
+	if rebuildFrom != "" {
 		if rebuildFrom == targetDc.DatacenterName() {
 			return "", fmt.Errorf("rebuild error: src dc and target dc cannot be the same")
 		}
@@ -386,7 +405,7 @@ func (r *K8ssandraClusterReconciler) checkRebuildAnnotation(ctx context.Context,
 	if !annotations.HasAnnotationWithValue(kc, api.RebuildDcAnnotation, dcName) && datacenterAddedToExistingCluster(kc, dcName) {
 		patch := client.MergeFromWithOptions(kc.DeepCopy())
 		annotations.AddAnnotation(kc, api.RebuildDcAnnotation, dcName)
-		if err := r.Client.Patch(ctx, kc, patch); err != nil {
+		if err := r.Patch(ctx, kc, patch); err != nil {
 			return result.Error(fmt.Errorf("failed to add rebuild annotation: %v", err))
 		}
 	}
@@ -400,7 +419,6 @@ func (r *K8ssandraClusterReconciler) reconcileDcRebuild(
 	dc *cassdcapi.CassandraDatacenter,
 	remoteClient client.Client,
 	logger logr.Logger) result.ReconcileResult {
-
 	logger.Info("Reconciling rebuild")
 
 	srcDc, err := getSourceDatacenterName(dc, kc)
@@ -408,7 +426,8 @@ func (r *K8ssandraClusterReconciler) reconcileDcRebuild(
 		return result.Error(err)
 	}
 
-	desiredTask := newRebuildTask(dc.Name, dc.Namespace, srcDc, int(dc.Spec.Size))
+	maxConcurrentRebuilds := resolveMaxConcurrentRebuilds(kc)
+	desiredTask := newRebuildTask(dc.Name, dc.Namespace, srcDc, int(dc.Spec.Size), maxConcurrentRebuilds)
 	taskKey := client.ObjectKey{Namespace: desiredTask.Namespace, Name: desiredTask.Name}
 	task := &cassctlapi.CassandraTask{}
 
@@ -439,6 +458,27 @@ func (r *K8ssandraClusterReconciler) reconcileDcRebuild(
 	}
 }
 
+func resolveMaxConcurrentRebuilds(kc *api.K8ssandraCluster) *int {
+	if kc.Spec.Cassandra.Rebuild == nil || kc.Spec.Cassandra.Rebuild.MaxConcurrentRebuilds == nil {
+		return nil
+	}
+	if *kc.Spec.Cassandra.Rebuild.MaxConcurrentRebuilds == 0 {
+		return ptr.To(math.MaxInt)
+	}
+	return kc.Spec.Cassandra.Rebuild.MaxConcurrentRebuilds
+}
+
+func resolveBuildFrom(kc *api.K8ssandraCluster) string {
+	var rebuildFrom string
+	if kc.Spec.Cassandra.Rebuild != nil && kc.Spec.Cassandra.Rebuild.SourceDC != "" {
+		rebuildFrom = kc.Spec.Cassandra.Rebuild.SourceDC
+	} else {
+		//nolint:staticcheck // SA1019: Deprecated annotation used for backward compatibility
+		rebuildFrom = kc.Annotations[api.DeprecatedRebuildSourceDcAnnotation]
+	}
+	return rebuildFrom
+}
+
 func taskFinished(task *cassctlapi.CassandraTask) (bool, error) {
 	label, found := task.Labels[rebuildNodesLabel]
 	if !found {
@@ -452,7 +492,7 @@ func taskFinished(task *cassctlapi.CassandraTask) (bool, error) {
 	return numNodes == task.Status.Succeeded+task.Status.Failed, nil
 }
 
-func newRebuildTask(targetDc, namespace, srcDc string, numNodes int) *cassctlapi.CassandraTask {
+func newRebuildTask(targetDc, namespace, srcDc string, numNodes int, maxConcurrentRebuilds *int) *cassctlapi.CassandraTask {
 	now := metav1.Now()
 	task := &cassctlapi.CassandraTask{
 		ObjectMeta: metav1.ObjectMeta{
@@ -478,6 +518,7 @@ func newRebuildTask(targetDc, namespace, srcDc string, numNodes int) *cassctlapi
 						},
 					},
 				},
+				MaxConcurrentPods: maxConcurrentRebuilds,
 			},
 		},
 	}
@@ -521,7 +562,7 @@ func dcUpgradePriority(dc *cassandra.DatacenterConfig) int {
 func (r *K8ssandraClusterReconciler) removeRebuildDcAnnotation(kc *api.K8ssandraCluster, ctx context.Context) result.ReconcileResult {
 	patch := client.MergeFrom(kc.DeepCopy())
 	delete(kc.Annotations, api.RebuildDcAnnotation)
-	if err := r.Client.Patch(ctx, kc, patch); err != nil {
+	if err := r.Patch(ctx, kc, patch); err != nil {
 		err = fmt.Errorf("failed to remove %s annotation: %v", api.RebuildDcAnnotation, err)
 		return result.Error(err)
 	}
