@@ -183,12 +183,29 @@ func (r *K8ssandraClusterReconciler) reconcileContactPointsServiceEndpoints(
 	key := contactPointsServiceKey(kc, dc)
 	endpoints := []*discoveryv1.EndpointSlice{}
 
+	// The remote cluster can split the endpoints of an address type into several slices (100 endpoints per slice by
+	// default). They are mirrored into a single local slice per address type, with one Endpoint per remote endpoint.
+	endpointsByAddressType := make(map[discoveryv1.AddressType][]discoveryv1.Endpoint)
+	portsByAddressType := make(map[discoveryv1.AddressType][]discoveryv1.EndpointPort)
+	addressTypes := make([]discoveryv1.AddressType, 0, 2)
 	for _, remoteEndpoint := range remoteEndpoints {
-		name := fmt.Sprintf("%s-%s", key.Name, strings.ToLower(string(remoteEndpoint.AddressType)))
-		addresses := make([]string, 0, len(remoteEndpoint.Endpoints))
-		for _, remoteAddress := range remoteEndpoint.Endpoints {
-			addresses = append(addresses, remoteAddress.Addresses...)
+		if _, found := endpointsByAddressType[remoteEndpoint.AddressType]; !found {
+			addressTypes = append(addressTypes, remoteEndpoint.AddressType)
+			endpointsByAddressType[remoteEndpoint.AddressType] = []discoveryv1.Endpoint{}
+			portsByAddressType[remoteEndpoint.AddressType] = remoteEndpoint.Ports
 		}
+		for _, remoteAddress := range remoteEndpoint.Endpoints {
+			if len(remoteAddress.Addresses) == 0 {
+				continue
+			}
+			endpointsByAddressType[remoteEndpoint.AddressType] = append(endpointsByAddressType[remoteEndpoint.AddressType], discoveryv1.Endpoint{
+				Addresses: remoteAddress.Addresses,
+			})
+		}
+	}
+
+	for _, addressType := range addressTypes {
+		name := fmt.Sprintf("%s-%s", key.Name, strings.ToLower(string(addressType)))
 		endpoint := &discoveryv1.EndpointSlice{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: kc.Namespace,
@@ -204,13 +221,9 @@ func (r *K8ssandraClusterReconciler) reconcileContactPointsServiceEndpoints(
 					discoveryv1.LabelServiceName:       key.Name,
 				},
 			},
-			AddressType: remoteEndpoint.AddressType,
-			Endpoints: []discoveryv1.Endpoint{
-				{
-					Addresses: addresses,
-				},
-			},
-			Ports: remoteEndpoint.Ports,
+			AddressType: addressType,
+			Endpoints:   endpointsByAddressType[addressType],
+			Ports:       portsByAddressType[addressType],
 		}
 		endpoints = append(endpoints, endpoint)
 	}
@@ -221,8 +234,8 @@ func (r *K8ssandraClusterReconciler) reconcileContactPointsServiceEndpoints(
 
 	// Cleanup old endpoints object, it's not used anymore
 	oldEndpoints := &corev1.Endpoints{} //nolint:staticcheck // Endpoints is deprecated, but we still need to clean it up.
-	if err := r.Get(ctx, key, oldEndpoints); client.IgnoreNotFound(err) != nil {
-		return err
+	if err := r.Get(ctx, key, oldEndpoints); err != nil {
+		return client.IgnoreNotFound(err)
 	}
 
 	if err := r.Delete(ctx, oldEndpoints); client.IgnoreNotFound(err) != nil {

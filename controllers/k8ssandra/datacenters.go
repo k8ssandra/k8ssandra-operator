@@ -171,7 +171,10 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 
 			r.setStatusForDatacenter(kc, actualDc, dcConfig.K8sContext)
 
-			r.reconcileContactPointsService(ctx, kc, actualDc, remoteClient, dcLogger)
+			if recResult := r.reconcileContactPointsService(ctx, kc, actualDc, remoteClient, dcLogger); recResult.Completed() {
+				dcLogger.Error(recResult.GetError(), "Failed to reconcile the contact points service")
+				return recResult, actualDcs
+			}
 
 			if !annotations.CompareHashAnnotations(actualDc, desiredDc) && !AllowUpdate(kc) {
 				logger.Info("Datacenter requires an update, but we're not allowed to do it", "CassandraDatacenter", dcKey)
