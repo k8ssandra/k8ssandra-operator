@@ -18,6 +18,7 @@ package k8ssandra
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -191,9 +192,31 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 	return result.Done().Output()
 }
 
+// datacentersByTemplate returns the reconciled datacenters in the order of the datacenter templates in the spec.
+// The reconciled datacenters are not in spec order (they are sorted by upgrade priority), so they are matched by name.
+func datacentersByTemplate(kc *api.K8ssandraCluster, dcs []*cassdcapi.CassandraDatacenter) ([]*cassdcapi.CassandraDatacenter, error) {
+	dcsByName := make(map[string]*cassdcapi.CassandraDatacenter, len(dcs))
+	for _, dc := range dcs {
+		dcsByName[dc.Name] = dc
+	}
+	ordered := make([]*cassdcapi.CassandraDatacenter, 0, len(kc.Spec.Cassandra.Datacenters))
+	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
+		dc, found := dcsByName[dcTemplate.Meta.Name]
+		if !found {
+			return nil, fmt.Errorf("CassandraDatacenter %s was not reconciled", dcTemplate.Meta.Name)
+		}
+		ordered = append(ordered, dc)
+	}
+	return ordered, nil
+}
+
 func (r *K8ssandraClusterReconciler) afterCassandraReconciled(ctx context.Context, kc *api.K8ssandraCluster, dcs []*cassdcapi.CassandraDatacenter, logger logr.Logger) result.ReconcileResult {
+	orderedDcs, err := datacentersByTemplate(kc, dcs)
+	if err != nil {
+		return result.Error(err)
+	}
 	for i, dcTemplate := range kc.Spec.Cassandra.Datacenters {
-		dc := dcs[i]
+		dc := orderedDcs[i]
 		dcKey := utils.GetKey(dc)
 		logger := logger.WithValues("CassandraDatacenter", dcKey)
 		logger.Info("Reconciling Reaper for dc " + dc.DatacenterName())

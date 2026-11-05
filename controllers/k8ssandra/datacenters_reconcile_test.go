@@ -140,3 +140,32 @@ func TestCreatePurgeScheduleUsesDatacenterObjectName(t *testing.T) {
 	require.Len(t, schedules.Items, 1)
 	require.Equal(t, "dc2", schedules.Items[0].Spec.BackupSpec.CassandraDatacenter)
 }
+
+// TestDatacentersByTemplate verifies that the reconciled datacenters, which are sorted by upgrade priority,
+// are paired with their templates by name and not by index.
+func TestDatacentersByTemplate(t *testing.T) {
+	kc := &api.K8ssandraCluster{
+		Spec: api.K8ssandraClusterSpec{
+			Cassandra: &api.CassandraClusterTemplate{
+				Datacenters: []api.CassandraDatacenterTemplate{
+					{Meta: api.EmbeddedObjectMeta{Name: "cassandra"}},
+					{Meta: api.EmbeddedObjectMeta{Name: "analytics"}},
+				},
+			},
+		},
+	}
+	// actualDcs are in priority order: analytics first
+	dcs := []*cassdcapi.CassandraDatacenter{
+		{ObjectMeta: metav1.ObjectMeta{Name: "analytics"}},
+		{ObjectMeta: metav1.ObjectMeta{Name: "cassandra"}},
+	}
+
+	ordered, err := datacentersByTemplate(kc, dcs)
+	require.NoError(t, err)
+	require.Len(t, ordered, 2)
+	require.Equal(t, "cassandra", ordered[0].Name)
+	require.Equal(t, "analytics", ordered[1].Name)
+
+	_, err = datacentersByTemplate(kc, dcs[:1])
+	require.Error(t, err)
+}
