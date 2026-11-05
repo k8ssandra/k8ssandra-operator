@@ -391,14 +391,16 @@ func getSourceDatacenterName(targetDc *cassdcapi.CassandraDatacenter, kc *api.K8
 		return "", fmt.Errorf("rebuild error: src dc must a ready dc")
 	}
 
+	// dcNames holds Cassandra DC names (DatacenterName overrides applied), so compare against the
+	// target's Cassandra DC name, not its object name.
 	for _, dc := range dcNames {
-		if dc != targetDc.Name {
+		if dc != targetDc.DatacenterName() {
 			return dc, nil
 		}
 	}
 
 	return "", fmt.Errorf("rebuild error: unable to determine src dc for target dc (%s) from dc list (%s)",
-		targetDc.Name, strings.Trim(fmt.Sprint(dcNames), "[]"))
+		targetDc.DatacenterName(), strings.Trim(fmt.Sprint(dcNames), "[]"))
 }
 
 func (r *K8ssandraClusterReconciler) checkRebuildAnnotation(ctx context.Context, kc *api.K8ssandraCluster, dcName string) result.ReconcileResult {
