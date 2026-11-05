@@ -307,16 +307,17 @@ type JvmOptions struct {
 	// GC OPTIONS
 
 	// The name of the garbage collector to use. Depending on the Cassandra version, not all values
-	// are supported: Cassandra 3.11 supports only G1GC and CMS; Cassandra 4.0 supports G1GC, ZGC,
-	// Shenandoah and Graal. This option will unlock the corresponding garbage collector with a
+	// are supported: Cassandra 3.11 supports only G1GC and CMS; Cassandra 4.0 and later support G1GC,
+	// ZGC, Shenandoah and Graal. This option will unlock the corresponding garbage collector with a
 	// default configuration; to further tune the GC settings, use the additional JVM options field.
 	// Use the special value Custom if you intend to use non-standard garbage collectors.
 	// Cass Config Builder: supported for Cassandra 3.11 in jvm.options.
 	// Cass Config Builder: supported for Cassandra 4.0 in jvm11-server.options.
+	// Cass Config Builder: supported for Cassandra 5.0 in jvm17-server.options.
 	// +kubebuilder:validation:Enum=G1GC;CMS;ZGC;Shenandoah;Graal;Custom
 	// +kubebuilder:default=G1GC
 	// +optional
-	GarbageCollector *string `json:"gc,omitempty" cass-config:"^3.11.x:jvm-options/garbage_collector;>=4.x,hcd@>=1.x.x:jvm11-server-options/garbage_collector;dse@>=6.8.x:jvm8-server-options/garbage_collector"`
+	GarbageCollector *string `json:"gc,omitempty" cass-config:"^3.11.x:jvm-options/garbage_collector;^4.x,hcd@>=1.x.x:jvm11-server-options/garbage_collector;>=5.x:jvm17-server-options/garbage_collector;dse@>=6.8.x:jvm8-server-options/garbage_collector"`
 
 	// CMS
 
