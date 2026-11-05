@@ -35,6 +35,10 @@ import (
 
 const (
 	rebuildNodesLabel = "k8ssandra.io/rebuild-nodes"
+
+	// ownedAnnotationsAnnotation lists the annotation keys that k8ssandra-operator set on a CassandraDatacenter. Annotations
+	// that are not listed were set by someone else, and are preserved when the CassandraDatacenter is updated.
+	ownedAnnotationsAnnotation = "k8ssandra.io/owned-annotations"
 )
 
 func AllowUpdate(kc *api.K8ssandraCluster) bool {
@@ -202,10 +206,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 					return result.Error(fmt.Errorf("invalid Cassandra config: %v", err)), actualDcs
 				}
 
-				actualDc = actualDc.DeepCopy()
-				resourceVersion := actualDc.GetResourceVersion()
-				desiredDc.DeepCopyInto(actualDc)
-				actualDc.SetResourceVersion(resourceVersion)
+				actualDc = datacenterForUpdate(actualDc, desiredDc)
 				if err = remoteClient.Update(ctx, actualDc); err != nil {
 					dcLogger.Error(err, "Failed to update datacenter")
 					return result.Error(err), actualDcs
@@ -259,7 +260,9 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 					return result.Error(err), actualDcs
 				}
 				// cassdc doesn't exist, we'll create it
-				if err = remoteClient.Create(ctx, desiredDc); err != nil {
+				newDc := desiredDc.DeepCopy()
+				setOwnedAnnotations(newDc, desiredDc)
+				if err = remoteClient.Create(ctx, newDc); err != nil {
 					dcLogger.Error(err, "Failed to create datacenter")
 					return result.Error(err), actualDcs
 				}
@@ -584,4 +587,51 @@ func (r *K8ssandraClusterReconciler) patchPreservingStatus(ctx context.Context, 
 	err := r.Patch(ctx, kc, patch)
 	kc.Status = *status
 	return err
+}
+
+// datacenterForUpdate returns the CassandraDatacenter to write when updating actualDc to desiredDc. The metadata of
+// desiredDc replaces the metadata of actualDc, except for the finalizers and annotations that were set by someone else
+// (for example cass-operator's finalizer, or annotations added directly to the CassandraDatacenter), which are kept.
+func datacenterForUpdate(actualDc, desiredDc *cassdcapi.CassandraDatacenter) *cassdcapi.CassandraDatacenter {
+	updated := desiredDc.DeepCopy()
+	updated.SetResourceVersion(actualDc.GetResourceVersion())
+
+	for _, finalizer := range actualDc.GetFinalizers() {
+		controllerutil.AddFinalizer(updated, finalizer)
+	}
+
+	// Only annotations that we know k8ssandra-operator did not set can be preserved. If the owned annotations are not
+	// tracked yet (the CassandraDatacenter was last written by an older version), we can't tell them apart.
+	if ownedValue, tracked := actualDc.GetAnnotations()[ownedAnnotationsAnnotation]; tracked {
+		previouslyOwned := make(map[string]struct{})
+		for _, key := range strings.Split(ownedValue, ",") {
+			previouslyOwned[key] = struct{}{}
+		}
+		if updated.Annotations == nil {
+			updated.Annotations = make(map[string]string)
+		}
+		for key, value := range actualDc.GetAnnotations() {
+			if _, desired := updated.Annotations[key]; desired || key == ownedAnnotationsAnnotation {
+				continue
+			}
+			if _, owned := previouslyOwned[key]; owned {
+				continue
+			}
+			updated.Annotations[key] = value
+		}
+	}
+
+	setOwnedAnnotations(updated, desiredDc)
+	return updated
+}
+
+// setOwnedAnnotations records on dc the keys of the annotations of desiredDc, which are owned by k8ssandra-operator.
+// This must be done after the hash annotation was computed, so that the hash is not affected.
+func setOwnedAnnotations(dc, desiredDc *cassdcapi.CassandraDatacenter) {
+	keys := make([]string, 0, len(desiredDc.GetAnnotations()))
+	for key := range desiredDc.GetAnnotations() {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	annotations.AddAnnotation(dc, ownedAnnotationsAnnotation, strings.Join(keys, ","))
 }

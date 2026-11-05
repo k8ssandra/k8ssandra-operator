@@ -238,3 +238,60 @@ func TestMidPassWritesPreserveInMemoryStatus(t *testing.T) {
 		require.Equal(t, "fresh", stored.Status.Datacenters["dc1"].ContextName)
 	})
 }
+
+// TestDatacenterForUpdatePreservesForeignMetadata verifies that updating a CassandraDatacenter keeps finalizers and
+// annotations set by others, while annotations that k8ssandra-operator set and no longer wants are removed.
+func TestDatacenterForUpdatePreservesForeignMetadata(t *testing.T) {
+	desired := &cassdcapi.CassandraDatacenter{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "dc1",
+			Finalizers:  []string{"k8ssandracluster.k8ssandra.io/finalizer"},
+			Annotations: map[string]string{"k8ssandra.io/resource-hash": "new", "user-template": "v2"},
+		},
+	}
+
+	t.Run("tracked", func(t *testing.T) {
+		actual := &cassdcapi.CassandraDatacenter{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "dc1",
+				ResourceVersion: "42",
+				Finalizers:      []string{"finalizer.cassandra.datastax.com", "k8ssandracluster.k8ssandra.io/finalizer"},
+				Annotations: map[string]string{
+					"k8ssandra.io/resource-hash": "old",
+					"user-template":              "v1",
+					"removed-from-template":      "x",
+
+					"cassandra.datastax.com/skip-local-decommission-check": "true",
+					ownedAnnotationsAnnotation:                             "k8ssandra.io/resource-hash,removed-from-template,user-template",
+				},
+			},
+		}
+
+		updated := datacenterForUpdate(actual, desired)
+		require.Equal(t, "42", updated.ResourceVersion)
+		require.ElementsMatch(t, []string{"finalizer.cassandra.datastax.com", "k8ssandracluster.k8ssandra.io/finalizer"}, updated.Finalizers)
+		require.Equal(t, map[string]string{
+			"k8ssandra.io/resource-hash": "new",
+			"user-template":              "v2",
+			"cassandra.datastax.com/skip-local-decommission-check": "true",
+			ownedAnnotationsAnnotation:                             "k8ssandra.io/resource-hash,user-template",
+		}, updated.Annotations)
+		// desired must not be modified
+		require.NotContains(t, desired.Annotations, ownedAnnotationsAnnotation)
+	})
+
+	t.Run("not tracked yet", func(t *testing.T) {
+		actual := &cassdcapi.CassandraDatacenter{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "dc1",
+				Finalizers:  []string{"finalizer.cassandra.datastax.com"},
+				Annotations: map[string]string{"k8ssandra.io/resource-hash": "old", "unknown-origin": "x"},
+			},
+		}
+
+		updated := datacenterForUpdate(actual, desired)
+		require.ElementsMatch(t, []string{"finalizer.cassandra.datastax.com", "k8ssandracluster.k8ssandra.io/finalizer"}, updated.Finalizers)
+		require.NotContains(t, updated.Annotations, "unknown-origin")
+		require.Equal(t, "k8ssandra.io/resource-hash,user-template", updated.Annotations[ownedAnnotationsAnnotation])
+	})
+}
