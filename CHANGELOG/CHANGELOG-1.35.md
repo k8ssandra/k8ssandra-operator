@@ -18,3 +18,5 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [DOCS] []() Add PITR orchestration design doc
 * [ENHANCEMENT] [#1831](https://github.com/k8ssandra/k8ssandra-operator/issues/1831) Add PITR RPCs to the Medusa client
 * [FEATURE] [#1832](https://github.com/k8ssandra/k8ssandra-operator/issues/1832) Add PITR APIs and CRDs
+* [FEATURE] [#1833](https://github.com/k8ssandra/k8ssandra-operator/issues/1833) Pass PITR config to Medusa, update pod's annotation on a PITR config change so we force a restart
+
