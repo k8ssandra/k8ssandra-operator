@@ -68,24 +68,27 @@ func (r *K8ssandraClusterReconciler) checkSchemas(
 		kcKey := utils.GetKey(kc)
 		logger.Info("Decommissioning DC", "dc", decommCassDcName, "context", status.ContextName)
 
-		var dcRemoteClient client.Client
-		if status.ContextName == "" {
-			dcRemoteClient = remoteClient
-		} else {
-			dcRemoteClient, err = r.ClientCache.GetRemoteClient(status.ContextName)
-			if err != nil {
-				return result.Error(err)
-			}
+		// The DC being decommissioned can live in a different k8s cluster than the DC we are
+		// currently looping over (remoteClient), so always resolve its own client. An empty
+		// ContextName resolves to the local client.
+		dcRemoteClient, err := r.ClientCache.GetRemoteClient(status.ContextName)
+		if err != nil {
+			return result.Error(err)
 		}
 
-		dc, err = r.findDcForDeletion(ctx, kcKey, decommCassDcName, dcRemoteClient)
+		decommDc, err := r.findDcForDeletion(ctx, kcKey, decommCassDcName, dcRemoteClient)
 		if err != nil {
 			return result.Error(err)
 		}
 
 		decommDcName := decommCassDcName
-		if dc.Spec.DatacenterName != "" {
-			decommDcName = dc.Spec.DatacenterName
+		if decommDc != nil {
+			if decommDc.Spec.DatacenterName != "" {
+				decommDcName = decommDc.Spec.DatacenterName
+			}
+		} else if status.Cassandra != nil && status.Cassandra.DatacenterName != nil && *status.Cassandra.DatacenterName != "" {
+			// The CassandraDatacenter is already gone, use the Cassandra DC name recorded in the status.
+			decommDcName = *status.Cassandra.DatacenterName
 		}
 
 		if recResult := r.checkUserKeyspacesReplicationForDecommission(kc, decommDcName, mgmtApi, logger); recResult.Completed() {

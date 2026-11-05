@@ -18,3 +18,4 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [DOCS] []() Add PITR orchestration design doc
 * [ENHANCEMENT] [#1831](https://github.com/k8ssandra/k8ssandra-operator/issues/1831) Add PITR RPCs to the Medusa client
 * [FEATURE] [#1832](https://github.com/k8ssandra/k8ssandra-operator/issues/1832) Add PITR APIs and CRDs
+* [BUGFIX] [#1871](https://github.com/k8ssandra/k8ssandra-operator/issues/1871) Fix a panic when removing a DC in the control-plane cluster while the first remaining DC is in a remote cluster, or when the removed DC's CassandraDatacenter is already gone
