@@ -141,6 +141,15 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			return result.Error(err), actualDcs
 		}
 
+		// A datacenter that is being rebuilt cannot be stopped. Apply that adjustment before hashing, so the
+		// stored hash reflects the spec that was actually written. Otherwise the hashes would match once the
+		// rebuild finishes and the requested stop would never be applied.
+		stopRequested := desiredDc.Spec.Stopped
+		if stopRequested && annotations.HasAnnotationWithValue(kc, api.RebuildDcAnnotation, dcKey.Name) {
+			desiredDc.Spec.Stopped = false
+			dcLogger.Info("Stopped cannot be set to true until the CassandraDatacenter is fully rebuilt, the stop will be applied after the rebuild")
+		}
+
 		// Note: desiredDc should not be modified from now on
 		annotations.AddHashAnnotation(desiredDc)
 
@@ -178,12 +187,6 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 					desiredDc.Spec.SuperuserSecretName = actualDc.Spec.SuperuserSecretName
 					err = fmt.Errorf("tried to update superuserSecretName in K8ssandraCluster")
 					dcLogger.Error(err, "SuperuserSecretName is immutable, reverting to existing value in CassandraDatacenter")
-				}
-
-				if annotations.HasAnnotationWithValue(kc, api.RebuildDcAnnotation, dcKey.Name) && desiredDc.Spec.Stopped {
-					desiredDc.Spec.Stopped = false
-					err = fmt.Errorf("tried to stop a datacenter that is being rebuilt")
-					dcLogger.Error(err, "Stopped cannot be set to true until the CassandraDatacenter is fully rebuilt")
 				}
 
 				// Set the proper default during upgrade from 3.x to 4.x
@@ -249,7 +252,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			}
 		} else {
 			if errors.IsNotFound(err) {
-				if annotations.HasAnnotationWithValue(kc, api.RebuildDcAnnotation, dcKey.Name) && desiredDc.Spec.Stopped {
+				if annotations.HasAnnotationWithValue(kc, api.RebuildDcAnnotation, dcKey.Name) && stopRequested {
 					err := fmt.Errorf("cannot add a datacenter in stopped state to an existing cluster")
 					return result.Error(err), actualDcs
 				}
