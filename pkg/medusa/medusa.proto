@@ -145,5 +145,5 @@ message PreparePitrRestoreRequest {
 message PreparePitrRestoreResponse {
   StatusType          status = 1;
   map<string, string> nodeBaseBackups = 2;
-  double              targetTimestampS = 3;
+  double              targetTimestamp = 3;
 }
