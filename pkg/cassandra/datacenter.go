@@ -249,6 +249,12 @@ func NewDatacenter(klusterKey types.NamespacedName, template *DatacenterConfig) 
 			api.K8ssandraClusterNamespaceLabel: klusterKey.Namespace,
 		})
 
+	// The Prometheus ServiceMonitor selects the all-pods Service by this label. cass-operator only sets it when MCAC is
+	// enabled, so add it here for the new metrics endpoint too.
+	if template.Telemetry.IsPrometheusEnabled() {
+		dc.Spec.AdditionalServiceConfig.AllPodsService.Labels[cassdcapi.PromMetricsLabel] = "true"
+	}
+
 	dc.Spec.Tolerations = template.Tolerations
 
 	if !template.McacEnabled {

@@ -316,6 +316,15 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 
 	dc1Key := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, "dc1")
 
+	t.Log("check that the all-pods Service gets the prom-metrics label")
+	require.Eventually(func() bool {
+		dc := &cassdcapi.CassandraDatacenter{}
+		if err := f.Get(ctx, dc1Key, dc); err != nil {
+			return false
+		}
+		return dc.Spec.AdditionalServiceConfig.AllPodsService.Labels[cassdcapi.PromMetricsLabel] == "true"
+	}, timeout, interval, "timed out waiting for the prom-metrics label on the all-pods Service")
+
 	if err = f.SetDatacenterStatusReady(ctx, dc1Key); err != nil {
 		assert.Fail(t, "error setting status ready", err)
 	}
@@ -342,6 +351,21 @@ func createSingleDcCluster(t *testing.T, ctx context.Context, f *framework.Frame
 	if err := f.Client.Patch(ctx, kc, kcPatch); err != nil {
 		assert.Fail(t, "failed to patch K8ssandraCluster", "error", err)
 	}
+
+	t.Log("check that the prom-metrics label is removed from the all-pods Service")
+	require.Eventually(func() bool {
+		dc := &cassdcapi.CassandraDatacenter{}
+		if err := f.Get(ctx, dc1Key, dc); err != nil {
+			return false
+		}
+		_, found := dc.Spec.AdditionalServiceConfig.AllPodsService.Labels[cassdcapi.PromMetricsLabel]
+		return !found
+	}, timeout, interval, "timed out waiting for the prom-metrics label to be removed")
+
+	if err = f.SetDatacenterStatusReady(ctx, dc1Key); err != nil {
+		assert.Fail(t, "error setting status ready", err)
+	}
+
 	assert.Eventually(t, func() bool {
 		err := f.Get(ctx, smKey, sm)
 		if err != nil {
