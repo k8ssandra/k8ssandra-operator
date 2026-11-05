@@ -565,6 +565,10 @@ func (c *fakeMedusaClient) PrepareRestore(ctx context.Context, datacenter, backu
 	return nil, nil
 }
 
+func (c *fakeMedusaClient) PreparePitrRestore(ctx context.Context, datacenter, targetTimestamp string) (*medusa.PreparePitrRestoreResponse, error) {
+	return nil, nil
+}
+
 func findDatacenterScalingUpCondition(status *cassdcapi.CassandraDatacenterStatus) *cassdcapi.DatacenterCondition {
 	for _, condition := range status.Conditions {
 		if condition.Type == cassdcapi.DatacenterScalingUp {

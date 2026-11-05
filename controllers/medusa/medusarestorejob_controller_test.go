@@ -818,3 +818,7 @@ func (c *fakeMedusaRestoreClient) BackupStatus(ctx context.Context, name string)
 func (c *fakeMedusaRestoreClient) PrepareRestore(ctx context.Context, datacenter, backupName, restoreKey string) (*medusa.PrepareRestoreResponse, error) {
 	return nil, nil
 }
+
+func (c *fakeMedusaRestoreClient) PreparePitrRestore(ctx context.Context, datacenter, targetTimestamp string) (*medusa.PreparePitrRestoreResponse, error) {
+	return nil, nil
+}
