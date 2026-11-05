@@ -15,6 +15,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [BUGFIX] [#967](https://github.com/k8ssandra/k8ssandra-operator/issues/967) Fix Medusa gRPC client address formatting for IPv6 pod IPs
 * [DOCS] []() Add PITR orchestration design doc
 * [ENHANCEMENT] [#1831](https://github.com/k8ssandra/k8ssandra-operator/issues/1831) Add PITR RPCs to the Medusa client
 * [FEATURE] [#1832](https://github.com/k8ssandra/k8ssandra-operator/issues/1832) Add PITR APIs and CRDs
