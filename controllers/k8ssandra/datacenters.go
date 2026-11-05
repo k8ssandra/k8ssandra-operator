@@ -283,6 +283,14 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		}
 
 		if len(dcsRequiringUpdate) > 0 {
+			// The task name depends on the generations, which change if the spec is modified during a refresh. Wait for
+			// any refresh task of this cluster that is still running, instead of creating a second one.
+			if running, err := r.refreshTaskRunning(ctx, kc); err != nil {
+				return result.Error(err), actualDcs
+			} else if running {
+				return result.RequeueSoon(r.DefaultDelay), actualDcs
+			}
+
 			generatedName := fmt.Sprintf("refresh-%d-%d", kc.Generation, kc.Status.ObservedGeneration)
 			internalTask := &ktaskapi.K8ssandraTask{}
 			err := r.Get(ctx, types.NamespacedName{Namespace: kc.Namespace, Name: generatedName}, internalTask)
@@ -330,6 +338,20 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 	}
 
 	return result.Continue(), actualDcs
+}
+
+// refreshTaskRunning returns true if a refresh K8ssandraTask created for this cluster has not completed yet.
+func (r *K8ssandraClusterReconciler) refreshTaskRunning(ctx context.Context, kc *api.K8ssandraCluster) (bool, error) {
+	tasks := &ktaskapi.K8ssandraTaskList{}
+	if err := r.List(ctx, tasks, client.InNamespace(kc.Namespace), client.MatchingLabels(labels.WatchedByK8ssandraClusterLabels(utils.GetKey(kc)))); err != nil {
+		return false, err
+	}
+	for _, task := range tasks.Items {
+		if strings.HasPrefix(task.Name, "refresh-") && task.Spec.Cluster.Name == kc.Name && task.Status.CompletionTime.IsZero() {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // setDatacenterOwnership sets the K8ssandraCluster as an owner of the CassandraDatacenter,

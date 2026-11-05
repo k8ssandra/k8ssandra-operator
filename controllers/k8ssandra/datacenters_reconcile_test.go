@@ -8,10 +8,13 @@ import (
 	testlogr "github.com/go-logr/logr/testing"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassctlapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
+	ktaskapi "github.com/k8ssandra/k8ssandra-operator/apis/control/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -294,4 +297,30 @@ func TestDatacenterForUpdatePreservesForeignMetadata(t *testing.T) {
 		require.NotContains(t, updated.Annotations, "unknown-origin")
 		require.Equal(t, "k8ssandra.io/resource-hash,user-template", updated.Annotations[ownedAnnotationsAnnotation])
 	})
+}
+
+// TestRefreshTaskRunning verifies that an unfinished refresh task is found even if its name was generated from
+// older generations.
+func TestRefreshTaskRunning(t *testing.T) {
+	s := newUnitTestScheme(t)
+	require.NoError(t, ktaskapi.AddToScheme(s))
+	ctx := context.Background()
+
+	kc := &api.K8ssandraCluster{ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "ns", Generation: 3}}
+	task := &ktaskapi.K8ssandraTask{
+		ObjectMeta: metav1.ObjectMeta{Name: "refresh-2-1", Namespace: "ns", Labels: labels.WatchedByK8ssandraClusterLabels(client.ObjectKeyFromObject(kc))},
+		Spec:       ktaskapi.K8ssandraTaskSpec{Cluster: corev1.ObjectReference{Name: kc.Name}},
+	}
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(task).WithStatusSubresource(task).Build()
+	r := &K8ssandraClusterReconciler{Client: c, Scheme: s}
+
+	running, err := r.refreshTaskRunning(ctx, kc)
+	require.NoError(t, err)
+	require.True(t, running)
+
+	task.Status.CompletionTime = &metav1.Time{Time: time.Now()}
+	require.NoError(t, c.Status().Update(ctx, task))
+	running, err = r.refreshTaskRunning(ctx, kc)
+	require.NoError(t, err)
+	require.False(t, running)
 }
