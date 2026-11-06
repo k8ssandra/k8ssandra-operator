@@ -272,6 +272,38 @@ func TestGetSourceDatacenterName_Found(t *testing.T) {
 	}
 }
 
+// TestGetSourceDatacenterName_SkipsSelfWithDatacenterNameOverride verifies that a target DC with a
+// datacenterName override that comes first in the spec is not picked as its own rebuild source.
+func TestGetSourceDatacenterName_SkipsSelfWithDatacenterNameOverride(t *testing.T) {
+	ready := &cassdcapi.CassandraDatacenterStatus{Conditions: []cassdcapi.DatacenterCondition{
+		{Type: cassdcapi.DatacenterReady, Status: "True"},
+	}}
+	targetDc := &cassdcapi.CassandraDatacenter{
+		ObjectMeta: metav1.ObjectMeta{Name: "dc2"},
+		Spec:       cassdcapi.CassandraDatacenterSpec{DatacenterName: "real-dc2"},
+	}
+	kc := &api.K8ssandraCluster{
+		Spec: api.K8ssandraClusterSpec{
+			Cassandra: &api.CassandraClusterTemplate{
+				Datacenters: []api.CassandraDatacenterTemplate{
+					{Meta: api.EmbeddedObjectMeta{Name: "dc2"}, DatacenterOptions: api.DatacenterOptions{DatacenterName: "real-dc2"}},
+					{Meta: api.EmbeddedObjectMeta{Name: "dc1"}},
+				},
+			},
+		},
+		Status: api.K8ssandraClusterStatus{
+			Datacenters: map[string]api.K8ssandraStatus{
+				"dc1": {Cassandra: ready.DeepCopy()},
+				"dc2": {Cassandra: ready.DeepCopy()},
+			},
+		},
+	}
+
+	src, err := getSourceDatacenterName(targetDc, kc)
+	require.NoError(t, err)
+	require.Equal(t, "dc1", src)
+}
+
 func TestGetSourceDatacenterName_Conflict(t *testing.T) {
 	targetDc := &cassdcapi.CassandraDatacenter{
 		ObjectMeta: metav1.ObjectMeta{

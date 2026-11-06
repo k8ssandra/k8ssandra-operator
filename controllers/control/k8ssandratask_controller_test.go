@@ -16,9 +16,11 @@ import (
 	"github.com/stretchr/testify/require"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -70,6 +72,7 @@ func TestK8ssandraTask(t *testing.T) {
 	t.Run("ExecuteParallelK8ssandraTask", testEnv.ControllerTest(ctx, executeParallelK8ssandraTask))
 	t.Run("ExecuteSequentialK8ssandraTask", testEnv.ControllerTest(ctx, executeSequentialK8ssandraTask))
 	t.Run("DeleteK8ssandraTask", testEnv.ControllerTest(ctx, deleteK8ssandraTask))
+	t.Run("DeleteK8ssandraTaskWithRemovedDc", testEnv.ControllerTest(ctx, deleteK8ssandraTaskWithRemovedDc))
 	t.Run("ExpireK8ssandraTask", testEnv.ControllerTest(ctx, expireK8ssandraTask))
 }
 
@@ -193,16 +196,19 @@ func executeSequentialK8ssandraTask(t *testing.T, ctx context.Context, f *framew
 					Command: "upgradesstables",
 				}},
 			},
+			// The DCs run in the listed order, which is not the order of the K8ssandraCluster spec.
+			Datacenters: []string{"dc2", "dc1"},
 			// Note: DcConcurrencyPolicy defaults to batchv1.ForbidConcurrent
 		},
 	}
 	require.NoError(f.Client.Create(ctx, k8Task), "failed to create K8ssandraTask")
 
-	cassTask1Key := newClusterKey(f.DataPlaneContexts[0], namespace, "upgradesstables-dc1")
-	cassTask2Key := newClusterKey(f.DataPlaneContexts[1], namespace, "upgradesstables-dc2")
+	// CassandraTask 1 is the task of dc2, the first DC listed in the K8ssandraTask.
+	cassTask1Key := newClusterKey(f.DataPlaneContexts[1], namespace, "upgradesstables-dc2")
+	cassTask2Key := newClusterKey(f.DataPlaneContexts[0], namespace, "upgradesstables-dc1")
 
 	t.Log("Check that CassandraTask 1 has been created")
-	cassTask1 := loadCassandraTask(f.DataPlaneContexts[0], namespace, "upgradesstables-dc1", ctx, f, require)
+	cassTask1 := loadCassandraTask(f.DataPlaneContexts[1], namespace, "upgradesstables-dc2", ctx, f, require)
 	require.Equal("job1", cassTask1.Spec.Jobs[0].Name)
 	require.Equal("upgradesstables", string(cassTask1.Spec.Jobs[0].Command))
 
@@ -240,7 +246,7 @@ func executeSequentialK8ssandraTask(t *testing.T, ctx context.Context, f *framew
 	}))
 
 	t.Log("Check that CassandraTask 2 has been created")
-	cassTask2 := loadCassandraTask(f.DataPlaneContexts[1], namespace, "upgradesstables-dc2", ctx, f, require)
+	cassTask2 := loadCassandraTask(f.DataPlaneContexts[0], namespace, "upgradesstables-dc1", ctx, f, require)
 	require.Equal("job1", cassTask2.Spec.Jobs[0].Name)
 	require.Equal("upgradesstables", string(cassTask2.Spec.Jobs[0].Command))
 
@@ -316,6 +322,64 @@ func deleteK8ssandraTask(t *testing.T, ctx context.Context, f *framework.Framewo
 	t.Log("Check that the CassandraTasks do not exist anymore")
 	require.Eventually(func() bool { return !f.CassTaskExists(ctx, cassTask1Key)() }, timeout, interval)
 	require.Eventually(func() bool { return !f.CassTaskExists(ctx, cassTask2Key)() }, timeout, interval)
+}
+
+// deleteK8ssandraTaskWithRemovedDc verifies that a K8ssandraTask can still be deleted after one of its datacenters was
+// removed from the K8ssandraCluster.
+func deleteK8ssandraTaskWithRemovedDc(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+	require := require.New(t)
+
+	kc := newCluster(namespace,
+		newDc("dc1", f.DataPlaneContexts[0]),
+		newDc("dc2", f.DataPlaneContexts[1]))
+	require.NoError(f.Client.Create(ctx, kc), "failed to create K8ssandraCluster")
+
+	t.Log("Create a K8ssandraTask")
+	k8Task := &api.K8ssandraTask{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "upgradesstables",
+		},
+		Spec: api.K8ssandraTaskSpec{
+			Cluster: corev1.ObjectReference{
+				Name: "kc",
+			},
+			Datacenters: []string{"dc1", "dc2"},
+			Template: cassapi.CassandraTaskTemplate{
+				Jobs: []cassapi.CassandraJob{{
+					Name:    "job1",
+					Command: "upgradesstables",
+				}},
+			},
+			DcConcurrencyPolicy: batchv1.AllowConcurrent,
+		},
+	}
+	require.NoError(f.Client.Create(ctx, k8Task), "failed to create K8ssandraTask")
+
+	t.Log("Check that the CassandraTasks exist")
+	cassTask1Key := newClusterKey(f.DataPlaneContexts[0], namespace, "upgradesstables-dc1")
+	require.Eventually(f.CassTaskExists(ctx, cassTask1Key), timeout, interval)
+	cassTask2Key := newClusterKey(f.DataPlaneContexts[1], namespace, "upgradesstables-dc2")
+	require.Eventually(f.CassTaskExists(ctx, cassTask2Key), timeout, interval)
+
+	t.Log("Remove dc2 from the K8ssandraCluster")
+	require.Eventually(func() bool {
+		if err := f.Client.Get(ctx, client.ObjectKeyFromObject(kc), kc); err != nil {
+			return false
+		}
+		kc.Spec.Cassandra.Datacenters = kc.Spec.Cassandra.Datacenters[:1]
+		return f.Client.Update(ctx, kc) == nil
+	}, timeout, interval, "failed to remove dc2 from the K8ssandraCluster")
+
+	t.Log("Delete the K8ssandraTask")
+	require.NoError(f.Client.Delete(ctx, k8Task), "failed to delete K8ssandraTask")
+
+	t.Log("Check that the CassandraTask of dc1 and the K8ssandraTask are deleted")
+	require.Eventually(func() bool { return !f.CassTaskExists(ctx, cassTask1Key)() }, timeout, interval)
+	require.Eventually(func() bool {
+		err := f.Client.Get(ctx, client.ObjectKeyFromObject(k8Task), &api.K8ssandraTask{})
+		return k8serrors.IsNotFound(err)
+	}, timeout, interval, "the K8ssandraTask should be deleted")
 }
 
 // expireK8ssandraTask verifies that a completed K8ssandraTask gets deleted (as well as the corresponding

@@ -396,7 +396,7 @@ func TestMedusaSyncReconcile(t *testing.T) {
 
 // A purge task whose pod operations were running in a previous operator process must not stay in progress forever.
 func TestMedusaTaskInProgressWithoutRunningOperations(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	scheme := runtime.NewScheme()
 	require.NoError(t, corev1.AddToScheme(scheme))
 	require.NoError(t, cassdcapi.AddToScheme(scheme))
