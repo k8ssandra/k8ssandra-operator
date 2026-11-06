@@ -35,6 +35,10 @@ import (
 
 const (
 	rebuildNodesLabel = "k8ssandra.io/rebuild-nodes"
+
+	// ownedAnnotationsAnnotation lists the annotation keys that k8ssandra-operator set on a CassandraDatacenter. Annotations
+	// that are not listed were set by someone else, and are preserved when the CassandraDatacenter is updated.
+	ownedAnnotationsAnnotation = "k8ssandra.io/owned-annotations"
 )
 
 func AllowUpdate(kc *api.K8ssandraCluster) bool {
@@ -141,6 +145,15 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			return result.Error(err), actualDcs
 		}
 
+		// A datacenter that is being rebuilt cannot be stopped. Apply that adjustment before hashing, so the
+		// stored hash reflects the spec that was actually written. Otherwise the hashes would match once the
+		// rebuild finishes and the requested stop would never be applied.
+		stopRequested := desiredDc.Spec.Stopped
+		if stopRequested && annotations.HasAnnotationWithValue(kc, api.RebuildDcAnnotation, dcKey.Name) {
+			desiredDc.Spec.Stopped = false
+			dcLogger.Info("Stopped cannot be set to true until the CassandraDatacenter is fully rebuilt, the stop will be applied after the rebuild")
+		}
+
 		// Note: desiredDc should not be modified from now on
 		annotations.AddHashAnnotation(desiredDc)
 
@@ -162,15 +175,17 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 
 			r.setStatusForDatacenter(kc, actualDc, dcConfig.K8sContext)
 
-			r.reconcileContactPointsService(ctx, kc, actualDc, remoteClient, dcLogger)
+			if recResult := r.reconcileContactPointsService(ctx, kc, actualDc, remoteClient, dcLogger); recResult.Completed() {
+				dcLogger.Error(recResult.GetError(), "Failed to reconcile the contact points service")
+				return recResult, actualDcs
+			}
 
 			if !annotations.CompareHashAnnotations(actualDc, desiredDc) && !AllowUpdate(kc) {
 				logger.Info("Datacenter requires an update, but we're not allowed to do it", "CassandraDatacenter", dcKey)
-				// We're not allowed to update, but need to
-				patch := client.MergeFrom(kc.DeepCopy())
-				kc.Status.SetConditionStatus(api.ClusterRequiresUpdate, corev1.ConditionTrue)
-				if err := r.Client.Status().Patch(ctx, kc, patch); err != nil {
-					return result.Error(fmt.Errorf("failed to set %s condition: %v", api.ClusterRequiresUpdate, err)), actualDcs
+				// We're not allowed to update, but need to. The condition is persisted with the rest of the status at the
+				// end of the reconcile. Patching it here would replace the in-memory status with the stored one.
+				if kc.Status.GetConditionStatus(api.ClusterRequiresUpdate) != corev1.ConditionTrue {
+					kc.Status.SetConditionStatus(api.ClusterRequiresUpdate, corev1.ConditionTrue)
 				}
 			} else if !annotations.CompareHashAnnotations(actualDc, desiredDc) {
 				if actualDc.Spec.SuperuserSecretName != desiredDc.Spec.SuperuserSecretName {
@@ -178,12 +193,6 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 					desiredDc.Spec.SuperuserSecretName = actualDc.Spec.SuperuserSecretName
 					err = fmt.Errorf("tried to update superuserSecretName in K8ssandraCluster")
 					dcLogger.Error(err, "SuperuserSecretName is immutable, reverting to existing value in CassandraDatacenter")
-				}
-
-				if annotations.HasAnnotationWithValue(kc, api.RebuildDcAnnotation, dcKey.Name) && desiredDc.Spec.Stopped {
-					desiredDc.Spec.Stopped = false
-					err = fmt.Errorf("tried to stop a datacenter that is being rebuilt")
-					dcLogger.Error(err, "Stopped cannot be set to true until the CassandraDatacenter is fully rebuilt")
 				}
 
 				// Set the proper default during upgrade from 3.x to 4.x
@@ -197,10 +206,7 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 					return result.Error(fmt.Errorf("invalid Cassandra config: %v", err)), actualDcs
 				}
 
-				actualDc = actualDc.DeepCopy()
-				resourceVersion := actualDc.GetResourceVersion()
-				desiredDc.DeepCopyInto(actualDc)
-				actualDc.SetResourceVersion(resourceVersion)
+				actualDc = datacenterForUpdate(actualDc, desiredDc)
 				if err = remoteClient.Update(ctx, actualDc); err != nil {
 					dcLogger.Error(err, "Failed to update datacenter")
 					return result.Error(err), actualDcs
@@ -245,16 +251,24 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 					if recResult := r.reconcileDcRebuild(ctx, kc, actualDc, remoteClient, dcLogger); recResult.Completed() {
 						return recResult, actualDcs
 					}
+					if stopRequested {
+						// The rebuild has finished, but the stop deferred during the rebuild has not been applied yet. Requeue
+						// before this pass marks the generation as observed. Otherwise the next pass is not allowed to apply
+						// it unless the automated-update annotation is set.
+						return result.RequeueSoon(r.DefaultDelay), actualDcs
+					}
 				}
 			}
 		} else {
 			if errors.IsNotFound(err) {
-				if annotations.HasAnnotationWithValue(kc, api.RebuildDcAnnotation, dcKey.Name) && desiredDc.Spec.Stopped {
+				if annotations.HasAnnotationWithValue(kc, api.RebuildDcAnnotation, dcKey.Name) && stopRequested {
 					err := fmt.Errorf("cannot add a datacenter in stopped state to an existing cluster")
 					return result.Error(err), actualDcs
 				}
 				// cassdc doesn't exist, we'll create it
-				if err = remoteClient.Create(ctx, desiredDc); err != nil {
+				newDc := desiredDc.DeepCopy()
+				setOwnedAnnotations(newDc, desiredDc)
+				if err = remoteClient.Create(ctx, newDc); err != nil {
 					dcLogger.Error(err, "Failed to create datacenter")
 					return result.Error(err), actualDcs
 				}
@@ -275,6 +289,15 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 		}
 
 		if len(dcsRequiringUpdate) > 0 {
+			// The task name depends on the generations, which change if the spec is modified during a refresh. Wait for
+			// any refresh task of this cluster that is still running, instead of creating a second one.
+			if running, err := r.refreshTaskRunning(ctx, kc); err != nil {
+				return result.Error(err), actualDcs
+			} else if running != "" {
+				logger.Info("Waiting for a running refresh task before creating a new one", "K8ssandraTask", running)
+				return result.RequeueSoon(r.DefaultDelay), actualDcs
+			}
+
 			generatedName := fmt.Sprintf("refresh-%d-%d", kc.Generation, kc.Status.ObservedGeneration)
 			internalTask := &ktaskapi.K8ssandraTask{}
 			err := r.Get(ctx, types.NamespacedName{Namespace: kc.Namespace, Name: generatedName}, internalTask)
@@ -322,6 +345,23 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 	}
 
 	return result.Continue(), actualDcs
+}
+
+// refreshTaskRunning returns the name of a refresh K8ssandraTask created for this cluster that has not completed yet,
+// or an empty string if there is none. Invalid tasks are ignored: they never complete, and would otherwise block every
+// later refresh.
+func (r *K8ssandraClusterReconciler) refreshTaskRunning(ctx context.Context, kc *api.K8ssandraCluster) (string, error) {
+	tasks := &ktaskapi.K8ssandraTaskList{}
+	if err := r.List(ctx, tasks, client.InNamespace(kc.Namespace), client.MatchingLabels(labels.WatchedByK8ssandraClusterLabels(utils.GetKey(kc)))); err != nil {
+		return "", err
+	}
+	for _, task := range tasks.Items {
+		if strings.HasPrefix(task.Name, "refresh-") && task.Spec.Cluster.Name == kc.Name && task.Status.CompletionTime.IsZero() &&
+			task.GetConditionStatus(ktaskapi.JobInvalid) != metav1.ConditionTrue {
+			return task.Name, nil
+		}
+	}
+	return "", nil
 }
 
 // setDatacenterOwnership sets the K8ssandraCluster as an owner of the CassandraDatacenter,
@@ -391,21 +431,23 @@ func getSourceDatacenterName(targetDc *cassdcapi.CassandraDatacenter, kc *api.K8
 		return "", fmt.Errorf("rebuild error: src dc must a ready dc")
 	}
 
+	// dcNames holds Cassandra DC names (DatacenterName overrides applied), so compare against the
+	// target's Cassandra DC name, not its object name.
 	for _, dc := range dcNames {
-		if dc != targetDc.Name {
+		if dc != targetDc.DatacenterName() {
 			return dc, nil
 		}
 	}
 
 	return "", fmt.Errorf("rebuild error: unable to determine src dc for target dc (%s) from dc list (%s)",
-		targetDc.Name, strings.Trim(fmt.Sprint(dcNames), "[]"))
+		targetDc.DatacenterName(), strings.Trim(fmt.Sprint(dcNames), "[]"))
 }
 
 func (r *K8ssandraClusterReconciler) checkRebuildAnnotation(ctx context.Context, kc *api.K8ssandraCluster, dcName string) result.ReconcileResult {
 	if !annotations.HasAnnotationWithValue(kc, api.RebuildDcAnnotation, dcName) && datacenterAddedToExistingCluster(kc, dcName) {
 		patch := client.MergeFromWithOptions(kc.DeepCopy())
 		annotations.AddAnnotation(kc, api.RebuildDcAnnotation, dcName)
-		if err := r.Patch(ctx, kc, patch); err != nil {
+		if err := r.patchPreservingStatus(ctx, kc, patch); err != nil {
 			return result.Error(fmt.Errorf("failed to add rebuild annotation: %v", err))
 		}
 	}
@@ -442,7 +484,7 @@ func (r *K8ssandraClusterReconciler) reconcileDcRebuild(
 			return r.removeRebuildDcAnnotation(kc, ctx)
 		} else {
 			logger.Info("Waiting for datacenter rebuild to complete", "Task", taskKey)
-			return result.RequeueSoon(15)
+			return result.RequeueSoon(r.DefaultDelay)
 		}
 	} else {
 		if errors.IsNotFound(err) {
@@ -451,7 +493,7 @@ func (r *K8ssandraClusterReconciler) reconcileDcRebuild(
 				logger.Error(err, "Failed to create rebuild task", "Task", taskKey)
 				return result.Error(err)
 			}
-			return result.RequeueSoon(15)
+			return result.RequeueSoon(r.DefaultDelay)
 		}
 		logger.Error(err, "Failed to get rebuild task", "Task", taskKey)
 		return result.Error(err)
@@ -562,9 +604,66 @@ func dcUpgradePriority(dc *cassandra.DatacenterConfig) int {
 func (r *K8ssandraClusterReconciler) removeRebuildDcAnnotation(kc *api.K8ssandraCluster, ctx context.Context) result.ReconcileResult {
 	patch := client.MergeFrom(kc.DeepCopy())
 	delete(kc.Annotations, api.RebuildDcAnnotation)
-	if err := r.Patch(ctx, kc, patch); err != nil {
+	if err := r.patchPreservingStatus(ctx, kc, patch); err != nil {
 		err = fmt.Errorf("failed to remove %s annotation: %v", api.RebuildDcAnnotation, err)
 		return result.Error(err)
 	}
 	return result.Continue()
+}
+
+// patchPreservingStatus patches the main resource of the K8ssandraCluster. The client decodes the server response into kc,
+// which would replace the in-memory status changes of the current reconcile with the stored status. Those are restored
+// after the patch, so that they are written by the status update at the end of the reconcile.
+func (r *K8ssandraClusterReconciler) patchPreservingStatus(ctx context.Context, kc *api.K8ssandraCluster, patch client.Patch) error {
+	status := kc.Status.DeepCopy()
+	err := r.Patch(ctx, kc, patch)
+	kc.Status = *status
+	return err
+}
+
+// datacenterForUpdate returns the CassandraDatacenter to write when updating actualDc to desiredDc. The metadata of
+// desiredDc replaces the metadata of actualDc, except for the finalizers and annotations that were set by someone else
+// (for example cass-operator's finalizer, or annotations added directly to the CassandraDatacenter), which are kept.
+func datacenterForUpdate(actualDc, desiredDc *cassdcapi.CassandraDatacenter) *cassdcapi.CassandraDatacenter {
+	updated := desiredDc.DeepCopy()
+	updated.SetResourceVersion(actualDc.GetResourceVersion())
+
+	for _, finalizer := range actualDc.GetFinalizers() {
+		controllerutil.AddFinalizer(updated, finalizer)
+	}
+
+	// Only annotations that we know k8ssandra-operator did not set can be preserved. If the owned annotations are not
+	// tracked yet (the CassandraDatacenter was last written by an older version), we can't tell them apart.
+	if ownedValue, tracked := actualDc.GetAnnotations()[ownedAnnotationsAnnotation]; tracked {
+		previouslyOwned := make(map[string]struct{})
+		for _, key := range strings.Split(ownedValue, ",") {
+			previouslyOwned[key] = struct{}{}
+		}
+		if updated.Annotations == nil {
+			updated.Annotations = make(map[string]string)
+		}
+		for key, value := range actualDc.GetAnnotations() {
+			if _, desired := updated.Annotations[key]; desired || key == ownedAnnotationsAnnotation {
+				continue
+			}
+			if _, owned := previouslyOwned[key]; owned {
+				continue
+			}
+			updated.Annotations[key] = value
+		}
+	}
+
+	setOwnedAnnotations(updated, desiredDc)
+	return updated
+}
+
+// setOwnedAnnotations records on dc the keys of the annotations of desiredDc, which are owned by k8ssandra-operator.
+// This must be done after the hash annotation was computed, so that the hash is not affected.
+func setOwnedAnnotations(dc, desiredDc *cassdcapi.CassandraDatacenter) {
+	keys := make([]string, 0, len(desiredDc.GetAnnotations()))
+	for key := range desiredDc.GetAnnotations() {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	annotations.AddAnnotation(dc, ownedAnnotationsAnnotation, strings.Join(keys, ","))
 }

@@ -148,7 +148,7 @@ func (r *K8ssandraClusterReconciler) checkInitialSystemReplication(
 	}
 	kc.Annotations[api.InitialSystemReplicationAnnotation] = string(bytes)
 	logger.Info("New initial system replication", "SystemReplication", string(bytes))
-	if err = r.Patch(ctx, kc, patch); err != nil {
+	if err = r.patchPreservingStatus(ctx, kc, patch); err != nil {
 		logger.Error(err, "Failed to apply "+api.InitialSystemReplicationAnnotation+" patch")
 		return nil, err
 	}

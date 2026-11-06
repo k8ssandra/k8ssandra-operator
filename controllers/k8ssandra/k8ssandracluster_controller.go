@@ -18,6 +18,7 @@ package k8ssandra
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -94,6 +95,7 @@ type K8ssandraClusterReconciler struct {
 // +kubebuilder:rbac:groups=monitoring.coreos.com,namespace="k8ssandra",resources=servicemonitors,verbs=get;list;watch;create;update;patch;delete;deletecollection
 // +kubebuilder:rbac:groups=core,namespace="k8ssandra",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",namespace="k8ssandra",resources=events,verbs=create;patch
+// +kubebuilder:rbac:groups=events.k8s.io,namespace="k8ssandra",resources=events,verbs=create;patch
 // +kubebuilder:rbac:groups=batch,namespace="k8ssandra",resources=cronjobs,verbs=get;list;watch;create;update;delete
 
 func (r *K8ssandraClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -191,9 +193,31 @@ func (r *K8ssandraClusterReconciler) reconcile(ctx context.Context, kc *api.K8ss
 	return result.Done().Output()
 }
 
+// datacentersByTemplate returns the reconciled datacenters in the order of the datacenter templates in the spec.
+// The reconciled datacenters are not in spec order (they are sorted by upgrade priority), so they are matched by name.
+func datacentersByTemplate(kc *api.K8ssandraCluster, dcs []*cassdcapi.CassandraDatacenter) ([]*cassdcapi.CassandraDatacenter, error) {
+	dcsByName := make(map[string]*cassdcapi.CassandraDatacenter, len(dcs))
+	for _, dc := range dcs {
+		dcsByName[dc.Name] = dc
+	}
+	ordered := make([]*cassdcapi.CassandraDatacenter, 0, len(kc.Spec.Cassandra.Datacenters))
+	for _, dcTemplate := range kc.Spec.Cassandra.Datacenters {
+		dc, found := dcsByName[dcTemplate.Meta.Name]
+		if !found {
+			return nil, fmt.Errorf("CassandraDatacenter %s was not reconciled", dcTemplate.Meta.Name)
+		}
+		ordered = append(ordered, dc)
+	}
+	return ordered, nil
+}
+
 func (r *K8ssandraClusterReconciler) afterCassandraReconciled(ctx context.Context, kc *api.K8ssandraCluster, dcs []*cassdcapi.CassandraDatacenter, logger logr.Logger) result.ReconcileResult {
+	orderedDcs, err := datacentersByTemplate(kc, dcs)
+	if err != nil {
+		return result.Error(err)
+	}
 	for i, dcTemplate := range kc.Spec.Cassandra.Datacenters {
-		dc := dcs[i]
+		dc := orderedDcs[i]
 		dcKey := utils.GetKey(dc)
 		logger := logger.WithValues("CassandraDatacenter", dcKey)
 		logger.Info("Reconciling Reaper for dc " + dc.DatacenterName())
@@ -214,12 +238,18 @@ func updateStatus(ctx context.Context, r client.Client, kc *api.K8ssandraCluster
 		if metav1.HasAnnotation(kc.ObjectMeta, api.AutomatedUpdateAnnotation) {
 			if kc.Annotations[api.AutomatedUpdateAnnotation] == string(api.AllowUpdateOnce) {
 				delete(kc.Annotations, api.AutomatedUpdateAnnotation)
-				if err := r.Update(ctx, kc); err != nil {
+				// The client decodes the server response into kc, keep the in-memory status of this reconcile
+				status := kc.Status.DeepCopy()
+				err := r.Update(ctx, kc)
+				kc.Status = *status
+				if err != nil {
 					return result.Error(err)
 				}
 			}
 		}
-		kc.Status.SetConditionStatus(api.ClusterRequiresUpdate, corev1.ConditionFalse)
+		if kc.Status.GetConditionStatus(api.ClusterRequiresUpdate) != corev1.ConditionFalse {
+			kc.Status.SetConditionStatus(api.ClusterRequiresUpdate, corev1.ConditionFalse)
+		}
 	}
 
 	kc.Status.ObservedGeneration = kc.Generation

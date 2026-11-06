@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -34,6 +35,7 @@ func addDc(t *testing.T, ctx context.Context, f *framework.Framework, namespace 
 	t.Run("FailUserKeyspaceUpdate", addDcTest(ctx, f, failUserKeyspaceUpdate, true))
 	t.Run("SchemaDisagreementOnSystemKeyspaces", addDcTest(ctx, f, schemaDisagreementOnSystemKeyspaces, true))
 	t.Run("ConfigureSrcDcForRebuild", addDcTest(ctx, f, configureSrcDcForRebuild, false))
+	t.Run("StopDuringRebuild", addDcTest(ctx, f, stopDuringRebuild, true))
 	t.Run("DeleteDcWithUserKeyspacesFails", addDcTest(ctx, f, deleteDcWithUserKeyspacesFails, false))
 	t.Run("DeleteDcWithUserKeyspacesSucceeds", addDcTest(ctx, f, deleteDcWithUserKeyspacesSucceeds, false))
 }
@@ -295,6 +297,70 @@ func withUserKeyspaces(ctx context.Context, t *testing.T, f *framework.Framework
 	}
 
 	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key, kc)
+}
+
+// stopDuringRebuild verifies that a stop requested while a datacenter is being rebuilt is not applied
+// until the rebuild finishes, and that it is applied afterwards.
+func stopDuringRebuild(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
+	require := require.New(t)
+
+	replication := map[string]int{"dc1": 3}
+	updatedReplication := map[string]int{"dc1": 3, "dc2": 3}
+
+	mockMgmtApi := testutils.NewFakeManagementApiFacade()
+	for _, ks := range api.SystemKeyspaces {
+		mockMgmtApi.On(testutils.EnsureKeyspaceReplication, ks, replication).Return(nil)
+		mockMgmtApi.On(testutils.EnsureKeyspaceReplication, ks, updatedReplication).Return(nil)
+	}
+	mockMgmtApi.On(testutils.ListKeyspaces, "").Return([]string{}, nil)
+
+	adapter := func(ctx context.Context, datacenter *cassdcapi.CassandraDatacenter, client client.Client, logger logr.Logger) (cassandra.ManagementApiFacade, error) {
+		return mockMgmtApi, nil
+	}
+	managementApiFactory.SetAdapter(adapter)
+
+	dc1Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
+	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: f.DataPlaneContexts[1]}
+
+	addDcToCluster(ctx, t, f, kc, dc2Key)
+	verifyReplicatedSecretReconciled(ctx, t, f, kc)
+
+	require.Eventually(f.DatacenterExists(ctx, dc2Key), timeout, interval, "failed to verify dc2 was created")
+	require.NoError(f.SetDatacenterStatusReady(ctx, dc2Key), "failed to set dc2 status ready")
+
+	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key, kc)
+
+	// Without the automated-update annotation, a DC can only be updated in a pass that observes a new generation. That
+	// is the edit that sets stopped, so the stop must still be applied after the passes that wait for the rebuild.
+	t.Log("request dc2 to stop while it is being rebuilt")
+	require.Eventually(func() bool {
+		if err := f.Client.Get(ctx, utils.GetKey(kc), kc); err != nil {
+			return false
+		}
+		delete(kc.Annotations, api.AutomatedUpdateAnnotation)
+		kc.Spec.Cassandra.Datacenters[1].Stopped = true
+		return f.Client.Update(ctx, kc) == nil
+	}, timeout, interval, "failed to set dc2 stopped")
+
+	require.Never(func() bool {
+		dc := &cassdcapi.CassandraDatacenter{}
+		if err := f.Get(ctx, dc2Key, dc); err != nil {
+			return false
+		}
+		return dc.Spec.Stopped
+	}, 3*time.Second, interval, "dc2 must not be stopped while it is being rebuilt")
+
+	rebuildTaskKey := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, "dc2-rebuild")
+	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey, dc2Key)
+
+	t.Log("check that dc2 is stopped after the rebuild finished")
+	require.Eventually(func() bool {
+		dc := &cassdcapi.CassandraDatacenter{}
+		if err := f.Get(ctx, dc2Key, dc); err != nil {
+			return false
+		}
+		return dc.Spec.Stopped
+	}, timeout, interval, "dc2 should be stopped after the rebuild finished")
 }
 
 // schemaDisagreementOnSystemKeyspaces verifies that the rebuild task is not created when the

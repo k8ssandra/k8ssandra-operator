@@ -120,6 +120,53 @@ func TestK8ssandraClusterReconciler_reconcilePerNodeConfiguration(t *testing.T) 
 				assert.True(t, found)
 			},
 		},
+		{
+			name: "default per-node config not owned by the operator",
+			args: args{
+				dcConfig: &cassandra.DatacenterConfig{
+					Meta: api.EmbeddedObjectMeta{
+						Name: "dc1",
+					},
+					InitialTokensByPodName: map[string][]string{
+						"pod1": {"token1", "token2"},
+					},
+				},
+				remoteClient: func() client.Client {
+					var perNodeConfig = &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-dc1-per-node-config",
+							Namespace: "test-ns",
+						},
+					}
+					fakeClient, _ := test.NewFakeClient(perNodeConfig)
+					return fakeClient
+				}(),
+			},
+			wantResult:   result.Error(errPerNodeConfigNotOwnedByK8ssandraOperator),
+			configAssert: func(t *testing.T, gotConfig *cassandra.DatacenterConfig) {},
+		},
+		{
+			name: "obsolete per-node config not owned by the operator",
+			args: args{
+				dcConfig: &cassandra.DatacenterConfig{
+					Meta: api.EmbeddedObjectMeta{
+						Name: "dc1",
+					},
+				},
+				remoteClient: func() client.Client {
+					var perNodeConfig = &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-dc1-per-node-config",
+							Namespace: "test-ns",
+						},
+					}
+					fakeClient, _ := test.NewFakeClient(perNodeConfig)
+					return fakeClient
+				}(),
+			},
+			wantResult:   result.Error(errPerNodeConfigNotOwnedByK8ssandraOperator),
+			configAssert: func(t *testing.T, gotConfig *cassandra.DatacenterConfig) {},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
