@@ -138,34 +138,34 @@ func testRestoreJobValidation(t *testing.T) {
 		}
 	}
 
-	err := k8sClient.Create(ctx, newJob("both-set", "b1", "2024-07-15T12:30:00Z"))
+	err := k8sClient.Create(t.Context(), newJob("both-set", "b1", "2024-07-15T12:30:00Z"))
 	require.Error(err)
 	require.Contains(err.Error(), "vmedusarestorejob.kb.io")
 	require.Contains(err.Error(), "mutually exclusive")
 
-	err = k8sClient.Create(ctx, newJob("neither-set", "", ""))
+	err = k8sClient.Create(t.Context(), newJob("neither-set", "", ""))
 	require.Error(err)
 	require.Contains(err.Error(), "vmedusarestorejob.kb.io")
 	require.Contains(err.Error(), "must be set")
 
-	err = k8sClient.Create(ctx, newJob("bad-timestamp", "", "yesterday"))
+	err = k8sClient.Create(t.Context(), newJob("bad-timestamp", "", "yesterday"))
 	require.Error(err)
 	require.Contains(err.Error(), "spec.targetTimestamp")
 
 	backupJob := newJob("backup-only", "b1", "")
-	require.NoError(k8sClient.Create(ctx, backupJob))
+	require.NoError(k8sClient.Create(t.Context(), backupJob))
 
-	require.NoError(k8sClient.Create(ctx, newJob("iso-timestamp", "", "2024-07-15T12:30:00Z")))
-	require.NoError(k8sClient.Create(ctx, newJob("epoch-timestamp", "", "1721046600.5")))
+	require.NoError(k8sClient.Create(t.Context(), newJob("iso-timestamp", "", "2024-07-15T12:30:00Z")))
+	require.NoError(k8sClient.Create(t.Context(), newJob("epoch-timestamp", "", "1721046600.5")))
 
 	// Turning a valid job into an invalid one is rejected
 	backupJob.Spec.TargetTimestamp = "2024-07-15T12:30:00Z"
-	err = k8sClient.Update(ctx, backupJob)
+	err = k8sClient.Update(t.Context(), backupJob)
 	require.Error(err)
 	require.Contains(err.Error(), "mutually exclusive")
 
 	// Delete is always allowed
-	require.NoError(k8sClient.Delete(ctx, newJob("backup-only", "", "")))
+	require.NoError(k8sClient.Delete(t.Context(), newJob("backup-only", "", "")))
 }
 
 func testCronScheduleValidation(t *testing.T) {
