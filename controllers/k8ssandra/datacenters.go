@@ -293,7 +293,8 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 			// any refresh task of this cluster that is still running, instead of creating a second one.
 			if running, err := r.refreshTaskRunning(ctx, kc); err != nil {
 				return result.Error(err), actualDcs
-			} else if running {
+			} else if running != "" {
+				logger.Info("Waiting for a running refresh task before creating a new one", "K8ssandraTask", running)
 				return result.RequeueSoon(r.DefaultDelay), actualDcs
 			}
 
@@ -346,18 +347,21 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 	return result.Continue(), actualDcs
 }
 
-// refreshTaskRunning returns true if a refresh K8ssandraTask created for this cluster has not completed yet.
-func (r *K8ssandraClusterReconciler) refreshTaskRunning(ctx context.Context, kc *api.K8ssandraCluster) (bool, error) {
+// refreshTaskRunning returns the name of a refresh K8ssandraTask created for this cluster that has not completed yet,
+// or an empty string if there is none. Invalid tasks are ignored: they never complete, and would otherwise block every
+// later refresh.
+func (r *K8ssandraClusterReconciler) refreshTaskRunning(ctx context.Context, kc *api.K8ssandraCluster) (string, error) {
 	tasks := &ktaskapi.K8ssandraTaskList{}
 	if err := r.List(ctx, tasks, client.InNamespace(kc.Namespace), client.MatchingLabels(labels.WatchedByK8ssandraClusterLabels(utils.GetKey(kc)))); err != nil {
-		return false, err
+		return "", err
 	}
 	for _, task := range tasks.Items {
-		if strings.HasPrefix(task.Name, "refresh-") && task.Spec.Cluster.Name == kc.Name && task.Status.CompletionTime.IsZero() {
-			return true, nil
+		if strings.HasPrefix(task.Name, "refresh-") && task.Spec.Cluster.Name == kc.Name && task.Status.CompletionTime.IsZero() &&
+			task.GetConditionStatus(ktaskapi.JobInvalid) != metav1.ConditionTrue {
+			return task.Name, nil
 		}
 	}
-	return false, nil
+	return "", nil
 }
 
 // setDatacenterOwnership sets the K8ssandraCluster as an owner of the CassandraDatacenter,

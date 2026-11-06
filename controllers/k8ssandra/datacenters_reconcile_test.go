@@ -304,7 +304,7 @@ func TestDatacenterForUpdatePreservesForeignMetadata(t *testing.T) {
 func TestRefreshTaskRunning(t *testing.T) {
 	s := newUnitTestScheme(t)
 	require.NoError(t, ktaskapi.AddToScheme(s))
-	ctx := context.Background()
+	ctx := t.Context()
 
 	kc := &api.K8ssandraCluster{ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "ns", Generation: 3}}
 	task := &ktaskapi.K8ssandraTask{
@@ -316,11 +316,19 @@ func TestRefreshTaskRunning(t *testing.T) {
 
 	running, err := r.refreshTaskRunning(ctx, kc)
 	require.NoError(t, err)
-	require.True(t, running)
+	require.Equal(t, task.Name, running)
 
+	// An invalid task never completes, so it must not block later refreshes.
+	task.SetCondition(ktaskapi.JobInvalid, metav1.ConditionTrue)
+	require.NoError(t, c.Status().Update(ctx, task))
+	running, err = r.refreshTaskRunning(ctx, kc)
+	require.NoError(t, err)
+	require.Empty(t, running)
+
+	task.SetCondition(ktaskapi.JobInvalid, metav1.ConditionFalse)
 	task.Status.CompletionTime = &metav1.Time{Time: time.Now()}
 	require.NoError(t, c.Status().Update(ctx, task))
 	running, err = r.refreshTaskRunning(ctx, kc)
 	require.NoError(t, err)
-	require.False(t, running)
+	require.Empty(t, running)
 }
