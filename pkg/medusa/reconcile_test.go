@@ -3,6 +3,7 @@ package medusa
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	sync "sync"
 	"testing"
 
@@ -778,4 +779,90 @@ func getTestImageRegistry(t testing.TB) cassimages.ImageRegistry {
 		imageRegistryTest = r
 	})
 	return imageRegistryTest
+}
+
+func pitrTestCluster(pitr *medusaapi.PitrConfig) *api.K8ssandraCluster {
+	return &api.K8ssandraCluster{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "test", Name: "demo"},
+		Spec: api.K8ssandraClusterSpec{
+			Cassandra: &api.CassandraClusterTemplate{
+				Datacenters: []api.CassandraDatacenterTemplate{{
+					Meta:       api.EmbeddedObjectMeta{Name: "dc1"},
+					K8sContext: "k8sCtx0",
+					Size:       3,
+				}},
+			},
+			Medusa: &medusaapi.MedusaClusterTemplate{
+				StorageProperties: medusaapi.Storage{StorageProvider: "s3", BucketName: "bucket"},
+				Pitr:              pitr,
+			},
+		},
+	}
+}
+
+func TestMedusaIniPitr(t *testing.T) {
+	interval := 30
+	render := func(pitr *medusaapi.PitrConfig) string {
+		kc := pitrTestCluster(pitr)
+		return CreateMedusaIni(kc, cassandra.Coalesce(kc.CassClusterName(), kc.Spec.Cassandra.DeepCopy(), kc.Spec.Cassandra.Datacenters[0].DeepCopy()))
+	}
+
+	t.Run("Enabled", func(t *testing.T) {
+		ini := render(&medusaapi.PitrConfig{Enabled: true, ArchiveIntervalSeconds: &interval, SpoolDir: "/spool"})
+		assert.Contains(t, ini, "[pitr]\n    enabled = true\n    commitlog_archive_interval_seconds = 30\n    commitlog_spool_dir = /spool\n")
+		pitrAt, loggingAt, k8sAt, urlAt := strings.Index(ini, "[pitr]"), strings.Index(ini, "[logging]"), strings.Index(ini, "[kubernetes]"), strings.Index(ini, "cassandra_url")
+		assert.Less(t, pitrAt, loggingAt)
+		assert.Less(t, k8sAt, urlAt)
+	})
+	t.Run("EnabledWithoutOptionals", func(t *testing.T) {
+		ini := render(&medusaapi.PitrConfig{Enabled: true})
+		assert.Contains(t, ini, "[pitr]\n    enabled = true\n\n    [logging]")
+		assert.NotContains(t, ini, "commitlog_archive_interval_seconds")
+		assert.NotContains(t, ini, "commitlog_spool_dir")
+	})
+	t.Run("Nil", func(t *testing.T) {
+		assert.NotContains(t, render(nil), "[pitr]")
+	})
+	t.Run("Disabled", func(t *testing.T) {
+		assert.NotContains(t, render(&medusaapi.PitrConfig{Enabled: false, ArchiveIntervalSeconds: &interval}), "[pitr]")
+	})
+}
+
+func TestPitrHashAnnotation(t *testing.T) {
+	logger := logr.New(logr.Discard().GetSink())
+	interval := 30
+	otherInterval := 60
+	update := func(pitr *medusaapi.PitrConfig, dcConfig *cassandra.DatacenterConfig) map[string]string {
+		spec := pitrTestCluster(pitr).Spec.Medusa
+		UpdateMedusaInitContainer(dcConfig, spec, false, "test", logger, getTestImageRegistry(t))
+		return dcConfig.PodTemplateSpec.Annotations
+	}
+	hash := func(pitr *medusaapi.PitrConfig) string {
+		return update(pitr, &cassandra.DatacenterConfig{})[MedusaPitrHashAnnotation]
+	}
+
+	t.Run("NilSetsNoAnnotation", func(t *testing.T) {
+		assert.NotContains(t, update(nil, &cassandra.DatacenterConfig{}), MedusaPitrHashAnnotation)
+	})
+	t.Run("NilKeepsOtherAnnotations", func(t *testing.T) {
+		dcConfig := &cassandra.DatacenterConfig{}
+		dcConfig.PodTemplateSpec.Annotations = map[string]string{"a": "b"}
+		assert.Equal(t, map[string]string{"a": "b"}, update(nil, dcConfig))
+	})
+	t.Run("DisabledSetsAnnotation", func(t *testing.T) {
+		assert.NotEmpty(t, hash(&medusaapi.PitrConfig{Enabled: false}))
+	})
+	t.Run("SameValueSameHash", func(t *testing.T) {
+		assert.Equal(t, hash(&medusaapi.PitrConfig{Enabled: true, ArchiveIntervalSeconds: &interval}), hash(&medusaapi.PitrConfig{Enabled: true, ArchiveIntervalSeconds: &interval}))
+	})
+	t.Run("ChangedIntervalChangesHash", func(t *testing.T) {
+		assert.NotEqual(t, hash(&medusaapi.PitrConfig{Enabled: true, ArchiveIntervalSeconds: &interval}), hash(&medusaapi.PitrConfig{Enabled: true, ArchiveIntervalSeconds: &otherInterval}))
+	})
+	t.Run("DoesNotMutateSharedMap", func(t *testing.T) {
+		shared := map[string]string{"a": "b"}
+		dcConfig := &cassandra.DatacenterConfig{}
+		dcConfig.PodTemplateSpec.Annotations = shared
+		update(&medusaapi.PitrConfig{Enabled: true}, dcConfig)
+		assert.Equal(t, map[string]string{"a": "b"}, shared)
+	})
 }
