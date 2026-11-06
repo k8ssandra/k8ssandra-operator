@@ -181,7 +181,7 @@ func addDcSetupForMultiDc(ctx context.Context, t *testing.T, f *framework.Framew
 	err = f.SetDatacenterStatusReady(ctx, dc1Key)
 	require.NoError(err, "failed to set dc1 status to ready")
 
-	dc2Key := dcClusterKey(f, kc, "dc2")
+	dc2Key := dc2ClusterKey(f, kc)
 	dc = &cassdcapi.CassandraDatacenter{}
 	err = f.Get(ctx, dc2Key, dc)
 	require.NoError(err)
@@ -692,12 +692,12 @@ func frameworkContext(f *framework.Framework, k8sContext string) string {
 	return k8sContext
 }
 
-// dcClusterKey returns the key of the CassandraDatacenter for the DC template named dcName in kc.
-func dcClusterKey(f *framework.Framework, kc *api.K8ssandraCluster, dcName string) framework.ClusterKey {
+// dc2ClusterKey returns the key of the dc2 CassandraDatacenter of kc.
+func dc2ClusterKey(f *framework.Framework, kc *api.K8ssandraCluster) framework.ClusterKey {
 	for _, dc := range kc.Spec.Cassandra.Datacenters {
-		if dc.Meta.Name == dcName {
-			return framework.NewClusterKey(frameworkContext(f, dc.K8sContext), kc.Namespace, dcName)
+		if dc.Meta.Name == "dc2" {
+			return framework.NewClusterKey(frameworkContext(f, dc.K8sContext), kc.Namespace, "dc2")
 		}
 	}
-	panic("no DC template named " + dcName)
+	panic("no DC template named dc2")
 }

@@ -55,7 +55,7 @@ func deleteDcWithUserKeyspacesFails(ctx context.Context, t *testing.T, f *framew
 	}
 	managementApiFactory.SetAdapter(adapter)
 
-	dc2Key := dcClusterKey(f, kc, "dc2")
+	dc2Key := dc2ClusterKey(f, kc)
 
 	addDatacenterFinalizer(ctx, t, f, dc2Key)
 
@@ -113,7 +113,7 @@ func deleteDcWithUserKeyspacesSucceeds(ctx context.Context, t *testing.T, f *fra
 	}
 	managementApiFactory.SetAdapter(adapter)
 
-	dc2Key := dcClusterKey(f, kc, "dc2")
+	dc2Key := dc2ClusterKey(f, kc)
 
 	addDatacenterFinalizer(ctx, t, f, dc2Key)
 
@@ -172,7 +172,7 @@ func deleteDcAfterCassandraDatacenterRemoved(ctx context.Context, t *testing.T, 
 	}
 	setMgmtApi(newMgmtApi(map[string]string{"class": cassandra.NetworkTopology, "dc1": "3", "dc2": "3"}))
 
-	dc2Key := dcClusterKey(f, kc, "dc2")
+	dc2Key := dc2ClusterKey(f, kc)
 	kcKey := utils.GetKey(kc)
 
 	require.Eventually(func() bool {
