@@ -97,6 +97,7 @@ func TestMedusaWebhooks(t *testing.T) {
 	})
 	require.NoError(err)
 	require.NoError(SetupMedusaBackupScheduleWebhookWithManager(mgr))
+	require.NoError(SetupMedusaRestoreJobWebhookWithManager(mgr))
 
 	//+kubebuilder:scaffold:webhook
 
@@ -121,6 +122,50 @@ func TestMedusaWebhooks(t *testing.T) {
 	}, 2*time.Second, 300*time.Millisecond)
 
 	t.Run("CronScheduleValidation", testCronScheduleValidation)
+	t.Run("RestoreJobValidation", testRestoreJobValidation)
+}
+
+func testRestoreJobValidation(t *testing.T) {
+	require := require.New(t)
+
+	namespace := "restorejobtest"
+	createNamespace(require, namespace)
+
+	newJob := func(name, backup, ts string) *MedusaRestoreJob {
+		return &MedusaRestoreJob{
+			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
+			Spec:       MedusaRestoreJobSpec{Backup: backup, TargetTimestamp: ts, CassandraDatacenter: "dc1"},
+		}
+	}
+
+	err := k8sClient.Create(ctx, newJob("both-set", "b1", "2024-07-15T12:30:00Z"))
+	require.Error(err)
+	require.Contains(err.Error(), "vmedusarestorejob.kb.io")
+	require.Contains(err.Error(), "mutually exclusive")
+
+	err = k8sClient.Create(ctx, newJob("neither-set", "", ""))
+	require.Error(err)
+	require.Contains(err.Error(), "vmedusarestorejob.kb.io")
+	require.Contains(err.Error(), "must be set")
+
+	err = k8sClient.Create(ctx, newJob("bad-timestamp", "", "yesterday"))
+	require.Error(err)
+	require.Contains(err.Error(), "spec.targetTimestamp")
+
+	backupJob := newJob("backup-only", "b1", "")
+	require.NoError(k8sClient.Create(ctx, backupJob))
+
+	require.NoError(k8sClient.Create(ctx, newJob("iso-timestamp", "", "2024-07-15T12:30:00Z")))
+	require.NoError(k8sClient.Create(ctx, newJob("epoch-timestamp", "", "1721046600.5")))
+
+	// Turning a valid job into an invalid one is rejected
+	backupJob.Spec.TargetTimestamp = "2024-07-15T12:30:00Z"
+	err = k8sClient.Update(ctx, backupJob)
+	require.Error(err)
+	require.Contains(err.Error(), "mutually exclusive")
+
+	// Delete is always allowed
+	require.NoError(k8sClient.Delete(ctx, newJob("backup-only", "", "")))
 }
 
 func testCronScheduleValidation(t *testing.T) {

@@ -292,6 +292,10 @@ func main() {
 		setupLog.Error(err, "unable to create webhook", "webhook", "MedusaBackupSchedule")
 		os.Exit(1)
 	}
+	if err = medusav1alpha1.SetupMedusaRestoreJobWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "MedusaRestoreJob")
+		os.Exit(1)
+	}
 	if err = (&medusactrl.MedusaConfigurationReconciler{
 		ReconcilerConfig: reconcilerConfig,
 		Client:           mgr.GetClient(),
