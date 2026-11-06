@@ -76,11 +76,8 @@ func (r *MedusaRestoreJobReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	factory := medusa.NewFactory(r.Client, logger)
 	logger.Info("Starting reconcile", "MedusaRestoreJob", req.Name)
 
-	// A finished restore job must never touch the datacenter again. Without this check, every
-	// operator restart would walk the whole restore state machine again, re-adding the restore
-	// env vars to the datacenter (rolling restart) and starting a datacenter that was stopped
-	// after the restore. The check runs before the request is built so that a finished job
-	// whose MedusaBackup has since been purged does not fail either.
+	// A finished job must never touch the datacenter again. Checked before the request is
+	// built, which fetches the MedusaBackup, so a job whose backup was purged also returns here.
 	restoreJob := &medusav1alpha1.MedusaRestoreJob{}
 	if err := r.Get(ctx, req.NamespacedName, restoreJob); err != nil {
 		if errors.IsNotFound(err) {

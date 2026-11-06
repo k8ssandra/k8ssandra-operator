@@ -53,24 +53,9 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 	require.NoError(f.Create(ctx, secretKey, secret), "failed to create medusa-client-secret")
 	t.Logf("Created secret: %s/%s", secret.Namespace, secret.Name)
 
-	// The user secrets (Medusa CQL user and superuser) are refreshed at the end of the restore, so
-	// they must exist in the data plane.
-	for _, name := range []string{cassandraUserSecret, "test-superuser"} {
-		userSecret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: namespace,
-				Name:      name,
-			},
-			Data: map[string][]byte{
-				"username": []byte(name),
-				"password": []byte(name),
-			},
-		}
-		err := f.Create(ctx, framework.NewClusterKey(k8sCtx0, namespace, name), userSecret)
-		if !errors.IsAlreadyExists(err) {
-			require.NoError(err, "failed to create user secret %s", name)
-		}
-	}
+	// The user secrets are refreshed at the end of the restore, so they must exist in the data plane.
+	// The superuser secret is created later, to check that a failed refresh keeps the restore unfinished.
+	require.NoError(createUserSecret(ctx, f, framework.NewClusterKey(k8sCtx0, namespace, cassandraUserSecret)), "failed to create Medusa user secret")
 
 	kc := &k8ss.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
@@ -335,6 +320,18 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 
 	require.NoError(err)
 
+	t.Log("check that the restore does not finish while the superuser secret cannot be refreshed")
+	require.Never(func() bool {
+		restore := &api.MedusaRestoreJob{}
+		if err := f.Get(ctx, restoreKey, restore); err != nil {
+			return false
+		}
+		return !restore.Status.FinishTime.IsZero()
+	}, 1*time.Second, interval, "the restore finished before the user secrets were refreshed")
+
+	superuserSecretKey := framework.NewClusterKey(k8sCtx0, namespace, "test-superuser")
+	require.NoError(createUserSecret(ctx, f, superuserSecretKey), "failed to create superuser secret")
+
 	t.Log("check restore status finish time set")
 	require.Eventually(func() bool {
 		restore := &api.MedusaRestoreJob{}
@@ -344,14 +341,14 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 		}
 
 		return !restore.Status.FinishTime.IsZero()
-	}, timeout, interval)
+	}, timeout*2, interval)
 
 	restore = &api.MedusaRestoreJob{}
 	require.NoError(f.Get(ctx, restoreKey, restore))
 
-	t.Log("check that the user secrets were refreshed before the restore finished")
+	t.Log("check that the superuser secret was refreshed")
 	superuserSecret := &corev1.Secret{}
-	require.NoError(f.Get(ctx, framework.NewClusterKey(k8sCtx0, namespace, "test-superuser"), superuserSecret))
+	require.NoError(f.Get(ctx, superuserSecretKey, superuserSecret))
 	require.Equal(restore.Status.StartTime.String(), superuserSecret.Annotations[k8ss.RefreshAnnotation])
 
 	testFinishedRestoreJobDoesNotModifyDatacenter(t, ctx, f, dc1Key, restoreKey, backupKey, restore)
@@ -435,6 +432,20 @@ func testFinishedRestoreJobDoesNotModifyDatacenter(t *testing.T, ctx context.Con
 	res, err := reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: restoreKey.NamespacedName})
 	require.NoError(err)
 	require.Equal(ctrl.Result{}, res)
+}
+
+func createUserSecret(ctx context.Context, f *framework.Framework, key framework.ClusterKey) error {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: key.Namespace,
+			Name:      key.Name,
+		},
+		Data: map[string][]byte{
+			"username": []byte(key.Name),
+			"password": []byte(key.Name),
+		},
+	}
+	return f.Create(ctx, key, secret)
 }
 
 func findContainerIndex(containers []corev1.Container, name string) int {
