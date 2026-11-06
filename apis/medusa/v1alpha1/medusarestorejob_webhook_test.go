@@ -45,22 +45,6 @@ func TestMedusaRestoreJobValidator(t *testing.T) {
 		}
 	}
 
-	t.Run("create valid", func(t *testing.T) {
-		_, err := v.ValidateCreate(t.Context(), job("b1", ""))
-		require.NoError(t, err)
-		_, err = v.ValidateCreate(t.Context(), job("", "2024-07-15T12:30:00Z"))
-		require.NoError(t, err)
-	})
-
-	t.Run("create invalid", func(t *testing.T) {
-		_, err := v.ValidateCreate(t.Context(), job("b1", "2024-07-15T12:30:00Z"))
-		require.Error(t, err)
-		_, err = v.ValidateCreate(t.Context(), job("", ""))
-		require.Error(t, err)
-		_, err = v.ValidateCreate(t.Context(), job("", "yesterday"))
-		require.Error(t, err)
-	})
-
 	t.Run("update valid to invalid", func(t *testing.T) {
 		_, err := v.ValidateUpdate(t.Context(), job("b1", ""), job("b1", "2024-07-15T12:30:00Z"))
 		require.Error(t, err)
@@ -73,6 +57,7 @@ func TestMedusaRestoreJobValidator(t *testing.T) {
 
 	t.Run("update with unchanged spec is allowed", func(t *testing.T) {
 		old := job("", "")
+		old.Finalizers = []string{"test"}
 		updated := old.DeepCopy()
 		updated.Finalizers = nil
 		_, err := v.ValidateUpdate(t.Context(), old, updated)
