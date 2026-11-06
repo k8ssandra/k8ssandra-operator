@@ -89,6 +89,8 @@ func mustLabels(klusterName string, klusterNamespace string, dcName string, addi
 		additionalLabels = make(map[string]string)
 	}
 	additionalLabels[k8ssandraapi.ManagedByLabel] = k8ssandraapi.NameLabelValue
+	// Selects the ServiceMonitor into the operator's cache (see pkg/leancache)
+	additionalLabels[k8ssandraapi.NameLabel] = k8ssandraapi.NameLabelValue
 	additionalLabels[k8ssandraapi.PartOfLabel] = k8ssandraapi.PartOfLabelValue
 	additionalLabels[k8ssandraapi.K8ssandraClusterNameLabel] = klusterName
 	additionalLabels[k8ssandraapi.DatacenterLabel] = dcName

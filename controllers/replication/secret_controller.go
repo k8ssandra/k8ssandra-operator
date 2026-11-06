@@ -13,6 +13,7 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/replication/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/leancache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -184,7 +185,9 @@ func (s *SecretSyncController) Reconcile(ctx context.Context, req ctrl.Request) 
 			return ctrl.Result{}, fmt.Errorf("replication failed")
 		}
 	}
-	return ctrl.Result{}, err
+	// Secrets that match the selector but are not labelled watched yet produce no events,
+	// so pick them up periodically (see fetchAllMatchingSecrets).
+	return ctrl.Result{RequeueAfter: s.LongDelay}, nil
 }
 
 // syncSecretsToTarget syncs a list of secrets to a specific replication target
@@ -208,7 +211,7 @@ func (s *SecretSyncController) syncSecretsToTarget(ctx context.Context, secrets 
 			namespace = target.Namespace
 		}
 		fetchedSecret := &corev1.Secret{}
-		if err = remoteClient.Get(ctx, types.NamespacedName{Name: getPrefixedSecretName(target.TargetPrefix, sec.Name), Namespace: namespace}, fetchedSecret); err != nil {
+		if err = leancache.Read(ctx, remoteClient, types.NamespacedName{Name: getPrefixedSecretName(target.TargetPrefix, sec.Name), Namespace: namespace}, fetchedSecret); err != nil {
 			if errors.IsNotFound(err) {
 				logger.Info("Copying secret to target cluster", "Secret", sec.Name, "TargetContext", target)
 				// Create it
@@ -219,6 +222,7 @@ func (s *SecretSyncController) syncSecretsToTarget(ctx context.Context, secrets 
 				copiedSecret.Finalizers = []string{}
 				copiedSecret.Name = getPrefixedSecretName(target.TargetPrefix, sec.Name)
 				copiedSecret.Labels = calculateTargetLabels(copiedSecret.Labels, target, rsec.Namespace, rsec.Name)
+				leancache.MarkWatched(copiedSecret)
 				if err = remoteClient.Create(ctx, copiedSecret); err != nil {
 					logger.Error(err, "Failed to sync secret to target cluster", "Secret", copiedSecret.Name, "TargetContext", target)
 					return err
@@ -251,46 +255,36 @@ func (s *SecretSyncController) syncSecretsToTarget(ctx context.Context, secrets 
 
 // cleanupSecretsInTarget deletes replicated secrets from a target
 func (s *SecretSyncController) cleanupSecretsInTarget(ctx context.Context, rsec *api.ReplicatedSecret, target api.ReplicationTarget, remoteClient client.Client, logger logr.Logger) error {
-	// List all secrets in the target cluster that match the replicated-secret-name label
-	secrets := &corev1.SecretList{}
+	// List all secrets in the target cluster that match the replicated-secret-name label. Read
+	// live, since copies made by older versions are not labelled watched and thus not cached.
+	secrets := &metav1.PartialObjectMetadataList{}
+	secrets.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("SecretList"))
 	listOption := client.ListOptions{
 		LabelSelector: labels.SelectorFromSet(map[string]string{coreapi.ReplicatedSecretLabel: replicatedSecretLabel(rsec.Namespace, rsec.Name)}),
-		Namespace:     target.Namespace,
+		Namespace:     utils.FirstNonEmptyString(target.Namespace, rsec.Namespace),
 	}
-	err := remoteClient.List(ctx, secrets, &listOption)
+	err := leancache.APIReader(remoteClient).List(ctx, secrets, &listOption)
 	if err != nil {
 		return err
 	}
 
 	for _, deleteObject := range secrets.Items {
 		logger.Info("Checking secret", "Secret", deleteObject.Name, "TargetContext", target)
-		targetNamespace := utils.FirstNonEmptyString(target.Namespace, deleteObject.Namespace)
-		sec := &corev1.Secret{}
-		if err := remoteClient.Get(ctx, types.NamespacedName{Name: deleteObject.Name, Namespace: targetNamespace}, sec); err != nil {
+		// Cleanup only needs metadata, including the orphan annotation.
+		if val, found := deleteObject.GetAnnotations()[secret.OrphanResourceAnnotation]; found && val == "true" {
+			logger.Info("Skipping secret deletion because it has the orphan annotation", "Secret", deleteObject.Name, "TargetContext", target)
+			continue
+		}
+		logger.Info("Deleting secrets for", "objectMeta", deleteObject.ObjectMeta,
+			"Cluster", target.K8sContextName)
+		err := remoteClient.Delete(ctx, &deleteObject)
+		if err != nil {
 			if errors.IsNotFound(err) {
-				// Secret does not exist in target cluster, skip
 				logger.Info("Secret does not exist in target cluster, skipping", "Secret", deleteObject.Name, "TargetContext", target)
 				continue
 			}
-			logger.Error(err, "Failed to fetch secret from target cluster", "Secret", deleteObject.Name, "TargetContext", target)
+			logger.Error(err, "Failed to remove secrets from target cluster", "ReplicatedSecret", rsec.Name, "TargetContext", target, "targetSecret", deleteObject.ObjectMeta)
 			return err
-		} else {
-			// Delete the secret if it doesn't have the orphan annotation
-			if val, found := sec.GetAnnotations()[secret.OrphanResourceAnnotation]; found && val == "true" {
-				logger.Info("Skipping secret deletion because it has the orphan annotation", "Secret", deleteObject.Name, "TargetContext", target)
-				continue
-			}
-			logger.Info("Deleting secrets for", "objectMeta", deleteObject.ObjectMeta,
-				"Cluster", target.K8sContextName)
-			err := remoteClient.Delete(ctx, &deleteObject)
-			if err != nil {
-				if errors.IsNotFound(err) {
-					logger.Info("Secret does not exist in target cluster, skipping", "Secret", deleteObject.Name, "TargetContext", target)
-					continue
-				}
-				logger.Error(err, "Failed to remove secrets from target cluster", "ReplicatedSecret", rsec.Name, "TargetContext", target, "targetSecret", deleteObject.ObjectMeta)
-				return err
-			}
 		}
 	}
 	return nil
@@ -352,6 +346,7 @@ func syncSecrets(src, dest *corev1.Secret, target api.ReplicationTarget, replica
 	// TODO: it would be nice at some point in future to remove the DC specific hardcoded stuff and
 	// filter DC specific stuff by setting dropLabels in the replicatedsecret resource.
 	dest.Labels = calculateTargetLabels(dest.Labels, target, replicatedSecretNamespace, replicatedSecretName)
+	leancache.MarkWatched(dest)
 }
 
 // filterValue verifies the annotation is not something datacenter specific
@@ -373,17 +368,25 @@ func (s *SecretSyncController) verifyHashAnnotation(ctx context.Context, sec *co
 	return nil
 }
 
+// fetchAllMatchingSecrets lists the Secrets matching a ReplicatedSecret's selector. The selector is
+// arbitrary, while only Secrets labelled watched are cached, so the list is read live and the
+// matches are labelled watched; changes to them then trigger reconciles through the Secret watch.
 func (s *SecretSyncController) fetchAllMatchingSecrets(ctx context.Context, selector labels.Selector, namespace string) ([]corev1.Secret, error) {
+	localClient := s.ClientCache.GetLocalClient()
 	secrets := &corev1.SecretList{}
 	listOption := client.ListOptions{
 		LabelSelector: selector,
 		Namespace:     namespace,
 	}
-	err := s.ClientCache.GetLocalClient().List(ctx, secrets, &listOption)
-	if err != nil {
+	if err := leancache.APIReader(localClient).List(ctx, secrets, &listOption); err != nil {
 		return nil, err
 	}
 
+	for i := range secrets.Items {
+		if err := leancache.EnsureWatched(ctx, localClient, &secrets.Items[i]); err != nil {
+			return nil, err
+		}
+	}
 	return secrets.Items, nil
 }
 
@@ -407,17 +410,21 @@ func (s *SecretSyncController) SetupWithManager(mgr ctrl.Manager, clusters []clu
 		return requests
 	}
 
-	toMatchingReplicatesTyped := func(ctx context.Context, secret *corev1.Secret) []reconcile.Request {
+	toMatchingReplicatesTyped := func(ctx context.Context, secret *metav1.PartialObjectMetadata) []reconcile.Request {
 		return toMatchingReplicates(ctx, secret)
 	}
 
+	// Secret watches are metadata-only and, like the Secret cache, only see Secrets labelled
+	// watched (see pkg/leancache). The map fn only needs labels.
 	cb := ctrl.NewControllerManagedBy(mgr).
 		For(&api.ReplicatedSecret{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
-		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(toMatchingReplicates))
+		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(toMatchingReplicates), builder.OnlyMetadata)
 
 	for _, c := range clusters {
+		secretMeta := &metav1.PartialObjectMetadata{}
+		secretMeta.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Secret"))
 		cb = cb.WatchesRawSource(
-			source.Kind(c.GetCache(), &corev1.Secret{},
+			source.Kind(c.GetCache(), secretMeta,
 				handler.TypedEnqueueRequestsFromMapFunc(toMatchingReplicatesTyped)))
 	}
 

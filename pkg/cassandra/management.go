@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/errors"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/leancache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 
 	"github.com/go-logr/logr"
@@ -42,7 +43,8 @@ func (d defaultManagementApiFactory) NewManagementApiFacade(
 	k8sClient client.Client,
 	logger logr.Logger,
 ) (ManagementApiFacade, error) {
-	if httpClient, err := httphelper.BuildManagementApiHttpClient(ctx, k8sClient, k8sClient, dc, nil); err != nil {
+	// Secret reads go through leancache.Read, so the TLS Secret is labelled for our cache
+	if httpClient, err := httphelper.BuildManagementApiHttpClient(ctx, leancache.ReadingClient(k8sClient), leancache.APIReader(k8sClient), dc, nil); err != nil {
 		return nil, err
 	} else if protocol, err := httphelper.GetManagementApiProtocol(dc); err != nil {
 		return nil, err

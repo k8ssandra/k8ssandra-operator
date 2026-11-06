@@ -19,6 +19,7 @@ import (
 	terratesttesting "github.com/gruntwork-io/terratest/modules/testing"
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	casstaskapi "github.com/k8ssandra/cass-operator/apis/control/v1alpha1"
+	"github.com/k8ssandra/cass-operator/pkg/oplabels"
 	configapi "github.com/k8ssandra/k8ssandra-operator/apis/config/v1beta1"
 	controlapi "github.com/k8ssandra/k8ssandra-operator/apis/control/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -719,8 +720,11 @@ func (f *Framework) NewAllPodsEndpoints(
 				api.K8ssandraClusterNameLabel:      kcKey.Name,
 				cassdcapi.DatacenterLabel:          dcKey.Name,
 				cassdcapi.ClusterLabel:             kcKey.Name,
-				discoveryv1.LabelManagedBy:         "framework",
-				discoveryv1.LabelServiceName:       fmt.Sprintf("%s-%s-all-pods-service", kc.SanitizedName(), dcKey.Name),
+				// Mirrored by Kubernetes from cass-operator's all-pods Service
+				oplabels.NameLabel:           oplabels.NameLabelValue,
+				oplabels.ManagedByLabel:      oplabels.ManagedByLabelValue,
+				discoveryv1.LabelManagedBy:   "framework",
+				discoveryv1.LabelServiceName: fmt.Sprintf("%s-%s-all-pods-service", kc.SanitizedName(), dcKey.Name),
 			},
 		},
 		AddressType: discoveryv1.AddressTypeIPv4,

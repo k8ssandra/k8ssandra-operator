@@ -22,6 +22,7 @@ import (
 	"github.com/go-logr/logr"
 	cassimages "github.com/k8ssandra/cass-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/leancache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -122,7 +123,7 @@ func (r *MedusaConfigurationReconciler) GetSecret(ctx context.Context, client cl
 	// Get the referenced secret to check if it exists
 	secret := &corev1.Secret{}
 	secretNamespacedName := types.NamespacedName{Namespace: req.Namespace, Name: secretName}
-	err := client.Get(ctx, secretNamespacedName, secret)
+	err := leancache.Read(ctx, client, secretNamespacedName, secret)
 	if err != nil {
 		return &corev1.Secret{}, err
 	}

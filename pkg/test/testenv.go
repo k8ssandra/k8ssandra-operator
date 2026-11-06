@@ -18,6 +18,7 @@ import (
 
 	secretswebhook "github.com/k8ssandra/k8ssandra-operator/controllers/secrets-webhook"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/leancache"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/k8ssandra/k8ssandra-operator/test/kustomize"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -84,14 +85,19 @@ func (e *TestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(
 		TLSOpts: []func(*tls.Config){func(config *tls.Config) {}},
 	})
 
-	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
+	managerOptions := ctrl.Options{
 		Scheme:         scheme.Scheme,
 		WebhookServer:  whServer,
 		LeaderElection: false,
 		Metrics: server.Options{
 			BindAddress: "0",
 		},
-	})
+	}
+	managerOptions.Cache = leancache.Options()
+	managerOptions.NewCache = leancache.NewCache
+	managerOptions.NewClient = leancache.NewClient
+	managerOptions.Client.Cache = &client.CacheOptions{DisableFor: leancache.DisableFor()}
+	k8sManager, err := ctrl.NewManager(cfg, managerOptions)
 	if err != nil {
 		return err
 	}
@@ -191,6 +197,7 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, controlPl
 	clustersToCreate := e.NumDataPlanes + 1
 	cfgs := make([]*rest.Config, clustersToCreate)
 	clusters := make([]cluster.Cluster, 0, clustersToCreate)
+	cachedClients := make(map[string]client.Client, clustersToCreate)
 
 	// Create all environments first (each with its own webhook configuration)
 	for i := range clustersToCreate {
@@ -230,11 +237,16 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, controlPl
 
 		c, err := cluster.New(cfg, func(o *cluster.Options) {
 			o.Scheme = scheme.Scheme
+			o.Cache = leancache.Options()
+			o.NewCache = leancache.NewCache
+			o.NewClient = leancache.NewClient
+			o.Client.Cache = &client.CacheOptions{DisableFor: leancache.DisableFor()}
 		})
 		if err != nil {
 			return err
 		}
 		clusters = append(clusters, c)
+		cachedClients[clusterName] = c.GetClient()
 	}
 
 	// Create a manager for each environment with its own webhook server
@@ -249,14 +261,19 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, controlPl
 			TLSOpts: []func(*tls.Config){func(config *tls.Config) {}},
 		})
 
-		k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
+		managerOptions := ctrl.Options{
 			Scheme:         scheme.Scheme,
 			WebhookServer:  whServer,
 			LeaderElection: false,
 			Metrics: server.Options{
 				BindAddress: "0",
 			},
-		})
+		}
+		managerOptions.Cache = leancache.Options()
+		managerOptions.NewCache = leancache.NewCache
+		managerOptions.NewClient = leancache.NewClient
+		managerOptions.Client.Cache = &client.CacheOptions{DisableFor: leancache.DisableFor()}
+		k8sManager, err := ctrl.NewManager(cfg, managerOptions)
 		if err != nil {
 			return err
 		}
@@ -273,7 +290,8 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, controlPl
 	}
 
 	clientCache := clientcache.New(controlPlaneManager.GetClient(), e.Clients[e.controlPlane], scheme.Scheme)
-	for ctxName, cli := range e.Clients {
+	// The operator uses the cached clients, like the remote clusters in main.go
+	for ctxName, cli := range cachedClients {
 		clientCache.AddClient(ctxName, cli)
 	}
 

@@ -94,6 +94,8 @@ func mustLabels(reaperName string, additionalLabels map[string]string) map[strin
 		additionalLabels = make(map[string]string)
 	}
 	additionalLabels[k8ssandraapi.ManagedByLabel] = k8ssandraapi.NameLabelValue
+	// Selects the ServiceMonitor into the operator's cache (see pkg/leancache)
+	additionalLabels[k8ssandraapi.NameLabel] = k8ssandraapi.NameLabelValue
 	additionalLabels[k8ssandraapi.PartOfLabel] = k8ssandraapi.PartOfLabelValue
 	additionalLabels[reaperapi.ReaperLabel] = reaperName
 	additionalLabels[k8ssandraapi.ComponentLabel] = k8ssandraapi.ComponentLabelTelemetry
