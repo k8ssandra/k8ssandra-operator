@@ -111,6 +111,8 @@ jobs:
       - name: Load images
         run: |
           docker load --input /tmp/k8ssandra-operator.tar
+      - name: Raise inotify limits
+        run: sudo sysctl -w fs.inotify.max_user_instances=1280 fs.inotify.max_user_watches=655360
       - name: Setup kind clusters
         run: make IMG="k8ssandra/k8ssandra-operator:${{ needs.build_image.outputs.image_tag }}" create-kind-multicluster kind-load-image-multi cert-manager-multi nginx-kind-multi
       - name: Run e2e test ( ${{ matrix.e2e_test }} )
