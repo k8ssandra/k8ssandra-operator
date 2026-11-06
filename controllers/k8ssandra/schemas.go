@@ -81,18 +81,21 @@ func (r *K8ssandraClusterReconciler) checkSchemas(
 			return result.Error(err)
 		}
 
-		decommDcName := decommCassDcName
 		if decommDc != nil {
+			decommDcName := decommCassDcName
 			if decommDc.Spec.DatacenterName != "" {
 				decommDcName = decommDc.Spec.DatacenterName
 			}
-		} else if status.Cassandra != nil && status.Cassandra.DatacenterName != nil && *status.Cassandra.DatacenterName != "" {
-			// The CassandraDatacenter is already gone, use the Cassandra DC name recorded in the status.
-			decommDcName = *status.Cassandra.DatacenterName
-		}
-
-		if recResult := r.checkUserKeyspacesReplicationForDecommission(kc, decommDcName, mgmtApi, logger); recResult.Completed() {
-			return recResult
+			if recResult := r.checkUserKeyspacesReplicationForDecommission(kc, decommDcName, mgmtApi, logger); recResult.Completed() {
+				return recResult
+			}
+		} else {
+			// The CassandraDatacenter is already gone, so its datacenterName override can't be read
+			// anymore (and cass-operator records the object name, not the override, in the status).
+			// Block if any user keyspace still replicates to a DC that is not part of the cluster.
+			if recResult := r.checkUserKeyspacesReplicationToUnknownDcs(kc, decommCassDcName, mgmtApi, logger); recResult.Completed() {
+				return recResult
+			}
 		}
 		status.DecommissionProgress = api.DecommDeleting
 		kc.Status.Datacenters[decommCassDcName] = status
@@ -302,6 +305,46 @@ func (r *K8ssandraClusterReconciler) checkUserKeyspacesReplicationForDecommissio
 		logger.Info("checking keyspace replication", "keyspace", ks, "replication", replication, "decommissioning_dc", decommDc)
 		if _, hasReplicas := replication[decommDc]; hasReplicas {
 			return result.Error(fmt.Errorf("cannot decommission DC %s: keyspace %s still has replicas on it", decommDc, ks))
+		}
+	}
+
+	return result.Continue()
+}
+
+// checkUserKeyspacesReplicationToUnknownDcs is used when the CassandraDatacenter of the DC being
+// decommissioned no longer exists and its Cassandra DC name is therefore unknown. It returns an error
+// if any user keyspace still has replicas on a DC that is neither in the K8ssandraCluster spec nor
+// listed as an external datacenter.
+func (r *K8ssandraClusterReconciler) checkUserKeyspacesReplicationToUnknownDcs(
+	kc *api.K8ssandraCluster,
+	decommDc string,
+	mgmtApi cassandra.ManagementApiFacade,
+	logger logr.Logger) result.ReconcileResult {
+	logger.Info("CassandraDatacenter for decommission not found, checking user keyspaces for replicas on DCs outside the cluster", "decommissioning_dc", decommDc)
+
+	knownDcs := make(map[string]struct{}, len(kc.Spec.Cassandra.Datacenters)+len(kc.Spec.ExternalDatacenters))
+	for i := range kc.Spec.Cassandra.Datacenters {
+		knownDcs[kc.Spec.Cassandra.Datacenters[i].CassDcName()] = struct{}{}
+	}
+	for _, dcName := range kc.Spec.ExternalDatacenters {
+		knownDcs[dcName] = struct{}{}
+	}
+
+	userKeyspaces, err := getUserKeyspaces(mgmtApi, kc)
+	if err != nil {
+		return result.Error(fmt.Errorf("failed to get user keyspaces: %v", err))
+	}
+
+	for _, ks := range userKeyspaces {
+		replication, err := getKeyspaceReplication(mgmtApi, ks)
+		if err != nil {
+			return result.Error(fmt.Errorf("failed to get replication for keyspace (%s): %v", ks, err))
+		}
+		logger.Info("checking keyspace replication", "keyspace", ks, "replication", replication, "decommissioning_dc", decommDc)
+		for replicaDc := range replication {
+			if _, known := knownDcs[replicaDc]; !known {
+				return result.Error(fmt.Errorf("cannot decommission DC %s: keyspace %s still has replicas on DC %s, which is not part of the cluster", decommDc, ks, replicaDc))
+			}
 		}
 	}
 

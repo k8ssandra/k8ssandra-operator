@@ -36,6 +36,10 @@ func addDc(t *testing.T, ctx context.Context, f *framework.Framework, namespace 
 	t.Run("ConfigureSrcDcForRebuild", addDcTest(ctx, f, configureSrcDcForRebuild, false))
 	t.Run("DeleteDcWithUserKeyspacesFails", addDcTest(ctx, f, deleteDcWithUserKeyspacesFails, false))
 	t.Run("DeleteDcWithUserKeyspacesSucceeds", addDcTest(ctx, f, deleteDcWithUserKeyspacesSucceeds, false))
+	// dc2 lives in the control plane (k8sContext "") while dc1 is in a data plane, see #1871.
+	t.Run("DeleteLocalDcWithUserKeyspacesFails", addDcTestWithLocalDc2(ctx, f, deleteDcWithUserKeyspacesFails))
+	t.Run("DeleteLocalDcWithUserKeyspacesSucceeds", addDcTestWithLocalDc2(ctx, f, deleteDcWithUserKeyspacesSucceeds))
+	t.Run("DeleteDcAfterCassandraDatacenterRemoved", addDcTest(ctx, f, deleteDcAfterCassandraDatacenterRemoved, false))
 }
 
 type addDcTestFunc func(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster)
@@ -113,7 +117,9 @@ func addDcSetupForSingleDc(ctx context.Context, t *testing.T, f *framework.Frame
 	return kc
 }
 
-func addDcSetupForMultiDc(ctx context.Context, t *testing.T, f *framework.Framework, namespace string) *api.K8ssandraCluster {
+// addDcSetupForMultiDc creates a cluster with dc1 in the first data plane and dc2 in dc2Context. An
+// empty dc2Context puts dc2 in the control plane.
+func addDcSetupForMultiDc(ctx context.Context, t *testing.T, f *framework.Framework, namespace, dc2Context string) *api.K8ssandraCluster {
 	require := require.New(t)
 	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
@@ -145,7 +151,7 @@ func addDcSetupForMultiDc(ctx context.Context, t *testing.T, f *framework.Framew
 						Meta: api.EmbeddedObjectMeta{
 							Name: "dc2",
 						},
-						K8sContext: f.DataPlaneContexts[1],
+						K8sContext: dc2Context,
 						Size:       3,
 					},
 				},
@@ -156,7 +162,11 @@ func addDcSetupForMultiDc(ctx context.Context, t *testing.T, f *framework.Framew
 
 	createSuperuserSecret(ctx, t, f, kcKey, kc.Name)
 
-	createReplicatedSecret(ctx, t, f, kcKey, f.DataPlaneContexts[0], f.DataPlaneContexts[1])
+	replicationTargets := []string{f.DataPlaneContexts[0]}
+	if dc2Context != "" {
+		replicationTargets = append(replicationTargets, dc2Context)
+	}
+	createReplicatedSecret(ctx, t, f, kcKey, replicationTargets...)
 	setReplicationStatusDone(ctx, t, f, kcKey)
 
 	createCassandraDatacenter(ctx, t, f, kc, 0)
@@ -171,7 +181,7 @@ func addDcSetupForMultiDc(ctx context.Context, t *testing.T, f *framework.Framew
 	err = f.SetDatacenterStatusReady(ctx, dc1Key)
 	require.NoError(err, "failed to set dc1 status to ready")
 
-	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc2"}, K8sContext: f.DataPlaneContexts[1]}
+	dc2Key := dcClusterKey(f, kc, "dc2")
 	dc = &cassdcapi.CassandraDatacenter{}
 	err = f.Get(ctx, dc2Key, dc)
 	require.NoError(err)
@@ -196,7 +206,7 @@ func addDcSetupForMultiDc(ctx context.Context, t *testing.T, f *framework.Framew
 
 	t.Log("check that dc2 was rebuilt")
 	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key, kc)
-	rebuildTaskKey := framework.NewClusterKey(f.DataPlaneContexts[1], kc.Namespace, "dc2-rebuild")
+	rebuildTaskKey := framework.NewClusterKey(dc2Key.K8sContext, kc.Namespace, "dc2-rebuild")
 	setRebuildTaskFinished(ctx, t, f, rebuildTaskKey, dc2Key)
 
 	t.Log("wait for the CassandraInitialized condition to be set")
@@ -214,6 +224,27 @@ func addDcSetupForMultiDc(ctx context.Context, t *testing.T, f *framework.Framew
 }
 
 func addDcTest(ctx context.Context, f *framework.Framework, test addDcTestFunc, single bool) func(*testing.T) {
+	if single {
+		return runAddDcTest(ctx, f, test, addDcSetupForSingleDc)
+	}
+	return runAddDcTest(ctx, f, test, func(ctx context.Context, t *testing.T, f *framework.Framework, namespace string) *api.K8ssandraCluster {
+		return addDcSetupForMultiDc(ctx, t, f, namespace, f.DataPlaneContexts[1])
+	})
+}
+
+// addDcTestWithLocalDc2 runs test against a cluster where dc1 is in a data plane and dc2 is in the
+// control plane (k8sContext "").
+func addDcTestWithLocalDc2(ctx context.Context, f *framework.Framework, test addDcTestFunc) func(*testing.T) {
+	return runAddDcTest(ctx, f, test, func(ctx context.Context, t *testing.T, f *framework.Framework, namespace string) *api.K8ssandraCluster {
+		return addDcSetupForMultiDc(ctx, t, f, namespace, "")
+	})
+}
+
+func runAddDcTest(
+	ctx context.Context,
+	f *framework.Framework,
+	test addDcTestFunc,
+	setup func(ctx context.Context, t *testing.T, f *framework.Framework, namespace string) *api.K8ssandraCluster) func(*testing.T) {
 	return func(t *testing.T) {
 		managementApiFactory.SetT(t)
 		managementApiFactory.UseDefaultAdapter()
@@ -222,12 +253,7 @@ func addDcTest(ctx context.Context, f *framework.Framework, test addDcTestFunc, 
 		if err := f.CreateNamespace(namespace); err != nil {
 			t.Fatalf("failed to create namespace %s: %v", namespace, err)
 		}
-		var kc *api.K8ssandraCluster
-		if single {
-			kc = addDcSetupForSingleDc(ctx, t, f, namespace)
-		} else {
-			kc = addDcSetupForMultiDc(ctx, t, f, namespace)
-		}
+		kc := setup(ctx, t, f, namespace)
 
 		test(ctx, t, f, kc)
 
@@ -651,8 +677,27 @@ func createCassandraDatacenter(ctx context.Context, t *testing.T, f *framework.F
 			Namespace: namespace,
 			Name:      dcTemplate.Meta.Name,
 		},
-		K8sContext: dcTemplate.K8sContext,
+		K8sContext: frameworkContext(f, dcTemplate.K8sContext),
 	}
 	err = f.Create(ctx, dcKey, dc)
 	require.NoError(t, err, "failed to create cassandradatacenter")
+}
+
+// frameworkContext maps a K8sContext from a K8ssandraCluster spec to the framework context that
+// holds its objects. An empty K8sContext means the control plane.
+func frameworkContext(f *framework.Framework, k8sContext string) string {
+	if k8sContext == "" {
+		return f.ControlPlaneContext
+	}
+	return k8sContext
+}
+
+// dcClusterKey returns the key of the CassandraDatacenter for the DC template named dcName in kc.
+func dcClusterKey(f *framework.Framework, kc *api.K8ssandraCluster, dcName string) framework.ClusterKey {
+	for _, dc := range kc.Spec.Cassandra.Datacenters {
+		if dc.Meta.Name == dcName {
+			return framework.NewClusterKey(frameworkContext(f, dc.K8sContext), kc.Namespace, dcName)
+		}
+	}
+	panic("no DC template named " + dcName)
 }
