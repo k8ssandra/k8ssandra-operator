@@ -330,11 +330,14 @@ func stopDuringRebuild(ctx context.Context, t *testing.T, f *framework.Framework
 
 	verifyRebuildTaskCreated(ctx, t, f, dc2Key, dc1Key, kc)
 
+	// Without the automated-update annotation, a DC can only be updated in a pass that observes a new generation. That
+	// is the edit that sets stopped, so the stop must still be applied after the passes that wait for the rebuild.
 	t.Log("request dc2 to stop while it is being rebuilt")
 	require.Eventually(func() bool {
 		if err := f.Client.Get(ctx, utils.GetKey(kc), kc); err != nil {
 			return false
 		}
+		delete(kc.Annotations, api.AutomatedUpdateAnnotation)
 		kc.Spec.Cassandra.Datacenters[1].Stopped = true
 		return f.Client.Update(ctx, kc) == nil
 	}, timeout, interval, "failed to set dc2 stopped")

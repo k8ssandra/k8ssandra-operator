@@ -251,6 +251,12 @@ func (r *K8ssandraClusterReconciler) reconcileDatacenters(ctx context.Context, k
 					if recResult := r.reconcileDcRebuild(ctx, kc, actualDc, remoteClient, dcLogger); recResult.Completed() {
 						return recResult, actualDcs
 					}
+					if stopRequested {
+						// The rebuild has finished, but the stop deferred during the rebuild has not been applied yet. Requeue
+						// before this pass marks the generation as observed. Otherwise the next pass is not allowed to apply
+						// it unless the automated-update annotation is set.
+						return result.RequeueSoon(r.DefaultDelay), actualDcs
+					}
 				}
 			}
 		} else {
