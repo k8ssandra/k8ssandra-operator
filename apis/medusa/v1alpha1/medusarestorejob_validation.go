@@ -23,29 +23,18 @@ import (
 	"time"
 )
 
-// isoLocalLayout is ISO-8601 without a timezone designator. Medusa reads such a value as UTC.
-const isoLocalLayout = "2006-01-02T15:04:05"
-
 // ParseTargetTimestamp parses a MedusaRestoreJob spec.targetTimestamp value and returns it in UTC.
-//
-// Accepted formats, tried in this order, follow what Medusa accepts so the operator is never stricter than Medusa:
-//   - ISO-8601 / RFC3339 with a timezone offset, for example 2024-07-15T12:30:00Z or 2024-07-15T12:30:00+02:00
-//   - ISO-8601 without a timezone, for example 2024-07-15T12:30:00, which is read as UTC
-//   - a Unix epoch in seconds as a float string, for example 1721046600.5
-//
-// Fractional seconds are accepted in the ISO-8601 forms.
+// The value must be either an RFC3339 timestamp (for example 2024-07-15T12:30:00Z) or Unix epoch
+// seconds, optionally with a fractional part (for example 1721046600.5).
 func ParseTargetTimestamp(s string) (time.Time, error) {
 	if t, err := time.Parse(time.RFC3339, s); err == nil {
 		return t.UTC(), nil
-	}
-	if t, err := time.ParseInLocation(isoLocalLayout, s, time.UTC); err == nil {
-		return t, nil
 	}
 	if f, err := strconv.ParseFloat(s, 64); err == nil && !math.IsNaN(f) && !math.IsInf(f, 0) {
 		sec, frac := math.Modf(f)
 		return time.Unix(int64(sec), int64(frac*float64(time.Second))).UTC(), nil
 	}
-	return time.Time{}, fmt.Errorf("spec.targetTimestamp %q is not a valid ISO-8601 timestamp or Unix epoch seconds value", s)
+	return time.Time{}, fmt.Errorf("spec.targetTimestamp %q must be an RFC3339 timestamp or Unix epoch seconds", s)
 }
 
 // ValidateRestoreJobSpec checks the rules for a MedusaRestoreJobSpec that the CRD schema cannot express:
