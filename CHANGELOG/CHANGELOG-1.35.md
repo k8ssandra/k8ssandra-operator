@@ -15,6 +15,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [BUGFIX] [#1863](https://github.com/k8ssandra/k8ssandra-operator/issues/1863) Set the Reaper Service labels when `resourceMeta` isn't set, so the Reaper ServiceMonitor finds it
 * [DOCS] []() Add PITR orchestration design doc
 * [ENHANCEMENT] [#1831](https://github.com/k8ssandra/k8ssandra-operator/issues/1831) Add PITR RPCs to the Medusa client
 * [FEATURE] [#1832](https://github.com/k8ssandra/k8ssandra-operator/issues/1832) Add PITR APIs and CRDs
