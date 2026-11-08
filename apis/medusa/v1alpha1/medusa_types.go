@@ -213,6 +213,30 @@ type MedusaClusterTemplate struct {
 	// +kubebuilder:default=true
 	// +optional
 	PurgeBackups *bool `json:"purgeBackups,omitempty"`
+
+	// Pitr configures point-in-time restore (PITR).
+	// +optional
+	Pitr *PitrConfig `json:"pitr,omitempty"`
+}
+
+// PitrConfig configures point-in-time restore (PITR) for Medusa.
+type PitrConfig struct {
+	// Enabled turns on PITR. The operator then configures Medusa to archive commit logs,
+	// accepts PITR restores, and configures Vector to scrape the archiving status from Medusa.
+	// +kubebuilder:default=false
+	Enabled bool `json:"enabled"`
+
+	// ArchiveIntervalSeconds is the time, in seconds, between commit log archive runs.
+	// Must be at least 1. If unset, Medusa uses its own default (1 minute).
+	// +kubebuilder:validation:Minimum=1
+	// +optional
+	ArchiveIntervalSeconds *int `json:"archiveIntervalSeconds,omitempty"`
+
+	// SpoolDir is the directory where Medusa keeps commit logs before archiving them.
+	// It must be on the same filesystem as the Cassandra commitlog directory.
+	// Defaults to /var/lib/cassandra/commitlog_spool_dir.
+	// +optional
+	SpoolDir string `json:"spoolDir,omitempty"`
 }
 
 type GRPCEncryption struct {

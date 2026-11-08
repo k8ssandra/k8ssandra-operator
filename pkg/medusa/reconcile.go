@@ -3,6 +3,7 @@ package medusa
 import (
 	"bytes"
 	"fmt"
+	"maps"
 	reflect "reflect"
 	"text/template"
 
@@ -11,6 +12,7 @@ import (
 	k8ss "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/go-logr/logr"
@@ -42,6 +44,11 @@ const (
 	MedusaClientSecretNameAnnotation = "medusa.k8ssandra.io/grpc-client-secret-name"
 	MedusaServerNameAnnotation       = "medusa.k8ssandra.io/grpc-server-name"
 	MedusaGRPCPortAnnotation         = "medusa.k8ssandra.io/grpc-port"
+
+	// MedusaPitrHashAnnotation is set on the Cassandra pod template to a hash of spec.medusa.pitr.
+	// Medusa arms commit log archiving at pod start only, so a change to the hash rolls the pods.
+	// It is absent when spec.medusa.pitr is nil, so clusters without PITR see no pod template change.
+	MedusaPitrHashAnnotation = "k8ssandra.io/medusa-pitr-hash"
 )
 
 func CreateMedusaIni(kc *k8ss.K8ssandraCluster, dcConfig *cassandra.DatacenterConfig) string {
@@ -126,6 +133,17 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster, dcConfig *cassandra.DatacenterCo
     tls_cert = /etc/certificates/grpc-server-certs/tls.crt
     tls_key = /etc/certificates/grpc-server-certs/tls.key
 	{{- end }}
+    {{- if and .Spec.Medusa.Pitr .Spec.Medusa.Pitr.Enabled }}
+
+    [pitr]
+    enabled = true
+    {{- if .Spec.Medusa.Pitr.ArchiveIntervalSeconds }}
+    commitlog_archive_interval_seconds = {{ .Spec.Medusa.Pitr.ArchiveIntervalSeconds }}
+    {{- end }}
+    {{- if .Spec.Medusa.Pitr.SpoolDir }}
+    commitlog_spool_dir = {{ .Spec.Medusa.Pitr.SpoolDir }}
+    {{- end }}
+    {{- end }}
 
     [logging]
     level = DEBUG
@@ -222,6 +240,14 @@ func UpdateMedusaInitContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 	restoreContainer.Env = medusaEnvVars(medusaSpec, k8cName, useExternalSecrets, "RESTORE")
 	restoreContainer.VolumeMounts = medusaVolumeMounts(dcConfig, medusaSpec, k8cName)
 	restoreContainer.Resources = medusaInitContainerResources(medusaSpec)
+
+	if medusaSpec.Pitr != nil {
+		// The map may be shared with the K8ssandraCluster spec, so copy it before writing.
+		annotations := map[string]string{}
+		maps.Copy(annotations, dcConfig.PodTemplateSpec.Annotations)
+		annotations[MedusaPitrHashAnnotation] = utils.DeepHashString(medusaSpec.Pitr)
+		dcConfig.PodTemplateSpec.Annotations = annotations
+	}
 
 	if !found {
 		logger.Info("Couldn't find medusa-restore init container")

@@ -30,6 +30,8 @@ type MedusaClient interface {
 	GetBackups(ctx context.Context, in *GetBackupsRequest, opts ...grpc.CallOption) (*GetBackupsResponse, error)
 	PurgeBackups(ctx context.Context, in *PurgeBackupsRequest, opts ...grpc.CallOption) (*PurgeBackupsResponse, error)
 	PrepareRestore(ctx context.Context, in *PrepareRestoreRequest, opts ...grpc.CallOption) (*PrepareRestoreResponse, error)
+	GetCommitLogArchiveStatus(ctx context.Context, in *GetCommitLogArchiveStatusRequest, opts ...grpc.CallOption) (*GetCommitLogArchiveStatusResponse, error)
+	PreparePitrRestore(ctx context.Context, in *PreparePitrRestoreRequest, opts ...grpc.CallOption) (*PreparePitrRestoreResponse, error)
 }
 
 type medusaClient struct {
@@ -112,6 +114,24 @@ func (c *medusaClient) PrepareRestore(ctx context.Context, in *PrepareRestoreReq
 	return out, nil
 }
 
+func (c *medusaClient) GetCommitLogArchiveStatus(ctx context.Context, in *GetCommitLogArchiveStatusRequest, opts ...grpc.CallOption) (*GetCommitLogArchiveStatusResponse, error) {
+	out := new(GetCommitLogArchiveStatusResponse)
+	err := c.cc.Invoke(ctx, "/Medusa/GetCommitLogArchiveStatus", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *medusaClient) PreparePitrRestore(ctx context.Context, in *PreparePitrRestoreRequest, opts ...grpc.CallOption) (*PreparePitrRestoreResponse, error) {
+	out := new(PreparePitrRestoreResponse)
+	err := c.cc.Invoke(ctx, "/Medusa/PreparePitrRestore", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MedusaServer is the server API for Medusa service.
 // All implementations must embed UnimplementedMedusaServer
 // for forward compatibility
@@ -124,6 +144,8 @@ type MedusaServer interface {
 	GetBackups(context.Context, *GetBackupsRequest) (*GetBackupsResponse, error)
 	PurgeBackups(context.Context, *PurgeBackupsRequest) (*PurgeBackupsResponse, error)
 	PrepareRestore(context.Context, *PrepareRestoreRequest) (*PrepareRestoreResponse, error)
+	GetCommitLogArchiveStatus(context.Context, *GetCommitLogArchiveStatusRequest) (*GetCommitLogArchiveStatusResponse, error)
+	PreparePitrRestore(context.Context, *PreparePitrRestoreRequest) (*PreparePitrRestoreResponse, error)
 	mustEmbedUnimplementedMedusaServer()
 }
 
@@ -154,6 +176,12 @@ func (UnimplementedMedusaServer) PurgeBackups(context.Context, *PurgeBackupsRequ
 }
 func (UnimplementedMedusaServer) PrepareRestore(context.Context, *PrepareRestoreRequest) (*PrepareRestoreResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PrepareRestore not implemented")
+}
+func (UnimplementedMedusaServer) GetCommitLogArchiveStatus(context.Context, *GetCommitLogArchiveStatusRequest) (*GetCommitLogArchiveStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCommitLogArchiveStatus not implemented")
+}
+func (UnimplementedMedusaServer) PreparePitrRestore(context.Context, *PreparePitrRestoreRequest) (*PreparePitrRestoreResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PreparePitrRestore not implemented")
 }
 func (UnimplementedMedusaServer) mustEmbedUnimplementedMedusaServer() {}
 
@@ -312,6 +340,42 @@ func _Medusa_PrepareRestore_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Medusa_GetCommitLogArchiveStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCommitLogArchiveStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MedusaServer).GetCommitLogArchiveStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Medusa/GetCommitLogArchiveStatus",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MedusaServer).GetCommitLogArchiveStatus(ctx, req.(*GetCommitLogArchiveStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Medusa_PreparePitrRestore_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PreparePitrRestoreRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MedusaServer).PreparePitrRestore(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Medusa/PreparePitrRestore",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MedusaServer).PreparePitrRestore(ctx, req.(*PreparePitrRestoreRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Medusa_ServiceDesc is the grpc.ServiceDesc for Medusa service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -350,6 +414,14 @@ var Medusa_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "PrepareRestore",
 			Handler:    _Medusa_PrepareRestore_Handler,
+		},
+		{
+			MethodName: "GetCommitLogArchiveStatus",
+			Handler:    _Medusa_GetCommitLogArchiveStatus_Handler,
+		},
+		{
+			MethodName: "PreparePitrRestore",
+			Handler:    _Medusa_PreparePitrRestore_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

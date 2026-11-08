@@ -25044,6 +25044,30 @@ spec:
                         type: string
                     type: object
                     x-kubernetes-map-type: atomic
+                  pitr:
+                    description: Pitr configures point-in-time restore (PITR).
+                    properties:
+                      archiveIntervalSeconds:
+                        description: |-
+                          ArchiveIntervalSeconds is the time, in seconds, between commit log archive runs.
+                          Must be at least 1. If unset, Medusa uses its own default (1 minute).
+                        minimum: 1
+                        type: integer
+                      enabled:
+                        default: false
+                        description: |-
+                          Enabled turns on PITR. The operator then configures Medusa to archive commit logs,
+                          accepts PITR restores, and configures Vector to scrape the archiving status from Medusa.
+                        type: boolean
+                      spoolDir:
+                        description: |-
+                          SpoolDir is the directory where Medusa keeps commit logs before archiving them.
+                          It must be on the same filesystem as the Cassandra commitlog directory.
+                          Defaults to /var/lib/cassandra/commitlog_spool_dir.
+                        type: string
+                    required:
+                    - enabled
+                    type: object
                   purgeBackups:
                     default: true
                     description: |-
@@ -29993,14 +30017,20 @@ spec:
             description: MedusaRestoreJobSpec defines the desired state of MedusaRestoreJob
             properties:
               backup:
-                description: The name of the MedusaBackup to restore.
+                description: The name of the MedusaBackup to restore. Mutually exclusive
+                  with TargetTimestamp.
                 type: string
               cassandraDatacenter:
                 description: Name of the Cassandra datacenter to perform the restore
                   on.
                 type: string
+              targetTimestamp:
+                description: |-
+                  TargetTimestamp is the point in time to restore to, for a PITR restore.
+                  Either an ISO-8601 UTC string (for example 2026-11-03T10:35:11.123Z) or a Unix epoch string.
+                  Mutually exclusive with Backup. The base backups must have been taken with pitr.enabled=true.
+                type: string
             required:
-            - backup
             - cassandraDatacenter
             type: object
           status:
@@ -30051,6 +30081,25 @@ spec:
                   in_place:
                     description: Whether the restore is in-place or not
                     type: boolean
+                  pitr:
+                    description: Pitr holds the PITR data. It is set only for PITR
+                      restores.
+                    properties:
+                      node_backups:
+                        additionalProperties:
+                          type: string
+                        description: NodeBackups maps each node to the name of the
+                          base backup it restores from.
+                        type: object
+                      target_timestamp:
+                        description: TargetTimestamp is the restore point, in whole
+                          seconds since the Unix epoch.
+                        format: int64
+                        type: integer
+                    required:
+                    - node_backups
+                    - target_timestamp
+                    type: object
                 type: object
               restorePrepared:
                 type: boolean

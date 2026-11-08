@@ -25,8 +25,15 @@ import (
 
 // MedusaRestoreJobSpec defines the desired state of MedusaRestoreJob
 type MedusaRestoreJobSpec struct {
-	// The name of the MedusaBackup to restore.
-	Backup string `json:"backup"`
+	// The name of the MedusaBackup to restore. Mutually exclusive with TargetTimestamp.
+	// +optional
+	Backup string `json:"backup,omitempty"`
+
+	// TargetTimestamp is the point in time to restore to, for a PITR restore.
+	// Either an ISO-8601 UTC string (for example 2026-11-03T10:35:11.123Z) or a Unix epoch string.
+	// Mutually exclusive with Backup. The base backups must have been taken with pitr.enabled=true.
+	// +optional
+	TargetTimestamp string `json:"targetTimestamp,omitempty"`
 
 	// Name of the Cassandra datacenter to perform the restore on.
 	CassandraDatacenter string `json:"cassandraDatacenter"`
@@ -81,6 +88,19 @@ type MedusaRestoreMapping struct {
 
 	// Mapping between source and target nodes for a restore
 	HostMap map[string]MappingSource `json:"host_map,omitempty"`
+
+	// Pitr holds the PITR data. It is set only for PITR restores.
+	// +optional
+	Pitr *PitrRestoreBlock `json:"pitr,omitempty"`
+}
+
+// PitrRestoreBlock describes a point-in-time restore for the nodes of a datacenter.
+type PitrRestoreBlock struct {
+	// TargetTimestamp is the restore point, in whole seconds since the Unix epoch.
+	TargetTimestamp int64 `json:"target_timestamp"`
+
+	// NodeBackups maps each node to the name of the base backup it restores from.
+	NodeBackups map[string]string `json:"node_backups"`
 }
 
 type MappingSource struct {

@@ -76,6 +76,10 @@ type Client interface {
 	PrepareRestore(ctx context.Context, datacenter, backupName, restoreKey string) (*PrepareRestoreResponse, error)
 
 	BackupStatus(ctx context.Context, backupName string) (*BackupStatusResponse, error)
+
+	// PreparePitrRestore asks Medusa to check that a point-in-time restore to targetTimestamp is possible
+	// for the given Cassandra datacenter. The caller owns the deadline and the error handling.
+	PreparePitrRestore(ctx context.Context, datacenter, targetTimestamp string) (*PreparePitrRestoreResponse, error)
 }
 
 func (c *defaultClient) Close() error {
@@ -131,6 +135,13 @@ func (c *defaultClient) PrepareRestore(ctx context.Context, datacenter, backupNa
 	response, err := c.grpcClient.PrepareRestore(ctx, &request)
 
 	return response, err
+}
+
+func (c *defaultClient) PreparePitrRestore(ctx context.Context, datacenter, targetTimestamp string) (*PreparePitrRestoreResponse, error) {
+	return c.grpcClient.PreparePitrRestore(ctx, &PreparePitrRestoreRequest{
+		Datacenter:      datacenter,
+		TargetTimestamp: targetTimestamp,
+	})
 }
 
 func (c *defaultClient) BackupStatus(ctx context.Context, backupName string) (*BackupStatusResponse, error) {
