@@ -803,8 +803,8 @@ func TestValidateEncryptionStoresSecrets(t *testing.T) {
 	t.Run("client encryption succeeds", func(t *testing.T) {
 		template := newTestEncryptionDatacenterConfig(true, false)
 		client := fake.NewClientBuilder().WithObjects(
-			newEncryptionPasswordSecret("test", "client-keystore-secret", "keystore-password"),
-			newEncryptionPasswordSecret("test", "client-truststore-secret", "truststore-password"),
+			newEncryptionPasswordSecret("client-keystore-secret", "keystore-password"),
+			newEncryptionPasswordSecret("client-truststore-secret", "truststore-password"),
 		).Build()
 
 		err := ValidateEncryptionStoresSecrets(ctx, datacenterKey, template, client, logger)
@@ -823,7 +823,7 @@ func TestValidateEncryptionStoresSecrets(t *testing.T) {
 	t.Run("client truststore secret is missing", func(t *testing.T) {
 		template := newTestEncryptionDatacenterConfig(true, false)
 		client := fake.NewClientBuilder().WithObjects(
-			newEncryptionPasswordSecret("test", "client-keystore-secret", "keystore-password"),
+			newEncryptionPasswordSecret("client-keystore-secret", "keystore-password"),
 		).Build()
 
 		err := ValidateEncryptionStoresSecrets(ctx, datacenterKey, template, client, logger)
@@ -834,7 +834,7 @@ func TestValidateEncryptionStoresSecrets(t *testing.T) {
 	t.Run("client password key is missing", func(t *testing.T) {
 		template := newTestEncryptionDatacenterConfig(true, false)
 		client := fake.NewClientBuilder().WithObjects(
-			newEncryptionPasswordSecret("test", "client-keystore-secret", "wrong-key"),
+			newEncryptionPasswordSecret("client-keystore-secret", "wrong-key"),
 		).Build()
 
 		err := ValidateEncryptionStoresSecrets(ctx, datacenterKey, template, client, logger)
@@ -854,8 +854,8 @@ func TestValidateEncryptionStoresSecrets(t *testing.T) {
 	t.Run("server encryption succeeds", func(t *testing.T) {
 		template := newTestEncryptionDatacenterConfig(false, true)
 		client := fake.NewClientBuilder().WithObjects(
-			newEncryptionPasswordSecret("test", "server-keystore-secret", "keystore-password"),
-			newEncryptionPasswordSecret("test", "server-truststore-secret", "truststore-password"),
+			newEncryptionPasswordSecret("server-keystore-secret", "keystore-password"),
+			newEncryptionPasswordSecret("server-truststore-secret", "truststore-password"),
 		).Build()
 
 		err := ValidateEncryptionStoresSecrets(ctx, datacenterKey, template, client, logger)
@@ -874,7 +874,7 @@ func TestValidateEncryptionStoresSecrets(t *testing.T) {
 	t.Run("server truststore secret is missing", func(t *testing.T) {
 		template := newTestEncryptionDatacenterConfig(false, true)
 		client := fake.NewClientBuilder().WithObjects(
-			newEncryptionPasswordSecret("test", "server-keystore-secret", "keystore-password"),
+			newEncryptionPasswordSecret("server-keystore-secret", "keystore-password"),
 		).Build()
 
 		err := ValidateEncryptionStoresSecrets(ctx, datacenterKey, template, client, logger)
@@ -947,9 +947,9 @@ func newTestEncryptionStores(prefix string) *encryption.Stores {
 	}
 }
 
-func newEncryptionPasswordSecret(namespace, name, key string) *corev1.Secret {
+func newEncryptionPasswordSecret(name, key string) *corev1.Secret {
 	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "test", Name: name},
 		Data:       map[string][]byte{key: []byte("password")},
 	}
 }
