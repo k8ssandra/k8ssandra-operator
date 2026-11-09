@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"context"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/api/equality"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -46,10 +47,14 @@ func (v *MedusaRestoreJobValidator) ValidateCreate(ctx context.Context, obj *Med
 }
 
 // ValidateUpdate implements admission.Validator. An update that leaves the spec unchanged is always allowed,
-// so metadata-only changes (for example removing a finalizer) are never blocked.
+// so metadata-only changes (for example removing a finalizer) are never blocked. The spec cannot change once
+// the restore has started (status.startTime is set), because the restore mapping was already built from it.
 func (v *MedusaRestoreJobValidator) ValidateUpdate(ctx context.Context, old *MedusaRestoreJob, new *MedusaRestoreJob) (admission.Warnings, error) {
 	if equality.Semantic.DeepEqual(old.Spec, new.Spec) {
 		return nil, nil
+	}
+	if !old.Status.StartTime.IsZero() {
+		return nil, fmt.Errorf("spec cannot be changed after the restore has started (status.startTime is set)")
 	}
 	return nil, ValidateRestoreJobSpec(&new.Spec)
 }

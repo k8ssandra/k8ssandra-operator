@@ -164,6 +164,15 @@ func testRestoreJobValidation(t *testing.T) {
 	require.Error(err)
 	require.Contains(err.Error(), "mutually exclusive")
 
+	// The spec is frozen once the restore has started
+	require.NoError(k8sClient.Get(t.Context(), client.ObjectKeyFromObject(backupJob), backupJob))
+	backupJob.Status.StartTime = metav1.Now()
+	require.NoError(k8sClient.Status().Update(t.Context(), backupJob))
+	backupJob.Spec.Backup = "b2"
+	err = k8sClient.Update(t.Context(), backupJob)
+	require.Error(err)
+	require.Contains(err.Error(), "restore has started")
+
 	// Delete is always allowed
 	require.NoError(k8sClient.Delete(t.Context(), newJob("backup-only", "", "")))
 }

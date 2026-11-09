@@ -55,6 +55,14 @@ func TestMedusaRestoreJobValidator(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("update after the restore started is rejected", func(t *testing.T) {
+		old := job("b1", "")
+		old.Status.StartTime = metav1.Now()
+		_, err := v.ValidateUpdate(t.Context(), old, job("b2", ""))
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "restore has started")
+	})
+
 	t.Run("update with unchanged spec is allowed", func(t *testing.T) {
 		old := job("", "")
 		old.Finalizers = []string{"test"}
