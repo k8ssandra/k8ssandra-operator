@@ -23,18 +23,33 @@ import (
 	"time"
 )
 
+// maxTargetTimestamp is the first instant of year 10000. Medusa (Python datetime) can't represent it or anything later.
+var maxTargetTimestamp = time.Date(10000, time.January, 1, 0, 0, 0, 0, time.UTC)
+
 // ParseTargetTimestamp parses a MedusaRestoreJob spec.targetTimestamp value and returns it in UTC.
 // The value must be either an RFC3339 timestamp (for example 2024-07-15T12:30:00Z) or Unix epoch
-// seconds, optionally with a fractional part (for example 1721046600.5).
+// seconds, optionally with a fractional part (for example 1721046600.5). The result must fall within
+// years 1970 to 9999.
 func ParseTargetTimestamp(s string) (time.Time, error) {
 	if t, err := time.Parse(time.RFC3339, s); err == nil {
-		return t.UTC(), nil
+		return checkTargetTimestampRange(s, t.UTC())
 	}
 	if f, err := strconv.ParseFloat(s, 64); err == nil && !math.IsNaN(f) && !math.IsInf(f, 0) {
+		// Check the bounds before converting, as int64(f) is undefined for values out of the int64 range
+		if f < 0 || f >= float64(maxTargetTimestamp.Unix()) {
+			return checkTargetTimestampRange(s, time.Time{})
+		}
 		sec, frac := math.Modf(f)
-		return time.Unix(int64(sec), int64(frac*float64(time.Second))).UTC(), nil
+		return checkTargetTimestampRange(s, time.Unix(int64(sec), int64(frac*float64(time.Second))).UTC())
 	}
 	return time.Time{}, fmt.Errorf("spec.targetTimestamp %q must be an RFC3339 timestamp or Unix epoch seconds", s)
+}
+
+func checkTargetTimestampRange(s string, t time.Time) (time.Time, error) {
+	if t.Year() < 1970 || !t.Before(maxTargetTimestamp) {
+		return time.Time{}, fmt.Errorf("spec.targetTimestamp %q must be between years 1970 and 9999", s)
+	}
+	return t, nil
 }
 
 // ValidateRestoreJobSpec checks the rules for a MedusaRestoreJobSpec that the CRD schema cannot express:

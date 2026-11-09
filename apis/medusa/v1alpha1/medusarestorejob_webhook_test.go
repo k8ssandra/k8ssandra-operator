@@ -20,6 +20,8 @@ func TestValidateRestoreJobSpec(t *testing.T) {
 		{name: "both set", spec: MedusaRestoreJobSpec{Backup: "b1", TargetTimestamp: "2024-07-15T12:30:00Z", CassandraDatacenter: "dc1"}, errSubstr: "mutually exclusive"},
 		{name: "neither set", spec: MedusaRestoreJobSpec{CassandraDatacenter: "dc1"}, errSubstr: "must be set"},
 		{name: "invalid timestamp", spec: MedusaRestoreJobSpec{TargetTimestamp: "yesterday", CassandraDatacenter: "dc1"}, errSubstr: "spec.targetTimestamp"},
+		{name: "epoch out of range", spec: MedusaRestoreJobSpec{TargetTimestamp: "1e300", CassandraDatacenter: "dc1"}, errSubstr: "between years 1970 and 9999"},
+		{name: "RFC3339 before 1970", spec: MedusaRestoreJobSpec{TargetTimestamp: "1969-12-31T23:59:59Z", CassandraDatacenter: "dc1"}, errSubstr: "between years 1970 and 9999"},
 	}
 
 	for _, tt := range tests {
