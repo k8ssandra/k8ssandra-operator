@@ -277,6 +277,7 @@ func main() {
 		ImageRegistry:    registry,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "MedusaRestoreJob")
+		os.Exit(1)
 	}
 
 	if err = (&medusactrl.MedusaBackupScheduleReconciler{
