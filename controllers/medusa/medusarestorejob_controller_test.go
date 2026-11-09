@@ -799,13 +799,13 @@ func (c *fakeMedusaRestoreClient) GetBackups(ctx context.Context) ([]*medusa.Bac
 			Status:     *medusa.StatusType_SUCCESS.Enum(),
 			Nodes: []*medusa.BackupNode{
 				{
-					Host: "node1", Datacenter: "real-dc1", Rack: "rack1",
+					Host: "node1", Datacenter: "real-dc1", Rack: "default",
 				},
 				{
-					Host: "node2", Datacenter: "real-dc1", Rack: "rack1",
+					Host: "node2", Datacenter: "real-dc1", Rack: "default",
 				},
 				{
-					Host: "node3", Datacenter: "real-dc1", Rack: "rack1",
+					Host: "node3", Datacenter: "real-dc1", Rack: "default",
 				},
 			},
 		},

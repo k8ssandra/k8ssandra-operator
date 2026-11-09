@@ -2,6 +2,7 @@ package medusa
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
@@ -226,11 +227,11 @@ func TestGetHostMap(t *testing.T) {
 	}
 	assert.Equal(t, expected, result)
 	///////////////////////////////////////////// Test with nodes split over three racks. ////////////////////////////////////////////
-	// Define racks on DC
+	// Define racks on DC. The rack names must match the rack names of the source backup.
 	cassDc.Spec.Racks = []cassdcapi.Rack{
-		{Name: "rack1"},
-		{Name: "rack2"},
-		{Name: "rack3"},
+		{Name: "test-rack1"},
+		{Name: "test-rack2"},
+		{Name: "test-rack3"},
 	}
 	// Make DC name = "test-dc2" which is our test DC which has racks.
 	medusaBackup = pkgtest.NewMedusaRestore("default", "local-backupname", "remote-backupname", "test-dc2", "test-cluster")
@@ -238,15 +239,15 @@ func TestGetHostMap(t *testing.T) {
 	expected = HostMappingSlice{
 		{
 			Source: "test-cluster-test-dc2-test-rack1-sts-0",
-			Target: "test-cluster-test-dc2-rack1-sts-0",
+			Target: "test-cluster-test-dc2-test-rack1-sts-0",
 		},
 		{
 			Source: "test-cluster-test-dc2-test-rack2-sts-0",
-			Target: "test-cluster-test-dc2-rack2-sts-0",
+			Target: "test-cluster-test-dc2-test-rack2-sts-0",
 		},
 		{
 			Source: "test-cluster-test-dc2-test-rack3-sts-0",
-			Target: "test-cluster-test-dc2-rack3-sts-0",
+			Target: "test-cluster-test-dc2-test-rack3-sts-0",
 		},
 	}
 	result, err = GetHostMap(cassDc, *medusaBackup, mockgRPCClient, ctx)
@@ -269,4 +270,241 @@ func Test_HostMappingSlice_IsInPlace(t *testing.T) {
 	}
 	_, err = s.IsInPlace()
 	assert.Error(t, err, err)
+}
+
+// configurableMockClient is a mockgRPCClient whose GetBackups result can be set per test.
+type configurableMockClient struct {
+	mockgRPCClient
+	backups []*BackupSummary
+	err     error
+}
+
+func (c configurableMockClient) GetBackups(ctx context.Context) ([]*BackupSummary, error) {
+	return c.backups, c.err
+}
+
+func newTestDC(clusterName string, size int32, racks ...string) *cassdcapi.CassandraDatacenter {
+	dc := &cassdcapi.CassandraDatacenter{
+		ObjectMeta: metav1.ObjectMeta{Name: "dc1", Namespace: "default"},
+		Spec: cassdcapi.CassandraDatacenterSpec{
+			ClusterName: clusterName,
+			Size:        size,
+		},
+	}
+	for _, r := range racks {
+		dc.Spec.Racks = append(dc.Spec.Racks, cassdcapi.Rack{Name: r})
+	}
+	return dc
+}
+
+func backupNode(host, dc, rack string) *BackupNode {
+	return &BackupNode{Host: host, Datacenter: dc, Rack: rack}
+}
+
+// pitrFixture is a source DC "dc1" of cluster "src" with racks r1 and r2 with two nodes each. Node 0 of each rack is
+// part of backup b1 and node 1 of each rack is part of backup b2, so that base backups differ per node.
+func pitrFixture() (backups []*BackupSummary, nodeBackups map[string]string) {
+	backups = []*BackupSummary{
+		{BackupName: "b1", Nodes: []*BackupNode{
+			backupNode("src-dc1-r1-sts-0", "dc1", "r1"),
+			backupNode("src-dc1-r2-sts-0", "dc1", "r2"),
+		}},
+		{BackupName: "b2", Nodes: []*BackupNode{
+			backupNode("src-dc1-r1-sts-1", "dc1", "r1"),
+			backupNode("src-dc1-r2-sts-1", "dc1", "r2"),
+		}},
+	}
+	nodeBackups = map[string]string{
+		"src-dc1-r1-sts-0": "b1",
+		"src-dc1-r2-sts-0": "b1",
+		"src-dc1-r1-sts-1": "b2",
+		"src-dc1-r2-sts-1": "b2",
+	}
+	return
+}
+
+func requireTerminal(t *testing.T, err error) {
+	t.Helper()
+	assert.Error(t, err)
+	var terminal *TerminalError
+	assert.True(t, errors.As(err, &terminal), "expected a TerminalError, got %v", err)
+}
+
+func TestGetPitrHostMapSameNames(t *testing.T) {
+	backups, nodeBackups := pitrFixture()
+	dc := newTestDC("src", 4, "r1", "r2")
+
+	result, err := GetPitrHostMap(dc, nodeBackups, configurableMockClient{backups: backups}, context.Background())
+	assert.NoError(t, err)
+	assert.Equal(t, HostMappingSlice{
+		{Source: "src-dc1-r1-sts-0", Target: "src-dc1-r1-sts-0"},
+		{Source: "src-dc1-r1-sts-1", Target: "src-dc1-r1-sts-1"},
+		{Source: "src-dc1-r2-sts-0", Target: "src-dc1-r2-sts-0"},
+		{Source: "src-dc1-r2-sts-1", Target: "src-dc1-r2-sts-1"},
+	}, result)
+	inPlace, err := result.IsInPlace()
+	assert.NoError(t, err)
+	assert.True(t, inPlace)
+}
+
+func TestGetPitrHostMapDifferentNames(t *testing.T) {
+	backups, nodeBackups := pitrFixture()
+	// Same layout, different cluster name, so different pod names.
+	dc := newTestDC("tgt", 4, "r1", "r2")
+
+	result, err := GetPitrHostMap(dc, nodeBackups, configurableMockClient{backups: backups}, context.Background())
+	assert.NoError(t, err)
+	assert.Equal(t, HostMappingSlice{
+		{Source: "src-dc1-r1-sts-0", Target: "tgt-dc1-r1-sts-0"},
+		{Source: "src-dc1-r1-sts-1", Target: "tgt-dc1-r1-sts-1"},
+		{Source: "src-dc1-r2-sts-0", Target: "tgt-dc1-r2-sts-0"},
+		{Source: "src-dc1-r2-sts-1", Target: "tgt-dc1-r2-sts-1"},
+	}, result)
+	inPlace, err := result.IsInPlace()
+	assert.NoError(t, err)
+	assert.False(t, inPlace)
+
+	mapping, err := result.ToMedusaRestoreMapping()
+	assert.NoError(t, err)
+	assert.False(t, *mapping.InPlace)
+	assert.Equal(t, []string{"src-dc1-r2-sts-1"}, mapping.HostMap["tgt-dc1-r2-sts-1"].Source)
+}
+
+func TestGetPitrHostMapIgnoresOtherDC(t *testing.T) {
+	backups, nodeBackups := pitrFixture()
+	backups[0].Nodes = append(backups[0].Nodes, backupNode("src-other-zzz-sts-0", "other", "zzz"))
+	nodeBackups["src-other-zzz-sts-0"] = "b1"
+	dc := newTestDC("src", 4, "r1", "r2")
+
+	result, err := GetPitrHostMap(dc, nodeBackups, configurableMockClient{backups: backups}, context.Background())
+	assert.NoError(t, err)
+	assert.Len(t, result, 4)
+}
+
+func TestGetPitrHostMapSingleDefaultRack(t *testing.T) {
+	backups := []*BackupSummary{{BackupName: "b1", Nodes: []*BackupNode{
+		backupNode("src-dc1-default-sts-0", "dc1", "default"),
+		backupNode("src-dc1-default-sts-1", "dc1", "default"),
+	}}}
+	nodeBackups := map[string]string{"src-dc1-default-sts-0": "b1", "src-dc1-default-sts-1": "b1"}
+
+	result, err := GetPitrHostMap(newTestDC("src", 2), nodeBackups, configurableMockClient{backups: backups}, context.Background())
+	assert.NoError(t, err)
+	assert.Len(t, result, 2)
+}
+
+func TestGetPitrHostMapTopologyErrors(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("rack count mismatch", func(t *testing.T) {
+		backups, nodeBackups := pitrFixture()
+		dc := newTestDC("src", 4, "r1", "r2", "r3")
+		_, err := GetPitrHostMap(dc, nodeBackups, configurableMockClient{backups: backups}, ctx)
+		requireTerminal(t, err)
+		assert.Contains(t, err.Error(), "number of racks")
+	})
+
+	t.Run("rack names differ", func(t *testing.T) {
+		backups, nodeBackups := pitrFixture()
+		dc := newTestDC("src", 4, "r1", "other")
+		_, err := GetPitrHostMap(dc, nodeBackups, configurableMockClient{backups: backups}, ctx)
+		requireTerminal(t, err)
+		assert.Contains(t, err.Error(), "rack names")
+	})
+
+	t.Run("source rack larger than target rack", func(t *testing.T) {
+		backups := []*BackupSummary{{BackupName: "b1", Nodes: []*BackupNode{
+			backupNode("src-dc1-r1-sts-0", "dc1", "r1"),
+			backupNode("src-dc1-r1-sts-1", "dc1", "r1"),
+			backupNode("src-dc1-r1-sts-2", "dc1", "r1"),
+			backupNode("src-dc1-r2-sts-0", "dc1", "r2"),
+		}}}
+		nodeBackups := map[string]string{
+			"src-dc1-r1-sts-0": "b1", "src-dc1-r1-sts-1": "b1", "src-dc1-r1-sts-2": "b1", "src-dc1-r2-sts-0": "b1",
+		}
+		dc := newTestDC("src", 4, "r1", "r2") // two pods per rack
+		assert.NotPanics(t, func() {
+			_, err := GetPitrHostMap(dc, nodeBackups, configurableMockClient{backups: backups}, ctx)
+			requireTerminal(t, err)
+			assert.Contains(t, err.Error(), "greater than")
+		})
+	})
+
+	t.Run("target pod without a source", func(t *testing.T) {
+		backups, nodeBackups := pitrFixture()
+		dc := newTestDC("src", 6, "r1", "r2") // three pods per rack, two sources per rack
+		_, err := GetPitrHostMap(dc, nodeBackups, configurableMockClient{backups: backups}, ctx)
+		requireTerminal(t, err)
+		assert.Contains(t, err.Error(), "have a source node")
+	})
+
+	t.Run("backup not found", func(t *testing.T) {
+		backups, nodeBackups := pitrFixture()
+		nodeBackups["src-dc1-r1-sts-0"] = "missing"
+		dc := newTestDC("src", 4, "r1", "r2")
+		_, err := GetPitrHostMap(dc, nodeBackups, configurableMockClient{backups: backups}, ctx)
+		requireTerminal(t, err)
+		assert.Contains(t, err.Error(), "missing")
+	})
+
+	t.Run("node not in its backup", func(t *testing.T) {
+		backups, nodeBackups := pitrFixture()
+		nodeBackups["src-dc1-r1-sts-0"] = "b2"
+		dc := newTestDC("src", 4, "r1", "r2")
+		_, err := GetPitrHostMap(dc, nodeBackups, configurableMockClient{backups: backups}, ctx)
+		requireTerminal(t, err)
+		assert.Contains(t, err.Error(), "src-dc1-r1-sts-0")
+	})
+
+	t.Run("no backups at all", func(t *testing.T) {
+		_, nodeBackups := pitrFixture()
+		dc := newTestDC("src", 4, "r1", "r2")
+		_, err := GetPitrHostMap(dc, nodeBackups, configurableMockClient{}, ctx)
+		requireTerminal(t, err)
+	})
+}
+
+func TestGetPitrHostMapGetBackupsFailureIsNotTerminal(t *testing.T) {
+	_, nodeBackups := pitrFixture()
+	dc := newTestDC("src", 4, "r1", "r2")
+	rootErr := errors.New("connection refused")
+
+	_, err := GetPitrHostMap(dc, nodeBackups, configurableMockClient{err: rootErr}, context.Background())
+	assert.Error(t, err)
+	assert.True(t, errors.Is(err, rootErr))
+	var terminal *TerminalError
+	assert.False(t, errors.As(err, &terminal))
+}
+
+func TestGetHostMapTopologyErrors(t *testing.T) {
+	ctx := context.Background()
+	restore := pkgtest.NewMedusaRestore("default", "local", "b1", "dc1", "src")
+
+	t.Run("rack names differ", func(t *testing.T) {
+		backups, _ := pitrFixture()
+		backups[0].BackupName = "b1"
+		backups[0].Nodes = append(backups[0].Nodes, backups[1].Nodes...)
+		dc := newTestDC("src", 4, "r1", "other")
+		_, err := GetHostMap(dc, *restore, configurableMockClient{backups: backups[:1]}, ctx)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "rack names")
+		var terminal *TerminalError
+		assert.False(t, errors.As(err, &terminal))
+	})
+
+	t.Run("source rack larger than target rack", func(t *testing.T) {
+		backups := []*BackupSummary{{BackupName: "b1", Nodes: []*BackupNode{
+			backupNode("src-dc1-r1-sts-0", "dc1", "r1"),
+			backupNode("src-dc1-r1-sts-1", "dc1", "r1"),
+			backupNode("src-dc1-r1-sts-2", "dc1", "r1"),
+			backupNode("src-dc1-r2-sts-0", "dc1", "r2"),
+		}}}
+		dc := newTestDC("src", 4, "r1", "r2")
+		assert.NotPanics(t, func() {
+			_, err := GetHostMap(dc, *restore, configurableMockClient{backups: backups}, ctx)
+			assert.Error(t, err)
+			var terminal *TerminalError
+			assert.False(t, errors.As(err, &terminal))
+		})
+	})
 }
