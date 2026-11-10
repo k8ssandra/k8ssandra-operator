@@ -11,6 +11,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ss "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
@@ -20,6 +21,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes/scheme"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -49,6 +52,10 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 	secretKey := framework.NewClusterKey(k8sCtx0, namespace, "medusa-client-secret")
 	require.NoError(f.Create(ctx, secretKey, secret), "failed to create medusa-client-secret")
 	t.Logf("Created secret: %s/%s", secret.Namespace, secret.Name)
+
+	// The user secrets are refreshed at the end of the restore, so they must exist in the data plane.
+	// The superuser secret is created later, to check that a failed refresh keeps the restore unfinished.
+	require.NoError(createUserSecret(ctx, f, framework.NewClusterKey(k8sCtx0, namespace, cassandraUserSecret)), "failed to create Medusa user secret")
 
 	kc := &k8ss.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
@@ -313,6 +320,18 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 
 	require.NoError(err)
 
+	t.Log("check that the restore does not finish while the superuser secret cannot be refreshed")
+	require.Never(func() bool {
+		restore := &api.MedusaRestoreJob{}
+		if err := f.Get(ctx, restoreKey, restore); err != nil {
+			return false
+		}
+		return !restore.Status.FinishTime.IsZero()
+	}, 1*time.Second, interval, "the restore finished before the user secrets were refreshed")
+
+	superuserSecretKey := framework.NewClusterKey(k8sCtx0, namespace, "test-superuser")
+	require.NoError(createUserSecret(ctx, f, superuserSecretKey), "failed to create superuser secret")
+
 	t.Log("check restore status finish time set")
 	require.Eventually(func() bool {
 		restore := &api.MedusaRestoreJob{}
@@ -322,10 +341,120 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 		}
 
 		return !restore.Status.FinishTime.IsZero()
-	}, timeout, interval)
+	}, timeout*2, interval)
+
+	restore = &api.MedusaRestoreJob{}
+	require.NoError(f.Get(ctx, restoreKey, restore))
+
+	t.Log("check that the superuser secret was refreshed")
+	superuserSecret := &corev1.Secret{}
+	require.NoError(f.Get(ctx, superuserSecretKey, superuserSecret))
+	require.Equal(restore.Status.StartTime.String(), superuserSecret.Annotations[k8ss.RefreshAnnotation])
+
+	testFinishedRestoreJobDoesNotModifyDatacenter(t, ctx, f, dc1Key, restoreKey, backupKey, restore)
 
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: dc.Namespace, Name: kc.Name}, timeout, interval)
 	require.NoError(err, "failed to delete K8ssandraCluster")
+}
+
+// testFinishedRestoreJobDoesNotModifyDatacenter simulates what happens to a finished restore job on an
+// operator restart: the datacenter has drifted since the restore (the restore env vars were removed by a
+// later spec push and the datacenter was stopped) and the job is reconciled again. The datacenter must
+// be left untouched.
+func testFinishedRestoreJobDoesNotModifyDatacenter(t *testing.T, ctx context.Context, f *framework.Framework, dcKey, restoreKey, backupKey framework.ClusterKey, finishedRestore *api.MedusaRestoreJob) {
+	require := require.New(t)
+
+	t.Log("remove the restore env vars from the datacenter and stop it")
+	dc := &cassdcapi.CassandraDatacenter{}
+	require.NoError(f.Get(ctx, dcKey, dc))
+	patch := client.MergeFrom(dc.DeepCopy())
+	restoreContainer := &dc.Spec.PodTemplateSpec.Spec.InitContainers[findContainerIndex(dc.Spec.PodTemplateSpec.Spec.InitContainers, restoreContainerName)]
+	env := make([]corev1.EnvVar, 0, len(restoreContainer.Env))
+	for _, e := range restoreContainer.Env {
+		if e.Name != backupNameEnvVar && e.Name != restoreKeyEnvVar && e.Name != restoreMappingEnvVar {
+			env = append(env, e)
+		}
+	}
+	restoreContainer.Env = env
+	dc.Spec.Stopped = true
+	require.NoError(f.Patch(ctx, dc, patch, dcKey))
+
+	require.NoError(f.Get(ctx, dcKey, dc))
+	expectedSpec := dc.Spec.DeepCopy()
+	expectedResourceVersion := dc.ResourceVersion
+
+	remoteClient, err := f.GetClient(dcKey.K8sContext)
+	require.NoError(err)
+	reconciler := &MedusaRestoreJobReconciler{
+		ReconcilerConfig: &config.ReconcilerConfig{DefaultDelay: 50 * time.Millisecond, LongDelay: 150 * time.Millisecond},
+		Client:           remoteClient,
+		Scheme:           scheme.Scheme,
+		ClientFactory:    NewMedusaClientRestoreFactory(),
+		ImageRegistry:    getTestImageRegistry(),
+	}
+
+	t.Log("reconcile the finished restore job again")
+	for i := 0; i < 3; i++ {
+		res, err := reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: restoreKey.NamespacedName})
+		require.NoError(err)
+		require.Equal(ctrl.Result{}, res)
+	}
+
+	t.Log("check that the datacenter was not modified")
+	require.Never(func() bool {
+		current := &cassdcapi.CassandraDatacenter{}
+		if err := f.Get(ctx, dcKey, current); err != nil {
+			t.Logf("failed to get datacenter: %v", err)
+			return true
+		}
+		return current.ResourceVersion != expectedResourceVersion
+	}, 1*time.Second, interval, "the finished restore job modified the datacenter")
+
+	require.NoError(f.Get(ctx, dcKey, dc))
+	require.Equal(*expectedSpec, dc.Spec)
+	require.True(dc.Spec.Stopped, "the finished restore job started the datacenter")
+	restoreContainer = findContainer(dc.Spec.PodTemplateSpec.Spec.InitContainers, restoreContainerName)
+	require.NotNil(restoreContainer)
+	require.Nil(utils.FindEnvVar(restoreContainer.Env, backupNameEnvVar))
+	require.Nil(utils.FindEnvVar(restoreContainer.Env, restoreKeyEnvVar))
+	require.Nil(utils.FindEnvVar(restoreContainer.Env, restoreMappingEnvVar))
+
+	t.Log("check that the restore job status was not modified")
+	restore := &api.MedusaRestoreJob{}
+	require.NoError(f.Get(ctx, restoreKey, restore))
+	require.Equal(finishedRestore.Status, restore.Status)
+
+	t.Log("purge the MedusaBackup and check that reconciling the finished restore job does not fail")
+	require.NoError(f.Delete(ctx, backupKey, &api.MedusaBackup{ObjectMeta: metav1.ObjectMeta{Namespace: backupKey.Namespace, Name: backupKey.Name}}))
+	require.Eventually(func() bool {
+		return errors.IsNotFound(f.Get(ctx, backupKey, &api.MedusaBackup{}))
+	}, timeout, interval)
+	res, err := reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: restoreKey.NamespacedName})
+	require.NoError(err)
+	require.Equal(ctrl.Result{}, res)
+}
+
+func createUserSecret(ctx context.Context, f *framework.Framework, key framework.ClusterKey) error {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: key.Namespace,
+			Name:      key.Name,
+		},
+		Data: map[string][]byte{
+			"username": []byte(key.Name),
+			"password": []byte(key.Name),
+		},
+	}
+	return f.Create(ctx, key, secret)
+}
+
+func findContainerIndex(containers []corev1.Container, name string) int {
+	for i, c := range containers {
+		if c.Name == name {
+			return i
+		}
+	}
+	return -1
 }
 
 func createCassandraPods(t *testing.T, f *framework.Framework, ctx context.Context, dcKey framework.ClusterKey, dc *cassdcapi.CassandraDatacenter) error {
