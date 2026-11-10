@@ -75,6 +75,22 @@ func (r *MedusaRestoreJobReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	logger := log.FromContext(ctx).WithValues("medusarestorejob", req.NamespacedName)
 	factory := medusa.NewFactory(r.Client, logger)
 	logger.Info("Starting reconcile", "MedusaRestoreJob", req.Name)
+
+	// A finished job must never touch the datacenter again. Checked before the request is
+	// built, which fetches the MedusaBackup, so a job whose backup was purged also returns here.
+	restoreJob := &medusav1alpha1.MedusaRestoreJob{}
+	if err := r.Get(ctx, req.NamespacedName, restoreJob); err != nil {
+		if errors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
+		logger.Error(err, "Failed to get MedusaRestoreJob")
+		return ctrl.Result{}, err
+	}
+	if !restoreJob.Status.FinishTime.IsZero() {
+		logger.V(1).Info("MedusaRestoreJob has already finished, skipping reconcile", "FinishTime", restoreJob.Status.FinishTime)
+		return ctrl.Result{}, nil
+	}
+
 	request, result, err := factory.NewMedusaRestoreRequest(ctx, req.NamespacedName)
 
 	if result != nil {
@@ -177,13 +193,9 @@ func (r *MedusaRestoreJobReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return r.applyUpdatesAndRequeue(ctx, request)
 	}
 
-	request.SetMedusaRestoreFinishTime(metav1.Now())
-	if err := r.applyUpdates(ctx, request); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	request.Log.Info("The restore operation is complete for DC", "CassandraDatacenter", request.Datacenter.Name)
-
+	// Refresh the secrets before persisting FinishTime. Once FinishTime is set the job is never
+	// reconciled again, so a failed refresh has to be retried while the job is still unfinished.
+	// The refresh annotation is derived from StartTime, so retries write the same value.
 	recRes := medusa.RefreshSecrets(request.Datacenter, ctx, r.Client, request.Log, r.DefaultDelay, request.RestoreJob.Status.StartTime)
 	switch {
 	case recRes.IsError():
@@ -191,6 +203,13 @@ func (r *MedusaRestoreJobReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	case recRes.IsRequeue():
 		return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 	}
+
+	request.SetMedusaRestoreFinishTime(metav1.Now())
+	if err := r.applyUpdates(ctx, request); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	request.Log.Info("The restore operation is complete for DC", "CassandraDatacenter", request.Datacenter.Name)
 
 	return ctrl.Result{}, nil
 }

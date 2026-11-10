@@ -818,3 +818,67 @@ func medusaConfigurationChangeTriggersReconcile(t *testing.T, ctx context.Contex
 	t.Log("Verifying configmap is updated after MedusaConfiguration spec change")
 	verifyConfigMap(require, ctx, f, namespace, prefixFromClusterSpec, updatedTransfers, keyFilePresent)
 }
+
+// pitrChangeRollsPods checks that a change to spec.medusa.pitr changes the pod template of the
+// CassandraDatacenter. cass-operator, which is not part of envtest, rolls the pods on such a change.
+func pitrChangeRollsPods(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+	require := require.New(t)
+
+	kc := &api.K8ssandraCluster{
+		ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: k8ssandraClusterName},
+		Spec: api.K8ssandraClusterSpec{
+			Cassandra: &api.CassandraClusterTemplate{
+				DatacenterOptions: api.DatacenterOptions{ServerVersion: "3.11.14"},
+				Datacenters:       []api.CassandraDatacenterTemplate{dcTemplate("dc1", f.DataPlaneContexts[0])},
+			},
+			Medusa: medusaTemplateWithoutConfigRef(),
+		},
+	}
+	require.NoError(f.Client.Create(ctx, kc), "failed to create K8ssandraCluster")
+	verifyReplicatedSecretReconciled(ctx, t, f, kc)
+
+	dcKey := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: namespace, Name: "dc1"}, K8sContext: f.DataPlaneContexts[0]}
+	require.Eventually(f.DatacenterExists(ctx, dcKey), timeout, interval)
+
+	// podHash returns the pod template annotation and whether it is set.
+	podHash := func() (string, bool) {
+		dc := &cassdcapi.CassandraDatacenter{}
+		if err := f.Get(ctx, dcKey, dc); err != nil || dc.Spec.PodTemplateSpec == nil {
+			return "", false
+		}
+		hash, found := dc.Spec.PodTemplateSpec.Annotations[medusa.MedusaPitrHashAnnotation]
+		return hash, found
+	}
+	setPitr := func(pitr *medusaapi.PitrConfig) {
+		require.NoError(f.PatchK8ssandraCluster(ctx, client.ObjectKey{Namespace: namespace, Name: k8ssandraClusterName}, func(kc *api.K8ssandraCluster) {
+			kc.Spec.Medusa.Pitr = pitr
+		}))
+	}
+	// waitForHash waits for a hash that differs from previous.
+	waitForHash := func(previous string) {
+		require.Eventually(func() bool {
+			h, found := podHash()
+			return found && h != previous
+		}, timeout, interval, "pod template hash did not change")
+	}
+
+	t.Log("pitr unset: no annotation")
+	_, found := podHash()
+	require.False(found, "pod template must not carry the pitr hash when pitr is unset")
+
+	t.Log("enable pitr: annotation appears")
+	setPitr(&medusaapi.PitrConfig{Enabled: true, ArchiveIntervalSeconds: ptr.To(30)})
+	waitForHash("")
+	first, _ := podHash()
+
+	t.Log("change archiveIntervalSeconds: annotation changes")
+	setPitr(&medusaapi.PitrConfig{Enabled: true, ArchiveIntervalSeconds: ptr.To(60)})
+	waitForHash(first)
+
+	t.Log("remove pitr: annotation disappears")
+	setPitr(nil)
+	require.Eventually(func() bool {
+		_, found := podHash()
+		return !found
+	}, timeout, interval, "pod template hash was not removed")
+}
