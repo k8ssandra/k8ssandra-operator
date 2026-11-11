@@ -413,14 +413,6 @@ func TestGetPitrHostMapTopologyErrors(t *testing.T) {
 		assert.Contains(t, err.Error(), "datacenter other")
 	})
 
-	t.Run("rack names differ", func(t *testing.T) {
-		backups, nodeBackups := pitrFixture()
-		dc := newTestDC("src", 4, "r1", "other")
-		_, err := GetPitrHostMap(dc, nodeBackups, configurableMockClient{backups: backups}, ctx)
-		requireTerminal(t, err)
-		assert.Contains(t, err.Error(), "rack names")
-	})
-
 	t.Run("source rack larger than target rack", func(t *testing.T) {
 		backups := []*BackupSummary{{BackupName: "b1", Nodes: []*BackupNode{
 			backupNode("src-dc1-r1-sts-0", "dc1", "r1"),
@@ -488,18 +480,6 @@ func TestGetPitrHostMapGetBackupsFailureIsNotTerminal(t *testing.T) {
 func TestGetHostMapTopologyErrors(t *testing.T) {
 	ctx := context.Background()
 	restore := pkgtest.NewMedusaRestore("default", "local", "b1", "dc1", "src")
-
-	t.Run("rack names differ", func(t *testing.T) {
-		backups, _ := pitrFixture()
-		backups[0].BackupName = "b1"
-		backups[0].Nodes = append(backups[0].Nodes, backups[1].Nodes...)
-		dc := newTestDC("src", 4, "r1", "other")
-		_, err := GetHostMap(dc, *restore, configurableMockClient{backups: backups[:1]}, ctx)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "rack names")
-		var terminal *TerminalError
-		assert.False(t, errors.As(err, &terminal))
-	})
 
 	t.Run("source rack larger than target rack", func(t *testing.T) {
 		backups := []*BackupSummary{{BackupName: "b1", Nodes: []*BackupNode{

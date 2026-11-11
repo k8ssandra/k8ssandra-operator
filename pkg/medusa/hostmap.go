@@ -246,8 +246,8 @@ func findBackupNode(backup *BackupSummary, host string) *BackupNode {
 	return nil
 }
 
-// buildHostMap pairs the sorted source racks with the sorted racks of the target datacenter. Rack count and rack names
-// must be equal. Node j of source rack i is paired with pod j of target rack i.
+// buildHostMap pairs the sorted source racks with the sorted racks of the target datacenter. Rack count must be equal.
+// Node j of source rack i is paired with pod j of target rack i.
 func buildHostMap(sourceRacks map[NodeLocation][]string, cassDC *cassdcapi.CassandraDatacenter) (HostMappingSlice, error) {
 	destRacks := getTargetRackFQDNs(cassDC)
 	sortedSource := sortLocations(sourceRacks)
@@ -259,9 +259,6 @@ func buildHostMap(sourceRacks map[NodeLocation][]string, cassDC *cassdcapi.Cassa
 	for i, sourceRack := range sortedSource {
 		// We've already bounds checked sortedDest/sortedSource above, no need to do it again here.
 		destRack := sortedDests[i]
-		if sourceRack.Location.Rack != destRack.Location.Rack {
-			return nil, fmt.Errorf("rack names in source does not match rack names in destination. Source: %v, Dest: %v", rackNames(sortedSource), rackNames(sortedDests))
-		}
 		for j, sourceNode := range sourceRack.Nodes {
 			if j >= destRack.Size {
 				return nil, fmt.Errorf("number of nodes in source rack %s greater than number of nodes in dest rack %s", sourceRack.Location.Rack, destRack.Location.Rack)
@@ -278,14 +275,6 @@ func buildHostMap(sourceRacks map[NodeLocation][]string, cassDC *cassdcapi.Cassa
 		}
 	}
 	return out, nil
-}
-
-func rackNames(racks []rack) []string {
-	names := make([]string, 0, len(racks))
-	for _, r := range racks {
-		names = append(names, r.Location.Rack)
-	}
-	return names
 }
 
 func (s HostMappingSlice) IsInPlace() (bool, error) {
