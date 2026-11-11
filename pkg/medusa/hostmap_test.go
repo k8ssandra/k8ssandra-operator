@@ -404,6 +404,15 @@ func TestGetPitrHostMapTopologyErrors(t *testing.T) {
 		assert.Contains(t, err.Error(), "number of racks")
 	})
 
+	t.Run("datacenter name differs", func(t *testing.T) {
+		backups, nodeBackups := pitrFixture()
+		dc := newTestDC("src", 4, "r1", "r2")
+		dc.Spec.DatacenterName = "other"
+		_, err := GetPitrHostMap(dc, nodeBackups, configurableMockClient{backups: backups}, ctx)
+		requireTerminal(t, err)
+		assert.Contains(t, err.Error(), "datacenter other")
+	})
+
 	t.Run("rack names differ", func(t *testing.T) {
 		backups, nodeBackups := pitrFixture()
 		dc := newTestDC("src", 4, "r1", "other")

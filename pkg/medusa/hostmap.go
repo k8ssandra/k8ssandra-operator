@@ -219,7 +219,11 @@ func buildPitrHostMap(cassDC *cassdcapi.CassandraDatacenter, nodeBackups map[str
 		nodes = append(nodes, backupNode)
 	}
 
-	hostMap, err := buildHostMap(getSourceRacks(nodes, cassDC.DatacenterName()), cassDC)
+	sourceRacks := getSourceRacks(nodes, cassDC.DatacenterName())
+	if len(sourceRacks) == 0 {
+		return nil, fmt.Errorf("no source node belongs to datacenter %s; the datacenter name of the backup does not match the destination", cassDC.DatacenterName())
+	}
+	hostMap, err := buildHostMap(sourceRacks, cassDC)
 	if err != nil {
 		return nil, err
 	}
