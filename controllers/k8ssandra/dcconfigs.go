@@ -40,12 +40,12 @@ func (r *K8ssandraClusterReconciler) createDatacenterConfigs(
 			return nil, err
 		}
 
-		if err = cassandra.ReadEncryptionStoresSecrets(ctx, kcKey, dcConfig, remoteClient, dcLogger); err != nil {
-			dcLogger.Error(err, "Failed to read encryption secrets")
+		if err = cassandra.ValidateEncryptionStoresSecrets(ctx, dcKey, dcConfig, remoteClient, dcLogger); err != nil {
+			dcLogger.Error(err, "Failed to validate encryption secrets")
 			return nil, err
 		}
 
-		if err := cassandra.HandleEncryptionOptions(dcConfig); err != nil {
+		if err := cassandra.HandleEncryptionOptions(dcConfig, r.ImageRegistry.GetClientImage()); err != nil {
 			return nil, err
 		}
 
