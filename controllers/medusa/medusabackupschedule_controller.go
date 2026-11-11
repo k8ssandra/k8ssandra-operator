@@ -36,6 +36,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	cassimages "github.com/k8ssandra/cass-operator/pkg/images"
 	medusav1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
 	cron "github.com/robfig/cron/v3"
 )
 
@@ -169,6 +170,10 @@ func (r *MedusaBackupScheduleReconciler) Reconcile(ctx context.Context, req ctrl
 				CassandraDatacenter: backupSchedule.Spec.BackupSpec.CassandraDatacenter,
 				Operation:           medusav1alpha1.OperationTypePurge,
 			},
+		}
+
+		if v, found := backupSchedule.Annotations[medusa.MedusaPurgeSequentialAnnotation]; found {
+			metav1.SetMetaDataAnnotation(&purgeJob.ObjectMeta, medusa.MedusaPurgeSequentialAnnotation, v)
 		}
 
 		if err := r.Create(ctx, purgeJob); err != nil {

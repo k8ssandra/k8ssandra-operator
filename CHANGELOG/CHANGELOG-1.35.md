@@ -15,6 +15,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
+* [ENHANCEMENT] [#1883](https://github.com/k8ssandra/k8ssandra-operator/issues/1883) Run Medusa purges on all Cassandra pods in parallel. Set the `medusa.k8ssandra.io/purge-sequential: "true"` annotation to purge one pod at a time
 * [DOCS] []() Add PITR orchestration design doc
 * [ENHANCEMENT] [#1831](https://github.com/k8ssandra/k8ssandra-operator/issues/1831) Add PITR RPCs to the Medusa client
 * [FEATURE] [#1832](https://github.com/k8ssandra/k8ssandra-operator/issues/1832) Add PITR APIs and CRDs

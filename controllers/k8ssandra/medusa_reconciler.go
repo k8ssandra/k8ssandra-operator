@@ -323,6 +323,9 @@ func (r *K8ssandraClusterReconciler) createPurgeSchedule(ctx context.Context, re
 		},
 	}
 	purgeSchedule.SetLabels(labels.CleanedUpByLabels(utils.GetKey(kc)))
+	if v, found := kc.Annotations[medusa.MedusaPurgeSequentialAnnotation]; found {
+		metav1.SetMetaDataAnnotation(&purgeSchedule.ObjectMeta, medusa.MedusaPurgeSequentialAnnotation, v)
+	}
 	err := controllerutil.SetOwnerReference(dc, &purgeSchedule, &scheme)
 	if err != nil {
 		logger.Error(err, "failed to set owner reference for MedusaBackupSchedule")

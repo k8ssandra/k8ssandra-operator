@@ -166,7 +166,7 @@ func (r *MedusaTaskReconciler) prepareRestoreOperation(ctx context.Context, task
 		return prepareRestore(ctx, task, &pod, cassdc, r.Client, r.ClientFactory, logger)
 	}
 
-	return r.executePodOperations(ctx, task, pods, "prepare restore", op, logger)
+	return r.executePodOperations(ctx, task, pods, "prepare restore", false, op, logger)
 }
 
 func (r *MedusaTaskReconciler) purgeOperation(ctx context.Context, task *medusav1alpha1.MedusaTask, pods []corev1.Pod, cassdc *cassdcapi.CassandraDatacenter, logger logr.Logger) (reconcile.Result, error) {
@@ -176,7 +176,10 @@ func (r *MedusaTaskReconciler) purgeOperation(ctx context.Context, task *medusav
 		return doPurge(ctx, &pod, cassdc, r.Client, r.ClientFactory, logger)
 	}
 
-	return r.executePodOperations(ctx, task, pods, "purge", op, logger)
+	// Purges run on all pods in parallel unless the task asks for the old one pod at a time behaviour, for object
+	// storage backends that can't handle the parallel load.
+	sequential := task.Annotations[medusa.MedusaPurgeSequentialAnnotation] == "true"
+	return r.executePodOperations(ctx, task, pods, "purge", sequential, op, logger)
 }
 
 type podOperation func(ctx context.Context, task *medusav1alpha1.MedusaTask, pod corev1.Pod) (*medusa.PurgeBackupsResponse, error)
@@ -186,6 +189,7 @@ func (r *MedusaTaskReconciler) executePodOperations(
 	task *medusav1alpha1.MedusaTask,
 	pods []corev1.Pod,
 	operationName string,
+	sequential bool,
 	operation podOperation,
 	logger logr.Logger) (reconcile.Result, error) {
 	// Set the start time and add the pods to the in progress list
@@ -208,50 +212,56 @@ func (r *MedusaTaskReconciler) executePodOperations(
 		mutex := sync.Mutex{}
 		patch := client.MergeFrom(task.DeepCopy())
 
-		opLogger := logger.WithValues("Operation", operationName)
+		opLogger := logger.WithValues("Operation", operationName, "Sequential", sequential)
 
-		for _, p := range pods {
-			pod := p
-			wg.Add(1)
-			go func() {
-				opLogger.Info("starting pod operation", "CassandraPod", pod.Name)
-				succeeded := false
-				purgeBackupsResponse, err := operation(ctx, task, p)
-				if err == nil {
-					logger.Info("finished pod operation", "CassandraPod", pod.Name)
-					succeeded = true
-				} else {
-					logger.Error(err, "pod operation failed", "CassandraPod", pod.Name)
-				}
-				mutex.Lock()
-				defer mutex.Unlock()
-				defer wg.Done()
-				task.Status.InProgress = utils.RemoveValue(task.Status.InProgress, pod.Name)
-				var taskResult medusav1alpha1.TaskResult
-				if succeeded {
-					if purgeBackupsResponse == nil {
-						taskResult = medusav1alpha1.TaskResult{
-							PodName: pod.Name,
-						}
-					} else {
-						taskResult = medusav1alpha1.TaskResult{
-							PodName:                   pod.Name,
-							NbBackupsPurged:           int(purgeBackupsResponse.NbBackupsPurged),
-							NbObjectsPurged:           int(purgeBackupsResponse.NbObjectsPurged),
-							TotalPurgedSize:           int(purgeBackupsResponse.TotalPurgedSize),
-							TotalObjectsWithinGcGrace: int(purgeBackupsResponse.TotalObjectsWithinGcGrace),
-						}
-					}
-					task.Status.Finished = append(task.Status.Finished, taskResult)
-				} else {
-					task.Status.Failed = append(task.Status.Failed, pod.Name)
-				}
-			}()
-			wg.Wait()
-			logger.Info("finished task operations")
-			if err := r.Status().Patch(context.Background(), task, patch); err != nil {
-				logger.Error(err, "failed to patch status", "MedusaTask", fmt.Sprint(task))
+		runPodOperation := func(pod corev1.Pod) {
+			defer wg.Done()
+			opLogger.Info("starting pod operation", "CassandraPod", pod.Name)
+			succeeded := false
+			purgeBackupsResponse, err := operation(ctx, task, pod)
+			if err == nil {
+				opLogger.Info("finished pod operation", "CassandraPod", pod.Name)
+				succeeded = true
+			} else {
+				opLogger.Error(err, "pod operation failed", "CassandraPod", pod.Name)
 			}
+			mutex.Lock()
+			defer mutex.Unlock()
+			task.Status.InProgress = utils.RemoveValue(task.Status.InProgress, pod.Name)
+			var taskResult medusav1alpha1.TaskResult
+			if succeeded {
+				if purgeBackupsResponse == nil {
+					taskResult = medusav1alpha1.TaskResult{
+						PodName: pod.Name,
+					}
+				} else {
+					taskResult = medusav1alpha1.TaskResult{
+						PodName:                   pod.Name,
+						NbBackupsPurged:           int(purgeBackupsResponse.NbBackupsPurged),
+						NbObjectsPurged:           int(purgeBackupsResponse.NbObjectsPurged),
+						TotalPurgedSize:           int(purgeBackupsResponse.TotalPurgedSize),
+						TotalObjectsWithinGcGrace: int(purgeBackupsResponse.TotalObjectsWithinGcGrace),
+					}
+				}
+				task.Status.Finished = append(task.Status.Finished, taskResult)
+			} else {
+				task.Status.Failed = append(task.Status.Failed, pod.Name)
+			}
+		}
+
+		for _, pod := range pods {
+			wg.Add(1)
+			if sequential {
+				runPodOperation(pod)
+			} else {
+				go runPodOperation(pod)
+			}
+		}
+		wg.Wait()
+
+		opLogger.Info("finished task operations")
+		if err := r.Status().Patch(context.Background(), task, patch); err != nil {
+			opLogger.Error(err, "failed to patch status", "MedusaTask", fmt.Sprint(task))
 		}
 	}()
 
