@@ -457,6 +457,15 @@ func TestGetPitrHostMapTopologyErrors(t *testing.T) {
 		assert.Contains(t, err.Error(), "src-dc1-r1-sts-0")
 	})
 
+	t.Run("empty nodeBackups", func(t *testing.T) {
+		backups, _ := pitrFixture()
+		dc := newTestDC("src", 4, "r1", "r2")
+		for _, nodeBackups := range []map[string]string{nil, {}} {
+			_, err := GetPitrHostMap(dc, nodeBackups, configurableMockClient{backups: backups}, ctx)
+			requireTerminal(t, err)
+		}
+	})
+
 	t.Run("no backups at all", func(t *testing.T) {
 		_, nodeBackups := pitrFixture()
 		dc := newTestDC("src", 4, "r1", "r2")
@@ -495,5 +504,14 @@ func TestGetHostMapTopologyErrors(t *testing.T) {
 			var terminal *TerminalError
 			assert.False(t, errors.As(err, &terminal))
 		})
+	})
+
+	t.Run("backup without nodes", func(t *testing.T) {
+		backups := []*BackupSummary{{BackupName: "b1"}}
+		dc := newTestDC("src", 4, "r1", "r2")
+		_, err := GetHostMap(dc, *restore, configurableMockClient{backups: backups}, ctx)
+		assert.Error(t, err)
+		var terminal *TerminalError
+		assert.False(t, errors.As(err, &terminal))
 	})
 }
