@@ -18,8 +18,10 @@ package medusa
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apiErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -43,6 +45,14 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/shared"
 )
 
+// DefaultBackupNotFoundGracePeriod is how long after the start of a MedusaBackupJob a pod whose backup Medusa
+// doesn't know yet is kept in progress. Medusa only reports a backup once its async backup thread has written the
+// backup's start marker to the storage, which can take a while on a busy node.
+const DefaultBackupNotFoundGracePeriod = 5 * time.Minute
+
+// errBackupNotFound is returned by backupStatus when Medusa doesn't know the backup.
+var errBackupNotFound = errors.New("backup not found")
+
 // MedusaBackupJobReconciler reconciles a MedusaBackupJob object
 type MedusaBackupJobReconciler struct {
 	*config.ReconcilerConfig
@@ -50,6 +60,8 @@ type MedusaBackupJobReconciler struct {
 	Scheme *runtime.Scheme
 	medusa.ClientFactory
 	ImageRegistry cassimages.ImageRegistry
+	// BackupNotFoundGracePeriod overrides DefaultBackupNotFoundGracePeriod when set.
+	BackupNotFoundGracePeriod time.Duration
 }
 
 // +kubebuilder:rbac:groups=medusa.k8ssandra.io,namespace="k8ssandra",resources=medusabackupjobs,verbs=get;list;watch;create;update;patch;delete
@@ -121,6 +133,19 @@ func (r *MedusaBackupJobReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			for _, pod := range pods {
 				if podName == pod.Name {
 					status, err := backupStatus(ctx, backupJob.Name, &pod, cassdc, r.Client, r.ClientFactory, logger)
+					if errors.Is(err, errBackupNotFound) {
+						// Medusa doesn't report the backup until it has written its start marker to the storage.
+						// Give it some time, but not forever: the backup will never be found if the Medusa container
+						// restarted or the backup failed before writing the marker.
+						if time.Since(backupJob.Status.StartTime.Time) < r.backupNotFoundGracePeriod() {
+							logger.Info("Backup not found yet, waiting for it to start", "CassandraPod", podName)
+							progress = append(progress, podName)
+						} else {
+							logger.Info("Backup still not found after the grace period, marking it as failed", "CassandraPod", podName)
+							backupJob.Status.Failed = append(backupJob.Status.Failed, podName)
+						}
+						continue StatusCheck
+					}
 					if err != nil {
 						return ctrl.Result{}, err
 					}
@@ -347,7 +372,7 @@ func backupStatus(ctx context.Context, name string, pod *corev1.Pod, cassdc *cas
 			// the gRPC client does not return proper NotFound error, we need to check the payload too
 			if apiErrors.IsNotFound(err) || strings.Contains(err.Error(), "NotFound") {
 				logger.Info(fmt.Sprintf("did not find backup %s for pod %s", name, pod.Name))
-				return medusa.StatusType_UNKNOWN, nil
+				return medusa.StatusType_UNKNOWN, errBackupNotFound
 			}
 			logger.Error(err, fmt.Sprintf("getting backup status for backup %s and pod %s failed", name, pod.Name))
 			return medusa.StatusType_UNKNOWN, err
@@ -355,6 +380,13 @@ func backupStatus(ctx context.Context, name string, pod *corev1.Pod, cassdc *cas
 
 		return resp.Status, nil
 	}
+}
+
+func (r *MedusaBackupJobReconciler) backupNotFoundGracePeriod() time.Duration {
+	if r.BackupNotFoundGracePeriod > 0 {
+		return r.BackupNotFoundGracePeriod
+	}
+	return DefaultBackupNotFoundGracePeriod
 }
 
 func medusaBackupFinished(backup *medusav1alpha1.MedusaBackupJob) bool {
