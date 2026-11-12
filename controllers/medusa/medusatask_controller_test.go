@@ -393,3 +393,46 @@ func TestMedusaSyncReconcile(t *testing.T) {
 		})
 	}
 }
+
+// A purge task whose pod operations were running in a previous operator process must not stay in progress forever.
+func TestMedusaTaskInProgressWithoutRunningOperations(t *testing.T) {
+	ctx := t.Context()
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, cassdcapi.AddToScheme(scheme))
+	require.NoError(t, api.AddToScheme(scheme))
+	dc := &cassdcapi.CassandraDatacenter{ObjectMeta: metav1.ObjectMeta{Name: "dc1", Namespace: "test", UID: "dc1"}}
+	task := &api.MedusaTask{
+		ObjectMeta: metav1.ObjectMeta{Name: "purge", Namespace: dc.Namespace, UID: "purge", OwnerReferences: []metav1.OwnerReference{{APIVersion: cassdcapi.GroupVersion.String(), Kind: "CassandraDatacenter", Name: dc.Name, UID: dc.UID}}},
+		Spec:       api.MedusaTaskSpec{Operation: api.OperationTypePurge, CassandraDatacenter: dc.Name},
+		Status: api.MedusaTaskStatus{
+			StartTime:  metav1.Now(),
+			InProgress: []string{"pod2"},
+			Finished:   []api.TaskResult{{PodName: "pod1"}},
+		},
+	}
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(dc, task).WithStatusSubresource(&api.MedusaTask{}).Build()
+	r := &MedusaTaskReconciler{Client: c, Scheme: scheme, ReconcilerConfig: &config.ReconcilerConfig{DefaultDelay: time.Second}}
+	req := reconcile.Request{NamespacedName: client.ObjectKeyFromObject(task)}
+
+	// While this process runs the operations, the task stays in progress
+	r.runningOperations.Store(task.UID, struct{}{})
+	_, err := r.Reconcile(ctx, req)
+	require.NoError(t, err)
+	require.NoError(t, c.Get(ctx, req.NamespacedName, task))
+	require.Equal(t, []string{"pod2"}, task.Status.InProgress)
+
+	// Simulate a restart: nothing runs the operations anymore
+	r.runningOperations.Delete(task.UID)
+	_, err = r.Reconcile(ctx, req)
+	require.NoError(t, err)
+	require.NoError(t, c.Get(ctx, req.NamespacedName, task))
+	require.Empty(t, task.Status.InProgress)
+	require.Equal(t, []string{"pod2"}, task.Status.Failed)
+
+	// The next pass finishes the task
+	_, err = r.Reconcile(ctx, req)
+	require.NoError(t, err)
+	require.NoError(t, c.Get(ctx, req.NamespacedName, task))
+	require.False(t, task.Status.FinishTime.IsZero())
+}
