@@ -32,6 +32,7 @@ type MedusaRestoreJobSpec struct {
 	// TargetTimestamp is the point in time to restore to, for a PITR restore.
 	// Either an RFC3339 timestamp with a required zone (for example 2026-11-03T10:35:11.123Z) or
 	// Unix epoch seconds as a decimal string (for example 1721046600.5).
+	// Cassandra replays to millisecond precision, finer precision is lost.
 	// Mutually exclusive with Backup. The base backups must have been taken with pitr.enabled=true.
 	// +optional
 	TargetTimestamp string `json:"targetTimestamp,omitempty"`
@@ -97,8 +98,9 @@ type MedusaRestoreMapping struct {
 
 // PitrRestoreBlock describes a point-in-time restore for the nodes of a datacenter.
 type PitrRestoreBlock struct {
-	// TargetTimestamp is the restore point, in whole seconds since the Unix epoch.
-	TargetTimestamp int64 `json:"target_timestamp"`
+	// TargetTimestamp is the value of spec.targetTimestamp, unchanged. Medusa converts it to the format
+	// of Cassandra's restore_point_in_time when it renders the replay configuration.
+	TargetTimestamp string `json:"target_timestamp"`
 
 	// NodeBackups maps each node to the name of the base backup it restores from.
 	NodeBackups map[string]string `json:"node_backups"`

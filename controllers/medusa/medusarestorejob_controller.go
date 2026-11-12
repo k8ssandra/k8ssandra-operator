@@ -19,9 +19,12 @@ package medusa
 import (
 	"context"
 	"encoding/json"
+	goerrors "errors"
 	"fmt"
 	"time"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"k8s.io/utils/ptr"
 
 	"github.com/go-logr/logr"
@@ -97,6 +100,11 @@ func (r *MedusaRestoreJobReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return *result, err
 	}
 
+	// The validating webhook rejects a bad spec at admission. This covers clusters where it is not running.
+	if err := medusav1alpha1.ValidateRestoreJobSpec(&request.RestoreJob.Spec); err != nil {
+		return r.failTerminal(ctx, request, err)
+	}
+
 	if request.RestoreJob.Status.StartTime.IsZero() {
 		request.SetMedusaRestoreStartTime(metav1.Now())
 		request.SetMedusaRestoreKey(uuid.New().String())
@@ -126,31 +134,36 @@ func (r *MedusaRestoreJobReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		}
 	}
 
-	// Verify the backup can be used for restore
-	if err := validateBackupForRestore(request.MedusaBackup, cassdc); err != nil {
-		request.RestoreJob.Status.FinishTime = metav1.Now()
-		request.RestoreJob.Status.Message = err.Error()
-		if err = r.Status().Update(ctx, request.RestoreJob); err != nil {
-			logger.Error(err, "failed to update MedusaRestoreJob with error message", "MedusaRestoreJob", req.Name)
-			return ctrl.Result{}, err
-		}
+	// Verify the backup can be used for restore. A PITR job has no MedusaBackup: Medusa checks the
+	// base backups of every node in PreparePitrRestore.
+	if request.RestoreJob.Spec.TargetTimestamp == "" {
+		if err := validateBackupForRestore(request.MedusaBackup, cassdc); err != nil {
+			request.RestoreJob.Status.FinishTime = metav1.Now()
+			request.RestoreJob.Status.Message = err.Error()
+			if err = r.Status().Update(ctx, request.RestoreJob); err != nil {
+				logger.Error(err, "failed to update MedusaRestoreJob with error message", "MedusaRestoreJob", req.Name)
+				return ctrl.Result{}, err
+			}
 
-		logger.Error(fmt.Errorf("unable to use target backup for restore of CassandraDatacenter: %s", request.RestoreJob.Status.Message), "backup can not be used for restore")
-		return ctrl.Result{}, nil // No requeue, because this error is not transient
+			logger.Error(fmt.Errorf("unable to use target backup for restore of CassandraDatacenter: %s", request.RestoreJob.Status.Message), "backup can not be used for restore")
+			return ctrl.Result{}, nil // No requeue, because this error is not transient
+		}
 	}
 
 	// Prepare the restore by placing a mapping file in the Cassandra data volume.
 	if !request.RestoreJob.Status.RestorePrepared {
-		restorePrepared := false
-		if restoreMapping, err := r.prepareRestore(ctx, request, logger); err != nil {
+		restoreMapping, err := r.prepareRestore(ctx, request, logger)
+		if err != nil {
+			var terminal *medusa.TerminalError
+			if goerrors.As(err, &terminal) {
+				return r.failTerminal(ctx, request, err)
+			}
 			logger.Error(err, "Failed to prepare restore")
 			return ctrl.Result{}, err
-		} else {
-			restorePrepared = true
-			request.SetMedusaRestorePrepared(restorePrepared)
-			request.SetMedusaRestoreMapping(*restoreMapping)
-			return r.applyUpdatesAndRequeue(ctx, request)
 		}
+		request.SetMedusaRestorePrepared(true)
+		request.SetMedusaRestoreMapping(*restoreMapping)
+		return r.applyUpdatesAndRequeue(ctx, request)
 	}
 
 	if request.RestoreJob.Status.DatacenterStopped.IsZero() {
@@ -245,6 +258,18 @@ func (r *MedusaRestoreJobReconciler) applyUpdatesAndRequeue(ctx context.Context,
 	return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 }
 
+// failTerminal marks the MedusaRestoreJob as finished with err as the reason. The job is never reconciled
+// again. Every caller runs before the datacenter is stopped, so a terminal failure never leaves it down.
+func (r *MedusaRestoreJobReconciler) failTerminal(ctx context.Context, req *medusa.RestoreRequest, err error) (ctrl.Result, error) {
+	req.Log.Error(err, "The restore cannot run, marking the MedusaRestoreJob as failed")
+	req.SetMedusaRestoreFinishTime(metav1.Now())
+	req.RestoreJob.Status.Message = err.Error()
+	if err := r.applyUpdates(ctx, req); err != nil {
+		return ctrl.Result{}, err
+	}
+	return ctrl.Result{}, nil
+}
+
 // podTemplateSpecUpdateComplete checks that the pod template spec changes, namely the ones
 // with the restore container, have been pushed down to the StatefulSets. Return true if
 // the changes have been applied.
@@ -273,7 +298,13 @@ func (r *MedusaRestoreJobReconciler) podTemplateSpecUpdateComplete(ctx context.C
 			return false, nil
 		}
 
-		if !utils.ContainerHasEnvVar(container, backupNameEnvVar, req.MedusaBackup.Name) {
+		// A PITR restore has no backup name. RESTORE_KEY below is unique to this job and is written in the
+		// same update as BACKUP_NAME and RESTORE_MAPPING, so it proves that the mapping is this job's too.
+		backupName := ""
+		if req.RestoreJob.Spec.TargetTimestamp == "" {
+			backupName = req.MedusaBackup.Name
+		}
+		if !utils.ContainerHasEnvVar(container, backupNameEnvVar, backupName) {
 			return false, nil
 		}
 
@@ -298,6 +329,11 @@ func (r *MedusaRestoreJobReconciler) prepareRestore(ctx context.Context, request
 		if medusaClient, err := newClient(ctx, r.Client, request.Datacenter, ptr.To(pod), r.ClientFactory); err != nil {
 			logger.Error(err, "Failed to create Medusa client", "Pod", pod.Name)
 		} else {
+			if request.RestoreJob.Spec.TargetTimestamp != "" {
+				// PITR restore: Medusa picks the base backups of every node in one coordinator call
+				return r.preparePitrRestore(ctx, request, medusaClient, logger)
+			}
+
 			restoreHostMap, err := medusa.GetHostMap(request.Datacenter, *request.RestoreJob, medusaClient, ctx)
 			if err != nil {
 				return nil, err
@@ -312,6 +348,46 @@ func (r *MedusaRestoreJobReconciler) prepareRestore(ctx context.Context, request
 		}
 	}
 	return nil, fmt.Errorf("failed to get host map from backup")
+}
+
+// preparePitrRestore asks Medusa to check that a point-in-time restore of the datacenter to the job's
+// targetTimestamp is possible, and to pick a base backup for each node. On success it returns the restore
+// mapping with the pitr block attached. It returns a medusa.TerminalError when Medusa does not have the RPC,
+// when Medusa rejects the restore, or when the base backups do not fit the datacenter. Any other error is
+// transient and is retried by controller-runtime; the RPC is read-only, so a retry is safe.
+func (r *MedusaRestoreJobReconciler) preparePitrRestore(ctx context.Context, request *medusa.RestoreRequest, client medusa.Client, logger logr.Logger) (*medusav1alpha1.MedusaRestoreMapping, error) {
+	// The timestamp goes to Medusa and into the mapping as written in the spec. Medusa converts it when it
+	// renders the replay configuration.
+	targetTimestamp := request.RestoreJob.Spec.TargetTimestamp
+
+	// The Cassandra datacenter name, not the object name: it is the name Medusa stores in its backups.
+	resp, err := client.PreparePitrRestore(ctx, request.Datacenter.DatacenterName(), targetTimestamp)
+	if status.Code(err) == codes.Unimplemented {
+		return nil, medusa.Terminal(fmt.Errorf("the Medusa image does not support PITR, upgrade the Medusa image"))
+	}
+	if err != nil {
+		return nil, fmt.Errorf("PreparePitrRestore failed: %w", err)
+	}
+	// The response carries no reason. The Medusa log of the coordinator pod has it.
+	if resp.Status == medusa.StatusType_FAILED {
+		return nil, medusa.Terminal(fmt.Errorf("PITR restore to %s rejected by Medusa", targetTimestamp))
+	}
+
+	// The same rack-by-rack pairing as a backup restore. Pod names may differ (in_place false).
+	hostMap, err := medusa.GetPitrHostMap(request.Datacenter, resp.NodeBaseBackups, client, ctx)
+	if err != nil {
+		return nil, err
+	}
+	mapping, err := hostMap.ToMedusaRestoreMapping()
+	if err != nil {
+		return nil, err
+	}
+	mapping.Pitr = &medusav1alpha1.PitrRestoreBlock{
+		TargetTimestamp: targetTimestamp,      // spec.targetTimestamp, unchanged
+		NodeBackups:     resp.NodeBaseBackups, // keyed by source node name, each pod resolves its own through host_map
+	}
+	logger.Info("Medusa accepted the PITR restore", "TargetTimestamp", targetTimestamp, "Nodes", len(resp.NodeBaseBackups))
+	return &mapping, nil
 }
 
 func validateBackupForRestore(backup *medusav1alpha1.MedusaBackup, cassdc *cassdcapi.CassandraDatacenter) error {
@@ -391,7 +467,13 @@ func stopDatacenterRestoreJob(req *medusa.RestoreRequest) bool {
 // updateRestoreInitContainer sets the backup name, restore key and restore mapping env vars in the medusa-restore
 // init container. An error is returned if the container is not found.
 func updateMedusaRestoreInitContainer(req *medusa.RestoreRequest) error {
-	if err := setBackupNameInRestoreContainer(req.MedusaBackup.Name, req.Datacenter); err != nil {
+	// A PITR restore has no single backup: the base backups are in the mapping. BACKUP_NAME is cleared so
+	// that a value left by an earlier backup restore cannot open the backup gate of the restore entrypoint.
+	backupName := ""
+	if req.RestoreJob.Spec.TargetTimestamp == "" {
+		backupName = req.MedusaBackup.Name
+	}
+	if err := setBackupNameInRestoreContainer(backupName, req.Datacenter); err != nil {
 		return err
 	}
 

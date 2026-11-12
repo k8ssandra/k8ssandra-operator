@@ -37,6 +37,7 @@ type RequestFactory interface {
 	// responsible for fetching the CassandraRestore, CassandraBackup, and
 	// CassandraDatacenter objects from the api server. The factory returns a deep copy of
 	// each of the objects, so there is no need to call DeepCopy() on them.
+	// The MedusaBackup is fetched only for a backup restore; it is nil for a PITR restore.
 	// Reconciliation should proceed only if the returned Result is nil.
 	NewMedusaRestoreRequest(ctx context.Context, restoreKey types.NamespacedName) (*RestoreRequest, *ctrl.Result, error)
 }
@@ -65,14 +66,6 @@ func (f *factory) NewMedusaRestoreRequest(ctx context.Context, restoreKey types.
 		return nil, &ctrl.Result{}, err
 	}
 
-	backup := &api.MedusaBackup{}
-	backupKey := types.NamespacedName{Namespace: restoreKey.Namespace, Name: restore.Spec.Backup}
-	err = f.Get(ctx, backupKey, backup)
-	if err != nil {
-		f.Log.Error(err, "Failed to get MedusaBackup", "MedusaBackup", backupKey)
-		return nil, &ctrl.Result{}, err
-	}
-
 	dc := &cassdcapi.CassandraDatacenter{}
 	dcKey := types.NamespacedName{Namespace: restoreKey.Namespace, Name: restore.Spec.CassandraDatacenter}
 	err = f.Get(ctx, dcKey, dc)
@@ -82,10 +75,23 @@ func (f *factory) NewMedusaRestoreRequest(ctx context.Context, restoreKey types.
 		return nil, &ctrl.Result{}, err
 	}
 
-	reqLogger := f.Log.WithValues(
-		"MedusaRestoreJob", restoreKey,
-		"MedusaBackup", backupKey,
-		"CassandraDatacenter", dcKey)
+	logValues := []interface{}{"MedusaRestoreJob", restoreKey, "CassandraDatacenter", dcKey}
+
+	// A PITR job (spec.targetTimestamp set) has no MedusaBackup: Medusa picks the base backups in
+	// PreparePitrRestore. The fetch is also skipped for an invalid job with both fields set, so that
+	// it fails in validateRestoreSpec instead of being retried forever on a missing backup.
+	var backup *api.MedusaBackup
+	if restore.Spec.Backup != "" && restore.Spec.TargetTimestamp == "" {
+		backup = &api.MedusaBackup{}
+		backupKey := types.NamespacedName{Namespace: restoreKey.Namespace, Name: restore.Spec.Backup}
+		if err := f.Get(ctx, backupKey, backup); err != nil {
+			f.Log.Error(err, "Failed to get MedusaBackup", "MedusaBackup", backupKey)
+			return nil, &ctrl.Result{}, err
+		}
+		logValues = append(logValues, "MedusaBackup", backupKey)
+	}
+
+	reqLogger := f.Log.WithValues(logValues...)
 
 	restoreHash := utils.DeepHashString(restore.Status)
 	datacenterHash := utils.DeepHashString(dc.Spec)
@@ -93,7 +99,7 @@ func (f *factory) NewMedusaRestoreRequest(ctx context.Context, restoreKey types.
 	req := RestoreRequest{
 		Log:             reqLogger,
 		RestoreJob:      restore.DeepCopy(),
-		MedusaBackup:    backup.DeepCopy(),
+		MedusaBackup:    backup.DeepCopy(), // nil for a PITR job
 		Datacenter:      dc.DeepCopy(),
 		restoreHash:     restoreHash,
 		datacenterHash:  datacenterHash,
