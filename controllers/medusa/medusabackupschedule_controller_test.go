@@ -8,6 +8,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 
 	medusav1alpha1 "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -377,4 +378,51 @@ func TestSchedulerParseError(t *testing.T) {
 
 	_, err = r.Reconcile(context.TODO(), reconcile.Request{NamespacedName: nsName})
 	require.Error(err)
+}
+
+func TestPurgeSchedulerCopiesSequentialAnnotation(t *testing.T) {
+	for _, value := range []string{"", "true"} {
+		t.Run("annotation="+value, func(t *testing.T) {
+			ctx := t.Context()
+			require := require.New(t)
+			require.NoError(medusav1alpha1.AddToScheme(scheme.Scheme))
+			require.NoError(cassdcapi.AddToScheme(scheme.Scheme))
+
+			fClock := &FakeClock{}
+			dc := cassdcapi.CassandraDatacenter{ObjectMeta: metav1.ObjectMeta{Name: "dc1", Namespace: "test-ns"}}
+			purgeSchedule := &medusav1alpha1.MedusaBackupSchedule{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-purge-schedule", Namespace: "test-ns"},
+				Spec: medusav1alpha1.MedusaBackupScheduleSpec{
+					CronSchedule:  "* * * * *",
+					BackupSpec:    medusav1alpha1.MedusaBackupJobSpec{CassandraDatacenter: "dc1"},
+					OperationType: string(medusav1alpha1.OperationTypePurge),
+				},
+			}
+			if value != "" {
+				purgeSchedule.Annotations = map[string]string{medusa.MedusaPurgeSequentialAnnotation: value}
+			}
+			fakeClient := fake.NewClientBuilder().
+				WithObjects(purgeSchedule, &dc).
+				WithStatusSubresource(purgeSchedule).
+				WithScheme(scheme.Scheme).
+				Build()
+			r := &MedusaBackupScheduleReconciler{Client: fakeClient, Scheme: scheme.Scheme, Clock: fClock}
+			req := reconcile.Request{NamespacedName: types.NamespacedName{Name: purgeSchedule.Name, Namespace: purgeSchedule.Namespace}}
+
+			_, err := r.Reconcile(ctx, req)
+			require.NoError(err)
+			fClock.currentTime = fClock.currentTime.Add(1 * time.Minute).Add(1 * time.Second)
+			_, err = r.Reconcile(ctx, req)
+			require.NoError(err)
+
+			purgeTasks := medusav1alpha1.MedusaTaskList{}
+			require.NoError(fakeClient.List(ctx, &purgeTasks))
+			require.Len(purgeTasks.Items, 1)
+			if value == "" {
+				require.NotContains(purgeTasks.Items[0].Annotations, medusa.MedusaPurgeSequentialAnnotation)
+			} else {
+				require.Equal(value, purgeTasks.Items[0].Annotations[medusa.MedusaPurgeSequentialAnnotation])
+			}
+		})
+	}
 }

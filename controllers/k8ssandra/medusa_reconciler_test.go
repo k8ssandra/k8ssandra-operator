@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/go-logr/logr"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
 	"github.com/stretchr/testify/assert"
@@ -14,6 +17,7 @@ import (
 	api "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	cassandra "github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	k8ssandrameta "github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
@@ -22,10 +26,12 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 const (
@@ -875,4 +881,34 @@ func pitrChangeRollsPods(t *testing.T, ctx context.Context, f *framework.Framewo
 		_, found := podHash()
 		return !found
 	}, timeout, interval, "pod template hash was not removed")
+}
+
+func TestPurgeScheduleCopiesSequentialAnnotation(t *testing.T) {
+	ctx := t.Context()
+	scheme := runtime.NewScheme()
+	require.NoError(t, cassdcapi.AddToScheme(scheme))
+	require.NoError(t, medusaapi.AddToScheme(scheme))
+
+	dc := &cassdcapi.CassandraDatacenter{ObjectMeta: metav1.ObjectMeta{Name: "dc1", Namespace: "test", UID: "dc1"}}
+	kc := &api.K8ssandraCluster{ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "test"}}
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(dc).Build()
+	r := &K8ssandraClusterReconciler{ReconcilerConfig: &config.ReconcilerConfig{DefaultDelay: time.Second}}
+	scheduleKey := types.NamespacedName{Namespace: dc.Namespace, Name: medusa.MedusaPurgeScheduleName(kc.SanitizedName(), dc.DatacenterName())}
+
+	require.NotNil(t, r.createPurgeSchedule(ctx, c, kc, dc, *scheme, logr.Discard()))
+	schedule := &medusaapi.MedusaBackupSchedule{}
+	require.NoError(t, c.Get(ctx, scheduleKey, schedule))
+	require.NotContains(t, schedule.Annotations, medusa.MedusaPurgeSequentialAnnotation)
+
+	// Setting the annotation on an existing cluster updates the existing schedule.
+	kc.Annotations = map[string]string{medusa.MedusaPurgeSequentialAnnotation: "true"}
+	require.NotNil(t, r.createPurgeSchedule(ctx, c, kc, dc, *scheme, logr.Discard()))
+	require.NoError(t, c.Get(ctx, scheduleKey, schedule))
+	require.Equal(t, "true", schedule.Annotations[medusa.MedusaPurgeSequentialAnnotation])
+
+	// Removing it goes back to parallel purges.
+	kc.Annotations = nil
+	require.NotNil(t, r.createPurgeSchedule(ctx, c, kc, dc, *scheme, logr.Discard()))
+	require.NoError(t, c.Get(ctx, scheduleKey, schedule))
+	require.NotContains(t, schedule.Annotations, medusa.MedusaPurgeSequentialAnnotation)
 }
