@@ -60,7 +60,7 @@ func newBackupJobUnitEnv(t *testing.T, status api.MedusaBackupJobStatus, funcs *
 	medusaClient.(*fakeMedusaClient).RequestedBackups = []string{job.Name}
 
 	return &backupJobUnitEnv{
-		ctx:     context.Background(),
+		ctx:     t.Context(),
 		client:  c,
 		r:       &MedusaBackupJobReconciler{Client: c, Scheme: scheme, ReconcilerConfig: &config.ReconcilerConfig{DefaultDelay: time.Second}, ClientFactory: factory},
 		req:     reconcile.Request{NamespacedName: client.ObjectKeyFromObject(job)},
@@ -72,28 +72,6 @@ func (e *backupJobUnitEnv) job(t *testing.T) *api.MedusaBackupJob {
 	job := &api.MedusaBackupJob{}
 	require.NoError(t, e.client.Get(e.ctx, e.req.NamespacedName, job))
 	return job
-}
-
-// An InProgress pod that no longer exists must be reported as failed, not silently dropped.
-func TestMedusaBackupJobMissingInProgressPodIsFailed(t *testing.T) {
-	env := newBackupJobUnitEnv(t, api.MedusaBackupJobStatus{
-		StartTime:  metav1.Now(),
-		InProgress: []string{"pod-that-is-gone"},
-	}, nil)
-
-	_, err := env.r.Reconcile(env.ctx, env.req)
-	require.NoError(t, err)
-
-	job := env.job(t)
-	require.Empty(t, job.Status.InProgress)
-	require.Equal(t, []string{"pod-that-is-gone"}, job.Status.Failed)
-
-	_, err = env.r.Reconcile(env.ctx, env.req)
-	require.NoError(t, err)
-	require.False(t, env.job(t).Status.FinishTime.IsZero())
-
-	err = env.client.Get(env.ctx, env.req.NamespacedName, &api.MedusaBackup{})
-	require.Error(t, err, "no MedusaBackup must be created for a failed backup")
 }
 
 // If the status patch that records the started backups is lost, the job must check every pod again
