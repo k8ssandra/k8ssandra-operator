@@ -24,11 +24,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [BUGFIX] [#1873](https://github.com/k8ssandra/k8ssandra-operator/issues/1873) Reject MedusaRestoreJob spec changes once the restore has started
 * [BUGFIX] [#1873](https://github.com/k8ssandra/k8ssandra-operator/issues/1873) Requeue rebuild polling after the default delay instead of 15ns
 * [BUGFIX] [#1873](https://github.com/k8ssandra/k8ssandra-operator/issues/1873) Reconcile Reaper and telemetry for the correct DC when datacenters are reordered by upgrade priority
-* [BUGFIX] [#1873](https://github.com/k8ssandra/k8ssandra-operator/issues/1873) Fail MedusaTask pods left in progress by an operator restart, so the task and later purges are not blocked
-* [BUGFIX] [#1873](https://github.com/k8ssandra/k8ssandra-operator/issues/1873) Run Medusa purge schedules for DCs that use a datacenterName override
-* [BUGFIX] [#1873](https://github.com/k8ssandra/k8ssandra-operator/issues/1873) Emit an event when a MedusaBackupSchedule postpones an execution because of unfinished jobs
 * [BUGFIX] [#1873](https://github.com/k8ssandra/k8ssandra-operator/issues/1873) Keep K8ssandraCluster status updates made earlier in a reconcile when the operator writes annotations or finalizers mid-pass
-* [BUGFIX] [#1873](https://github.com/k8ssandra/k8ssandra-operator/issues/1873) Only mark a MedusaBackupJob finished once its MedusaBackup and status are created, and fail InProgress pods that no longer exist
 * [BUGFIX] [#1873](https://github.com/k8ssandra/k8ssandra-operator/issues/1873) Skip K8ssandraCluster webhook validation for metadata-only updates and objects being deleted
 * [BUGFIX] [#1873](https://github.com/k8ssandra/k8ssandra-operator/issues/1873) Do not create a second refresh K8ssandraTask when the spec changes during a refresh
 * [BUGFIX] [#1873](https://github.com/k8ssandra/k8ssandra-operator/issues/1873) Surface contact-points service reconcile errors and mirror one Endpoint per address
@@ -38,7 +34,6 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [BUGFIX] [#1873](https://github.com/k8ssandra/k8ssandra-operator/issues/1873) Apply a stop requested during a DC rebuild once the rebuild finishes
 * [BUGFIX] [#1873](https://github.com/k8ssandra/k8ssandra-operator/issues/1873) Never pick the rebuild target DC as its own source when it uses a datacenterName override
 * [BUGFIX] [#1873](https://github.com/k8ssandra/k8ssandra-operator/issues/1873) Allow deleting a K8ssandraTask whose datacenter was removed from the cluster, and run explicit DC lists in listed order
-* [BUGFIX] [#1873](https://github.com/k8ssandra/k8ssandra-operator/issues/1873) Exit at startup when the MedusaRestoreJob controller cannot be set up, as for every other controller
 * [BUGFIX] [#967](https://github.com/k8ssandra/k8ssandra-operator/issues/967) Fix Medusa gRPC client address formatting for IPv6 pod IPs
 * [DOCS] []() Add PITR orchestration design doc
 * [TESTING] [#1870](https://github.com/k8ssandra/k8ssandra-operator/issues/1870) Raise the host inotify limits before creating kind clusters in CI, as Ubuntu 26.04 runners don't apply them at boot

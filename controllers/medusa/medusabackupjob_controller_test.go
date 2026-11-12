@@ -3,7 +3,6 @@ package medusa
 import (
 	"context"
 	"fmt"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -187,24 +186,6 @@ func testMedusaBackupDatacenter(t *testing.T, ctx context.Context, f *framework.
 	// in that same effort, we also found out we can have nil instead of backup sumamry
 	backupCreated = createAndVerifyMedusaBackup(dc1Key, dc1, f, ctx, require, t, namespace, backupWithNilSummary)
 	require.False(backupCreated, "the backup object shouldn't have been created")
-
-	// The backup with a nil summary stays in progress. A pod that disappears while its backup is in progress must be
-	// reported as failed, instead of being dropped from the job.
-	t.Log("verify that an in-progress pod that no longer exists is reported as failed")
-	nilSummaryKey := framework.NewClusterKey(dc1Key.K8sContext, namespace, backupWithNilSummary)
-	podName := fmt.Sprintf("%s-%s-0", dc1.Spec.ClusterName, dc1.LabelResourceName())
-	require.Eventually(func() bool {
-		job := &api.MedusaBackupJob{}
-		return f.Get(ctx, nilSummaryKey, job) == nil && slices.Contains(job.Status.InProgress, podName)
-	}, timeout, interval, "pod %s should be in progress", podName)
-	podKey := framework.NewClusterKey(dc1Key.K8sContext, namespace, podName)
-	require.NoError(f.Delete(ctx, podKey, &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: podName}}))
-	require.Eventually(func() bool {
-		job := &api.MedusaBackupJob{}
-		return f.Get(ctx, nilSummaryKey, job) == nil &&
-			slices.Contains(job.Status.Failed, podName) && !slices.Contains(job.Status.InProgress, podName)
-	}, timeout, interval, "pod %s should be reported as failed", podName)
-	createDatacenterPods(t, f, ctx, dc1Key, dc1)
 
 	err = f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval)
 	require.NoError(err, "failed to delete K8ssandraCluster")

@@ -20,6 +20,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -130,10 +131,7 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaPurgeSchedule(ctx context.Co
 	medusaSpec := kc.Spec.Medusa
 	if medusaSpec.PurgeBackups == nil || *medusaSpec.PurgeBackups {
 		logger.Info("Creating Medusa purge schedule")
-		medusaBackupSchedule, err := r.newPurgeSchedule(kc, dc, logger)
-		if err != nil {
-			return result.Error(err)
-		}
+		medusaBackupSchedule := r.createPurgeSchedule(ctx, remoteClient, kc, dc, *r.Scheme, logger)
 		if recRes := reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *medusaBackupSchedule); recRes.Completed() {
 			return recRes
 		}
@@ -305,8 +303,8 @@ func (r *K8ssandraClusterReconciler) validateStorageCredentials(medusaSpec *medu
 	return nil
 }
 
-// newPurgeSchedule builds the desired MedusaBackupSchedule that purges the backups of the given datacenter.
-func (r *K8ssandraClusterReconciler) newPurgeSchedule(kc *api.K8ssandraCluster, dc *cassdcapi.CassandraDatacenter, logger logr.Logger) (*medusaapi.MedusaBackupSchedule, error) {
+func (r *K8ssandraClusterReconciler) createPurgeSchedule(ctx context.Context, remoteClient client.Client, kc *api.K8ssandraCluster, dc *cassdcapi.CassandraDatacenter, scheme runtime.Scheme, logger logr.Logger) *medusaapi.MedusaBackupSchedule {
+	logger.Info("Creating Medusa purge schedule", "K8ssandraCluster", kc.Name, "CassandraDatacenter", dc.Name)
 	dcNamespace := dc.Namespace
 	if dcNamespace == "" {
 		dcNamespace = kc.Namespace
@@ -318,17 +316,20 @@ func (r *K8ssandraClusterReconciler) newPurgeSchedule(kc *api.K8ssandraCluster, 
 		},
 		Spec: medusaapi.MedusaBackupScheduleSpec{
 			BackupSpec: medusaapi.MedusaBackupJobSpec{
-				// The MedusaBackupSchedule controller looks up the CassandraDatacenter by its object name
-				CassandraDatacenter: dc.Name,
+				CassandraDatacenter: dc.DatacenterName(),
 			},
 			CronSchedule:  "0 0 * * *",
 			OperationType: string(medusaapi.OperationTypePurge),
 		},
 	}
 	purgeSchedule.SetLabels(labels.CleanedUpByLabels(utils.GetKey(kc)))
-	if err := controllerutil.SetOwnerReference(dc, &purgeSchedule, r.Scheme); err != nil {
+	err := controllerutil.SetOwnerReference(dc, &purgeSchedule, &scheme)
+	if err != nil {
 		logger.Error(err, "failed to set owner reference for MedusaBackupSchedule")
-		return nil, err
+		return nil
 	}
-	return &purgeSchedule, nil
+	if recRes := reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, purgeSchedule); recRes.Completed() {
+		return &purgeSchedule
+	}
+	return &purgeSchedule
 }

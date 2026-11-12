@@ -53,10 +53,6 @@ type MedusaTaskReconciler struct {
 	Scheme *runtime.Scheme
 	medusa.ClientFactory
 	ImageRegistry cassimages.ImageRegistry
-
-	// runningOperations tracks the UIDs of the tasks whose pod operations are being executed by a goroutine of
-	// this process. A task that is in progress but not tracked here was started by a previous operator process.
-	runningOperations sync.Map
 }
 
 // +kubebuilder:rbac:groups=medusa.k8ssandra.io,namespace="k8ssandra",resources=medusatasks,verbs=get;list;watch;create;update;patch;delete
@@ -115,20 +111,6 @@ func (r *MedusaTaskReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if task.Spec.Operation != medusav1alpha1.OperationTypeSync && !task.Status.StartTime.IsZero() {
 		// If there is anything in progress, simply requeue the request
 		if len(task.Status.InProgress) > 0 {
-			if _, running := r.runningOperations.Load(task.UID); !running {
-				// The goroutine that executed the pod operations is gone, for example because the operator was
-				// restarted. Nothing will ever update the progress of the remaining pods, so mark them as failed.
-				logger.Info("Task is in progress but its operations are not running anymore, marking the remaining pods as failed", "Pods", task.Status.InProgress)
-				// Use an optimistic lock, a stale cached object must not overwrite the final status written by the goroutine.
-				patch := client.MergeFromWithOptions(task.DeepCopy(), client.MergeFromWithOptimisticLock{})
-				task.Status.Failed = append(task.Status.Failed, task.Status.InProgress...)
-				task.Status.InProgress = nil
-				if err := r.Status().Patch(ctx, task, patch); err != nil {
-					logger.Error(err, "failed to patch status")
-					return ctrl.Result{}, err
-				}
-				return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
-			}
 			logger.Info("Tasks already in progress")
 			return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 		}
@@ -219,9 +201,7 @@ func (r *MedusaTaskReconciler) executePodOperations(
 		return ctrl.Result{}, err
 	}
 
-	r.runningOperations.Store(task.UID, struct{}{})
 	go func() {
-		defer r.runningOperations.Delete(task.UID)
 		wg := sync.WaitGroup{}
 
 		// Mutex to prevent concurrent updates to the Status object
