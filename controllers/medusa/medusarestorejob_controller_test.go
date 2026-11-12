@@ -2,11 +2,21 @@ package medusa
 
 import (
 	"context"
+	"encoding/json"
+	goerrors "errors"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ss "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -30,7 +40,9 @@ const (
 	restoredBackupName = "backup2"
 )
 
-func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+// createRestoreTestCluster creates a K8ssandraCluster with Medusa and gRPC encryption, waits for its
+// datacenter dc1 (Cassandra name real-dc1), marks it ready and creates its pods.
+func createRestoreTestCluster(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) (*k8ss.K8ssandraCluster, framework.ClusterKey, *cassdcapi.CassandraDatacenter) {
 	require := require.New(t)
 	err := f.Client.DeleteAllOf(ctx, &corev1.Pod{}, client.InNamespace(namespace))
 	require.NoError(err)
@@ -171,6 +183,14 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 	err = createCassandraPods(t, f, ctx, dc1Key, dc1)
 	require.NoError(err)
 
+	return kc, dc1Key, dc1
+}
+
+func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+	require := require.New(t)
+	k8sCtx0 := f.DataPlaneContexts[0]
+	kc, dc1Key, dc1 := createRestoreTestCluster(t, ctx, f, namespace)
+
 	t.Log("creating MedusaBackup")
 	backup := &api.MedusaBackup{
 		ObjectMeta: metav1.ObjectMeta{
@@ -183,7 +203,7 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 	}
 
 	backupKey := framework.NewClusterKey(dc1Key.K8sContext, dc1Key.Namespace, restoredBackupName)
-	err = f.Create(ctx, backupKey, backup)
+	err := f.Create(ctx, backupKey, backup)
 	require.NoError(err, "failed to create CassandraBackup")
 
 	patch := client.MergeFrom(backup.DeepCopy())
@@ -252,7 +272,7 @@ func testMedusaRestoreDatacenter(t *testing.T, ctx context.Context, f *framework
 
 	t.Log("check that the datacenter podTemplateSpec is updated")
 	require.Eventually(withDc1(func(dc *cassdcapi.CassandraDatacenter) bool {
-		restoreContainer := findContainer(dc.Spec.PodTemplateSpec.Spec.InitContainers, "medusa-restore")
+		restoreContainer := findRestoreContainer(dc.Spec.PodTemplateSpec.Spec.InitContainers)
 		if restoreContainer == nil {
 			t.Log("restore container not found")
 			return false
@@ -413,7 +433,7 @@ func testFinishedRestoreJobDoesNotModifyDatacenter(t *testing.T, ctx context.Con
 	require.NoError(f.Get(ctx, dcKey, dc))
 	require.Equal(*expectedSpec, dc.Spec)
 	require.True(dc.Spec.Stopped, "the finished restore job started the datacenter")
-	restoreContainer = findContainer(dc.Spec.PodTemplateSpec.Spec.InitContainers, restoreContainerName)
+	restoreContainer = findRestoreContainer(dc.Spec.PodTemplateSpec.Spec.InitContainers)
 	require.NotNil(restoreContainer)
 	require.Nil(utils.FindEnvVar(restoreContainer.Env, backupNameEnvVar))
 	require.Nil(utils.FindEnvVar(restoreContainer.Env, restoreKeyEnvVar))
@@ -668,9 +688,9 @@ func testValidationErrorStopsRestore(t *testing.T, ctx context.Context, f *frame
 	require.NoError(err, "failed to delete K8ssandraCluster")
 }
 
-func findContainer(containers []corev1.Container, name string) *corev1.Container {
+func findRestoreContainer(containers []corev1.Container) *corev1.Container {
 	for _, container := range containers {
-		if container.Name == name {
+		if container.Name == restoreContainerName {
 			return &container
 		}
 	}
@@ -755,10 +775,51 @@ func TestValidateBackupForRestore(t *testing.T) {
 type fakeMedusaRestoreClientFactory struct {
 	clientsMutex sync.Mutex
 	clients      map[string]*fakeMedusaRestoreClient
+
+	// Responses shared by every client of the factory. A test sets them before it creates the restore job.
+	backups      []*medusa.BackupSummary
+	backupsErr   error
+	pitrResponse *medusa.PreparePitrRestoreResponse
+	pitrErr      error
+
+	// The datacenter and targetTimestamp arguments of every PreparePitrRestore call, oldest first.
+	pitrDatacenters []string
+	pitrTimestamps  []string
 }
 
+// pitrTestTimestamp is the spec.targetTimestamp of the PITR test jobs. It reaches Medusa and the restore
+// mapping unchanged.
+const pitrTestTimestamp = "2024-07-15T12:30:00Z"
+
+// NewMedusaClientRestoreFactory returns a factory whose clients report one successful backup of nodes node1 to
+// node3 in rack "default" of datacenter "real-dc1", and accept a PITR restore of those nodes from that backup.
 func NewMedusaClientRestoreFactory() *fakeMedusaRestoreClientFactory {
-	return &fakeMedusaRestoreClientFactory{clients: make(map[string]*fakeMedusaRestoreClient, 0)}
+	return &fakeMedusaRestoreClientFactory{
+		clients: make(map[string]*fakeMedusaRestoreClient, 0),
+		backups: []*medusa.BackupSummary{
+			{
+				BackupName: restoredBackupName,
+				StartTime:  0,
+				FinishTime: 10,
+				Status:     *medusa.StatusType_SUCCESS.Enum(),
+				Nodes: []*medusa.BackupNode{
+					{
+						Host: "node1", Datacenter: "real-dc1", Rack: "default",
+					},
+					{
+						Host: "node2", Datacenter: "real-dc1", Rack: "default",
+					},
+					{
+						Host: "node3", Datacenter: "real-dc1", Rack: "default",
+					},
+				},
+			},
+		},
+		pitrResponse: &medusa.PreparePitrRestoreResponse{
+			Status:          medusa.StatusType_SUCCESS,
+			NodeBaseBackups: map[string]string{"node1": restoredBackupName, "node2": restoredBackupName, "node3": restoredBackupName},
+		},
+	}
 }
 
 func (f *fakeMedusaRestoreClientFactory) NewClient(address string) (medusa.Client, error) {
@@ -766,7 +827,7 @@ func (f *fakeMedusaRestoreClientFactory) NewClient(address string) (medusa.Clien
 	defer f.clientsMutex.Unlock()
 	_, ok := f.clients[address]
 	if !ok {
-		f.clients[address] = newFakeMedusaRestoreClient()
+		f.clients[address] = &fakeMedusaRestoreClient{factory: f}
 	}
 	return f.clients[address], nil
 }
@@ -776,10 +837,7 @@ func (f *fakeMedusaRestoreClientFactory) NewClientWithTLS(address string, secret
 }
 
 type fakeMedusaRestoreClient struct {
-}
-
-func newFakeMedusaRestoreClient() *fakeMedusaRestoreClient {
-	return &fakeMedusaRestoreClient{}
+	factory *fakeMedusaRestoreClientFactory
 }
 
 func (c *fakeMedusaRestoreClient) Close() error {
@@ -791,25 +849,7 @@ func (c *fakeMedusaRestoreClient) CreateBackup(ctx context.Context, name string,
 }
 
 func (c *fakeMedusaRestoreClient) GetBackups(ctx context.Context) ([]*medusa.BackupSummary, error) {
-	return []*medusa.BackupSummary{
-		{
-			BackupName: restoredBackupName,
-			StartTime:  0,
-			FinishTime: 10,
-			Status:     *medusa.StatusType_SUCCESS.Enum(),
-			Nodes: []*medusa.BackupNode{
-				{
-					Host: "node1", Datacenter: "real-dc1", Rack: "default",
-				},
-				{
-					Host: "node2", Datacenter: "real-dc1", Rack: "default",
-				},
-				{
-					Host: "node3", Datacenter: "real-dc1", Rack: "default",
-				},
-			},
-		},
-	}, nil
+	return c.factory.backups, c.factory.backupsErr
 }
 
 func (c *fakeMedusaRestoreClient) PurgeBackups(ctx context.Context) (*medusa.PurgeBackupsResponse, error) {
@@ -831,5 +871,386 @@ func (c *fakeMedusaRestoreClient) PrepareRestore(ctx context.Context, datacenter
 }
 
 func (c *fakeMedusaRestoreClient) PreparePitrRestore(ctx context.Context, datacenter, targetTimestamp string) (*medusa.PreparePitrRestoreResponse, error) {
-	return nil, nil
+	c.factory.clientsMutex.Lock()
+	c.factory.pitrDatacenters = append(c.factory.pitrDatacenters, datacenter)
+	c.factory.pitrTimestamps = append(c.factory.pitrTimestamps, targetTimestamp)
+	c.factory.clientsMutex.Unlock()
+	return c.factory.pitrResponse, c.factory.pitrErr
+}
+
+// testMedusaPitrRestoreDatacenter runs a PITR restore through the whole reconcile loop. No MedusaBackup
+// exists in the namespace: Medusa picks the base backups. The job finishes only once the datacenter is ready
+// again after its restart.
+func testMedusaPitrRestoreDatacenter(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
+	require := require.New(t)
+	k8sCtx0 := f.DataPlaneContexts[0]
+	kc, dc1Key, dc1 := createRestoreTestCluster(t, ctx, f, namespace)
+	require.NoError(createUserSecret(ctx, f, framework.NewClusterKey(k8sCtx0, namespace, "test-superuser")), "failed to create superuser secret")
+
+	restore := &api.MedusaRestoreJob{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      "test-pitr-restore",
+		},
+		Spec: api.MedusaRestoreJobSpec{
+			TargetTimestamp:     pitrTestTimestamp,
+			CassandraDatacenter: dc1.Name,
+		},
+	}
+	restoreKey := framework.NewClusterKey(dc1Key.K8sContext, dc1Key.Namespace, restore.Name)
+	require.NoError(f.Create(ctx, restoreKey, restore), "failed to create MedusaRestoreJob")
+
+	withDc1 := f.NewWithDatacenter(ctx, dc1Key)
+
+	t.Log("check that the datacenter is set to be stopped")
+	require.Eventually(withDc1(func(dc *cassdcapi.CassandraDatacenter) bool {
+		return dc.Spec.Stopped
+	}), timeout*5, interval, "timed out waiting for CassandraDatacenter stopped flag to be set")
+
+	t.Log("check that Medusa chose the base backups before the datacenter was stopped")
+	restore = &api.MedusaRestoreJob{}
+	require.NoError(f.Get(ctx, restoreKey, restore))
+	require.True(restore.Status.RestorePrepared)
+	require.Equal(false, *restore.Status.RestoreMapping.InPlace)
+	require.Len(restore.Status.RestoreMapping.HostMap, int(dc1.Spec.Size))
+	require.NotNil(restore.Status.RestoreMapping.Pitr)
+	require.Equal(pitrTestTimestamp, restore.Status.RestoreMapping.Pitr.TargetTimestamp)
+	require.Equal(map[string]string{"node1": restoredBackupName, "node2": restoredBackupName, "node3": restoredBackupName}, restore.Status.RestoreMapping.Pitr.NodeBackups)
+	expectedMapping, err := json.Marshal(restore.Status.RestoreMapping)
+	require.NoError(err)
+
+	t.Log("delete datacenter pods to simulate shutdown")
+	require.NoError(f.DeleteAllOf(ctx, dc1Key.K8sContext, &corev1.Pod{}, client.InNamespace(namespace), client.MatchingLabels{cassdcapi.DatacenterLabel: "dc1"}), "failed to delete datacenter pods")
+
+	dcStoppedTime := restore.Status.StartTime.Add(1 * time.Second)
+
+	t.Log("set datacenter status to stopped and not ready")
+	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {
+		dc.SetCondition(cassdcapi.DatacenterCondition{
+			Type:               cassdcapi.DatacenterStopped,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: metav1.NewTime(dcStoppedTime),
+		})
+		dc.SetCondition(cassdcapi.DatacenterCondition{
+			Type:               cassdcapi.DatacenterReady,
+			Status:             corev1.ConditionFalse,
+			LastTransitionTime: metav1.NewTime(dcStoppedTime),
+		})
+	})
+	require.NoError(err, "failed to update datacenter status with stopped condition")
+
+	t.Log("check that the datacenter podTemplateSpec is updated for a PITR restore")
+	require.Eventually(withDc1(func(dc *cassdcapi.CassandraDatacenter) bool {
+		restoreContainer := findRestoreContainer(dc.Spec.PodTemplateSpec.Spec.InitContainers)
+		if restoreContainer == nil {
+			return false
+		}
+		return utils.ContainerHasEnvVar(restoreContainer, backupNameEnvVar, "") &&
+			utils.ContainerHasEnvVar(restoreContainer, restoreMappingEnvVar, string(expectedMapping)) &&
+			utils.ContainerHasEnvVar(restoreContainer, restoreKeyEnvVar, restore.Status.RestoreKey)
+	}), timeout, interval, "timed out waiting for CassandraDatacenter PodTemplateSpec update")
+
+	restore = &api.MedusaRestoreJob{}
+	require.NoError(f.Get(ctx, restoreKey, restore))
+
+	t.Log("set datacenter status to updated")
+	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {
+		dc.SetCondition(cassdcapi.DatacenterCondition{
+			Type:               cassdcapi.DatacenterUpdating,
+			Status:             corev1.ConditionFalse,
+			LastTransitionTime: metav1.NewTime(restore.Status.DatacenterStopped.Add(time.Second * 1)),
+		})
+	})
+	require.NoError(err, "failed to update datacenter status with updating condition")
+
+	t.Log("check datacenter restarted")
+	require.Eventually(withDc1(func(dc *cassdcapi.CassandraDatacenter) bool {
+		return !dc.Spec.Stopped
+	}), timeout, interval)
+
+	restoreFinished := func() bool {
+		restore := &api.MedusaRestoreJob{}
+		if err := f.Get(ctx, restoreKey, restore); err != nil {
+			return false
+		}
+		return !restore.Status.FinishTime.IsZero()
+	}
+
+	t.Log("check that the restore does not finish while the datacenter is not ready")
+	require.Never(restoreFinished, 1*time.Second, interval, "the restore finished before the datacenter was ready")
+
+	t.Log("set datacenter status to ready")
+	err = f.PatchDatacenterStatus(ctx, dc1Key, func(dc *cassdcapi.CassandraDatacenter) {
+		dc.Status.CassandraOperatorProgress = cassdcapi.ProgressReady
+		dc.SetCondition(cassdcapi.DatacenterCondition{
+			Type:               cassdcapi.DatacenterReady,
+			Status:             corev1.ConditionTrue,
+			LastTransitionTime: metav1.NewTime(dcStoppedTime.Add(time.Second * 2)),
+		})
+	})
+	require.NoError(err)
+
+	t.Log("check restore status finish time set")
+	require.Eventually(restoreFinished, timeout*2, interval)
+	restore = &api.MedusaRestoreJob{}
+	require.NoError(f.Get(ctx, restoreKey, restore))
+	require.Empty(restore.Status.Message)
+
+	require.NoError(f.DeleteK8ssandraCluster(ctx, client.ObjectKey{Namespace: kc.Namespace, Name: kc.Name}, timeout, interval), "failed to delete K8ssandraCluster")
+}
+
+// newPitrTestDC returns a two-rack datacenter "dc1" of cluster "test" whose Cassandra name is "real-dc1", with
+// a medusa-restore initContainer that still carries the BACKUP_NAME of an earlier backup restore.
+func newPitrTestDC() *cassdcapi.CassandraDatacenter {
+	return &cassdcapi.CassandraDatacenter{
+		ObjectMeta: metav1.ObjectMeta{Name: "dc1", Namespace: "test", UID: "dc1"},
+		Spec: cassdcapi.CassandraDatacenterSpec{
+			ClusterName:    "test",
+			DatacenterName: "real-dc1",
+			Size:           2,
+			Racks:          []cassdcapi.Rack{{Name: "r1"}, {Name: "r2"}},
+			PodTemplateSpec: &corev1.PodTemplateSpec{Spec: corev1.PodSpec{InitContainers: []corev1.Container{{
+				Name: restoreContainerName,
+				Env:  []corev1.EnvVar{{Name: backupNameEnvVar, Value: "old-backup"}},
+			}}}},
+		},
+	}
+}
+
+// newPitrTestJob returns a PITR restore job for dc that already has its owner reference.
+func newPitrTestJob(dc *cassdcapi.CassandraDatacenter) *api.MedusaRestoreJob {
+	return &api.MedusaRestoreJob{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            "pitr-restore",
+			Namespace:       dc.Namespace,
+			OwnerReferences: []metav1.OwnerReference{{APIVersion: cassdcapi.GroupVersion.String(), Kind: "CassandraDatacenter", Name: dc.Name, UID: dc.UID}},
+		},
+		Spec: api.MedusaRestoreJobSpec{TargetTimestamp: pitrTestTimestamp, CassandraDatacenter: dc.Name},
+	}
+}
+
+func newPitrTestMapping() api.MedusaRestoreMapping {
+	return api.MedusaRestoreMapping{
+		InPlace: ptr.To(true),
+		HostMap: map[string]api.MappingSource{"test-dc1-r1-sts-0": {Source: []string{"test-dc1-r1-sts-0"}}},
+		Pitr:    &api.PitrRestoreBlock{TargetTimestamp: pitrTestTimestamp, NodeBackups: map[string]string{"test-dc1-r1-sts-0": "b1"}},
+	}
+}
+
+func newPitrTestScheme(t *testing.T) *runtime.Scheme {
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, appsv1.AddToScheme(scheme))
+	require.NoError(t, cassdcapi.AddToScheme(scheme))
+	require.NoError(t, api.AddToScheme(scheme))
+	return scheme
+}
+
+// pitrTestBackups returns one backup per rack, each with the single node <prefix>-dc1-<rack>-sts-0 of
+// datacenter real-dc1, and the node to backup map that PreparePitrRestore would return for them.
+func pitrTestBackups(prefix string, racks ...string) ([]*medusa.BackupSummary, map[string]string) {
+	backups := []*medusa.BackupSummary{}
+	nodeBackups := map[string]string{}
+	for i, rack := range racks {
+		host := fmt.Sprintf("%s-dc1-%s-sts-0", prefix, rack)
+		name := fmt.Sprintf("b%d", i+1)
+		backups = append(backups, &medusa.BackupSummary{BackupName: name, Nodes: []*medusa.BackupNode{{Host: host, Datacenter: "real-dc1", Rack: rack}}})
+		nodeBackups[host] = name
+	}
+	return backups, nodeBackups
+}
+
+// newPitrTestReconciler returns a reconciler over a fake client that holds the PITR test datacenter, one pod
+// per rack and the PITR job. No MedusaBackup object exists.
+func newPitrTestReconciler(t *testing.T, factory *fakeMedusaRestoreClientFactory) (*MedusaRestoreJobReconciler, client.Client, *cassdcapi.CassandraDatacenter, *api.MedusaRestoreJob) {
+	dc := newPitrTestDC()
+	job := newPitrTestJob(dc)
+	objects := []client.Object{dc, job}
+	for i, rack := range []string{"r1", "r2"} {
+		objects = append(objects, &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-dc1-%s-sts-0", rack), Namespace: dc.Namespace, Labels: dc.GetDatacenterLabels()},
+			Status:     corev1.PodStatus{PodIP: fmt.Sprintf("10.0.0.%d", i+1)},
+		})
+	}
+	scheme := newPitrTestScheme(t)
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).WithStatusSubresource(&api.MedusaRestoreJob{}).Build()
+	r := &MedusaRestoreJobReconciler{Client: c, Scheme: scheme, ReconcilerConfig: &config.ReconcilerConfig{DefaultDelay: time.Second}, ClientFactory: factory}
+	return r, c, dc, job
+}
+
+func TestReconcilePitrRestore(t *testing.T) {
+	inPlaceBackups, inPlaceNodes := pitrTestBackups("test", "r1", "r2")
+	outOfPlaceBackups, outOfPlaceNodes := pitrTestBackups("src", "r1", "r2")
+	threeRackBackups, threeRackNodes := pitrTestBackups("src", "r1", "r2", "r3")
+	success := func(nodes map[string]string) *medusa.PreparePitrRestoreResponse {
+		return &medusa.PreparePitrRestoreResponse{Status: medusa.StatusType_SUCCESS, NodeBaseBackups: nodes}
+	}
+
+	tests := []struct {
+		name       string
+		backups    []*medusa.BackupSummary
+		backupsErr error
+		pitrResp   *medusa.PreparePitrRestoreResponse
+		pitrErr    error
+		terminal   string            // substring of the failure message; "" means the restore proceeds
+		transient  bool              // the reconcile returns a plain error and changes nothing
+		inPlace    bool              // expected in_place of a restore that proceeds
+		hostMap    map[string]string // expected host_map (target pod to source node) of a restore that proceeds
+	}{
+		{name: "in place", backups: inPlaceBackups, pitrResp: success(inPlaceNodes), inPlace: true,
+			hostMap: map[string]string{"test-dc1-r1-sts-0": "test-dc1-r1-sts-0", "test-dc1-r2-sts-0": "test-dc1-r2-sts-0"}},
+		{name: "out of place", backups: outOfPlaceBackups, pitrResp: success(outOfPlaceNodes),
+			hostMap: map[string]string{"test-dc1-r1-sts-0": "src-dc1-r1-sts-0", "test-dc1-r2-sts-0": "src-dc1-r2-sts-0"}},
+		{name: "Medusa rejects the restore", backups: inPlaceBackups, pitrResp: &medusa.PreparePitrRestoreResponse{Status: medusa.StatusType_FAILED}, terminal: "rejected by Medusa"},
+		{name: "Medusa without PITR", pitrErr: status.Error(codes.Unimplemented, "unknown method PreparePitrRestore"), terminal: "does not support PITR"},
+		{name: "rack layout does not match", backups: threeRackBackups, pitrResp: success(threeRackNodes), terminal: "racks"},
+		{name: "transient PreparePitrRestore error", pitrErr: status.Error(codes.Unavailable, "sidecar not ready"), transient: true},
+		{name: "transient GetBackups error", pitrResp: success(inPlaceNodes), backupsErr: fmt.Errorf("storage unavailable"), transient: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			factory := NewMedusaClientRestoreFactory()
+			factory.backups, factory.backupsErr, factory.pitrResponse, factory.pitrErr = tt.backups, tt.backupsErr, tt.pitrResp, tt.pitrErr
+			r, c, dc, job := newPitrTestReconciler(t, factory)
+			req := ctrl.Request{NamespacedName: client.ObjectKeyFromObject(job)}
+
+			result, err := r.Reconcile(ctx, req)
+			require.NoError(t, c.Get(ctx, req.NamespacedName, job))
+			require.NoError(t, c.Get(ctx, client.ObjectKeyFromObject(dc), dc))
+			require.Equal(t, []string{"real-dc1"}, factory.pitrDatacenters, "PreparePitrRestore must get the Cassandra datacenter name")
+			require.Equal(t, []string{pitrTestTimestamp}, factory.pitrTimestamps, "PreparePitrRestore must get the timestamp as written in the spec")
+
+			if tt.transient {
+				var terminal *medusa.TerminalError
+				require.Error(t, err)
+				require.False(t, goerrors.As(err, &terminal), "a transient error must not be terminal: %v", err)
+				require.True(t, job.Status.FinishTime.IsZero())
+				require.False(t, job.Status.RestorePrepared)
+				require.False(t, dc.Spec.Stopped)
+				return
+			}
+
+			if tt.terminal != "" {
+				require.NoError(t, err)
+				require.Equal(t, ctrl.Result{}, result)
+				require.False(t, job.Status.FinishTime.IsZero())
+				require.Contains(t, job.Status.Message, tt.terminal)
+				require.False(t, job.Status.RestorePrepared)
+				require.Nil(t, job.Status.RestoreMapping.Pitr)
+				require.False(t, dc.Spec.Stopped)
+
+				t.Log("a failed job is not reconciled again")
+				result, err = r.Reconcile(ctx, req)
+				require.NoError(t, err)
+				require.Equal(t, ctrl.Result{}, result)
+				require.Len(t, factory.pitrDatacenters, 1, "a finished job must not call Medusa")
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotZero(t, result.RequeueAfter)
+			require.True(t, job.Status.RestorePrepared)
+			require.True(t, job.Status.FinishTime.IsZero())
+			mapping := job.Status.RestoreMapping
+			require.Equal(t, tt.inPlace, *mapping.InPlace)
+			require.Len(t, mapping.HostMap, len(tt.hostMap))
+			for target, source := range tt.hostMap {
+				require.Equal(t, api.MappingSource{Source: []string{source}}, mapping.HostMap[target])
+			}
+			require.Equal(t, pitrTestTimestamp, mapping.Pitr.TargetTimestamp, "the target timestamp is the spec value, unchanged")
+			require.Equal(t, tt.pitrResp.NodeBaseBackups, mapping.Pitr.NodeBackups, "the node_backups keys stay source node names")
+
+			t.Log("the next reconcile stops the datacenter with no further Medusa call")
+			result, err = r.Reconcile(ctx, req)
+			require.NoError(t, err)
+			require.NotZero(t, result.RequeueAfter)
+			require.NoError(t, c.Get(ctx, client.ObjectKeyFromObject(dc), dc))
+			require.True(t, dc.Spec.Stopped)
+			require.Len(t, factory.pitrDatacenters, 1)
+		})
+	}
+}
+
+// TestReconcileInvalidSpecIsTerminal covers clusters where the validating webhook is not running: a job with
+// both or neither of spec.backup and spec.targetTimestamp fails for good without a Medusa call.
+func TestReconcileInvalidSpecIsTerminal(t *testing.T) {
+	for name, spec := range map[string]api.MedusaRestoreJobSpec{
+		"both set":    {Backup: "b1", TargetTimestamp: "2024-07-15T12:30:00Z", CassandraDatacenter: "dc1"},
+		"neither set": {CassandraDatacenter: "dc1"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			ctx := context.Background()
+			factory := NewMedusaClientRestoreFactory()
+			r, c, dc, job := newPitrTestReconciler(t, factory)
+			require.NoError(t, c.Get(ctx, client.ObjectKeyFromObject(job), job))
+			job.Spec = spec
+			require.NoError(t, c.Update(ctx, job))
+			req := ctrl.Request{NamespacedName: client.ObjectKeyFromObject(job)}
+
+			for i := 0; i < 2; i++ {
+				result, err := r.Reconcile(ctx, req)
+				require.NoError(t, err)
+				require.Equal(t, ctrl.Result{}, result)
+			}
+			require.NoError(t, c.Get(ctx, req.NamespacedName, job))
+			require.NoError(t, c.Get(ctx, client.ObjectKeyFromObject(dc), dc))
+			require.False(t, job.Status.FinishTime.IsZero())
+			require.NotEmpty(t, job.Status.Message)
+			require.Empty(t, factory.pitrDatacenters)
+			require.False(t, dc.Spec.Stopped)
+		})
+	}
+}
+
+func TestPodTemplateSpecUpdateCompletePitr(t *testing.T) {
+	dc := newPitrTestDC()
+	dc.SetCondition(cassdcapi.DatacenterCondition{Type: cassdcapi.DatacenterUpdating, Status: corev1.ConditionFalse, LastTransitionTime: metav1.Now()})
+	job := newPitrTestJob(dc)
+	job.Status.RestoreKey = "key"
+	job.Status.DatacenterStopped = metav1.NewTime(time.Now().Add(-time.Minute))
+	job.Status.RestoreMapping = newPitrTestMapping()
+
+	tests := []struct {
+		name string
+		env  map[string]string
+		want bool
+	}{
+		{name: "env vars match", env: map[string]string{backupNameEnvVar: "", restoreKeyEnvVar: "key"}, want: true},
+		{name: "BACKUP_NAME not cleared", env: map[string]string{backupNameEnvVar: "old-backup", restoreKeyEnvVar: "key"}},
+		{name: "RESTORE_KEY differs", env: map[string]string{backupNameEnvVar: "", restoreKeyEnvVar: "other"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			env := []corev1.EnvVar{}
+			for name, value := range tt.env {
+				env = append(env, corev1.EnvVar{Name: name, Value: value})
+			}
+			sts := &appsv1.StatefulSet{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-dc1-r1-sts", Namespace: dc.Namespace, Labels: map[string]string{cassdcapi.ClusterLabel: "test", cassdcapi.DatacenterLabel: "dc1"}},
+				Spec:       appsv1.StatefulSetSpec{Template: corev1.PodTemplateSpec{Spec: corev1.PodSpec{InitContainers: []corev1.Container{{Name: restoreContainerName, Env: env}}}}},
+			}
+			scheme := newPitrTestScheme(t)
+			r := &MedusaRestoreJobReconciler{Client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(sts).Build(), Scheme: scheme}
+			complete, err := r.podTemplateSpecUpdateComplete(context.Background(), &medusa.RestoreRequest{Log: logr.Discard(), RestoreJob: job, Datacenter: dc})
+			require.NoError(t, err)
+			require.Equal(t, tt.want, complete)
+		})
+	}
+}
+
+func TestUpdateMedusaRestoreInitContainerPitr(t *testing.T) {
+	dc := newPitrTestDC()
+	job := newPitrTestJob(dc)
+	job.Status.RestoreKey = "key"
+	job.Status.RestoreMapping = newPitrTestMapping()
+	mappingJSON, err := json.Marshal(job.Status.RestoreMapping)
+	require.NoError(t, err)
+
+	require.NoError(t, updateMedusaRestoreInitContainer(&medusa.RestoreRequest{Log: logr.Discard(), RestoreJob: job, Datacenter: dc}))
+
+	container := findRestoreContainer(dc.Spec.PodTemplateSpec.Spec.InitContainers)
+	require.True(t, utils.ContainerHasEnvVar(container, backupNameEnvVar, ""), "BACKUP_NAME of an earlier backup restore must be cleared")
+	require.True(t, utils.ContainerHasEnvVar(container, restoreMappingEnvVar, string(mappingJSON)))
+	require.True(t, utils.ContainerHasEnvVar(container, restoreKeyEnvVar, "key"))
 }
