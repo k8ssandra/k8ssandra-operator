@@ -39,6 +39,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [BUGFIX] [#1873](https://github.com/k8ssandra/k8ssandra-operator/issues/1873) Never pick the rebuild target DC as its own source when it uses a datacenterName override
 * [BUGFIX] [#1873](https://github.com/k8ssandra/k8ssandra-operator/issues/1873) Allow deleting a K8ssandraTask whose datacenter was removed from the cluster, and run explicit DC lists in listed order
 * [BUGFIX] [#1873](https://github.com/k8ssandra/k8ssandra-operator/issues/1873) Exit at startup when the MedusaRestoreJob controller cannot be set up, as for every other controller
+* [BUGFIX] [#967](https://github.com/k8ssandra/k8ssandra-operator/issues/967) Fix Medusa gRPC client address formatting for IPv6 pod IPs
 * [DOCS] []() Add PITR orchestration design doc
 * [TESTING] [#1870](https://github.com/k8ssandra/k8ssandra-operator/issues/1870) Raise the host inotify limits before creating kind clusters in CI, as Ubuntu 26.04 runners don't apply them at boot
 
