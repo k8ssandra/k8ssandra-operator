@@ -116,6 +116,9 @@ func (e *TestEnv) Start(ctx context.Context, t *testing.T, initReconcilers func(
 	if err = medusaapi.SetupMedusaBackupScheduleWebhookWithManager(k8sManager); err != nil {
 		return err
 	}
+	if err = medusaapi.SetupMedusaRestoreJobWebhookWithManager(k8sManager); err != nil {
+		return err
+	}
 
 	go func() {
 		err = k8sManager.Start(ctx)
@@ -290,6 +293,9 @@ func (e *MultiClusterTestEnv) Start(ctx context.Context, t *testing.T, controlPl
 		}
 		secretswebhook.SetupSecretsInjectorWebhook(mgr)
 		if err := medusaapi.SetupMedusaBackupScheduleWebhookWithManager(mgr); err != nil {
+			return err
+		}
+		if err := medusaapi.SetupMedusaRestoreJobWebhookWithManager(mgr); err != nil {
 			return err
 		}
 
