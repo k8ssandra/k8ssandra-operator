@@ -5,7 +5,9 @@ import (
 	"time"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/leancache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,6 +36,11 @@ func ReconcileAndGetObject[U any, T Reconcileable[U]](
 		Name:      T(&desiredObject).GetName(),
 		Namespace: T(&desiredObject).GetNamespace(),
 	}
+	switch any(&desiredObject).(type) {
+	case *corev1.Secret, *corev1.ConfigMap:
+		// Part of the hashed state, so objects created before the label existed get it on update
+		leancache.MarkWatched(T(&desiredObject))
+	}
 	annotations.AddHashAnnotation(T(&desiredObject))
 
 	currentCm := new(U)
@@ -41,16 +48,22 @@ func ReconcileAndGetObject[U any, T Reconcileable[U]](
 	err := kClient.Get(ctx, objectKey, T(currentCm))
 
 	if err != nil {
-		if errors.IsNotFound(err) {
-			if err := kClient.Create(ctx, T(&desiredObject)); err != nil {
-				if errors.IsAlreadyExists(err) {
-					return result.RequeueSoon(requeueDelay), nil
-				}
-				return result.Error(err), nil
-			}
-			return result.Continue(), &desiredObject
+		if !errors.IsNotFound(err) {
+			return result.Error(err), nil
 		}
-		return result.Error(err), nil
+		if err := kClient.Create(ctx, T(&desiredObject)); err == nil {
+			return result.Continue(), &desiredObject
+		} else if !errors.IsAlreadyExists(err) {
+			return result.Error(err), nil
+		}
+		// Either the cache is behind, or the object exists without the labels the cache selects
+		// on. Read it live so the update below can fix the labels.
+		if err := leancache.APIReader(kClient).Get(ctx, objectKey, T(currentCm)); err != nil {
+			if errors.IsNotFound(err) {
+				return result.RequeueSoon(requeueDelay), nil
+			}
+			return result.Error(err), nil
+		}
 	}
 
 	if !annotations.CompareHashAnnotations(T(currentCm), T(&desiredObject)) {

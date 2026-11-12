@@ -6,6 +6,7 @@ import (
 
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/leancache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,7 +33,7 @@ func newClient(ctx context.Context, c client.Client, cassdc *cassdcapi.Cassandra
 			Name:      clientSecretName,
 		}
 		secret := &corev1.Secret{}
-		if err := c.Get(ctx, secretKey, secret); err != nil {
+		if err := leancache.Read(ctx, c, secretKey, secret); err != nil {
 			return nil, fmt.Errorf("failed to get client secret %s: %w", secretKey, err)
 		}
 

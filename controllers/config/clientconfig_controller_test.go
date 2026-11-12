@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/clientcache"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/leancache"
 	testutils "github.com/k8ssandra/k8ssandra-operator/pkg/test"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
@@ -191,6 +192,8 @@ func testSecretModification(t *testing.T, ctx context.Context, f *framework.Fram
 	secretKey := types.NamespacedName{Namespace: namespace, Name: secret.Name}
 	clientConfigKey := types.NamespacedName{Namespace: namespace, Name: clientConfig.Name}
 	reconciler.secretFilter[secretKey] = clientConfigKey
+	// InitClientConfigs labels the kubeconfig Secret so the Secret watch sees it
+	assert.NoError(leancache.EnsureWatched(ctx, f.Client, secret))
 
 	// Store currentCount of cancelFunc
 	currentCount := cancelCalls

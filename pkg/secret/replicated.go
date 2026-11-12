@@ -10,6 +10,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/labels"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/leancache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -61,7 +62,7 @@ func ReconcileSecret(ctx context.Context, c client.Client, secretName string, kc
 		return fmt.Errorf("secretName is required")
 	}
 	currentSec := &corev1.Secret{}
-	err := c.Get(ctx, types.NamespacedName{Name: secretName, Namespace: kcKey.Namespace}, currentSec)
+	err := leancache.Read(ctx, c, types.NamespacedName{Name: secretName, Namespace: kcKey.Namespace}, currentSec)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			password, err := generateRandomString(passwordCharacters, 20)
@@ -84,6 +85,7 @@ func ReconcileSecret(ctx context.Context, c client.Client, secretName string, kc
 				},
 			}
 			labels.AddCommonLabels(sec, kc)
+			leancache.MarkWatched(sec)
 			annotations.AddCommonAnnotations(sec, kc)
 			err = controllerutil.SetControllerReference(kc, sec, c.Scheme())
 			if err != nil {
