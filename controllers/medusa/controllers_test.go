@@ -41,6 +41,7 @@ func TestCassandraBackupRestore(t *testing.T) {
 	t.Run("TestMedusaBackupDatacenter", testEnv.ControllerTest(ctx, testMedusaBackupDatacenter))
 	t.Run("TestMedusaTasks", testEnv.ControllerTest(ctx, testMedusaTasks))
 	t.Run("TestMedusaRestoreDatacenter", testEnv.ControllerTest(ctx, testMedusaRestoreDatacenter))
+	t.Run("TestMedusaPitrRestoreDatacenter", testEnv.ControllerTest(ctx, testMedusaPitrRestoreDatacenter))
 	t.Run("TestValidationErrorStopsRestore", testEnv.ControllerTest(ctx, testValidationErrorStopsRestore))
 	t.Run("TestMedusaConfiguration", testEnv.ControllerTest(ctx, testMedusaConfiguration))
 
