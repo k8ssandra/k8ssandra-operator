@@ -227,6 +227,11 @@ func buildPitrHostMap(cassDC *cassdcapi.CassandraDatacenter, nodeBackups map[str
 	if err != nil {
 		return nil, err
 	}
+	// Medusa gets the datacenter in the request. A node of another datacenter in its answer means that we
+	// cannot trust it. Such a node would also have a node_backups entry but no host_map entry.
+	if len(hostMap) != len(nodeBackups) {
+		return nil, fmt.Errorf("Medusa returned base backups for %d nodes, but only %d of them belong to datacenter %s", len(nodeBackups), len(hostMap), cassDC.DatacenterName())
+	}
 	targetPods := 0
 	for _, pods := range getTargetRackFQDNs(cassDC) {
 		targetPods += len(pods)

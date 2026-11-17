@@ -370,15 +370,15 @@ func TestGetPitrHostMapDifferentNames(t *testing.T) {
 	assert.Equal(t, []string{"src-dc1-r2-sts-1"}, mapping.HostMap["tgt-dc1-r2-sts-1"].Source)
 }
 
-func TestGetPitrHostMapIgnoresOtherDC(t *testing.T) {
+func TestGetPitrHostMapOtherDCIsTerminal(t *testing.T) {
 	backups, nodeBackups := pitrFixture()
 	backups[0].Nodes = append(backups[0].Nodes, backupNode("src-other-zzz-sts-0", "other", "zzz"))
 	nodeBackups["src-other-zzz-sts-0"] = "b1"
 	dc := newTestDC("src", 4, "r1", "r2")
 
-	result, err := GetPitrHostMap(dc, nodeBackups, configurableMockClient{backups: backups}, context.Background())
-	assert.NoError(t, err)
-	assert.Len(t, result, 4)
+	_, err := GetPitrHostMap(dc, nodeBackups, configurableMockClient{backups: backups}, context.Background())
+	requireTerminal(t, err)
+	assert.Contains(t, err.Error(), "5 nodes, but only 4")
 }
 
 func TestGetPitrHostMapSingleDefaultRack(t *testing.T) {
