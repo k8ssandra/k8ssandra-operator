@@ -785,6 +785,9 @@ type fakeMedusaRestoreClientFactory struct {
 	// The datacenter and targetTimestamp arguments of every PreparePitrRestore call, oldest first.
 	pitrDatacenters []string
 	pitrTimestamps  []string
+
+	// The number of Close calls on the clients of the factory.
+	closed int
 }
 
 // pitrTestTimestamp is the spec.targetTimestamp of the PITR test jobs. It reaches Medusa and the restore
@@ -841,6 +844,9 @@ type fakeMedusaRestoreClient struct {
 }
 
 func (c *fakeMedusaRestoreClient) Close() error {
+	c.factory.clientsMutex.Lock()
+	defer c.factory.clientsMutex.Unlock()
+	c.factory.closed++
 	return nil
 }
 
@@ -1118,6 +1124,7 @@ func TestReconcilePitrRestore(t *testing.T) {
 			result, err := r.Reconcile(ctx, req)
 			require.NoError(t, c.Get(ctx, req.NamespacedName, job))
 			require.NoError(t, c.Get(ctx, client.ObjectKeyFromObject(dc), dc))
+			require.Equal(t, 1, factory.closed, "the Medusa client must be closed, also after an error")
 			require.Equal(t, []string{"real-dc1"}, factory.pitrDatacenters, "PreparePitrRestore must get the Cassandra datacenter name")
 			require.Equal(t, []string{pitrTestTimestamp}, factory.pitrTimestamps, "PreparePitrRestore must get the timestamp as written in the spec")
 

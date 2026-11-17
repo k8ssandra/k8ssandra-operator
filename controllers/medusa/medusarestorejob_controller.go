@@ -323,6 +323,12 @@ func (r *MedusaRestoreJobReconciler) prepareRestore(ctx context.Context, request
 		if medusaClient, err := newClient(ctx, r.Client, request.Datacenter, ptr.To(pod), r.ClientFactory); err != nil {
 			logger.Error(err, "Failed to create Medusa client", "Pod", pod.Name)
 		} else {
+			// Both branches below return, so the deferred Close runs once, for the client used.
+			defer func() {
+				if err := medusaClient.Close(); err != nil {
+					logger.Error(err, ErrFailedCloseMedusaClient)
+				}
+			}()
 			if request.RestoreJob.Spec.TargetTimestamp != "" {
 				// PITR restore: Medusa picks the base backups of every node in one coordinator call
 				return r.preparePitrRestore(ctx, request, medusaClient, logger)
