@@ -1108,6 +1108,7 @@ func TestReconcilePitrRestore(t *testing.T) {
 		{name: "out of place", backups: outOfPlaceBackups, pitrResp: success(outOfPlaceNodes),
 			hostMap: map[string]string{"test-dc1-r1-sts-0": "src-dc1-r1-sts-0", "test-dc1-r2-sts-0": "src-dc1-r2-sts-0"}},
 		{name: "Medusa rejects the restore", backups: inPlaceBackups, pitrResp: &medusa.PreparePitrRestoreResponse{Status: medusa.StatusType_FAILED}, terminal: "rejected by Medusa"},
+		{name: "Medusa returns an unset status", backups: inPlaceBackups, pitrResp: &medusa.PreparePitrRestoreResponse{}, terminal: "rejected by Medusa"},
 		{name: "Medusa without PITR", pitrErr: status.Error(codes.Unimplemented, "unknown method PreparePitrRestore"), terminal: "does not support PITR"},
 		{name: "rack layout does not match", backups: threeRackBackups, pitrResp: success(threeRackNodes), terminal: "racks"},
 		{name: "transient PreparePitrRestore error", pitrErr: status.Error(codes.Unavailable, "sidecar not ready"), transient: true},

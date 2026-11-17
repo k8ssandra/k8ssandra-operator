@@ -369,7 +369,7 @@ func (r *MedusaRestoreJobReconciler) preparePitrRestore(ctx context.Context, req
 		return nil, fmt.Errorf("PreparePitrRestore failed: %w", err)
 	}
 	// The response carries no reason. The Medusa log of the coordinator pod has it.
-	if resp.Status == medusa.StatusType_FAILED {
+	if resp.Status != medusa.StatusType_SUCCESS {
 		return nil, medusa.Terminal(fmt.Errorf("PITR restore to %s rejected by Medusa", targetTimestamp))
 	}
 
