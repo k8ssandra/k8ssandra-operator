@@ -1203,6 +1203,37 @@ func TestReconcileInvalidSpecIsTerminal(t *testing.T) {
 	}
 }
 
+// TestReconcileInvalidSpecAfterStartIsIgnored checks that the spec is validated only before the restore starts.
+// Failing a job later would set FinishTime while the datacenter is still stopped, and a finished job is never
+// reconciled again.
+func TestReconcileInvalidSpecAfterStartIsIgnored(t *testing.T) {
+	ctx := context.Background()
+	backups, nodes := pitrTestBackups("test", "r1", "r2")
+	factory := NewMedusaClientRestoreFactory()
+	factory.backups = backups
+	factory.pitrResponse = &medusa.PreparePitrRestoreResponse{Status: medusa.StatusType_SUCCESS, NodeBaseBackups: nodes}
+	r, c, dc, job := newPitrTestReconciler(t, factory)
+	req := ctrl.Request{NamespacedName: client.ObjectKeyFromObject(job)}
+
+	t.Log("reconcile until the datacenter is stopped")
+	for i := 0; i < 2; i++ {
+		_, err := r.Reconcile(ctx, req)
+		require.NoError(t, err)
+	}
+	require.NoError(t, c.Get(ctx, client.ObjectKeyFromObject(dc), dc))
+	require.True(t, dc.Spec.Stopped)
+
+	t.Log("an invalid spec edit must not fail the job")
+	require.NoError(t, c.Get(ctx, req.NamespacedName, job))
+	job.Spec.TargetTimestamp = "not-a-timestamp"
+	require.NoError(t, c.Update(ctx, job))
+	_, err := r.Reconcile(ctx, req)
+	require.NoError(t, err)
+	require.NoError(t, c.Get(ctx, req.NamespacedName, job))
+	require.True(t, job.Status.FinishTime.IsZero())
+	require.Empty(t, job.Status.Message)
+}
+
 func TestPodTemplateSpecUpdateCompletePitr(t *testing.T) {
 	dc := newPitrTestDC()
 	dc.SetCondition(cassdcapi.DatacenterCondition{Type: cassdcapi.DatacenterUpdating, Status: corev1.ConditionFalse, LastTransitionTime: metav1.Now()})

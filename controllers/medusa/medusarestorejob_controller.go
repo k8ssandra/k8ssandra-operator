@@ -100,12 +100,14 @@ func (r *MedusaRestoreJobReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return *result, err
 	}
 
-	// The validating webhook rejects a bad spec at admission. This covers clusters where it is not running.
-	if err := medusav1alpha1.ValidateRestoreJobSpec(&request.RestoreJob.Spec); err != nil {
-		return r.failTerminal(ctx, request, err)
-	}
-
 	if request.RestoreJob.Status.StartTime.IsZero() {
+		// The validating webhook rejects a bad spec at admission. This covers clusters where it is not running.
+		// Only check before the restore starts. The spec is immutable after that, and failing later
+		// could leave the datacenter stopped.
+		if err := medusav1alpha1.ValidateRestoreJobSpec(&request.RestoreJob.Spec); err != nil {
+			return r.failTerminal(ctx, request, err)
+		}
+
 		request.SetMedusaRestoreStartTime(metav1.Now())
 		request.SetMedusaRestoreKey(uuid.New().String())
 		request.SetMedusaRestorePrepared(false)
