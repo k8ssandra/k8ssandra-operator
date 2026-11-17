@@ -1375,6 +1375,7 @@ func newStuckReplayTestReconciler(t *testing.T, job *api.MedusaRestoreJob, stopp
 	dc := newPitrTestDC()
 	dc.SetCondition(cassdcapi.DatacenterCondition{Type: cassdcapi.DatacenterUpdating, Status: corev1.ConditionFalse, LastTransitionTime: metav1.Now()})
 	job.Status = api.MedusaRestoreJobStatus{
+		Message:           job.Status.Message,
 		StartTime:         metav1.NewTime(time.Now().Add(-stoppedAgo - time.Minute)),
 		DatacenterStopped: metav1.NewTime(time.Now().Add(-stoppedAgo)),
 		RestoreKey:        "key",
@@ -1400,15 +1401,18 @@ func TestReconcileStuckReplayNotice(t *testing.T) {
 		name       string
 		job        *api.MedusaRestoreJob
 		stoppedAgo time.Duration
+		message    string
 		notice     bool
 	}{
 		{name: "PITR job before the notice", job: newPitrTestJob(dc), stoppedAgo: 59 * time.Minute},
 		{name: "PITR job after the notice", job: newPitrTestJob(dc), stoppedAgo: 61 * time.Minute, notice: true},
+		{name: "PITR job after the notice keeps an existing message", job: newPitrTestJob(dc), stoppedAgo: 61 * time.Minute, message: "x"},
 		{name: "backup restore job never gets the notice", job: backupJob, stoppedAgo: 61 * time.Minute},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
+			tt.job.Status.Message = tt.message
 			r, c, dc := newStuckReplayTestReconciler(t, tt.job, tt.stoppedAgo)
 			req := ctrl.Request{NamespacedName: client.ObjectKeyFromObject(tt.job)}
 			job := &api.MedusaRestoreJob{}
@@ -1424,7 +1428,7 @@ func TestReconcileStuckReplayNotice(t *testing.T) {
 					require.Equal(t, stuckReplayNotice("dc1"), job.Status.Message)
 					require.Contains(t, job.Status.Message, "datacenter dc1 is not ready 60 minutes after the restore stopped it")
 				} else {
-					require.Empty(t, job.Status.Message)
+					require.Equal(t, tt.message, job.Status.Message)
 				}
 			}
 
