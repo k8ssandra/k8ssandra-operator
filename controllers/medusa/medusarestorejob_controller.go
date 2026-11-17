@@ -353,7 +353,8 @@ func (r *MedusaRestoreJobReconciler) prepareRestore(ctx context.Context, request
 // preparePitrRestore asks Medusa to check that a point-in-time restore of the datacenter to the job's
 // targetTimestamp is possible, and to pick a base backup for each node. On success it returns the restore
 // mapping with the pitr block attached. It returns a medusa.TerminalError when Medusa does not have the RPC,
-// when Medusa rejects the restore, or when the base backups do not fit the datacenter. Any other error is
+// when Medusa rejects the restore (status FAILED, or gRPC code InvalidArgument, FailedPrecondition or
+// NotFound), or when the base backups do not fit the datacenter. Any other error is
 // transient and is retried by controller-runtime; the RPC is read-only, so a retry is safe.
 func (r *MedusaRestoreJobReconciler) preparePitrRestore(ctx context.Context, request *medusa.RestoreRequest, client medusa.Client, logger logr.Logger) (*medusav1alpha1.MedusaRestoreMapping, error) {
 	// The timestamp goes to Medusa and into the mapping as written in the spec. Medusa converts it when it
@@ -362,8 +363,12 @@ func (r *MedusaRestoreJobReconciler) preparePitrRestore(ctx context.Context, req
 
 	// The Cassandra datacenter name, not the object name: it is the name Medusa stores in its backups.
 	resp, err := client.PreparePitrRestore(ctx, request.Datacenter.DatacenterName(), targetTimestamp)
-	if status.Code(err) == codes.Unimplemented {
+	switch status.Code(err) {
+	case codes.Unimplemented:
 		return nil, medusa.Terminal(fmt.Errorf("the Medusa image does not support PITR, upgrade the Medusa image"))
+	case codes.InvalidArgument, codes.FailedPrecondition, codes.NotFound:
+		// Medusa understood the request and refused it. A retry gets the same answer.
+		return nil, medusa.Terminal(fmt.Errorf("PITR restore to %s rejected by Medusa: %w", targetTimestamp, err))
 	}
 	if err != nil {
 		return nil, fmt.Errorf("PreparePitrRestore failed: %w", err)
