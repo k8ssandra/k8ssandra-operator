@@ -61,6 +61,10 @@ const (
 	// pitrPrepareTimeout bounds the PreparePitrRestore and GetBackups calls together. Medusa scans the storage
 	// bucket for them, which is slow on a big bucket. A hung sidecar must not block the reconcile worker forever.
 	pitrPrepareTimeout = 10 * time.Minute
+
+	// stuckReplayNoticeAfter is counted from Status.DatacenterStopped, so it covers the restart, the SSTable and
+	// segment downloads, and a modest replay. Large nodes can exceed it while healthy, so it is a notice, not a timeout.
+	stuckReplayNoticeAfter = 60 * time.Minute
 )
 
 // MedusaRestoreJobReconciler reconciles a MedusaRestoreJob object
@@ -202,6 +206,12 @@ func (r *MedusaRestoreJobReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	if !cassandra.DatacenterReady(request.Datacenter) {
 		request.Log.Info("Waiting for datacenter to come back online")
+		// A failed PITR replay keeps the datacenter not ready forever. Say so on the job, once.
+		if request.RestoreJob.Spec.TargetTimestamp != "" && request.RestoreJob.Status.Message == "" &&
+			time.Since(request.RestoreJob.Status.DatacenterStopped.Time) > stuckReplayNoticeAfter {
+			request.RestoreJob.Status.Message = stuckReplayNotice(request.Datacenter.Name)
+			request.Log.Info("The PITR restore may be stuck", "Message", request.RestoreJob.Status.Message)
+		}
 		return r.applyUpdatesAndRequeue(ctx, request)
 	}
 
@@ -216,6 +226,8 @@ func (r *MedusaRestoreJobReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{RequeueAfter: r.DefaultDelay}, nil
 	}
 
+	// Drop a stuck-replay notice from a job that finished after all.
+	request.RestoreJob.Status.Message = ""
 	request.SetMedusaRestoreFinishTime(metav1.Now())
 	if err := r.applyUpdates(ctx, request); err != nil {
 		return ctrl.Result{}, err
@@ -267,6 +279,14 @@ func (r *MedusaRestoreJobReconciler) failTerminal(ctx context.Context, req *medu
 		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, nil
+}
+
+// stuckReplayNotice names no pod and no error: the operator does not read Cassandra logs.
+func stuckReplayNotice(dcName string) string {
+	return fmt.Sprintf("datacenter %s is not ready %d minutes after the restore stopped it; the PITR restore may be stuck in "+
+		"the SSTable restore, the segment download, or commitlog replay. Check the medusa-restore initContainer log and the "+
+		"Cassandra log of the pods that are not ready for CommitLogReplayException. See the PITR user guide.",
+		dcName, int(stuckReplayNoticeAfter.Minutes()))
 }
 
 // podTemplateSpecUpdateComplete checks that the pod template spec changes, namely the ones
