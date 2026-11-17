@@ -1115,7 +1115,7 @@ func TestReconcilePitrRestore(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			factory := NewMedusaClientRestoreFactory()
 			factory.backups, factory.backupsErr, factory.pitrResponse, factory.pitrErr = tt.backups, tt.backupsErr, tt.pitrResp, tt.pitrErr
 			r, c, dc, job := newPitrTestReconciler(t, factory)
@@ -1187,7 +1187,7 @@ func TestReconcileInvalidSpecIsTerminal(t *testing.T) {
 		"neither set": {CassandraDatacenter: "dc1"},
 	} {
 		t.Run(name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			factory := NewMedusaClientRestoreFactory()
 			r, c, dc, job := newPitrTestReconciler(t, factory)
 			require.NoError(t, c.Get(ctx, client.ObjectKeyFromObject(job), job))
@@ -1214,7 +1214,7 @@ func TestReconcileInvalidSpecIsTerminal(t *testing.T) {
 // Failing a job later would set FinishTime while the datacenter is still stopped, and a finished job is never
 // reconciled again.
 func TestReconcileInvalidSpecAfterStartIsIgnored(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	backups, nodes := pitrTestBackups("test", "r1", "r2")
 	factory := NewMedusaClientRestoreFactory()
 	factory.backups = backups
@@ -1244,7 +1244,7 @@ func TestReconcileInvalidSpecAfterStartIsIgnored(t *testing.T) {
 // TestReconcileUnusableBackupIsTerminal checks that a job for a backup that cannot be restored fails for good
 // without stopping the datacenter or calling Medusa.
 func TestReconcileUnusableBackupIsTerminal(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	factory := NewMedusaClientRestoreFactory()
 	r, c, dc, job := newPitrTestReconciler(t, factory)
 	backup := &api.MedusaBackup{
@@ -1297,7 +1297,7 @@ func TestPodTemplateSpecUpdateCompletePitr(t *testing.T) {
 			}
 			scheme := newPitrTestScheme(t)
 			r := &MedusaRestoreJobReconciler{Client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(sts).Build(), Scheme: scheme}
-			complete, err := r.podTemplateSpecUpdateComplete(context.Background(), &medusa.RestoreRequest{Log: logr.Discard(), RestoreJob: job, Datacenter: dc})
+			complete, err := r.podTemplateSpecUpdateComplete(t.Context(), &medusa.RestoreRequest{Log: logr.Discard(), RestoreJob: job, Datacenter: dc})
 			require.NoError(t, err)
 			require.Equal(t, tt.want, complete)
 		})
