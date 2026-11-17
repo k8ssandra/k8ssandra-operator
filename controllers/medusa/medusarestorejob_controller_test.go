@@ -786,6 +786,9 @@ type fakeMedusaRestoreClientFactory struct {
 	pitrDatacenters []string
 	pitrTimestamps  []string
 
+	// The number of PreparePitrRestore and GetBackups calls whose context had a deadline.
+	deadlineCalls int
+
 	// The number of Close calls on the clients of the factory.
 	closed int
 }
@@ -839,6 +842,15 @@ func (f *fakeMedusaRestoreClientFactory) NewClientWithTLS(address string, secret
 	return f.NewClient(address)
 }
 
+// noteDeadline counts a call whose context has a deadline.
+func (f *fakeMedusaRestoreClientFactory) noteDeadline(ctx context.Context) {
+	if _, ok := ctx.Deadline(); ok {
+		f.clientsMutex.Lock()
+		f.deadlineCalls++
+		f.clientsMutex.Unlock()
+	}
+}
+
 type fakeMedusaRestoreClient struct {
 	factory *fakeMedusaRestoreClientFactory
 }
@@ -855,6 +867,7 @@ func (c *fakeMedusaRestoreClient) CreateBackup(ctx context.Context, name string,
 }
 
 func (c *fakeMedusaRestoreClient) GetBackups(ctx context.Context) ([]*medusa.BackupSummary, error) {
+	c.factory.noteDeadline(ctx)
 	return c.factory.backups, c.factory.backupsErr
 }
 
@@ -881,6 +894,7 @@ func (c *fakeMedusaRestoreClient) PreparePitrRestore(ctx context.Context, datace
 	c.factory.pitrDatacenters = append(c.factory.pitrDatacenters, datacenter)
 	c.factory.pitrTimestamps = append(c.factory.pitrTimestamps, targetTimestamp)
 	c.factory.clientsMutex.Unlock()
+	c.factory.noteDeadline(ctx)
 	return c.factory.pitrResponse, c.factory.pitrErr
 }
 
@@ -1169,6 +1183,7 @@ func TestReconcilePitrRestore(t *testing.T) {
 			for target, source := range tt.hostMap {
 				require.Equal(t, api.MappingSource{Source: []string{source}}, mapping.HostMap[target])
 			}
+			require.Equal(t, 2, factory.deadlineCalls, "PreparePitrRestore and GetBackups must run with a deadline")
 			require.Equal(t, pitrTestTimestamp, mapping.Pitr.TargetTimestamp, "the target timestamp is the spec value, unchanged")
 			require.Equal(t, tt.pitrResp.NodeBaseBackups, mapping.Pitr.NodeBackups, "the node_backups keys stay source node names")
 

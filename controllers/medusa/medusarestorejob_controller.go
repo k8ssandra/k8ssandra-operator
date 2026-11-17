@@ -57,6 +57,10 @@ const (
 	backupNameEnvVar     = "BACKUP_NAME"
 	restoreKeyEnvVar     = "RESTORE_KEY"
 	restoreMappingEnvVar = "RESTORE_MAPPING"
+
+	// pitrPrepareTimeout bounds the PreparePitrRestore and GetBackups calls together. Medusa scans the storage
+	// bucket for them, which is slow on a big bucket. A hung sidecar must not block the reconcile worker forever.
+	pitrPrepareTimeout = 10 * time.Minute
 )
 
 // MedusaRestoreJobReconciler reconciles a MedusaRestoreJob object
@@ -360,6 +364,9 @@ func (r *MedusaRestoreJobReconciler) preparePitrRestore(ctx context.Context, req
 	// The timestamp goes to Medusa and into the mapping as written in the spec. Medusa converts it when it
 	// renders the replay configuration.
 	targetTimestamp := request.RestoreJob.Spec.TargetTimestamp
+
+	ctx, cancel := context.WithTimeout(ctx, pitrPrepareTimeout)
+	defer cancel()
 
 	// The Cassandra datacenter name, not the object name: it is the name Medusa stores in its backups.
 	resp, err := client.PreparePitrRestore(ctx, request.Datacenter.DatacenterName(), targetTimestamp)
