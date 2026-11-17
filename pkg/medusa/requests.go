@@ -79,7 +79,7 @@ func (f *factory) NewMedusaRestoreRequest(ctx context.Context, restoreKey types.
 
 	// A PITR job (spec.targetTimestamp set) has no MedusaBackup: Medusa picks the base backups in
 	// PreparePitrRestore. The fetch is also skipped for an invalid job with both fields set, so that
-	// it fails in validateRestoreSpec instead of being retried forever on a missing backup.
+	// it fails in ValidateRestoreJobSpec instead of being retried forever on a missing backup.
 	var backup *api.MedusaBackup
 	if restore.Spec.Backup != "" && restore.Spec.TargetTimestamp == "" {
 		backup = &api.MedusaBackup{}
