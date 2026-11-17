@@ -1287,6 +1287,36 @@ func TestReconcileUnusableBackupIsTerminal(t *testing.T) {
 	require.False(t, dc.Spec.Stopped)
 }
 
+// TestReconcileUnusableBackupAfterPrepareIsIgnored checks that the backup is validated only before the restore is
+// prepared. Failing a job later would set FinishTime while the datacenter is stopped, and a finished job is never
+// reconciled again.
+func TestReconcileUnusableBackupAfterPrepareIsIgnored(t *testing.T) {
+	ctx := t.Context()
+	factory := NewMedusaClientRestoreFactory()
+	r, c, dc, job := newPitrTestReconciler(t, factory)
+	backup := &api.MedusaBackup{
+		ObjectMeta: metav1.ObjectMeta{Name: "b1", Namespace: dc.Namespace},
+		Status:     api.MedusaBackupStatus{TotalNodes: 2, FinishedNodes: 1, FinishTime: metav1.Now()},
+	}
+	require.NoError(t, c.Create(ctx, backup))
+	require.NoError(t, c.Get(ctx, client.ObjectKeyFromObject(job), job))
+	job.Spec = api.MedusaRestoreJobSpec{Backup: "b1", CassandraDatacenter: dc.Name}
+	require.NoError(t, c.Update(ctx, job))
+	job.Status.StartTime = metav1.Now()
+	job.Status.RestorePrepared = true
+	job.Status.RestoreMapping = newPitrTestMapping()
+	require.NoError(t, c.Status().Update(ctx, job))
+	req := ctrl.Request{NamespacedName: client.ObjectKeyFromObject(job)}
+
+	_, err := r.Reconcile(ctx, req)
+	require.NoError(t, err)
+	require.NoError(t, c.Get(ctx, req.NamespacedName, job))
+	require.NoError(t, c.Get(ctx, client.ObjectKeyFromObject(dc), dc))
+	require.True(t, job.Status.FinishTime.IsZero())
+	require.Empty(t, job.Status.Message)
+	require.True(t, dc.Spec.Stopped)
+}
+
 func TestPodTemplateSpecUpdateCompletePitr(t *testing.T) {
 	dc := newPitrTestDC()
 	dc.SetCondition(cassdcapi.DatacenterCondition{Type: cassdcapi.DatacenterUpdating, Status: corev1.ConditionFalse, LastTransitionTime: metav1.Now()})

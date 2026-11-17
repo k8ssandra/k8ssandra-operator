@@ -140,16 +140,17 @@ func (r *MedusaRestoreJobReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		}
 	}
 
-	// Verify the backup can be used for restore. A PITR job has no MedusaBackup: Medusa checks the
-	// base backups of every node in PreparePitrRestore.
-	if request.RestoreJob.Spec.TargetTimestamp == "" {
-		if err := validateBackupForRestore(request.MedusaBackup, cassdc); err != nil {
-			return r.failTerminal(ctx, request, err) // No requeue, because this error is not transient
-		}
-	}
-
 	// Prepare the restore by placing a mapping file in the Cassandra data volume.
 	if !request.RestoreJob.Status.RestorePrepared {
+		// Verify the backup can be used for restore. Only before the datacenter is stopped, so a terminal
+		// failure never leaves it down. A PITR job has no MedusaBackup: Medusa checks the base backups of
+		// every node in PreparePitrRestore.
+		if request.RestoreJob.Spec.TargetTimestamp == "" {
+			if err := validateBackupForRestore(request.MedusaBackup, cassdc); err != nil {
+				return r.failTerminal(ctx, request, err) // No requeue, because this error is not transient
+			}
+		}
+
 		restoreMapping, err := r.prepareRestore(ctx, request, logger)
 		if err != nil {
 			var terminal *medusa.TerminalError
