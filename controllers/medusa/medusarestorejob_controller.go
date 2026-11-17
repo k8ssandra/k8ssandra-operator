@@ -140,15 +140,7 @@ func (r *MedusaRestoreJobReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// base backups of every node in PreparePitrRestore.
 	if request.RestoreJob.Spec.TargetTimestamp == "" {
 		if err := validateBackupForRestore(request.MedusaBackup, cassdc); err != nil {
-			request.RestoreJob.Status.FinishTime = metav1.Now()
-			request.RestoreJob.Status.Message = err.Error()
-			if err = r.Status().Update(ctx, request.RestoreJob); err != nil {
-				logger.Error(err, "failed to update MedusaRestoreJob with error message", "MedusaRestoreJob", req.Name)
-				return ctrl.Result{}, err
-			}
-
-			logger.Error(fmt.Errorf("unable to use target backup for restore of CassandraDatacenter: %s", request.RestoreJob.Status.Message), "backup can not be used for restore")
-			return ctrl.Result{}, nil // No requeue, because this error is not transient
+			return r.failTerminal(ctx, request, err) // No requeue, because this error is not transient
 		}
 	}
 

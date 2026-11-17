@@ -1234,6 +1234,33 @@ func TestReconcileInvalidSpecAfterStartIsIgnored(t *testing.T) {
 	require.Empty(t, job.Status.Message)
 }
 
+// TestReconcileUnusableBackupIsTerminal checks that a job for a backup that cannot be restored fails for good
+// without stopping the datacenter or calling Medusa.
+func TestReconcileUnusableBackupIsTerminal(t *testing.T) {
+	ctx := context.Background()
+	factory := NewMedusaClientRestoreFactory()
+	r, c, dc, job := newPitrTestReconciler(t, factory)
+	backup := &api.MedusaBackup{
+		ObjectMeta: metav1.ObjectMeta{Name: "b1", Namespace: dc.Namespace},
+		Status:     api.MedusaBackupStatus{TotalNodes: 2, FinishedNodes: 1, FinishTime: metav1.Now()},
+	}
+	require.NoError(t, c.Create(ctx, backup))
+	require.NoError(t, c.Get(ctx, client.ObjectKeyFromObject(job), job))
+	job.Spec = api.MedusaRestoreJobSpec{Backup: "b1", CassandraDatacenter: dc.Name}
+	require.NoError(t, c.Update(ctx, job))
+	req := ctrl.Request{NamespacedName: client.ObjectKeyFromObject(job)}
+
+	result, err := r.Reconcile(ctx, req)
+	require.NoError(t, err)
+	require.Equal(t, ctrl.Result{}, result)
+	require.NoError(t, c.Get(ctx, req.NamespacedName, job))
+	require.NoError(t, c.Get(ctx, client.ObjectKeyFromObject(dc), dc))
+	require.False(t, job.Status.FinishTime.IsZero())
+	require.Contains(t, job.Status.Message, "has not completed successfully")
+	require.Empty(t, factory.pitrDatacenters)
+	require.False(t, dc.Spec.Stopped)
+}
+
 func TestPodTemplateSpecUpdateCompletePitr(t *testing.T) {
 	dc := newPitrTestDC()
 	dc.SetCondition(cassdcapi.DatacenterCondition{Type: cassdcapi.DatacenterUpdating, Status: corev1.ConditionFalse, LastTransitionTime: metav1.Now()})
