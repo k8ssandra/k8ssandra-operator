@@ -172,8 +172,8 @@ func (r *MedusaBackupScheduleReconciler) Reconcile(ctx context.Context, req ctrl
 			},
 		}
 
-		if v, found := backupSchedule.Annotations[medusa.MedusaPurgeSequentialAnnotation]; found {
-			metav1.SetMetaDataAnnotation(&purgeJob.ObjectMeta, medusa.MedusaPurgeSequentialAnnotation, v)
+		if v, found := backupSchedule.Annotations[medusa.MedusaTaskConcurrencyAnnotation]; found {
+			metav1.SetMetaDataAnnotation(&purgeJob.ObjectMeta, medusa.MedusaTaskConcurrencyAnnotation, v)
 		}
 
 		if err := r.Create(ctx, purgeJob); err != nil {

@@ -380,8 +380,8 @@ func TestSchedulerParseError(t *testing.T) {
 	require.Error(err)
 }
 
-func TestPurgeSchedulerCopiesSequentialAnnotation(t *testing.T) {
-	for _, value := range []string{"", "true"} {
+func TestPurgeSchedulerCopiesConcurrencyAnnotation(t *testing.T) {
+	for _, value := range []string{"", string(medusa.TaskConcurrencyRack)} {
 		t.Run("annotation="+value, func(t *testing.T) {
 			ctx := t.Context()
 			require := require.New(t)
@@ -399,7 +399,7 @@ func TestPurgeSchedulerCopiesSequentialAnnotation(t *testing.T) {
 				},
 			}
 			if value != "" {
-				purgeSchedule.Annotations = map[string]string{medusa.MedusaPurgeSequentialAnnotation: value}
+				purgeSchedule.Annotations = map[string]string{medusa.MedusaTaskConcurrencyAnnotation: value}
 			}
 			fakeClient := fake.NewClientBuilder().
 				WithObjects(purgeSchedule, &dc).
@@ -419,9 +419,9 @@ func TestPurgeSchedulerCopiesSequentialAnnotation(t *testing.T) {
 			require.NoError(fakeClient.List(ctx, &purgeTasks))
 			require.Len(purgeTasks.Items, 1)
 			if value == "" {
-				require.NotContains(purgeTasks.Items[0].Annotations, medusa.MedusaPurgeSequentialAnnotation)
+				require.NotContains(purgeTasks.Items[0].Annotations, medusa.MedusaTaskConcurrencyAnnotation)
 			} else {
-				require.Equal(value, purgeTasks.Items[0].Annotations[medusa.MedusaPurgeSequentialAnnotation])
+				require.Equal(value, purgeTasks.Items[0].Annotations[medusa.MedusaTaskConcurrencyAnnotation])
 			}
 		})
 	}

@@ -131,7 +131,11 @@ func (r *K8ssandraClusterReconciler) reconcileMedusaPurgeSchedule(ctx context.Co
 	medusaSpec := kc.Spec.Medusa
 	if medusaSpec.PurgeBackups == nil || *medusaSpec.PurgeBackups {
 		logger.Info("Creating Medusa purge schedule")
-		medusaBackupSchedule := r.createPurgeSchedule(ctx, remoteClient, kc, dc, *r.Scheme, logger)
+		medusaBackupSchedule, err := newPurgeSchedule(kc, dc, r.Scheme)
+		if err != nil {
+			logger.Error(err, "failed to build the Medusa purge schedule")
+			return result.Error(err)
+		}
 		if recRes := reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, *medusaBackupSchedule); recRes.Completed() {
 			return recRes
 		}
@@ -303,8 +307,8 @@ func (r *K8ssandraClusterReconciler) validateStorageCredentials(medusaSpec *medu
 	return nil
 }
 
-func (r *K8ssandraClusterReconciler) createPurgeSchedule(ctx context.Context, remoteClient client.Client, kc *api.K8ssandraCluster, dc *cassdcapi.CassandraDatacenter, scheme runtime.Scheme, logger logr.Logger) *medusaapi.MedusaBackupSchedule {
-	logger.Info("Creating Medusa purge schedule", "K8ssandraCluster", kc.Name, "CassandraDatacenter", dc.Name)
+// newPurgeSchedule returns the desired purge MedusaBackupSchedule for the datacenter.
+func newPurgeSchedule(kc *api.K8ssandraCluster, dc *cassdcapi.CassandraDatacenter, scheme *runtime.Scheme) (*medusaapi.MedusaBackupSchedule, error) {
 	dcNamespace := dc.Namespace
 	if dcNamespace == "" {
 		dcNamespace = kc.Namespace
@@ -323,16 +327,11 @@ func (r *K8ssandraClusterReconciler) createPurgeSchedule(ctx context.Context, re
 		},
 	}
 	purgeSchedule.SetLabels(labels.CleanedUpByLabels(utils.GetKey(kc)))
-	if v, found := kc.Annotations[medusa.MedusaPurgeSequentialAnnotation]; found {
-		metav1.SetMetaDataAnnotation(&purgeSchedule.ObjectMeta, medusa.MedusaPurgeSequentialAnnotation, v)
+	if v, found := kc.Annotations[medusa.MedusaTaskConcurrencyAnnotation]; found {
+		metav1.SetMetaDataAnnotation(&purgeSchedule.ObjectMeta, medusa.MedusaTaskConcurrencyAnnotation, v)
 	}
-	err := controllerutil.SetOwnerReference(dc, &purgeSchedule, &scheme)
-	if err != nil {
-		logger.Error(err, "failed to set owner reference for MedusaBackupSchedule")
-		return nil
+	if err := controllerutil.SetOwnerReference(dc, &purgeSchedule, scheme); err != nil {
+		return nil, fmt.Errorf("failed to set owner reference for MedusaBackupSchedule: %w", err)
 	}
-	if recRes := reconciliation.ReconcileObject(ctx, remoteClient, r.DefaultDelay, purgeSchedule); recRes.Completed() {
-		return &purgeSchedule
-	}
-	return &purgeSchedule
+	return &purgeSchedule, nil
 }

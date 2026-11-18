@@ -395,143 +395,257 @@ func TestMedusaSyncReconcile(t *testing.T) {
 	}
 }
 
-// purgeTestFactory hands out clients whose PurgeBackups records how many purges run at the same time. With
-// waitForAll set, each purge blocks until every pod's purge has started, so the purge only finishes if the pods are
-// purged in parallel.
-type purgeTestFactory struct {
+// podOpTestFactory hands out clients whose PurgeBackups and PrepareRestore check the batches the pods run in. Each
+// call blocks until every pod of its expected batch has started, so a batch only finishes if its pods run at the same
+// time, and it records a violation if a pod of another batch is running at the same time.
+type podOpTestFactory struct {
 	medusa.ClientFactory
 	mu         sync.Mutex
-	pods       int
-	started    int
-	active     int
-	maxActive  int
+	batchOf    map[string]int
+	batchSize  map[int]int
+	started    map[int]int
+	batchReady map[int]chan struct{}
+	active     map[string]bool
+	violations []string
 	order      []string
-	waitForAll bool
-	allStarted chan struct{}
+	podOf      map[string]string
 	failing    string
+	hanging    string
+	release    chan struct{}
 }
 
-func (f *purgeTestFactory) NewClient(address string) (medusa.Client, error) {
-	return &purgeTestClient{factory: f, address: address}, nil
+func newPodOpTestFactory(batches [][]string, failing, hanging string) *podOpTestFactory {
+	f := &podOpTestFactory{
+		batchOf:    map[string]int{},
+		batchSize:  map[int]int{},
+		started:    map[int]int{},
+		batchReady: map[int]chan struct{}{},
+		active:     map[string]bool{},
+		podOf:      map[string]string{},
+		failing:    failing,
+		hanging:    hanging,
+		release:    make(chan struct{}),
+	}
+	for i, batch := range batches {
+		f.batchSize[i] = len(batch)
+		f.batchReady[i] = make(chan struct{})
+		for _, pod := range batch {
+			f.batchOf[pod] = i
+		}
+	}
+	return f
 }
 
-type purgeTestClient struct {
+func (f *podOpTestFactory) NewClient(address string) (medusa.Client, error) {
+	return &podOpTestClient{factory: f, address: address}, nil
+}
+
+type podOpTestClient struct {
 	medusa.Client
-	factory *purgeTestFactory
+	factory *podOpTestFactory
 	address string
 }
 
-func (c *purgeTestClient) PurgeBackups(ctx context.Context) (*medusa.PurgeBackupsResponse, error) {
+func (c *podOpTestClient) run(ctx context.Context) error {
 	f := c.factory
 	f.mu.Lock()
-	f.started++
-	f.active++
-	f.maxActive = max(f.maxActive, f.active)
-	f.order = append(f.order, c.address)
-	if f.started == f.pods {
-		close(f.allStarted)
+	pod := f.podOf[c.address]
+	batch := f.batchOf[pod]
+	for other := range f.active {
+		if f.batchOf[other] != batch {
+			f.violations = append(f.violations, fmt.Sprintf("%s ran at the same time as %s", pod, other))
+		}
+	}
+	f.active[pod] = true
+	f.order = append(f.order, pod)
+	f.started[batch]++
+	if f.started[batch] == f.batchSize[batch] {
+		close(f.batchReady[batch])
 	}
 	f.mu.Unlock()
 
 	defer func() {
 		f.mu.Lock()
-		f.active--
+		delete(f.active, pod)
 		f.mu.Unlock()
 	}()
 
-	if f.waitForAll {
-		select {
-		case <-f.allStarted:
-		case <-time.After(10 * time.Second):
-			return nil, fmt.Errorf("timed out waiting for the other purges to start")
-		}
-	} else {
-		// Give overlapping purges a chance to show up in maxActive.
-		time.Sleep(20 * time.Millisecond)
+	select {
+	case <-f.batchReady[batch]:
+	case <-time.After(10 * time.Second):
+		return fmt.Errorf("timed out waiting for the rest of the batch to start")
 	}
+	if pod == f.hanging {
+		select {
+		case <-f.release:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if pod == f.failing {
+		return fmt.Errorf("pod operation failed")
+	}
+	return nil
+}
 
-	if c.address == f.failing {
-		return nil, fmt.Errorf("purge failed")
+func (c *podOpTestClient) PurgeBackups(ctx context.Context) (*medusa.PurgeBackupsResponse, error) {
+	if err := c.run(ctx); err != nil {
+		return nil, err
 	}
 	return &medusa.PurgeBackupsResponse{NbBackupsPurged: 1}, nil
 }
 
-func (c *purgeTestClient) Close() error { return nil }
+func (c *podOpTestClient) PrepareRestore(ctx context.Context, _, _, _ string) (*medusa.PrepareRestoreResponse, error) {
+	if err := c.run(ctx); err != nil {
+		return nil, err
+	}
+	return &medusa.PrepareRestoreResponse{}, nil
+}
 
-func TestMedusaPurgeParallelism(t *testing.T) {
+func (c *podOpTestClient) Close() error { return nil }
+
+type podOpTest struct {
+	client  client.Client
+	r       *MedusaTaskReconciler
+	req     reconcile.Request
+	factory *podOpTestFactory
+}
+
+// newPodOpTest creates a datacenter with racks r1, r2 and r3 and pods pod1 to pod7. pod1 to pod6 are spread over the
+// racks in turn, and pod7 is in rack r4, which isn't in the datacenter spec.
+func newPodOpTest(t *testing.T, operation api.OperationType, annotations map[string]string, batches [][]string, failing, hanging string) *podOpTest {
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, cassdcapi.AddToScheme(scheme))
+	require.NoError(t, api.AddToScheme(scheme))
+	dc := &cassdcapi.CassandraDatacenter{
+		ObjectMeta: metav1.ObjectMeta{Name: "dc1", Namespace: "test", UID: "dc1"},
+		Spec:       cassdcapi.CassandraDatacenterSpec{Racks: []cassdcapi.Rack{{Name: "r1"}, {Name: "r2"}, {Name: "r3"}}},
+	}
+	task := &api.MedusaTask{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            "task",
+			Namespace:       dc.Namespace,
+			Annotations:     annotations,
+			OwnerReferences: []metav1.OwnerReference{{APIVersion: cassdcapi.GroupVersion.String(), Kind: "CassandraDatacenter", Name: dc.Name, UID: dc.UID}},
+		},
+		Spec: api.MedusaTaskSpec{Operation: operation, CassandraDatacenter: dc.Name, BackupName: "backup", RestoreKey: "key"},
+	}
+	factory := newPodOpTestFactory(batches, failing, hanging)
+	objects := []client.Object{dc, task}
+	for i := 1; i <= 7; i++ {
+		rack := fmt.Sprintf("r%d", (i-1)%3+1)
+		if i == 7 {
+			rack = "r4"
+		}
+		name := fmt.Sprintf("pod%d", i)
+		podLabels := dc.GetDatacenterLabels()
+		podLabels[cassdcapi.RackLabel] = rack
+		objects = append(objects, &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: dc.Namespace, Labels: podLabels},
+			Status:     corev1.PodStatus{PodIP: fmt.Sprintf("10.0.0.%d", i)},
+		})
+		factory.podOf[fmt.Sprintf("10.0.0.%d:%d", i, medusa.DefaultMedusaPort)] = name
+	}
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).WithStatusSubresource(&api.MedusaTask{}).Build()
+	return &podOpTest{
+		client:  c,
+		r:       &MedusaTaskReconciler{Client: c, Scheme: scheme, ReconcilerConfig: &config.ReconcilerConfig{DefaultDelay: time.Second}, ClientFactory: factory},
+		req:     reconcile.Request{NamespacedName: client.ObjectKeyFromObject(task)},
+		factory: factory,
+	}
+}
+
+func (p *podOpTest) status(t *testing.T) api.MedusaTaskStatus {
+	task := &api.MedusaTask{}
+	require.NoError(t, p.client.Get(context.Background(), p.req.NamespacedName, task))
+	return task.Status
+}
+
+func finishedPods(status api.MedusaTaskStatus) []string {
+	pods := []string{}
+	for _, result := range status.Finished {
+		pods = append(pods, result.PodName)
+	}
+	return pods
+}
+
+func TestMedusaTaskConcurrency(t *testing.T) {
+	allPods := []string{"pod1", "pod2", "pod3", "pod4", "pod5", "pod6", "pod7"}
+	byRack := [][]string{{"pod1", "pod4"}, {"pod2", "pod5"}, {"pod3", "pod6"}, {"pod7"}}
+	byPod := [][]string{{"pod1"}, {"pod2"}, {"pod3"}, {"pod4"}, {"pod5"}, {"pod6"}, {"pod7"}}
 	tests := []struct {
-		name        string
-		annotations map[string]string
-		sequential  bool
+		name       string
+		operation  api.OperationType
+		annotation string
+		batches    [][]string
 	}{
-		{name: "parallel by default"},
-		{name: "parallel when annotation is not true", annotations: map[string]string{medusa.MedusaPurgeSequentialAnnotation: "false"}},
-		{name: "sequential with annotation", annotations: map[string]string{medusa.MedusaPurgeSequentialAnnotation: "true"}, sequential: true},
+		{name: "purge on all pods by default", operation: api.OperationTypePurge, batches: [][]string{allPods}},
+		{name: "purge on all pods", operation: api.OperationTypePurge, annotation: "all", batches: [][]string{allPods}},
+		{name: "purge one rack at a time", operation: api.OperationTypePurge, annotation: "rack", batches: byRack},
+		{name: "purge one pod at a time", operation: api.OperationTypePurge, annotation: "pod", batches: byPod},
+		{name: "purge one pod at a time for an unknown value", operation: api.OperationTypePurge, annotation: "racks", batches: byPod},
+		{name: "prepare restore on all pods by default", operation: api.OperationTypePrepareRestore, batches: [][]string{allPods}},
+		{name: "prepare restore one rack at a time", operation: api.OperationTypePrepareRestore, annotation: "rack", batches: byRack},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := t.Context()
-			scheme := runtime.NewScheme()
-			require.NoError(t, corev1.AddToScheme(scheme))
-			require.NoError(t, cassdcapi.AddToScheme(scheme))
-			require.NoError(t, api.AddToScheme(scheme))
-			dc := &cassdcapi.CassandraDatacenter{ObjectMeta: metav1.ObjectMeta{Name: "dc1", Namespace: "test", UID: "dc1"}}
-			task := &api.MedusaTask{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            "purge",
-					Namespace:       dc.Namespace,
-					Annotations:     tt.annotations,
-					OwnerReferences: []metav1.OwnerReference{{APIVersion: cassdcapi.GroupVersion.String(), Kind: "CassandraDatacenter", Name: dc.Name, UID: dc.UID}},
-				},
-				Spec: api.MedusaTaskSpec{Operation: api.OperationTypePurge, CassandraDatacenter: dc.Name},
+			var annotations map[string]string
+			if tt.annotation != "" {
+				annotations = map[string]string{medusa.MedusaTaskConcurrencyAnnotation: tt.annotation}
 			}
-			objects := []client.Object{dc, task}
-			podNames := []string{"pod1", "pod2", "pod3"}
-			for i, name := range podNames {
-				objects = append(objects, &corev1.Pod{
-					ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: dc.Namespace, Labels: dc.GetDatacenterLabels()},
-					Status:     corev1.PodStatus{PodIP: fmt.Sprintf("10.0.0.%d", i+1)},
-				})
-			}
-			c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).WithStatusSubresource(&api.MedusaTask{}).Build()
-			factory := &purgeTestFactory{
-				pods:       len(podNames),
-				waitForAll: !tt.sequential,
-				allStarted: make(chan struct{}),
-				failing:    fmt.Sprintf("10.0.0.2:%d", medusa.DefaultMedusaPort),
-			}
-			r := &MedusaTaskReconciler{Client: c, Scheme: scheme, ReconcilerConfig: &config.ReconcilerConfig{DefaultDelay: time.Second}, ClientFactory: factory}
-			req := reconcile.Request{NamespacedName: client.ObjectKeyFromObject(task)}
+			p := newPodOpTest(t, tt.operation, annotations, tt.batches, "pod2", "")
 
-			_, err := r.Reconcile(ctx, req)
+			// The pod operations outlive Reconcile, so cancelling its context must not cancel them.
+			reconcileCtx, cancel := context.WithCancel(t.Context())
+			_, err := p.r.Reconcile(reconcileCtx, p.req)
+			cancel()
 			require.NoError(t, err)
 
-			updated := &api.MedusaTask{}
+			var status api.MedusaTaskStatus
 			require.Eventually(t, func() bool {
-				require.NoError(t, c.Get(ctx, req.NamespacedName, updated))
-				return len(updated.Status.InProgress) == 0 && len(updated.Status.Finished)+len(updated.Status.Failed) == len(podNames)
-			}, 15*time.Second, 50*time.Millisecond)
+				status = p.status(t)
+				return len(status.InProgress) == 0 && len(status.Finished)+len(status.Failed) == len(allPods)
+			}, 30*time.Second, 50*time.Millisecond)
 
-			finished := []string{}
-			for _, result := range updated.Status.Finished {
-				finished = append(finished, result.PodName)
-				require.Equal(t, 1, result.NbBackupsPurged)
+			require.ElementsMatch(t, []string{"pod1", "pod3", "pod4", "pod5", "pod6", "pod7"}, finishedPods(status))
+			require.Equal(t, []string{"pod2"}, status.Failed)
+			if tt.operation == api.OperationTypePurge {
+				for _, result := range status.Finished {
+					require.Equal(t, 1, result.NbBackupsPurged)
+				}
 			}
-			require.ElementsMatch(t, []string{"pod1", "pod3"}, finished)
-			require.Equal(t, []string{"pod2"}, updated.Status.Failed)
 
-			factory.mu.Lock()
-			defer factory.mu.Unlock()
-			if tt.sequential {
-				require.Equal(t, 1, factory.maxActive)
-				require.Equal(t, []string{
-					fmt.Sprintf("10.0.0.1:%d", medusa.DefaultMedusaPort),
-					fmt.Sprintf("10.0.0.2:%d", medusa.DefaultMedusaPort),
-					fmt.Sprintf("10.0.0.3:%d", medusa.DefaultMedusaPort),
-				}, factory.order)
-			} else {
-				require.Equal(t, len(podNames), factory.maxActive)
+			p.factory.mu.Lock()
+			defer p.factory.mu.Unlock()
+			require.Empty(t, p.factory.violations)
+			batch := 0
+			for _, pod := range p.factory.order {
+				require.GreaterOrEqual(t, p.factory.batchOf[pod], batch, "pods ran out of batch order: %v", p.factory.order)
+				batch = p.factory.batchOf[pod]
 			}
 		})
 	}
+}
+
+// A pod that hangs must not hold back the status of the pods that already finished.
+func TestMedusaTaskStatusWithHangingPod(t *testing.T) {
+	allPods := []string{"pod1", "pod2", "pod3", "pod4", "pod5", "pod6", "pod7"}
+	p := newPodOpTest(t, api.OperationTypePurge, nil, [][]string{allPods}, "pod2", "pod3")
+	defer close(p.factory.release)
+
+	_, err := p.r.Reconcile(t.Context(), p.req)
+	require.NoError(t, err)
+
+	var status api.MedusaTaskStatus
+	require.Eventually(t, func() bool {
+		status = p.status(t)
+		return len(status.Finished)+len(status.Failed) == len(allPods)-1
+	}, 15*time.Second, 50*time.Millisecond)
+	require.Equal(t, []string{"pod3"}, status.InProgress)
+	require.ElementsMatch(t, []string{"pod1", "pod4", "pod5", "pod6", "pod7"}, finishedPods(status))
+	require.Equal(t, []string{"pod2"}, status.Failed)
 }
