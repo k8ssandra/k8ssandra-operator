@@ -873,27 +873,36 @@ func TestPitrPreStopHookAndGracePeriod(t *testing.T) {
 	logger := logr.New(logr.Discard().GetSink())
 	interval := 30
 
-	// build runs the same sequence as the K8ssandraCluster medusa reconciler:
-	// create the main container, update the init container, then update the main container.
-	buildWithGracePeriod := func(t *testing.T, pitr *medusaapi.PitrConfig, gracePeriod *int64, containers ...corev1.Container) (*corev1.Container, *cassandra.DatacenterConfig) {
+	// buildWithGracePeriod runs the same sequence as controllers/k8ssandra/medusa_reconciler.go:
+	// CreateMedusaMainContainer, UpdateMedusaInitContainer, then UpdateMedusaMainContainer.
+	// It returns the datacenter config, whose pod template is what ends up in the pods.
+	buildWithGracePeriod := func(t *testing.T, pitr *medusaapi.PitrConfig, gracePeriod *int64, containers ...corev1.Container) *cassandra.DatacenterConfig {
 		spec := pitrTestCluster(pitr).Spec.Medusa
 		dcConfig := &cassandra.DatacenterConfig{}
 		dcConfig.PodTemplateSpec.Spec.Containers = containers
 		dcConfig.PodTemplateSpec.Spec.TerminationGracePeriodSeconds = gracePeriod
 		container, err := CreateMedusaMainContainer(dcConfig, spec, false, "test", logger, getTestImageRegistry(t))
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		UpdateMedusaInitContainer(dcConfig, spec, false, "test", logger, getTestImageRegistry(t))
-		return container, dcConfig
+		UpdateMedusaMainContainer(dcConfig, container)
+		return dcConfig
 	}
-	build := func(t *testing.T, pitr *medusaapi.PitrConfig, containers ...corev1.Container) (*corev1.Container, *cassandra.DatacenterConfig) {
+	build := func(t *testing.T, pitr *medusaapi.PitrConfig, containers ...corev1.Container) *cassandra.DatacenterConfig {
 		return buildWithGracePeriod(t, pitr, nil, containers...)
+	}
+	// medusaContainer finds the medusa container in the pod template of dcConfig.
+	medusaContainer := func(t *testing.T, dcConfig *cassandra.DatacenterConfig) *corev1.Container {
+		idx, found := cassandra.FindContainer(&dcConfig.PodTemplateSpec, "medusa")
+		require.True(t, found)
+		return &dcConfig.PodTemplateSpec.Spec.Containers[idx]
 	}
 	command := func(port, spool string) []string {
 		return []string{"python3", "-c", pitrPreStopScript, port, spool}
 	}
 
 	t.Run("EnabledSetsHook", func(t *testing.T) {
-		container, _ := build(t, &medusaapi.PitrConfig{Enabled: true})
+		dcConfig := build(t, &medusaapi.PitrConfig{Enabled: true})
+		container := medusaContainer(t, dcConfig)
 		require.NotNil(t, container.Lifecycle)
 		require.NotNil(t, container.Lifecycle.PreStop)
 		require.NotNil(t, container.Lifecycle.PreStop.Exec)
@@ -901,7 +910,8 @@ func TestPitrPreStopHookAndGracePeriod(t *testing.T) {
 		assert.Equal(t, DefaultPitrSpoolDir, container.Lifecycle.PreStop.Exec.Command[4])
 	})
 	t.Run("SpoolDir", func(t *testing.T) {
-		container, _ := build(t, &medusaapi.PitrConfig{Enabled: true, SpoolDir: "/x"})
+		dcConfig := build(t, &medusaapi.PitrConfig{Enabled: true, SpoolDir: "/x"})
+		container := medusaContainer(t, dcConfig)
 		require.NotNil(t, container.Lifecycle)
 		require.NotNil(t, container.Lifecycle.PreStop)
 		require.NotNil(t, container.Lifecycle.PreStop.Exec)
@@ -912,44 +922,45 @@ func TestPitrPreStopHookAndGracePeriod(t *testing.T) {
 			Name:  "cassandra",
 			Ports: []corev1.ContainerPort{{Name: "mgmt-api-http", ContainerPort: 9999}},
 		}
-		container, _ := build(t, &medusaapi.PitrConfig{Enabled: true}, cassandraContainer)
+		dcConfig := build(t, &medusaapi.PitrConfig{Enabled: true}, cassandraContainer)
+		container := medusaContainer(t, dcConfig)
 		require.NotNil(t, container.Lifecycle)
 		require.NotNil(t, container.Lifecycle.PreStop)
 		require.NotNil(t, container.Lifecycle.PreStop.Exec)
 		assert.Equal(t, command("9999", DefaultPitrSpoolDir), container.Lifecycle.PreStop.Exec.Command)
 	})
 	t.Run("GracePeriodDefaultInterval", func(t *testing.T) {
-		_, dcConfig := build(t, &medusaapi.PitrConfig{Enabled: true})
+		dcConfig := build(t, &medusaapi.PitrConfig{Enabled: true})
 		require.NotNil(t, dcConfig.PodTemplateSpec.Spec.TerminationGracePeriodSeconds)
 		assert.Equal(t, int64(240), *dcConfig.PodTemplateSpec.Spec.TerminationGracePeriodSeconds)
 	})
 	t.Run("GracePeriodCustomInterval", func(t *testing.T) {
-		_, dcConfig := build(t, &medusaapi.PitrConfig{Enabled: true, ArchiveIntervalSeconds: &interval})
+		dcConfig := build(t, &medusaapi.PitrConfig{Enabled: true, ArchiveIntervalSeconds: &interval})
 		require.NotNil(t, dcConfig.PodTemplateSpec.Spec.TerminationGracePeriodSeconds)
 		assert.Equal(t, int64(180), *dcConfig.PodTemplateSpec.Spec.TerminationGracePeriodSeconds)
 	})
 	t.Run("NilPitr", func(t *testing.T) {
-		container, dcConfig := build(t, nil)
-		assert.Nil(t, container.Lifecycle)
+		dcConfig := build(t, nil)
+		assert.Nil(t, medusaContainer(t, dcConfig).Lifecycle)
 		assert.Nil(t, dcConfig.PodTemplateSpec.Spec.TerminationGracePeriodSeconds)
 	})
 	t.Run("DisabledPitr", func(t *testing.T) {
-		container, dcConfig := build(t, &medusaapi.PitrConfig{Enabled: false, ArchiveIntervalSeconds: &interval})
-		assert.Nil(t, container.Lifecycle)
+		dcConfig := build(t, &medusaapi.PitrConfig{Enabled: false, ArchiveIntervalSeconds: &interval})
+		assert.Nil(t, medusaContainer(t, dcConfig).Lifecycle)
 		assert.Nil(t, dcConfig.PodTemplateSpec.Spec.TerminationGracePeriodSeconds)
 	})
 	t.Run("ExistingLargerGracePeriodIsKept", func(t *testing.T) {
-		_, dcConfig := buildWithGracePeriod(t, &medusaapi.PitrConfig{Enabled: true}, ptr.To(int64(600)))
+		dcConfig := buildWithGracePeriod(t, &medusaapi.PitrConfig{Enabled: true}, ptr.To(int64(600)))
 		require.NotNil(t, dcConfig.PodTemplateSpec.Spec.TerminationGracePeriodSeconds)
 		assert.Equal(t, int64(600), *dcConfig.PodTemplateSpec.Spec.TerminationGracePeriodSeconds)
 	})
 	t.Run("ExistingSmallerGracePeriodIsRaised", func(t *testing.T) {
-		_, dcConfig := buildWithGracePeriod(t, &medusaapi.PitrConfig{Enabled: true}, ptr.To(int64(30)))
+		dcConfig := buildWithGracePeriod(t, &medusaapi.PitrConfig{Enabled: true}, ptr.To(int64(30)))
 		require.NotNil(t, dcConfig.PodTemplateSpec.Spec.TerminationGracePeriodSeconds)
 		assert.Equal(t, int64(240), *dcConfig.PodTemplateSpec.Spec.TerminationGracePeriodSeconds)
 	})
 	t.Run("ExistingGracePeriodKeptWhenPitrDisabled", func(t *testing.T) {
-		_, dcConfig := buildWithGracePeriod(t, &medusaapi.PitrConfig{Enabled: false}, ptr.To(int64(600)))
+		dcConfig := buildWithGracePeriod(t, &medusaapi.PitrConfig{Enabled: false}, ptr.To(int64(600)))
 		require.NotNil(t, dcConfig.PodTemplateSpec.Spec.TerminationGracePeriodSeconds)
 		assert.Equal(t, int64(600), *dcConfig.PodTemplateSpec.Spec.TerminationGracePeriodSeconds)
 	})
