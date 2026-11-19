@@ -1368,3 +1368,81 @@ func TestUpdateMedusaRestoreInitContainerPitr(t *testing.T) {
 	require.True(t, utils.ContainerHasEnvVar(container, restoreMappingEnvVar, string(mappingJSON)))
 	require.True(t, utils.ContainerHasEnvVar(container, restoreKeyEnvVar, "key"))
 }
+
+// newStuckReplayTestReconciler puts job in the branch that waits for the restarted datacenter to be ready,
+// with DatacenterStopped set stoppedAgo in the past.
+func newStuckReplayTestReconciler(t *testing.T, job *api.MedusaRestoreJob, stoppedAgo time.Duration) (*MedusaRestoreJobReconciler, client.Client, *cassdcapi.CassandraDatacenter) {
+	dc := newPitrTestDC()
+	dc.SetCondition(cassdcapi.DatacenterCondition{Type: cassdcapi.DatacenterUpdating, Status: corev1.ConditionFalse, LastTransitionTime: metav1.Now()})
+	job.Status = api.MedusaRestoreJobStatus{
+		Message:           job.Status.Message,
+		StartTime:         metav1.NewTime(time.Now().Add(-stoppedAgo - time.Minute)),
+		DatacenterStopped: metav1.NewTime(time.Now().Add(-stoppedAgo)),
+		RestoreKey:        "key",
+		RestorePrepared:   true,
+		RestoreMapping:    newPitrTestMapping(),
+	}
+	objects := []client.Object{dc, job,
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "test-superuser", Namespace: dc.Namespace}},
+		&api.MedusaBackup{ObjectMeta: metav1.ObjectMeta{Name: "b1", Namespace: dc.Namespace}},
+	}
+	scheme := newPitrTestScheme(t)
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).WithStatusSubresource(&api.MedusaRestoreJob{}).Build()
+	r := &MedusaRestoreJobReconciler{Client: c, Scheme: scheme, ReconcilerConfig: &config.ReconcilerConfig{DefaultDelay: time.Second}}
+	return r, c, dc
+}
+
+func TestReconcileStuckReplayNotice(t *testing.T) {
+	dc := newPitrTestDC()
+	backupJob := newPitrTestJob(dc)
+	backupJob.Spec = api.MedusaRestoreJobSpec{Backup: "b1", CassandraDatacenter: dc.Name}
+
+	tests := []struct {
+		name       string
+		job        *api.MedusaRestoreJob
+		stoppedAgo time.Duration
+		message    string
+		notice     bool
+	}{
+		{name: "PITR job before the notice", job: newPitrTestJob(dc), stoppedAgo: 59 * time.Minute},
+		{name: "PITR job after the notice", job: newPitrTestJob(dc), stoppedAgo: 61 * time.Minute, notice: true},
+		{name: "PITR job after the notice keeps an existing message", job: newPitrTestJob(dc), stoppedAgo: 61 * time.Minute, message: "x"},
+		{name: "backup restore job never gets the notice", job: backupJob, stoppedAgo: 61 * time.Minute},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := t.Context()
+			tt.job.Status.Message = tt.message
+			r, c, dc := newStuckReplayTestReconciler(t, tt.job, tt.stoppedAgo)
+			req := ctrl.Request{NamespacedName: client.ObjectKeyFromObject(tt.job)}
+			job := &api.MedusaRestoreJob{}
+
+			t.Log("the datacenter is not ready: the job stays in progress and is requeued, twice")
+			for range 2 {
+				result, err := r.Reconcile(ctx, req)
+				require.NoError(t, err)
+				require.NotZero(t, result.RequeueAfter)
+				require.NoError(t, c.Get(ctx, req.NamespacedName, job))
+				require.True(t, job.Status.FinishTime.IsZero())
+				if tt.notice {
+					require.Equal(t, stuckReplayNotice("dc1"), job.Status.Message)
+					require.Contains(t, job.Status.Message, "datacenter dc1 is not ready 60 minutes after the restore stopped it")
+				} else {
+					require.Equal(t, tt.message, job.Status.Message)
+				}
+			}
+
+			t.Log("the datacenter becomes ready: the job finishes with an empty message")
+			require.NoError(t, c.Get(ctx, client.ObjectKeyFromObject(dc), dc))
+			dc.Status.CassandraOperatorProgress = cassdcapi.ProgressReady
+			dc.SetCondition(cassdcapi.DatacenterCondition{Type: cassdcapi.DatacenterReady, Status: corev1.ConditionTrue, LastTransitionTime: metav1.Now()})
+			require.NoError(t, c.Update(ctx, dc)) // no status subresource for the DC in the fake client
+			result, err := r.Reconcile(ctx, req)
+			require.NoError(t, err)
+			require.Equal(t, ctrl.Result{}, result)
+			require.NoError(t, c.Get(ctx, req.NamespacedName, job))
+			require.False(t, job.Status.FinishTime.IsZero())
+			require.Empty(t, job.Status.Message)
+		})
+	}
+}
