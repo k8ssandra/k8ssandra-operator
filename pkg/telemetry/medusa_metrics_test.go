@@ -89,6 +89,26 @@ func TestCreateCassandraVectorTomlMedusa(t *testing.T) {
 		assert.NotContains(t, toml, "medusa_metrics")
 	})
 
+	t.Run("TLSWithServerSecretOnly", func(t *testing.T) {
+		medusaSpec := medusaWithTLS()
+		medusaSpec.ServiceProperties.Encryption.ClientSecretName = ""
+		toml, err := CreateCassandraVectorToml(vectorSpecWithSinks(CassandraMetricsTransformName), false, medusaSpec)
+		require.NoError(t, err)
+
+		assert.Contains(t, toml, "http://127.0.0.1:9500/metrics")
+		assert.NotContains(t, toml, "tls.")
+	})
+
+	t.Run("UserSourceReplacesScrape", func(t *testing.T) {
+		spec := vectorSpecWithSinks(CassandraMetricsTransformName)
+		spec.Vector.Components.Sources = []telemetry.VectorSourceSpec{{Name: MedusaMetricsSourceName, Type: "internal_metrics"}}
+		toml, err := CreateCassandraVectorToml(spec, false, &medusaapi.MedusaClusterTemplate{})
+		require.NoError(t, err)
+
+		assert.Contains(t, toml, "[sources.medusa_metrics_raw]\ntype = \"internal_metrics\"\n")
+		assert.NotContains(t, toml, "127.0.0.1:9500")
+	})
+
 	t.Run("NoMedusa", func(t *testing.T) {
 		toml, err := CreateCassandraVectorToml(vectorSpecWithSinks(CassandraMetricsTransformName), false, nil)
 		require.NoError(t, err)

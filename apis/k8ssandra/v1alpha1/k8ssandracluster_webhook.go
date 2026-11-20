@@ -305,16 +305,40 @@ func ValidateMedusa(r *K8ssandraCluster) error {
 	if r.Spec.Medusa == nil {
 		return nil
 	}
-	if r.Spec.Medusa.ServiceProperties.MetricsTLS {
-		encryption := r.Spec.Medusa.ServiceProperties.Encryption
-		if encryption == nil || encryption.ServerSecretName == "" || encryption.ClientSecretName == "" {
-			return ErrMedusaMetricsTLS
-		}
+	if err := validateMedusaMetrics(r.Spec.Medusa.ServiceProperties); err != nil {
+		return err
 	}
 	if r.Spec.Medusa.MedusaConfigurationRef.Name != "" {
 		return validateMedusaWithConfigRef(r.Spec.Medusa)
 	}
 	return validateMedusaWithoutConfigRef(r.Spec.Medusa)
+}
+
+// cassandraPodPorts are the well-known default ports of the other containers in a Cassandra pod. The medusa container
+// shares the pod's network namespace, so its metrics endpoint must not listen on any of them.
+var cassandraPodPorts = map[int]string{
+	7000: "Cassandra internode",
+	7001: "Cassandra internode TLS",
+	7199: "JMX",
+	8080: "management API",
+	9000: "management API metrics",
+	9042: "CQL",
+	9103: "MCAC metrics",
+	9142: "CQL TLS",
+}
+
+func validateMedusaMetrics(service medusaapi.Service) error {
+	if service.MetricsTLS && !service.MetricsTLSEnabled() {
+		return ErrMedusaMetricsTLS
+	}
+	port := service.MetricsPortOrDefault()
+	if port == service.GrpcPortOrDefault() {
+		return fmt.Errorf("medusa serviceProperties.metricsPort %d conflicts with the Medusa gRPC port", port)
+	}
+	if name, found := cassandraPodPorts[port]; found {
+		return fmt.Errorf("medusa serviceProperties.metricsPort %d conflicts with the %s port of the Cassandra pod", port, name)
+	}
+	return nil
 }
 
 // validateMedusaWithConfigRef validates Medusa configuration when a MedusaConfigurationRef is provided.

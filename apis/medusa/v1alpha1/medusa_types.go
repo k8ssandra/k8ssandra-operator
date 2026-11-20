@@ -146,6 +146,9 @@ type Service struct {
 	Encryption *GRPCEncryption `json:"encryption,omitempty"`
 }
 
+// DefaultGrpcPort is the port of Medusa's gRPC server when GrpcPort is unset.
+const DefaultGrpcPort = 50051
+
 // DefaultMetricsPort is the port of Medusa's Prometheus metrics endpoint when MetricsPort is unset.
 // It is the value of Medusa's example config, and stays clear of node_exporter (9100), the
 // management API metrics (9000) and MCAC (9103).
@@ -157,6 +160,21 @@ func (s Service) MetricsPortOrDefault() int {
 		return s.MetricsPort
 	}
 	return DefaultMetricsPort
+}
+
+// GrpcPortOrDefault returns GrpcPort, or DefaultGrpcPort when it is unset.
+func (s Service) GrpcPortOrDefault() int {
+	if s.GrpcPort != 0 {
+		return s.GrpcPort
+	}
+	return DefaultGrpcPort
+}
+
+// MetricsTLSEnabled tells whether the metrics endpoint is served over mutual TLS: MetricsTLS is set and Encryption
+// names both the server and the client secret. Every part of the TLS setup (medusa.ini, the Vector source and the
+// client certificate volume) checks this, so they never disagree, even for an object the webhook did not validate.
+func (s Service) MetricsTLSEnabled() bool {
+	return s.MetricsTLS && s.Encryption != nil && s.Encryption.ServerSecretName != "" && s.Encryption.ClientSecretName != ""
 }
 
 type PodStorageSettings struct {

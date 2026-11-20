@@ -785,4 +785,26 @@ func TestValidateMedusaMetricsTLS(t *testing.T) {
 	require.NoError(t, ValidateMedusa(cluster(medusaapi.Service{Encryption: encryption})))
 	require.ErrorIs(t, ValidateMedusa(cluster(medusaapi.Service{MetricsTLS: true})), ErrMedusaMetricsTLS)
 	require.ErrorIs(t, ValidateMedusa(cluster(medusaapi.Service{MetricsTLS: true, Encryption: &medusaapi.GRPCEncryption{ServerSecretName: "server-certs"}})), ErrMedusaMetricsTLS)
+	require.ErrorIs(t, ValidateMedusa(cluster(medusaapi.Service{MetricsTLS: true, Encryption: &medusaapi.GRPCEncryption{ClientSecretName: "client-certs"}})), ErrMedusaMetricsTLS)
+}
+
+func TestValidateMedusaMetricsPort(t *testing.T) {
+	validate := func(service medusaapi.Service) error {
+		kc := createMinimalClusterObj("medusa-metrics-port", "ns")
+		kc.Spec.Medusa = &medusaapi.MedusaClusterTemplate{
+			StorageProperties: medusaapi.Storage{StorageProvider: "s3", BucketName: "bucket"},
+			ServiceProperties: service,
+		}
+		return ValidateMedusa(kc)
+	}
+
+	require.NoError(t, validate(medusaapi.Service{}))
+	require.NoError(t, validate(medusaapi.Service{MetricsPort: 9600}))
+	require.NoError(t, validate(medusaapi.Service{MetricsPort: 50051, GrpcPort: 55055}))
+	require.ErrorContains(t, validate(medusaapi.Service{MetricsPort: 50051}), "gRPC port")
+	require.ErrorContains(t, validate(medusaapi.Service{MetricsPort: 55055, GrpcPort: 55055}), "gRPC port")
+	require.ErrorContains(t, validate(medusaapi.Service{GrpcPort: 9500}), "gRPC port")
+	for _, port := range []int{7000, 7001, 7199, 8080, 9000, 9042, 9103, 9142} {
+		require.ErrorContains(t, validate(medusaapi.Service{MetricsPort: port}), "Cassandra pod", "port %d", port)
+	}
 }

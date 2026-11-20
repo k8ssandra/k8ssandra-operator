@@ -150,7 +150,11 @@ spec:
         clientSecretName: medusa-client-certs
 ```
 
-Without Vector, the endpoint can be scraped on `<pod IP>:9500/metrics` (the `metrics` port of the `medusa` container).
+The port must not be the Medusa gRPC port or one of the default ports of the other containers in the Cassandra pod (7000, 7001, 7199, 8080, 9000, 9042, 9103 and 9142).
+
+To stop Vector from scraping Medusa, define your own source named `medusa_metrics_raw`: user components take precedence over the defaults with the same name.
+
+Without Vector, the endpoint can be scraped on `<pod IP>:9500/metrics` (the `metrics` port of the `medusa` container). With `metricsTLS`, it is served over https and requires a client certificate signed by the CA of the Medusa gRPC certificates.
 
 ## Custom Vector configuration
 

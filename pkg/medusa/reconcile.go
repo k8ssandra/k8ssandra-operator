@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	DefaultMedusaPort            = 50051
+	DefaultMedusaPort            = api.DefaultGrpcPort
 	DefaultProbeInitialDelay     = 10
 	DefaultProbeTimeout          = 1
 	DefaultProbePeriod           = 10
@@ -180,7 +180,7 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster, dcConfig *cassandra.DatacenterCo
 
     [monitoring]
     prometheus_port = {{ .Spec.Medusa.ServiceProperties.MetricsPortOrDefault }}
-    {{- if and .Spec.Medusa.ServiceProperties.MetricsTLS .Spec.Medusa.ServiceProperties.Encryption }}
+    {{- if .Spec.Medusa.ServiceProperties.MetricsTLSEnabled }}
     prometheus_tls_cert = /etc/certificates/grpc-server-certs/tls.crt
     prometheus_tls_key = /etc/certificates/grpc-server-certs/tls.key
     prometheus_ca_cert = /etc/certificates/grpc-server-certs/ca.crt
