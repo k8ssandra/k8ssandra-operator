@@ -65,3 +65,10 @@ func TestNewService(t *testing.T) {
 	assert.Contains(t, service.Spec.Ports, appPort)
 	assert.Contains(t, service.Spec.Ports, adminPort)
 }
+
+func TestNewServiceWithoutResourceMeta(t *testing.T) {
+	reaper := newTestReaper()
+	reaper.Spec.ResourceMeta = nil
+	service := NewService(types.NamespacedName{Namespace: reaper.Namespace, Name: GetServiceName(reaper.Name)}, reaper)
+	assert.Equal(t, k8ssandraapi.NameLabelValue, service.Labels[k8ssandraapi.NameLabel])
+}

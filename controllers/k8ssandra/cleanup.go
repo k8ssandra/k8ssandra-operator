@@ -11,12 +11,14 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/k8ssandra"
 	k8ssandralabels "github.com/k8ssandra/k8ssandra-operator/pkg/labels"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/leancache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/result"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -278,12 +280,13 @@ func (r *K8ssandraClusterReconciler) deleteK8ssandraConfigMaps(
 	kcLogger logr.Logger,
 ) (hasErrors bool) {
 	selector := k8ssandralabels.CleanedUpByLabels(client.ObjectKey{Namespace: kc.Namespace, Name: kc.SanitizedName()})
-	configMaps := &corev1.ConfigMapList{}
+	configMaps := &metav1.PartialObjectMetadataList{}
+	configMaps.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("ConfigMapList"))
 	options := client.ListOptions{
 		Namespace:     namespace,
 		LabelSelector: labels.SelectorFromSet(selector),
 	}
-	if err := remoteClient.List(ctx, configMaps, &options); err != nil {
+	if err := leancache.APIReader(remoteClient).List(ctx, configMaps, &options); err != nil {
 		kcLogger.Error(err, "Failed to list ConfigMap objects", "Context", dcTemplate.K8sContext)
 		return true
 	}
@@ -297,7 +300,7 @@ func (r *K8ssandraClusterReconciler) deleteK8ssandraConfigMaps(
 			}
 		}
 	}
-	return
+	return hasErrors
 }
 
 func (r *K8ssandraClusterReconciler) deleteServices(
@@ -314,7 +317,7 @@ func (r *K8ssandraClusterReconciler) deleteServices(
 		LabelSelector: labels.SelectorFromSet(selector),
 	}
 	serviceList := &corev1.ServiceList{}
-	if err := remoteClient.List(ctx, serviceList, &options); err != nil {
+	if err := leancache.APIReader(remoteClient).List(ctx, serviceList, &options); err != nil {
 		kcLogger.Error(err, "Failed to list K8ssandra services", "Context", dcTemplate.K8sContext)
 		return true
 	}
@@ -347,7 +350,7 @@ func (r *K8ssandraClusterReconciler) deleteDeployments(
 		LabelSelector: labels.SelectorFromSet(selector),
 	}
 	deploymentList := &appsv1.DeploymentList{}
-	if err := remoteClient.List(ctx, deploymentList, &options); err != nil {
+	if err := leancache.APIReader(remoteClient).List(ctx, deploymentList, &options); err != nil {
 		kcLogger.Error(err, "Failed to list K8ssandra deployments", "Context", dcTemplate.K8sContext)
 		return true
 	}
@@ -380,7 +383,7 @@ func (r *K8ssandraClusterReconciler) deleteCronJobs(
 		LabelSelector: labels.SelectorFromSet(selector),
 	}
 	cronJobList := &batchv1.CronJobList{}
-	if err := remoteClient.List(ctx, cronJobList, &options); err != nil {
+	if err := leancache.APIReader(remoteClient).List(ctx, cronJobList, &options); err != nil {
 		kcLogger.Error(err, "Failed to list Medusa CronJobs", "Context", dcTemplate.K8sContext)
 		return true
 	}

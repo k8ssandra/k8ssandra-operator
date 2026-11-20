@@ -113,7 +113,7 @@ func (_m *ReaperManager) GetUiCredentials(ctx context.Context, uiUserSecretRef *
 }
 
 // SetK8sClient provides a mock function with given fields: _a0
-func (_m *ReaperManager) SetK8sClient(_a0 client.Reader) {
+func (_m *ReaperManager) SetK8sClient(_a0 client.Client) {
 	_m.Called(_a0)
 }
 
