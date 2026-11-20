@@ -79,11 +79,7 @@ func BuildMedusaMetricsComponents(medusaSpec *medusaapi.MedusaClusterTemplate, s
 	return source, transform
 }
 
-// medusaMetricsTLS tells whether Medusa's metrics endpoint is served over mutual TLS. The webhook rejects metricsTLS
-// without both encryption secrets, the nil checks only guard against objects that bypassed it.
+// medusaMetricsTLS tells whether Medusa's metrics endpoint is served over mutual TLS.
 func medusaMetricsTLS(medusaSpec *medusaapi.MedusaClusterTemplate) bool {
-	return medusaSpec != nil &&
-		medusaSpec.ServiceProperties.MetricsTLS &&
-		medusaSpec.ServiceProperties.Encryption != nil &&
-		medusaSpec.ServiceProperties.Encryption.ClientSecretName != ""
+	return medusaSpec != nil && medusaSpec.ServiceProperties.MetricsTLSEnabled()
 }

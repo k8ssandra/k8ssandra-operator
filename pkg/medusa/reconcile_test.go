@@ -898,6 +898,10 @@ func TestMedusaIniMetrics(t *testing.T) {
 	t.Run("MetricsTLSWithoutEncryption", func(t *testing.T) {
 		assert.NotContains(t, render(medusaapi.Service{MetricsTLS: true}), "prometheus_tls")
 	})
+	t.Run("MetricsTLSWithOneSecret", func(t *testing.T) {
+		assert.NotContains(t, render(medusaapi.Service{MetricsTLS: true, Encryption: &medusaapi.GRPCEncryption{ServerSecretName: "server-certs"}}), "prometheus_tls")
+		assert.NotContains(t, render(medusaapi.Service{MetricsTLS: true, Encryption: &medusaapi.GRPCEncryption{ClientSecretName: "client-certs"}}), "prometheus_tls")
+	})
 	t.Run("WithPitr", func(t *testing.T) {
 		kc := pitrTestCluster(&medusaapi.PitrConfig{Enabled: true})
 		ini := CreateMedusaIni(kc, cassandra.Coalesce(kc.CassClusterName(), kc.Spec.Cassandra.DeepCopy(), kc.Spec.Cassandra.Datacenters[0].DeepCopy()))
