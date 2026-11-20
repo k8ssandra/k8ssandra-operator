@@ -343,8 +343,11 @@ func medusaInitContainerResources(medusaSpec *api.MedusaClusterTemplate) corev1.
 	}
 }
 
-// pitrPreStopLifecycle returns the preStop hook of the medusa container when pitr is enabled.
+// pitrPreStopLifecycle returns the preStop hook of the medusa container, or nil when pitr is nil or disabled.
 func pitrPreStopLifecycle(dcConfig *cassandra.DatacenterConfig, pitr *api.PitrConfig) *corev1.Lifecycle {
+	if pitr == nil || !pitr.Enabled {
+		return nil
+	}
 	port := httphelper.GetMgmtApiPort(dcConfig.PodTemplateSpec.Spec.Containers)
 	spool := pitr.SpoolDir
 	if spool == "" {
@@ -404,9 +407,7 @@ func CreateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 
 	medusaContainer.ReadinessProbe = readinessProbe
 	medusaContainer.LivenessProbe = livenessProbe
-	if medusaSpec.Pitr != nil && medusaSpec.Pitr.Enabled {
-		medusaContainer.Lifecycle = pitrPreStopLifecycle(dcConfig, medusaSpec.Pitr)
-	}
+	medusaContainer.Lifecycle = pitrPreStopLifecycle(dcConfig, medusaSpec.Pitr)
 	medusaContainer.VolumeMounts = medusaVolumeMounts(dcConfig, medusaSpec, k8cName)
 	medusaContainer.Resources = medusaMainContainerResources(medusaSpec)
 	return medusaContainer, nil
