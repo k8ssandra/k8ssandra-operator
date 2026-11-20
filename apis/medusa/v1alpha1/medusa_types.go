@@ -129,9 +129,34 @@ type Service struct {
 	// +optional
 	GrpcPort int `json:"grpcPort,omitempty"`
 
+	// MetricsPort is the port of Medusa's Prometheus metrics endpoint. Defaults to 9500.
+	// +kubebuilder:validation:Minimum=1025
+	// +kubebuilder:validation:Maximum=65535
+	// +optional
+	MetricsPort int `json:"metricsPort,omitempty"`
+
+	// MetricsTLS serves the metrics endpoint over mutual TLS, using the certificates from Encryption:
+	// Medusa uses the server secret and the Vector agent the client secret. Requires Encryption.
+	// Defaults to false (plain HTTP).
+	// +optional
+	MetricsTLS bool `json:"metricsTLS,omitempty"`
+
 	// gRPC allows modifying the gRPC server settings in Medusa. Settings these values enables mTLS in the gRPC server.
 	// +optional
 	Encryption *GRPCEncryption `json:"encryption,omitempty"`
+}
+
+// DefaultMetricsPort is the port of Medusa's Prometheus metrics endpoint when MetricsPort is unset.
+// It is the value of Medusa's example config, and stays clear of node_exporter (9100), the
+// management API metrics (9000) and MCAC (9103).
+const DefaultMetricsPort = 9500
+
+// MetricsPortOrDefault returns MetricsPort, or DefaultMetricsPort when it is unset.
+func (s Service) MetricsPortOrDefault() int {
+	if s.MetricsPort != 0 {
+		return s.MetricsPort
+	}
+	return DefaultMetricsPort
 }
 
 type PodStorageSettings struct {

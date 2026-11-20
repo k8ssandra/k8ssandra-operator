@@ -13,6 +13,7 @@ import (
 	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
+	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	telemetry "github.com/k8ssandra/k8ssandra-operator/apis/telemetry/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	corev1 "k8s.io/api/core/v1"
@@ -21,7 +22,7 @@ import (
 )
 
 // InjectCassandraVectorAgentConfig adds a override Vector agent config to the Cassandra pods, overwriting the default in the cass-operator
-func InjectCassandraVectorAgentConfig(telemetrySpec *telemetry.TelemetrySpec, dcConfig *cassandra.DatacenterConfig, k8cName string, logger logr.Logger) error {
+func InjectCassandraVectorAgentConfig(telemetrySpec *telemetry.TelemetrySpec, dcConfig *cassandra.DatacenterConfig, k8cName string, medusaSpec *medusaapi.MedusaClusterTemplate, logger logr.Logger) error {
 	if telemetrySpec.IsVectorEnabled() {
 		logger.V(1).Info("Updating server-system-logger agent in Cassandra pods")
 		originalContainerIdx, found := cassandra.FindContainer(&dcConfig.PodTemplateSpec, reconciliation.SystemLoggerContainerName)
@@ -51,6 +52,19 @@ func InjectCassandraVectorAgentConfig(telemetrySpec *telemetry.TelemetrySpec, dc
 			},
 		})
 
+		if medusaMetricsTLS(medusaSpec) {
+			// Vector presents the Medusa gRPC client certificate to scrape Medusa's metrics endpoint over mutual TLS.
+			dcConfig.StorageConfig.AdditionalVolumes = append(dcConfig.StorageConfig.AdditionalVolumes, cassdcapi.AdditionalVolumes{
+				Name:      MedusaClientCertsVolumeName,
+				MountPath: MedusaClientCertsMountPath,
+				VolumeSource: &corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: medusaSpec.ServiceProperties.Encryption.ClientSecretName,
+					},
+				},
+			})
+		}
+
 		if telemetrySpec.Vector.Image != "" {
 			loggerContainer.Image = telemetrySpec.Vector.Image
 		}
@@ -69,6 +83,8 @@ type PrometheusScrapeConfig struct {
 	ScrapeAddress  string
 	ScrapeEndpoint string
 	TLS            *telemetry.TLSConfig
+	// SkipVerifyHostname disables the hostname check of the server certificate. The certificate chain is still verified.
+	SkipVerifyHostname bool
 }
 
 func (p *PrometheusScrapeConfig) String() string {
@@ -91,6 +107,9 @@ func (p *PrometheusScrapeConfig) String() string {
 		if p.TLS.KeyFile != "" {
 			fmt.Fprintf(&sb, "\ntls.key_file = \"%s\"", p.TLS.KeyFile)
 		}
+		if p.SkipVerifyHostname {
+			sb.WriteString("\ntls.verify_hostname = false")
+		}
 	}
 
 	return sb.String()
@@ -106,7 +125,9 @@ const (
 	CassandraMetricsPortModern = 9000
 )
 
-func CreateCassandraVectorToml(telemetrySpec *telemetry.TelemetrySpec, mcacEnabled bool) (string, error) {
+// CreateCassandraVectorToml builds the Vector agent configuration of the Cassandra pods. medusaSpec is nil
+// when Medusa is not deployed; otherwise Medusa's metrics endpoint is scraped as well.
+func CreateCassandraVectorToml(telemetrySpec *telemetry.TelemetrySpec, mcacEnabled bool, medusaSpec *medusaapi.MedusaClusterTemplate) (string, error) {
 	var scrapePort int32
 	metricsEndpoint := ""
 	if mcacEnabled {
@@ -150,6 +171,17 @@ func CreateCassandraVectorToml(telemetrySpec *telemetry.TelemetrySpec, mcacEnabl
 	}
 
 	defaultSources, defaultTransformers, defaultSinks := BuildDefaultVectorComponents(config)
+
+	if medusaSpec != nil {
+		medusaSource, medusaTransform := BuildMedusaMetricsComponents(medusaSpec, config.ScrapeInterval)
+		defaultSources = append(defaultSources, medusaSource)
+		defaultTransformers = append(defaultTransformers, medusaTransform)
+		for i := range defaultTransformers {
+			if defaultTransformers[i].Name == CassandraMetricsTransformName {
+				defaultTransformers[i].Inputs = append(defaultTransformers[i].Inputs, medusaTransform.Name)
+			}
+		}
+	}
 
 	if telemetrySpec.Vector.Components == nil {
 		telemetrySpec.Vector.Components = &telemetry.VectorComponentsSpec{}
@@ -258,7 +290,7 @@ if err == null {
 
 	// Add the namespace label to the Cassandra metrics
 	metricsParser := telemetry.VectorTransformSpec{
-		Name:   "cassandra_metrics",
+		Name:   CassandraMetricsTransformName,
 		Type:   "remap",
 		Inputs: []string{"cassandra_metrics_raw"},
 		Config: `source = '''

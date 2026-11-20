@@ -109,6 +109,49 @@ They can be used as input in custom components added through configuration.
 We provide the `parse_cassandra_log` transform out of the box because it's likely to be a common need for users who ship the logs to a remote system such as Grafana Loki; however by default we don't use it and will be filtered out unless it's referenced by a custom transform/sink.
 This transform will parse the Cassandra logs and extract the log level, thread, timestamp, class, line and message fields. It will also remove the `source_type` field which is added by the `systemlog` source.
 
+## Medusa metrics
+
+When Medusa is deployed, the operator enables Medusa's Prometheus metrics endpoint and the Vector agent scrapes it, so a sink reading `cassandra_metrics` also receives the Medusa metrics. These include the commit log archiver metrics (`medusa_commitlog_archiver_*`) and the Python process metrics of the Medusa container (`process_*`, `python_*`).
+
+The scrape is defined by the `medusa_metrics_raw` source. The `medusa_metrics` transform adds the `container` tag, set to `medusa`, and the `pod_name`, `cluster`, `datacenter` and `rack` tags, and feeds the `cassandra_metrics` transform. To drop the Python process metrics and keep the Medusa ones, filter on these tags in your own transform:
+
+```yaml
+cassandra:
+  telemetry:
+    vector:
+      enabled: true
+      components:
+        transforms:
+          - name: without_medusa_process_metrics
+            type: filter
+            inputs:
+              - cassandra_metrics
+            config: |
+              condition = '.tags.container != "medusa" || starts_with(.name, "medusa_")'
+        sinks:
+          - name: console_output
+            type: console
+            inputs:
+              - without_medusa_process_metrics
+            config: |
+              [sinks.console_output.encoding]
+              codec = "json"
+```
+
+The endpoint listens on port 9500, which can be changed with `spec.medusa.serviceProperties.metricsPort`. It serves plain HTTP unless `spec.medusa.serviceProperties.metricsTLS` is set to `true`. With `metricsTLS`, the endpoint uses mutual TLS with the Medusa gRPC certificates from `spec.medusa.serviceProperties.encryption`, which must then be set: Medusa serves the certificate from `serverSecretName`, and Vector presents the one from `clientSecretName`. As with the operator's gRPC connections to Medusa, Vector checks the certificate chain but not the hostname.
+
+```yaml
+spec:
+  medusa:
+    serviceProperties:
+      metricsTLS: true
+      encryption:
+        serverSecretName: medusa-server-certs
+        clientSecretName: medusa-client-certs
+```
+
+Without Vector, the endpoint can be scraped on `<pod IP>:9500/metrics` (the `metrics` port of the `medusa` container).
+
 ## Custom Vector configuration
 
 To customize the Vector configuration, you can add [sources](https://vector.dev/docs/reference/configuration/sources/), [transforms](https://vector.dev/docs/reference/configuration/transforms/) and [sinks](https://vector.dev/docs/reference/configuration/sinks/) in a semi-structured way under `.spec.cassandra.telemetry.vector.components` and `.spec.reaper.telemetry.vector.components`:

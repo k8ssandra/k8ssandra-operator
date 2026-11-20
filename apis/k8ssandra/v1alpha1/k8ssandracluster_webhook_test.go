@@ -769,3 +769,20 @@ func testNoDCRename(t *testing.T) {
 	_, err := validator.ValidateUpdate(context.TODO(), kcOld, kcNew)
 	require.Error(t, err)
 }
+
+func TestValidateMedusaMetricsTLS(t *testing.T) {
+	cluster := func(service medusaapi.Service) *K8ssandraCluster {
+		kc := createMinimalClusterObj("medusa-metrics-tls", "ns")
+		kc.Spec.Medusa = &medusaapi.MedusaClusterTemplate{
+			StorageProperties: medusaapi.Storage{StorageProvider: "s3", BucketName: "bucket"},
+			ServiceProperties: service,
+		}
+		return kc
+	}
+	encryption := &medusaapi.GRPCEncryption{ServerSecretName: "server-certs", ClientSecretName: "client-certs"}
+
+	require.NoError(t, ValidateMedusa(cluster(medusaapi.Service{MetricsTLS: true, Encryption: encryption})))
+	require.NoError(t, ValidateMedusa(cluster(medusaapi.Service{Encryption: encryption})))
+	require.ErrorIs(t, ValidateMedusa(cluster(medusaapi.Service{MetricsTLS: true})), ErrMedusaMetricsTLS)
+	require.ErrorIs(t, ValidateMedusa(cluster(medusaapi.Service{MetricsTLS: true, Encryption: &medusaapi.GRPCEncryption{ServerSecretName: "server-certs"}})), ErrMedusaMetricsTLS)
+}
