@@ -183,6 +183,7 @@ func TestWebhook(t *testing.T) {
 	t.Run("ReaperStorage", testReaperStorage)
 	t.Run("NoDCRename", testNoDCRename)
 	t.Run("MedusaMandatoryFieldsMissing", testMedusaMandatoryFieldsMissing)
+	t.Run("MetadataOnlyUpdateNotRevalidated", testMetadataOnlyUpdateNotRevalidated)
 }
 
 func testContextValidation(t *testing.T) {
@@ -768,4 +769,35 @@ func testNoDCRename(t *testing.T) {
 	validator := K8ssandraClusterCustomValidator{}
 	_, err := validator.ValidateUpdate(context.TODO(), kcOld, kcNew)
 	require.Error(t, err)
+}
+
+// A cluster that no longer passes validation, here because its k8sContext is unknown, must still accept
+// metadata-only updates and updates while it is being deleted. Spec changes are still validated.
+func testMetadataOnlyUpdateNotRevalidated(t *testing.T) {
+	kcOld := createMinimalClusterObj("revalidation-test", "revalidation-namespace")
+	kcOld.Spec.Cassandra.Datacenters[0].K8sContext = "removed-context"
+	validator := K8ssandraClusterCustomValidator{}
+
+	kcNew := kcOld.DeepCopy()
+	kcNew.Finalizers = []string{"k8ssandracluster.k8ssandra.io/finalizer"}
+	metav1.SetMetaDataAnnotation(&kcNew.ObjectMeta, "some-annotation", "value")
+	_, err := validator.ValidateUpdate(context.TODO(), kcOld, kcNew)
+	require.NoError(t, err)
+
+	// The automated update annotation is still validated
+	metav1.SetMetaDataAnnotation(&kcNew.ObjectMeta, AutomatedUpdateAnnotation, "true")
+	_, err = validator.ValidateUpdate(context.TODO(), kcOld, kcNew)
+	require.Error(t, err)
+
+	kcNew = kcOld.DeepCopy()
+	kcNew.Spec.Cassandra.Datacenters[0].Size = 5
+	_, err = validator.ValidateUpdate(context.TODO(), kcOld, kcNew)
+	require.Error(t, err, "spec changes must still be validated")
+
+	now := metav1.Now()
+	kcOld.DeletionTimestamp = &now
+	kcNew = kcOld.DeepCopy()
+	kcNew.Finalizers = nil
+	_, err = validator.ValidateUpdate(context.TODO(), kcOld, kcNew)
+	require.NoError(t, err)
 }

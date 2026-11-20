@@ -225,36 +225,48 @@ func (r *K8ssandraTaskReconciler) deleteCassandraTasks(
 	}
 
 	logger.Info("Deleting CassandraTasks")
-	if dcs, err := filterDcs(kc, kTask.Spec.Datacenters); err != nil {
-		return err
-	} else {
-		for _, dc := range dcs {
-			dcNamespace := utils.FirstNonEmptyString(dc.Meta.Namespace, kc.Namespace)
-			actualCTask := &cassapi.CassandraTask{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: dcNamespace,
-					Name:      cassandraTaskName(kTask, dc.Meta.Name),
-				},
-			}
-			remoteClient, err := r.ClientCache.GetRemoteClient(dc.K8sContext)
-			if err != nil {
-				return err
-			}
-			logger.Info("Deleting CassandraTask", "CassandraTask", actualCTask)
-			if err := remoteClient.Delete(ctx, actualCTask); err != nil {
-				if !k8serrors.IsNotFound(err) {
-					return errors.Wrapf(err, "deleting CassandraTask %s.%s in context %s",
-						actualCTask.Namespace,
-						actualCTask.Name,
-						dc.K8sContext)
-				}
+	// Datacenters that were removed from the K8ssandraCluster are skipped: their CassandraTasks were deleted with the
+	// CassandraDatacenter, and failing here would leave the K8ssandraTask stuck in Terminating.
+	dcs, unknownDcNames := matchDcs(kc, kTask.Spec.Datacenters)
+	if len(unknownDcNames) > 0 {
+		logger.Info("Skipping datacenters that are not in the K8ssandraCluster anymore", "Datacenters", unknownDcNames)
+	}
+	for _, dc := range dcs {
+		dcNamespace := utils.FirstNonEmptyString(dc.Meta.Namespace, kc.Namespace)
+		actualCTask := &cassapi.CassandraTask{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: dcNamespace,
+				Name:      cassandraTaskName(kTask, dc.Meta.Name),
+			},
+		}
+		remoteClient, err := r.ClientCache.GetRemoteClient(dc.K8sContext)
+		if err != nil {
+			return err
+		}
+		logger.Info("Deleting CassandraTask", "CassandraTask", actualCTask)
+		if err := remoteClient.Delete(ctx, actualCTask); err != nil {
+			if !k8serrors.IsNotFound(err) {
+				return errors.Wrapf(err, "deleting CassandraTask %s.%s in context %s",
+					actualCTask.Namespace,
+					actualCTask.Name,
+					dc.K8sContext)
 			}
 		}
-		return nil
 	}
+	return nil
 }
 
 func filterDcs(kc *k8capi.K8ssandraCluster, dcNames []string) ([]k8capi.CassandraDatacenterTemplate, error) {
+	dcs, unknownDcNames := matchDcs(kc, dcNames)
+	if len(unknownDcNames) > 0 {
+		return nil, fmt.Errorf("unknown datacenters: %s", strings.Join(unknownDcNames, ", "))
+	}
+	return dcs, nil
+}
+
+// matchDcs returns the datacenters of the cluster with the given names, in the order of the names, and the names that
+// don't match any datacenter. If no names are given, all the datacenters of the cluster are returned.
+func matchDcs(kc *k8capi.K8ssandraCluster, dcNames []string) ([]k8capi.CassandraDatacenterTemplate, []string) {
 	if len(dcNames) == 0 {
 		return kc.Spec.Cassandra.Datacenters, nil
 	}
@@ -265,7 +277,7 @@ func filterDcs(kc *k8capi.K8ssandraCluster, dcNames []string) ([]k8capi.Cassandr
 		found := false
 		for _, dc := range kc.Spec.Cassandra.Datacenters {
 			if dc.Meta.Name == dcName {
-				dcs = append([]k8capi.CassandraDatacenterTemplate{dc}, dcs...)
+				dcs = append(dcs, dc)
 				found = true
 				break
 			}
@@ -274,10 +286,7 @@ func filterDcs(kc *k8capi.K8ssandraCluster, dcNames []string) ([]k8capi.Cassandr
 			unknownDcNames = append(unknownDcNames, dcName)
 		}
 	}
-	if len(unknownDcNames) > 0 {
-		return nil, fmt.Errorf("unknown datacenters: %s", strings.Join(unknownDcNames, ", "))
-	}
-	return dcs, nil
+	return dcs, unknownDcNames
 }
 
 func newCassandraTask(kTask *api.K8ssandraTask, namespace string, dcName string) *cassapi.CassandraTask {

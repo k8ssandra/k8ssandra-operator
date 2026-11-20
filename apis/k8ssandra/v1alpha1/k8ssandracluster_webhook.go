@@ -27,6 +27,7 @@ import (
 	medusaapi "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	reaperapi "github.com/k8ssandra/k8ssandra-operator/apis/reaper/v1alpha1"
 
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation"
 
@@ -131,12 +132,8 @@ func validateK8ssandraCluster(r *K8ssandraCluster) error {
 		}
 	}
 
-	if metav1.HasAnnotation(r.ObjectMeta, AutomatedUpdateAnnotation) {
-		// Allow only always and once in the annotation
-		annotationValue := r.GetAnnotations()[AutomatedUpdateAnnotation]
-		if annotationValue != string(AllowUpdateAlways) && annotationValue != string(AllowUpdateOnce) {
-			return fmt.Errorf("invalid value for %s annotation: %s", AutomatedUpdateAnnotation, annotationValue)
-		}
+	if err := validateAutomatedUpdateAnnotation(r); err != nil {
+		return err
 	}
 
 	if err := ValidateMedusa(r); err != nil {
@@ -151,6 +148,17 @@ func validateK8ssandraCluster(r *K8ssandraCluster) error {
 		return err
 	}
 
+	return nil
+}
+
+func validateAutomatedUpdateAnnotation(r *K8ssandraCluster) error {
+	if metav1.HasAnnotation(r.ObjectMeta, AutomatedUpdateAnnotation) {
+		// Allow only always and once in the annotation
+		annotationValue := r.GetAnnotations()[AutomatedUpdateAnnotation]
+		if annotationValue != string(AllowUpdateAlways) && annotationValue != string(AllowUpdateOnce) {
+			return fmt.Errorf("invalid value for %s annotation: %s", AutomatedUpdateAnnotation, annotationValue)
+		}
+	}
 	return nil
 }
 
@@ -190,6 +198,16 @@ func validateStatefulsetNameSize(r *K8ssandraCluster) error {
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (v *K8ssandraClusterCustomValidator) ValidateUpdate(ctx context.Context, oldCluster *K8ssandraCluster, newCluster *K8ssandraCluster) (admission.Warnings, error) {
 	webhookLog.Info("validate K8ssandraCluster update", "K8ssandraCluster", newCluster.Name)
+
+	// Do not re-validate an object that is being deleted, or whose spec did not change. Otherwise, a cluster that no
+	// longer passes validation (for example, because a ClientConfig was removed, or a validation rule was added in
+	// a newer version) could not have its finalizers or annotations updated, and its deletion could not complete.
+	if newCluster.GetDeletionTimestamp() != nil {
+		return nil, nil
+	}
+	if apiequality.Semantic.DeepEqual(oldCluster.Spec, newCluster.Spec) {
+		return nil, validateAutomatedUpdateAnnotation(newCluster)
+	}
 
 	if err := validateK8ssandraCluster(newCluster); err != nil {
 		return nil, err
