@@ -36,7 +36,7 @@ spec:
     spec:
       containers:
         - env:
-            - name: MANAGEMENT_API_HEAP_SIZE
+            - name: MGMT_API_HEAP_SIZE
               value: '67108864'
           name: cassandra
           resources: {}

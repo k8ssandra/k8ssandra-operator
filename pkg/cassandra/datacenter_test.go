@@ -1348,6 +1348,8 @@ func TestNewDatacenter_MgmtAPIHeapSize_Set(t *testing.T) {
 	)
 	assert.Equal(t, err, nil)
 	assert.Equal(t, dc.Spec.PodTemplateSpec.Spec.Containers[0].Env[0].Value, "999000000")
+	// The management API entrypoint reads MGMT_API_HEAP_SIZE; any other name is ignored.
+	assert.Equal(t, "MGMT_API_HEAP_SIZE", dc.Spec.PodTemplateSpec.Spec.Containers[0].Env[0].Name)
 }
 
 func TestNewDatacenter_McacDisabled_Set(t *testing.T) {
