@@ -19,6 +19,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [FEATURE] [#1833](https://github.com/k8ssandra/k8ssandra-operator/issues/1833) Pass PITR config to Medusa, update pod's annotation on a PITR config change so we force a restart
 * [FEATURE] [#1838](https://github.com/k8ssandra/k8ssandra-operator/issues/1838) Add a validating webhook for MedusaRestoreJob that requires exactly one of spec.backup and spec.targetTimestamp
 * [FEATURE] [#1835](https://github.com/k8ssandra/k8ssandra-operator/issues/1835) Add the PITR branch to the MedusaRestoreJob reconciler
+* [FEATURE] [#1836](https://github.com/k8ssandra/k8ssandra-operator/issues/1836) Add a preStop hook to the medusa container and raise the termination grace period when PITR is enabled, so the commit log spool is uploaded before the pod stops
 * [FEATURE] [#1837](https://github.com/k8ssandra/k8ssandra-operator/issues/1837) Set a stuck-replay notice in the status message of a PITR MedusaRestoreJob whose DC is not back in 60 minutes
 * [ENHANCEMENT] [#1831](https://github.com/k8ssandra/k8ssandra-operator/issues/1831) Add PITR RPCs to the Medusa client
 * [ENHANCEMENT] [#1834](https://github.com/k8ssandra/k8ssandra-operator/issues/1834) Add `TerminalError`, split `GetHostMap` and add `GetPitrHostMap` for PITR restores.
