@@ -132,6 +132,14 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster, dcConfig *cassandra.DatacenterCo
     tls_cert = /etc/certificates/grpc-server-certs/tls.crt
     tls_key = /etc/certificates/grpc-server-certs/tls.key
 	{{- end }}
+
+    [monitoring]
+    prometheus_port = {{ .Spec.Medusa.ServiceProperties.MetricsPortOrDefault }}
+    {{- if and .Spec.Medusa.ServiceProperties.MetricsTLS .Spec.Medusa.ServiceProperties.Encryption }}
+    prometheus_tls_cert = /etc/certificates/grpc-server-certs/tls.crt
+    prometheus_tls_key = /etc/certificates/grpc-server-certs/tls.key
+    prometheus_ca_cert = /etc/certificates/grpc-server-certs/ca.crt
+    {{- end }}
     {{- if and .Spec.Medusa.Pitr .Spec.Medusa.Pitr.Enabled }}
 
     [pitr]
@@ -308,6 +316,11 @@ func CreateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 		{
 			Name:          "grpc",
 			ContainerPort: int32(grpcPort),
+			Protocol:      "TCP",
+		},
+		{
+			Name:          "metrics",
+			ContainerPort: int32(medusaSpec.ServiceProperties.MetricsPortOrDefault()),
 			Protocol:      "TCP",
 		},
 	}

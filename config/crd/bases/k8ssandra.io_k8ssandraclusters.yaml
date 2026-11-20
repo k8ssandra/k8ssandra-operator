@@ -25373,6 +25373,18 @@ spec:
                           GrpcPort to listen on when running as gRPC service
                           Included grpc in the field name to avoid misunderstanding with storage.port
                         type: integer
+                      metricsPort:
+                        description: MetricsPort is the port of Medusa's Prometheus
+                          metrics endpoint. Defaults to 9500.
+                        maximum: 65535
+                        minimum: 1025
+                        type: integer
+                      metricsTLS:
+                        description: |-
+                          MetricsTLS serves the metrics endpoint over mutual TLS, using the certificates from Encryption:
+                          Medusa uses the server secret and the Vector agent the client secret. Requires Encryption.
+                          Defaults to false (plain HTTP).
+                        type: boolean
                     type: object
                   storageProperties:
                     description: Provides all storage backend related properties for

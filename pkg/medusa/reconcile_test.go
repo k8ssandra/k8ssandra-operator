@@ -531,7 +531,7 @@ func testMedusaIniMissingOptionalSettings(t *testing.T) {
 	assert.NotContains(t, medusaIni, "multipart_chunksize =")
 	assert.NotContains(t, medusaIni, "host =")
 	assert.NotContains(t, medusaIni, "region =")
-	assert.NotContains(t, medusaIni, "port =")
+	assert.NotContains(t, medusaIni, "\n    port =")
 	assert.Contains(t, medusaIni, "secure = False")
 	assert.NotContains(t, medusaIni, "backup_grace_period_in_days =")
 }
@@ -865,4 +865,55 @@ func TestPitrHashAnnotation(t *testing.T) {
 		update(&medusaapi.PitrConfig{Enabled: true}, dcConfig)
 		assert.Equal(t, map[string]string{"a": "b"}, shared)
 	})
+}
+
+func TestMedusaIniMetrics(t *testing.T) {
+	render := func(service medusaapi.Service) string {
+		kc := pitrTestCluster(nil)
+		kc.Spec.Medusa.ServiceProperties = service
+		return CreateMedusaIni(kc, cassandra.Coalesce(kc.CassClusterName(), kc.Spec.Cassandra.DeepCopy(), kc.Spec.Cassandra.Datacenters[0].DeepCopy()))
+	}
+	encryption := &medusaapi.GRPCEncryption{ServerSecretName: "server-certs", ClientSecretName: "client-certs"}
+
+	t.Run("Default", func(t *testing.T) {
+		ini := render(medusaapi.Service{})
+		assert.Contains(t, ini, "[monitoring]\n    prometheus_port = 9500\n\n    [logging]")
+		assert.Less(t, strings.Index(ini, "[grpc]"), strings.Index(ini, "[monitoring]"))
+		assert.NotContains(t, ini, "\t")
+	})
+	t.Run("CustomPort", func(t *testing.T) {
+		assert.Contains(t, render(medusaapi.Service{MetricsPort: 9600}), "[monitoring]\n    prometheus_port = 9600\n")
+	})
+	t.Run("TLS", func(t *testing.T) {
+		assert.Contains(t, render(medusaapi.Service{MetricsTLS: true, Encryption: encryption}), "[monitoring]\n    prometheus_port = 9500\n"+
+			"    prometheus_tls_cert = /etc/certificates/grpc-server-certs/tls.crt\n"+
+			"    prometheus_tls_key = /etc/certificates/grpc-server-certs/tls.key\n"+
+			"    prometheus_ca_cert = /etc/certificates/grpc-server-certs/ca.crt\n")
+	})
+	t.Run("EncryptionWithoutMetricsTLS", func(t *testing.T) {
+		assert.NotContains(t, render(medusaapi.Service{Encryption: encryption}), "prometheus_tls")
+	})
+	t.Run("MetricsTLSWithoutEncryption", func(t *testing.T) {
+		assert.NotContains(t, render(medusaapi.Service{MetricsTLS: true}), "prometheus_tls")
+	})
+	t.Run("WithPitr", func(t *testing.T) {
+		kc := pitrTestCluster(&medusaapi.PitrConfig{Enabled: true})
+		ini := CreateMedusaIni(kc, cassandra.Coalesce(kc.CassClusterName(), kc.Spec.Cassandra.DeepCopy(), kc.Spec.Cassandra.Datacenters[0].DeepCopy()))
+		assert.Contains(t, ini, "[monitoring]\n    prometheus_port = 9500\n\n    [pitr]")
+	})
+}
+
+func TestMedusaMainContainerMetricsPort(t *testing.T) {
+	logger := logr.New(logr.Discard().GetSink())
+	port := func(service medusaapi.Service) int32 {
+		spec := pitrTestCluster(nil).Spec.Medusa
+		spec.ServiceProperties = service
+		container, err := CreateMedusaMainContainer(&cassandra.DatacenterConfig{}, spec, false, "test", logger, getTestImageRegistry(t))
+		assert.NoError(t, err)
+		p, found := cassandra.FindPort(container, "metrics")
+		assert.True(t, found)
+		return p
+	}
+	assert.Equal(t, int32(medusaapi.DefaultMetricsPort), port(medusaapi.Service{}))
+	assert.Equal(t, int32(9600), port(medusaapi.Service{MetricsPort: 9600}))
 }

@@ -48,6 +48,7 @@ var (
 	ErrNoStoragePrefix          = fmt.Errorf("medusa storage prefix must be set when a medusaConfigurationRef is used")
 	ErrNoStorageProvider        = fmt.Errorf("medusa storage provider must be set when no medusaConfigurationRef is used")
 	ErrNoBucketName             = fmt.Errorf("medusa bucket name must be set when no medusaConfigurationRef is used")
+	ErrMedusaMetricsTLS         = fmt.Errorf("medusa serviceProperties.metricsTLS requires serviceProperties.encryption with serverSecretName and clientSecretName")
 	ErrNoReaperStorageConfig    = fmt.Errorf("reaper StorageConfig not set")
 	ErrNoReaperAccessMode       = fmt.Errorf("reaper StorageConfig.AccessModes not set")
 	ErrNoReaperResourceRequests = fmt.Errorf("reaper StorageConfig.Resources.Requests not set")
@@ -303,6 +304,12 @@ func (v *K8ssandraClusterCustomValidator) ValidateDelete(ctx context.Context, ob
 func ValidateMedusa(r *K8ssandraCluster) error {
 	if r.Spec.Medusa == nil {
 		return nil
+	}
+	if r.Spec.Medusa.ServiceProperties.MetricsTLS {
+		encryption := r.Spec.Medusa.ServiceProperties.Encryption
+		if encryption == nil || encryption.ServerSecretName == "" || encryption.ClientSecretName == "" {
+			return ErrMedusaMetricsTLS
+		}
 	}
 	if r.Spec.Medusa.MedusaConfigurationRef.Name != "" {
 		return validateMedusaWithConfigRef(r.Spec.Medusa)
