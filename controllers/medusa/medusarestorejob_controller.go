@@ -284,7 +284,7 @@ func (r *MedusaRestoreJobReconciler) failTerminal(ctx context.Context, req *medu
 // stuckReplayNotice names no pod and no error: the operator does not read Cassandra logs.
 func stuckReplayNotice(dcName string) string {
 	return fmt.Sprintf("datacenter %s is not ready for %d minutes since the restore stopped it; the PITR restore may be stuck. "+
-	    "Check the medusa-restore initContainer log and the server-system-logger of the pods that are not ready.",
+		"Check the medusa-restore initContainer log and the server-system-logger of the pods that are not ready.",
 		dcName, int(stuckReplayNoticeAfter.Minutes()))
 }
 

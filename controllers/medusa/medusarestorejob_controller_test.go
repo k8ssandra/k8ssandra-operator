@@ -1426,7 +1426,7 @@ func TestReconcileStuckReplayNotice(t *testing.T) {
 				require.True(t, job.Status.FinishTime.IsZero())
 				if tt.notice {
 					require.Equal(t, stuckReplayNotice("dc1"), job.Status.Message)
-					require.Contains(t, job.Status.Message, "datacenter dc1 is not ready 60 minutes after the restore stopped it")
+					require.Contains(t, job.Status.Message, "datacenter dc1 is not ready for 60 minutes since the restore stopped it; the PITR restore may be stuck.")
 				} else {
 					require.Equal(t, tt.message, job.Status.Message)
 				}
