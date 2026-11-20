@@ -139,7 +139,7 @@ func (in *DatacenterConfig) CassDcName() string {
 }
 
 const (
-	mgmtApiHeapSizeEnvVar = "MANAGEMENT_API_HEAP_SIZE"
+	mgmtApiHeapSizeEnvVar = "MGMT_API_HEAP_SIZE"
 	mcacDisabledEnvVar    = "MGMT_API_DISABLE_MCAC"
 )
 
