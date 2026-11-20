@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -166,7 +167,7 @@ func (r *MedusaTaskReconciler) prepareRestoreOperation(ctx context.Context, task
 		return prepareRestore(ctx, task, &pod, cassdc, r.Client, r.ClientFactory, logger)
 	}
 
-	return r.executePodOperations(ctx, task, pods, "prepare restore", op, logger)
+	return r.executePodOperations(ctx, task, pods, cassdc, "prepare restore", op, logger)
 }
 
 func (r *MedusaTaskReconciler) purgeOperation(ctx context.Context, task *medusav1alpha1.MedusaTask, pods []corev1.Pod, cassdc *cassdcapi.CassandraDatacenter, logger logr.Logger) (reconcile.Result, error) {
@@ -176,15 +177,66 @@ func (r *MedusaTaskReconciler) purgeOperation(ctx context.Context, task *medusav
 		return doPurge(ctx, &pod, cassdc, r.Client, r.ClientFactory, logger)
 	}
 
-	return r.executePodOperations(ctx, task, pods, "purge", op, logger)
+	return r.executePodOperations(ctx, task, pods, cassdc, "purge", op, logger)
 }
 
 type podOperation func(ctx context.Context, task *medusav1alpha1.MedusaTask, pod corev1.Pod) (*medusa.PurgeBackupsResponse, error)
+
+// taskConcurrency returns the concurrency the task asks for with medusa.MedusaTaskConcurrencyAnnotation. An unknown
+// value falls back to one pod at a time, so a typo never puts more load on the object storage than was asked for.
+func taskConcurrency(task *medusav1alpha1.MedusaTask, logger logr.Logger) medusa.TaskConcurrency {
+	value := task.Annotations[medusa.MedusaTaskConcurrencyAnnotation]
+	concurrency, ok := medusa.ParseTaskConcurrency(value)
+	if !ok {
+		logger.Info("unknown task concurrency, running on one pod at a time", "Annotation", medusa.MedusaTaskConcurrencyAnnotation, "Value", value)
+	}
+	return concurrency
+}
+
+// podBatches splits the pods into batches that run one after another. The pods within a batch run at the same time.
+// Racks are ordered as in the CassandraDatacenter spec; pods whose rack isn't in the spec go last, one batch per rack.
+func podBatches(pods []corev1.Pod, cassdc *cassdcapi.CassandraDatacenter, concurrency medusa.TaskConcurrency) [][]corev1.Pod {
+	switch concurrency {
+	case medusa.TaskConcurrencyPod:
+		batches := make([][]corev1.Pod, 0, len(pods))
+		for _, pod := range pods {
+			batches = append(batches, []corev1.Pod{pod})
+		}
+		return batches
+	case medusa.TaskConcurrencyRack:
+		byRack := map[string][]corev1.Pod{}
+		var unknownRacks []string
+		for _, pod := range pods {
+			rack := pod.Labels[cassdcapi.RackLabel]
+			if _, found := byRack[rack]; !found {
+				unknownRacks = append(unknownRacks, rack)
+			}
+			byRack[rack] = append(byRack[rack], pod)
+		}
+		batches := make([][]corev1.Pod, 0, len(byRack))
+		for _, rack := range cassdc.GetRacks() {
+			label := cassdcapi.CleanLabelValue(rack.Name)
+			if rackPods, found := byRack[label]; found {
+				batches = append(batches, rackPods)
+				delete(byRack, label)
+			}
+		}
+		for _, rack := range unknownRacks {
+			if rackPods, found := byRack[rack]; found {
+				batches = append(batches, rackPods)
+			}
+		}
+		return batches
+	default:
+		return [][]corev1.Pod{pods}
+	}
+}
 
 func (r *MedusaTaskReconciler) executePodOperations(
 	ctx context.Context,
 	task *medusav1alpha1.MedusaTask,
 	pods []corev1.Pod,
+	cassdc *cassdcapi.CassandraDatacenter,
 	operationName string,
 	operation podOperation,
 	logger logr.Logger) (reconcile.Result, error) {
@@ -201,57 +253,72 @@ func (r *MedusaTaskReconciler) executePodOperations(
 		return ctrl.Result{}, err
 	}
 
-	go func() {
-		wg := sync.WaitGroup{}
+	concurrency := taskConcurrency(task, logger)
+	batches := podBatches(pods, cassdc, concurrency)
 
+	// The operations outlive this Reconcile call, so they must not be cancelled when its context is.
+	opCtx := context.WithoutCancel(ctx)
+	// The operations get their own copy of the task, because the status patches below overwrite task.
+	opTask := task.DeepCopy()
+
+	go func() {
 		// Mutex to prevent concurrent updates to the Status object
 		mutex := sync.Mutex{}
-		patch := client.MergeFrom(task.DeepCopy())
+		// The status as last written to the server. Each patch is computed against it, so a failed patch is retried
+		// by the next one.
+		persisted := task.DeepCopy()
 
-		opLogger := logger.WithValues("Operation", operationName)
+		opLogger := logger.WithValues("Operation", operationName, "Concurrency", concurrency)
 
-		for _, p := range pods {
-			pod := p
-			wg.Add(1)
-			go func() {
-				opLogger.Info("starting pod operation", "CassandraPod", pod.Name)
-				succeeded := false
-				purgeBackupsResponse, err := operation(ctx, task, p)
-				if err == nil {
-					logger.Info("finished pod operation", "CassandraPod", pod.Name)
-					succeeded = true
-				} else {
-					logger.Error(err, "pod operation failed", "CassandraPod", pod.Name)
-				}
-				mutex.Lock()
-				defer mutex.Unlock()
-				defer wg.Done()
-				task.Status.InProgress = utils.RemoveValue(task.Status.InProgress, pod.Name)
-				var taskResult medusav1alpha1.TaskResult
-				if succeeded {
-					if purgeBackupsResponse == nil {
-						taskResult = medusav1alpha1.TaskResult{
-							PodName: pod.Name,
-						}
-					} else {
-						taskResult = medusav1alpha1.TaskResult{
-							PodName:                   pod.Name,
-							NbBackupsPurged:           int(purgeBackupsResponse.NbBackupsPurged),
-							NbObjectsPurged:           int(purgeBackupsResponse.NbObjectsPurged),
-							TotalPurgedSize:           int(purgeBackupsResponse.TotalPurgedSize),
-							TotalObjectsWithinGcGrace: int(purgeBackupsResponse.TotalObjectsWithinGcGrace),
-						}
-					}
-					task.Status.Finished = append(task.Status.Finished, taskResult)
-				} else {
-					task.Status.Failed = append(task.Status.Failed, pod.Name)
-				}
-			}()
-			wg.Wait()
-			logger.Info("finished task operations")
-			if err := r.Status().Patch(context.Background(), task, patch); err != nil {
-				logger.Error(err, "failed to patch status", "MedusaTask", fmt.Sprint(task))
+		patchStatus := func() {
+			if err := r.Status().Patch(opCtx, task, client.MergeFrom(persisted)); err != nil {
+				opLogger.Error(err, "failed to patch status", "MedusaTask", fmt.Sprint(task))
+				return
 			}
+			persisted = task.DeepCopy()
+		}
+
+		runPodOperation := func(pod corev1.Pod) {
+			opLogger.Info("starting pod operation", "CassandraPod", pod.Name)
+			purgeBackupsResponse, err := operation(opCtx, opTask, pod)
+			if err == nil {
+				opLogger.Info("finished pod operation", "CassandraPod", pod.Name)
+			} else {
+				opLogger.Error(err, "pod operation failed", "CassandraPod", pod.Name)
+			}
+
+			mutex.Lock()
+			defer mutex.Unlock()
+			task.Status.InProgress = utils.RemoveValue(task.Status.InProgress, pod.Name)
+			if err != nil {
+				task.Status.Failed = append(task.Status.Failed, pod.Name)
+			} else {
+				taskResult := medusav1alpha1.TaskResult{PodName: pod.Name}
+				if purgeBackupsResponse != nil {
+					taskResult.NbBackupsPurged = int(purgeBackupsResponse.NbBackupsPurged)
+					taskResult.NbObjectsPurged = int(purgeBackupsResponse.NbObjectsPurged)
+					taskResult.TotalPurgedSize = int(purgeBackupsResponse.TotalPurgedSize)
+					taskResult.TotalObjectsWithinGcGrace = int(purgeBackupsResponse.TotalObjectsWithinGcGrace)
+				}
+				task.Status.Finished = append(task.Status.Finished, taskResult)
+			}
+			// Record each pod as it finishes, so a pod that hangs doesn't hide the results of the others.
+			patchStatus()
+		}
+
+		for _, batch := range batches {
+			wg := sync.WaitGroup{}
+			for _, pod := range batch {
+				wg.Go(func() { runPodOperation(pod) })
+			}
+			wg.Wait()
+		}
+
+		opLogger.Info("finished task operations")
+		mutex.Lock()
+		defer mutex.Unlock()
+		if !equality.Semantic.DeepEqual(persisted.Status, task.Status) {
+			patchStatus()
 		}
 	}()
 
