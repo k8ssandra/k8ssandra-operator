@@ -174,7 +174,7 @@ func (r *MedusaTaskReconciler) purgeOperation(ctx context.Context, task *medusav
 	logger.Info("Starting purge operations", "cassdc", task.Spec.CassandraDatacenter)
 
 	op := func(ctx context.Context, task *medusav1alpha1.MedusaTask, pod corev1.Pod) (*medusa.PurgeBackupsResponse, error) {
-		return doPurge(ctx, &pod, cassdc, r.Client, r.ClientFactory, logger)
+		return doPurge(ctx, task, &pod, cassdc, r.Client, r.ClientFactory, logger)
 	}
 
 	return r.executePodOperations(ctx, task, pods, cassdc, "purge", op, logger)
@@ -473,7 +473,16 @@ func (r *MedusaTaskReconciler) scheduleSyncForPurge(task *medusav1alpha1.MedusaT
 	return nil
 }
 
-func doPurge(ctx context.Context, pod *corev1.Pod, cassdc *cassdcapi.CassandraDatacenter, c client.Client, clientFactory medusa.ClientFactory, logger logr.Logger) (*medusa.PurgeBackupsResponse, error) {
+func doPurge(ctx context.Context, task *medusav1alpha1.MedusaTask, pod *corev1.Pod, cassdc *cassdcapi.CassandraDatacenter, c client.Client, clientFactory medusa.ClientFactory, logger logr.Logger) (*medusa.PurgeBackupsResponse, error) {
+	timeout, err := medusa.PurgeTimeout(task)
+	if err != nil {
+		logger.Error(err, "Using the default purge timeout", "Timeout", timeout)
+	}
+	// The purge holds the gRPC call open until it completes. Bound it, so that a purge that stalls fails and
+	// stops blocking the purge schedule.
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
 	if medusaClient, err := newClient(ctx, c, cassdc, pod, clientFactory); err != nil {
 		return nil, err
 	} else {

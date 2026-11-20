@@ -171,10 +171,7 @@ func (r *MedusaBackupScheduleReconciler) Reconcile(ctx context.Context, req ctrl
 				Operation:           medusav1alpha1.OperationTypePurge,
 			},
 		}
-
-		if v, found := backupSchedule.Annotations[medusa.MedusaTaskConcurrencyAnnotation]; found {
-			metav1.SetMetaDataAnnotation(&purgeJob.ObjectMeta, medusa.MedusaTaskConcurrencyAnnotation, v)
-		}
+		medusa.CopyPurgeTaskAnnotations(backupSchedule, purgeJob)
 
 		if err := r.Create(ctx, purgeJob); err != nil {
 			// We've already updated the Status times.. we'll miss this job now?

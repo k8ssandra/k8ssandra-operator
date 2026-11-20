@@ -164,6 +164,9 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      k8ssandraClusterName,
+			Annotations: map[string]string{
+				medusa.MedusaPurgeTimeoutAnnotation: "36h",
+			},
 		},
 		Spec: api.K8ssandraClusterSpec{
 			Cassandra: &api.CassandraClusterTemplate{
@@ -740,6 +743,7 @@ func checkPurgeSchedule(t *testing.T, ctx context.Context, namespace string, kc 
 		require.NoError(t, f.Get(ctx, purgeScheduleKey, purgeSchedule))
 		require.Equal(t, purgeSchedule.Spec.OperationType, string(medusaapi.OperationTypePurge))
 		require.Equal(t, purgeSchedule.Spec.CronSchedule, "0 0 * * *")
+		require.Equal(t, kc.Annotations[medusa.MedusaPurgeTimeoutAnnotation], purgeSchedule.Annotations[medusa.MedusaPurgeTimeoutAnnotation])
 	}, timeout, interval, "CassandraDatacenter should be deleted")
 }
 

@@ -327,9 +327,8 @@ func newPurgeSchedule(kc *api.K8ssandraCluster, dc *cassdcapi.CassandraDatacente
 		},
 	}
 	purgeSchedule.SetLabels(labels.CleanedUpByLabels(utils.GetKey(kc)))
-	if v, found := kc.Annotations[medusa.MedusaTaskConcurrencyAnnotation]; found {
-		metav1.SetMetaDataAnnotation(&purgeSchedule.ObjectMeta, medusa.MedusaTaskConcurrencyAnnotation, v)
-	}
+	// Copied before hashing, so a change on the K8ssandraCluster updates the schedule.
+	medusa.CopyPurgeTaskAnnotations(kc, &purgeSchedule)
 	if err := controllerutil.SetOwnerReference(dc, &purgeSchedule, scheme); err != nil {
 		return nil, fmt.Errorf("failed to set owner reference for MedusaBackupSchedule: %w", err)
 	}

@@ -493,6 +493,30 @@ spec:
 
 We recommend disabling the CronJob in the `K8ssandraCluster` spec to avoid conflicts with the `MedusaBackupSchedule` CRD.
 
+### Purge timeout
+
+Medusa runs the whole purge in a single call, so a purge that stalls, for example because a Cassandra pod went away during the purge, would block the purge schedule.
+To prevent that, the purge on each Cassandra pod is stopped after 24 hours and that pod is marked as failed in the `MedusaTask` status.
+The next scheduled purge then continues with the backups that are left.
+
+If purges legitimately take longer, for example with a very large number of backups or a slow storage backend, raise the timeout with the `medusa.k8ssandra.io/purge-timeout` annotation.
+The value is a Go duration such as `36h` or `90m`:
+
+* On a `MedusaTask`, it applies to that purge.
+* On a `MedusaBackupSchedule`, it is copied to the purge tasks the schedule creates.
+* On the `K8ssandraCluster`, it is copied to the purge schedules the operator creates for each datacenter.
+
+```yaml
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: demo
+  annotations:
+    medusa.k8ssandra.io/purge-timeout: 36h
+```
+
+An invalid or non-positive value is ignored and the default of 24 hours is used.
+
 ### Disabling the purge CronJob
 If you want to disable the automatic creation of the above purge `CronJob`, you can do so by setting the optional `purgeBackups` field to `false` in the `K8ssandraCluster` spec:
 

@@ -203,6 +203,9 @@ func TestPurgeScheduler(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-purge-schedule",
 			Namespace: "test-ns",
+			Annotations: map[string]string{
+				medusa.MedusaPurgeTimeoutAnnotation: "36h",
+			},
 		},
 		Spec: medusav1alpha1.MedusaBackupScheduleSpec{
 			CronSchedule: "* * * * *",
@@ -249,6 +252,7 @@ func TestPurgeScheduler(t *testing.T) {
 	// Ensure the backup object is created correctly
 	backup := purgeTasks.Items[0]
 	require.Equal(purgeSchedule.Spec.BackupSpec.CassandraDatacenter, backup.Spec.CassandraDatacenter)
+	require.Equal("36h", backup.Annotations[medusa.MedusaPurgeTimeoutAnnotation])
 
 	// Verify the Status of the BackupSchedule is modified and the object is requeued
 	backupScheduleLive := &medusav1alpha1.MedusaBackupSchedule{}
