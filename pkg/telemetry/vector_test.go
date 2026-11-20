@@ -30,7 +30,7 @@ func TestInjectCassandraVectorAgentConfig(t *testing.T) {
 
 	logger := testr.New(t)
 
-	err := InjectCassandraVectorAgentConfig(telemetrySpec, dcConfig, "test", logger)
+	err := InjectCassandraVectorAgentConfig(telemetrySpec, dcConfig, "test", nil, logger)
 	require.NoError(t, err)
 
 	assert.Equal(t, 1, len(dcConfig.PodTemplateSpec.Spec.Containers))
@@ -44,7 +44,7 @@ func TestInjectCassandraVectorAgentConfig(t *testing.T) {
 func TestCreateCassandraVectorTomlDefault(t *testing.T) {
 	telemetrySpec := &telemetry.TelemetrySpec{Vector: &telemetry.VectorSpec{Enabled: ptr.To(true)}}
 
-	toml, err := CreateCassandraVectorToml(telemetrySpec, true)
+	toml, err := CreateCassandraVectorToml(telemetrySpec, true, nil)
 	if err != nil {
 		t.Errorf("CreateCassandraVectorToml() failed with %s", err)
 	}
@@ -67,7 +67,7 @@ func TestCreateCassandraVectorTomlMcacDisabled(t *testing.T) {
 			},
 		}}
 
-	toml, err := CreateCassandraVectorToml(telemetrySpec, false)
+	toml, err := CreateCassandraVectorToml(telemetrySpec, false, nil)
 	if err != nil {
 		t.Errorf("CreateCassandraVectorToml() failed with %s", err)
 	}
@@ -280,7 +280,7 @@ encoding.codec = "text"
 
 `
 
-	output, err := CreateCassandraVectorToml(telemetrySpec, false)
+	output, err := CreateCassandraVectorToml(telemetrySpec, false, nil)
 	assert.NoError(err)
 	assert.Equal(expectedOutput, output)
 }
@@ -305,7 +305,7 @@ enabled = true`,
 		},
 	}
 
-	output, err := CreateCassandraVectorToml(telemetrySpec, false)
+	output, err := CreateCassandraVectorToml(telemetrySpec, false, nil)
 	require.NoError(t, err)
 
 	assert.Contains(t, output, "data_dir = \"/data-dir\"")
@@ -544,7 +544,7 @@ func TestTLSEndpoint(t *testing.T) {
 			},
 		},
 	}
-	vectorToml, err := CreateCassandraVectorToml(telemetrySpec, false)
+	vectorToml, err := CreateCassandraVectorToml(telemetrySpec, false, nil)
 	require.NoError(err)
 
 	require.Contains(vectorToml, "https://localhost:9000/metrics")
