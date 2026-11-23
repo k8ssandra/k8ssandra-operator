@@ -1,6 +1,7 @@
 package secret
 
 import (
+	"strings"
 	"testing"
 
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
@@ -22,11 +23,21 @@ func TestLabelIsSet(t *testing.T) {
 func TestRandomPasswordGen(t *testing.T) {
 	username, err := generateRandomString(usernameCharacters, 8)
 	require.NoError(t, err)
-	password, err := generateRandomString(passwordCharacters, 24)
+	password, err := generateRandomString(passwordCharacters, 32)
 	require.NoError(t, err)
 
 	assert.Equal(t, 8, len(username))
-	assert.Equal(t, 24, len(password))
+	assert.Equal(t, 32, len(password))
+
+	for _, c := range password {
+		assert.True(t, strings.IndexByte(passwordCharacters, c) >= 0, "unexpected character %q", c)
+	}
+}
+
+func TestPasswordCharactersIncludeSpecialCharacters(t *testing.T) {
+	for _, c := range "-!*+=_" {
+		assert.Contains(t, passwordCharacters, string(c))
+	}
 }
 
 func TestDefaultSuperuserSecretName(t *testing.T) {

@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	passwordCharacters = "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	passwordCharacters = "-!*+=_0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 	usernameCharacters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 
 	// OrphanResourceAnnotation when set to true prevents the deletion of secret from target clusters even if matching ReplicatedSecret is removed
@@ -64,7 +64,7 @@ func ReconcileSecret(ctx context.Context, c client.Client, secretName string, kc
 	err := c.Get(ctx, types.NamespacedName{Name: secretName, Namespace: kcKey.Namespace}, currentSec)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			password, err := generateRandomString(passwordCharacters, 20)
+			password, err := generateRandomString(passwordCharacters, 32)
 			if err != nil {
 				return err
 			}
