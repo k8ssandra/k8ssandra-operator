@@ -15,10 +15,17 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 
 ## unreleased
 
-
+* [FEATURE] [#1832](https://github.com/k8ssandra/k8ssandra-operator/issues/1832) Add PITR APIs and CRDs
+* [FEATURE] [#1833](https://github.com/k8ssandra/k8ssandra-operator/issues/1833) Pass PITR config to Medusa, update pod's annotation on a PITR config change so we force a restart
+* [FEATURE] [#1838](https://github.com/k8ssandra/k8ssandra-operator/issues/1838) Add a validating webhook for MedusaRestoreJob that requires exactly one of spec.backup and spec.targetTimestamp
+* [FEATURE] [#1835](https://github.com/k8ssandra/k8ssandra-operator/issues/1835) Add the PITR branch to the MedusaRestoreJob reconciler
+* [FEATURE] [#1836](https://github.com/k8ssandra/k8ssandra-operator/issues/1836) Add a preStop hook to the medusa container and raise the termination grace period when PITR is enabled, so the commit log spool is uploaded before the pod stops
+* [FEATURE] [#1837](https://github.com/k8ssandra/k8ssandra-operator/issues/1837) Set a stuck-replay notice in the status message of a PITR MedusaRestoreJob whose DC is not back in 60 minutes
+* [ENHANCEMENT] [#1831](https://github.com/k8ssandra/k8ssandra-operator/issues/1831) Add PITR RPCs to the Medusa client
+* [ENHANCEMENT] [#1834](https://github.com/k8ssandra/k8ssandra-operator/issues/1834) Add `TerminalError`, split `GetHostMap` and add `GetPitrHostMap` for PITR restores.
+* [BUGFIX] [#1872](https://github.com/k8ssandra/k8ssandra-operator/issues/1872) Don't re-run finished MedusaRestoreJobs, which restarted or started the datacenter on every operator restart. User secrets are now refreshed before the restore is marked finished
+* [BUGFIX] [#1873](https://github.com/k8ssandra/k8ssandra-operator/issues/1873) Reject MedusaRestoreJob spec changes once the restore has started
+* [BUGFIX] [#967](https://github.com/k8ssandra/k8ssandra-operator/issues/967) Fix Medusa gRPC client address formatting for IPv6 pod IPs
 * [BUGFIX] [#1854](https://github.com/k8ssandra/k8ssandra-operator/issues/1854) Keep managed Cassandra and Reaper encryption-store passwords in Kubernetes Secrets and verify Medusa and Reaper TLS server identities ([#1855](https://github.com/k8ssandra/k8ssandra-operator/pull/1855))
 * [DOCS] []() Add PITR orchestration design doc
-* [ENHANCEMENT] [#1831](https://github.com/k8ssandra/k8ssandra-operator/issues/1831) Add PITR RPCs to the Medusa client
-* [FEATURE] [#1832](https://github.com/k8ssandra/k8ssandra-operator/issues/1832) Add PITR APIs and CRDs
 * [TESTING] [#1870](https://github.com/k8ssandra/k8ssandra-operator/issues/1870) Raise the host inotify limits before creating kind clusters in CI, as Ubuntu 26.04 runners don't apply them at boot
-* [FEATURE] [#1833](https://github.com/k8ssandra/k8ssandra-operator/issues/1833) Pass PITR config to Medusa, update pod's annotation on a PITR config change so we force a restart

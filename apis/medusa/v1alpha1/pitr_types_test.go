@@ -21,13 +21,13 @@ func TestMedusaRestoreMappingPitrJSON(t *testing.T) {
 	m := MedusaRestoreMapping{
 		InPlace: &inPlace,
 		Pitr: &PitrRestoreBlock{
-			TargetTimestamp: 1700000000,
+			TargetTimestamp: "2023-11-14T22:13:20Z",
 			NodeBackups:     map[string]string{"node1": "backup1"},
 		},
 	}
 	b, err := json.Marshal(m)
 	require.NoError(t, err)
-	require.JSONEq(t, `{"in_place":true,"pitr":{"target_timestamp":1700000000,"node_backups":{"node1":"backup1"}}}`, string(b))
+	require.JSONEq(t, `{"in_place":true,"pitr":{"target_timestamp":"2023-11-14T22:13:20Z","node_backups":{"node1":"backup1"}}}`, string(b))
 
 	m.Pitr = nil
 	b, err = json.Marshal(m)
