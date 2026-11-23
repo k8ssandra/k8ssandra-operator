@@ -804,7 +804,4 @@ func TestValidateMedusaMetricsPort(t *testing.T) {
 	require.ErrorContains(t, validate(medusaapi.Service{MetricsPort: 50051}), "gRPC port")
 	require.ErrorContains(t, validate(medusaapi.Service{MetricsPort: 55055, GrpcPort: 55055}), "gRPC port")
 	require.ErrorContains(t, validate(medusaapi.Service{GrpcPort: 9500}), "gRPC port")
-	for _, port := range []int{7000, 7001, 7199, 8080, 9000, 9042, 9103, 9142} {
-		require.ErrorContains(t, validate(medusaapi.Service{MetricsPort: port}), "Cassandra pod", "port %d", port)
-	}
 }

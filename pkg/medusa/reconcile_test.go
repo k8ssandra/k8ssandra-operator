@@ -533,7 +533,8 @@ func testMedusaIniMissingOptionalSettings(t *testing.T) {
 	assert.NotContains(t, medusaIni, "multipart_chunksize =")
 	assert.NotContains(t, medusaIni, "host =")
 	assert.NotContains(t, medusaIni, "region =")
-	assert.NotContains(t, medusaIni, "\n    port =")
+	// No storage or gRPC port line; prometheus_port in [monitoring] is always rendered.
+	assert.NotRegexp(t, `(?m)^\s*port =`, medusaIni)
 	assert.Contains(t, medusaIni, "secure = False")
 	assert.NotContains(t, medusaIni, "backup_grace_period_in_days =")
 }
