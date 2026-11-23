@@ -21637,6 +21637,13 @@ ManagementApiAuth defines the authentication settings for the management API in 
         </td>
         <td>true</td>
       </tr><tr>
+        <td><b>serverName</b></td>
+        <td>string</td>
+        <td>
+          ServerName is the DNS name that Medusa clients expect in the gRPC server certificate.<br/>
+        </td>
+        <td>true</td>
+      </tr><tr>
         <td><b>serverSecretName</b></td>
         <td>string</td>
         <td>

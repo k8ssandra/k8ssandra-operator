@@ -47,6 +47,12 @@ k8ssandra-operator uses [Medusa](https://github.com/thelastpickle/cassandra-medu
 
 Backup and restore schedules can be configured using Kubernetes manifests, allowing for declarative, auditable management of backup and restore processes.
 
+### Encryption security
+
+Managed Cassandra and Reaper encryption credentials are sourced from Kubernetes Secrets instead of being rendered into generated resource specifications. Medusa and Reaper TLS clients also verify the expected server identity. See the [encryption guide](docs/content/en/tasks/secure/encryption/_index.md) for configuration and migration requirements.
+
+This hardening is tracked in [issue #1854](https://github.com/k8ssandra/k8ssandra-operator/issues/1854) and implemented by [pull request #1855](https://github.com/k8ssandra/k8ssandra-operator/pull/1855).
+
 ### Where to from here?
 
 This documentation covers everything from install details, deployed components, configuration references, and guided outcome-based tasks. 

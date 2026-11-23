@@ -17,12 +17,181 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/meta"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 )
+
+func expectedClientEncryptionEnv() []corev1.EnvVar {
+	return []corev1.EnvVar{
+		{
+			Name: reaperKeystorePasswordEnvName,
+			ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{Name: "keystore-secret"},
+				Key:                  "keystore-password",
+			}},
+		},
+		{
+			Name: reaperTruststorePasswordEnvName,
+			ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{Name: "truststore-secret"},
+				Key:                  "truststore-password",
+			}},
+		},
+		{
+			Name:  "JAVA_OPTS",
+			Value: "-Djavax.net.ssl.keyStore=/mnt/client-keystore/keystore -Djavax.net.ssl.keyStorePassword=$(REAPER_CASS_CLIENT_KEYSTORE_PASSWORD) -Djavax.net.ssl.trustStore=/mnt/client-truststore/truststore -Djavax.net.ssl.trustStorePassword=$(REAPER_CASS_CLIENT_TRUSTSTORE_PASSWORD) -Dssl.enable=true -Ddatastax-java-driver.advanced.ssl-engine-factory.class=com.datastax.oss.driver.internal.core.ssl.DefaultSslEngineFactory -Ddatastax-java-driver.advanced.ssl-engine-factory.hostname-validation=false",
+		},
+	}
+}
+
+func TestConfigureClientEncryption(t *testing.T) {
+	selector := func(name, key string) *encryption.SecretKeySelector {
+		return &encryption.SecretKeySelector{
+			LocalObjectReference: corev1.LocalObjectReference{Name: name},
+			Key:                  key,
+		}
+	}
+
+	tests := []struct {
+		name                    string
+		stores                  *encryption.Stores
+		externalSecrets         bool
+		expectedKeystoreSecret  string
+		expectedKeystoreKey     string
+		expectedTruststoreStore string
+		expectedTruststoreKey   string
+		expectedEnabled         bool
+	}{
+		{
+			name: "default password selectors",
+			stores: &encryption.Stores{
+				KeystoreSecretRef:   selector("keystore-secret", "custom-keystore"),
+				TruststoreSecretRef: selector("truststore-secret", "custom-truststore"),
+			},
+			expectedKeystoreSecret:  "keystore-secret",
+			expectedKeystoreKey:     "keystore-password",
+			expectedTruststoreStore: "truststore-secret",
+			expectedTruststoreKey:   "truststore-password",
+			expectedEnabled:         true,
+		},
+		{
+			name: "dedicated password selectors",
+			stores: &encryption.Stores{
+				KeystoreSecretRef:           selector("keystore-secret", ""),
+				TruststoreSecretRef:         selector("truststore-secret", ""),
+				KeystorePasswordRef:         selector("keystore-passwords", "custom-keystore-password"),
+				TruststorePasswordSecretRef: selector("truststore-passwords", "custom-truststore-password"),
+			},
+			expectedKeystoreSecret:  "keystore-passwords",
+			expectedKeystoreKey:     "custom-keystore-password",
+			expectedTruststoreStore: "truststore-passwords",
+			expectedTruststoreKey:   "custom-truststore-password",
+			expectedEnabled:         true,
+		},
+		{
+			name: "external secrets bypass",
+			stores: &encryption.Stores{
+				KeystoreSecretRef:   selector("keystore-secret", ""),
+				TruststoreSecretRef: selector("truststore-secret", ""),
+			},
+			externalSecrets: true,
+		},
+		{
+			name: "missing keystore selector",
+			stores: &encryption.Stores{
+				TruststoreSecretRef: selector("truststore-secret", ""),
+			},
+		},
+		{
+			name: "missing truststore selector",
+			stores: &encryption.Stores{
+				KeystoreSecretRef: selector("keystore-secret", ""),
+			},
+		},
+		{
+			name: "nil stores",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reaper := newTestReaper()
+			reaper.Spec.ClientEncryptionStores = tt.stores
+			if tt.externalSecrets {
+				reaper.Spec.SecretsProvider = "external"
+			}
+			baseEnv := []corev1.EnvVar{{Name: "BASE_ENV", Value: "base"}}
+			baseVolumes := []corev1.Volume{{Name: "base-volume"}}
+			baseMounts := []corev1.VolumeMount{{Name: "base-volume", MountPath: "/base"}}
+
+			envVars, volumes, mounts := configureClientEncryption(reaper, baseEnv, baseVolumes, baseMounts)
+
+			if !tt.expectedEnabled {
+				assert.Equal(t, baseEnv, envVars)
+				assert.Equal(t, baseVolumes, volumes)
+				assert.Equal(t, baseMounts, mounts)
+				return
+			}
+
+			assert.Contains(t, volumes, corev1.Volume{
+				Name: "client-keystore",
+				VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{
+					SecretName: "keystore-secret",
+					Items: []corev1.KeyToPath{{
+						Key:  tt.stores.KeystoreSecretRef.GetSpecificKeyOrDefault("keystore"),
+						Path: "keystore",
+					}},
+				}},
+			})
+			assert.Contains(t, volumes, corev1.Volume{
+				Name: "client-truststore",
+				VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{
+					SecretName: "truststore-secret",
+					Items: []corev1.KeyToPath{{
+						Key:  tt.stores.TruststoreSecretRef.GetSpecificKeyOrDefault("truststore"),
+						Path: "truststore",
+					}},
+				}},
+			})
+			assert.Contains(t, mounts, corev1.VolumeMount{Name: "client-keystore", MountPath: "/mnt/client-keystore"})
+			assert.Contains(t, mounts, corev1.VolumeMount{Name: "client-truststore", MountPath: "/mnt/client-truststore"})
+
+			keystorePassword := requireEnvVar(t, envVars, reaperKeystorePasswordEnvName)
+			require.Empty(t, keystorePassword.Value)
+			require.NotNil(t, keystorePassword.ValueFrom)
+			require.Equal(t, tt.expectedKeystoreSecret, keystorePassword.ValueFrom.SecretKeyRef.Name)
+			require.Equal(t, tt.expectedKeystoreKey, keystorePassword.ValueFrom.SecretKeyRef.Key)
+
+			truststorePassword := requireEnvVar(t, envVars, reaperTruststorePasswordEnvName)
+			require.Empty(t, truststorePassword.Value)
+			require.NotNil(t, truststorePassword.ValueFrom)
+			require.Equal(t, tt.expectedTruststoreStore, truststorePassword.ValueFrom.SecretKeyRef.Name)
+			require.Equal(t, tt.expectedTruststoreKey, truststorePassword.ValueFrom.SecretKeyRef.Key)
+
+			javaOpts := requireEnvVar(t, envVars, "JAVA_OPTS")
+			require.Contains(t, javaOpts.Value, "$(REAPER_CASS_CLIENT_KEYSTORE_PASSWORD)")
+			require.Contains(t, javaOpts.Value, "$(REAPER_CASS_CLIENT_TRUSTSTORE_PASSWORD)")
+			require.NotContains(t, javaOpts.Value, tt.expectedKeystoreKey)
+			require.NotContains(t, javaOpts.Value, tt.expectedTruststoreKey)
+			require.Equal(t, "true", requireEnvVar(t, envVars, "REAPER_CASS_NATIVE_PROTOCOL_SSL_ENCRYPTION_ENABLED").Value)
+		})
+	}
+}
+
+func requireEnvVar(t *testing.T, envVars []corev1.EnvVar, name string) corev1.EnvVar {
+	t.Helper()
+	for _, envVar := range envVars {
+		if envVar.Name == name {
+			return envVar
+		}
+	}
+	require.FailNow(t, "environment variable not found", name)
+	return corev1.EnvVar{}
+}
 
 func TestNewDeployment(t *testing.T) {
 	mainImage := &images.Image{Repository: "test", Name: "reaper", Tag: "latest", PullPolicy: corev1.PullAlways}
@@ -55,7 +224,7 @@ func TestNewDeployment(t *testing.T) {
 
 	labels := createServiceAndDeploymentLabels(reaper)
 	logger := testlogr.NewTestLogger(t)
-	deployment := NewDeployment(reaper, newTestDatacenter(), ptr.To("keystore-password"), ptr.To("truststore-password"), logger, getTestImageRegistry(t))
+	deployment := NewDeployment(reaper, newTestDatacenter(), logger, getTestImageRegistry(t))
 
 	assert.Equal(t, reaper.Namespace, deployment.Namespace)
 	assert.Equal(t, reaper.Name, deployment.Name)
@@ -140,7 +309,8 @@ func TestNewDeployment(t *testing.T) {
 	assert.NotNil(t, tempDirMount, "temp-dir volume mount not found in init container")
 	assert.Equal(t, "/tmp", tempDirMount.MountPath, "temp-dir volume mount path is not /tmp")
 
-	assert.ElementsMatch(t, container.Env, []corev1.EnvVar{
+	encryptionEnv := expectedClientEncryptionEnv()
+	expectedContainerEnv := append([]corev1.EnvVar{
 		{
 			Name:  "REAPER_STORAGE_TYPE",
 			Value: "cassandra",
@@ -170,10 +340,6 @@ func TestNewDeployment(t *testing.T) {
 			Value: "reaper_db",
 		},
 		{
-			Name:  "JAVA_OPTS",
-			Value: "-Djavax.net.ssl.keyStore=/mnt/client-keystore/keystore -Djavax.net.ssl.keyStorePassword=keystore-password -Djavax.net.ssl.trustStore=/mnt/client-truststore/truststore -Djavax.net.ssl.trustStorePassword=truststore-password -Dssl.enable=true -Ddatastax-java-driver.advanced.ssl-engine-factory.class=com.datastax.oss.driver.internal.core.ssl.DefaultSslEngineFactory -Ddatastax-java-driver.advanced.ssl-engine-factory.hostname-validation=false",
-		},
-		{
 			Name:  "REAPER_CASS_NATIVE_PROTOCOL_SSL_ENCRYPTION_ENABLED",
 			Value: "true",
 		},
@@ -185,14 +351,15 @@ func TestNewDeployment(t *testing.T) {
 			Name:  "REAPER_HTTP_MANAGEMENT_PORT",
 			Value: "8080",
 		},
-	})
+	}, encryptionEnv...)
+	assert.ElementsMatch(t, container.Env, expectedContainerEnv)
 
 	assert.Len(t, podSpec.InitContainers, 1)
 
 	initContainer := podSpec.InitContainers[0]
 	assert.Equal(t, "docker.io/test/reaper:latest", initContainer.Image)
 	assert.Equal(t, corev1.PullAlways, initContainer.ImagePullPolicy)
-	assert.ElementsMatch(t, initContainer.Env, []corev1.EnvVar{
+	expectedInitContainerEnv := append([]corev1.EnvVar{
 		{
 			Name:  "REAPER_STORAGE_TYPE",
 			Value: "cassandra",
@@ -218,10 +385,6 @@ func TestNewDeployment(t *testing.T) {
 			Value: "reaper_db",
 		},
 		{
-			Name:  "JAVA_OPTS",
-			Value: "-Djavax.net.ssl.keyStore=/mnt/client-keystore/keystore -Djavax.net.ssl.keyStorePassword=keystore-password -Djavax.net.ssl.trustStore=/mnt/client-truststore/truststore -Djavax.net.ssl.trustStorePassword=truststore-password -Dssl.enable=true -Ddatastax-java-driver.advanced.ssl-engine-factory.class=com.datastax.oss.driver.internal.core.ssl.DefaultSslEngineFactory -Ddatastax-java-driver.advanced.ssl-engine-factory.hostname-validation=false",
-		},
-		{
 			Name:  "REAPER_CASS_NATIVE_PROTOCOL_SSL_ENCRYPTION_ENABLED",
 			Value: "true",
 		},
@@ -233,7 +396,8 @@ func TestNewDeployment(t *testing.T) {
 			Name:  "REAPER_HTTP_MANAGEMENT_PORT",
 			Value: "8080",
 		},
-	})
+	}, encryptionEnv...)
+	assert.ElementsMatch(t, initContainer.Env, expectedInitContainerEnv)
 
 	assert.ElementsMatch(t, initContainer.Args, []string{"schema-migration"})
 
@@ -251,10 +415,10 @@ func TestNewDeployment(t *testing.T) {
 
 	reaper.Spec.Keyspace = "ks1"
 
-	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
+	deployment = NewDeployment(reaper, newTestDatacenter(), logger, getTestImageRegistry(t))
 	podSpec = deployment.Spec.Template.Spec
 	container = podSpec.Containers[0]
-	assert.Len(t, container.Env, 9)
+	assert.Len(t, container.Env, 13)
 
 	assert.Contains(t, container.Env, corev1.EnvVar{
 		Name:  "REAPER_CASS_KEYSPACE",
@@ -262,10 +426,10 @@ func TestNewDeployment(t *testing.T) {
 	})
 
 	reaper.Spec.AutoScheduling.Enabled = true
-	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
+	deployment = NewDeployment(reaper, newTestDatacenter(), logger, getTestImageRegistry(t))
 	podSpec = deployment.Spec.Template.Spec
 	container = podSpec.Containers[0]
-	assert.Len(t, container.Env, 19)
+	assert.Len(t, container.Env, 23)
 
 	assert.Contains(t, container.Env, corev1.EnvVar{
 		Name:  "REAPER_AUTO_SCHEDULING_ADAPTIVE",
@@ -400,7 +564,7 @@ func TestHttpManagementConfiguration(t *testing.T) {
 	reaper.Spec.HttpManagement.Keystores = &corev1.LocalObjectReference{Name: "test-dc1-c-mgmt-ks"}
 	logger := testlogr.NewTestLogger(t)
 
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
+	deployment := NewDeployment(reaper, newTestDatacenter(), logger, getTestImageRegistry(t))
 
 	assert := assert.New(t)
 	assert.Len(deployment.Spec.Template.Spec.Containers, 1)
@@ -445,7 +609,7 @@ func TestHttpManagementCustomPort(t *testing.T) {
 	}
 	logger := testlogr.NewTestLogger(t)
 
-	deployment := NewDeployment(reaper, dc, nil, nil, logger, getTestImageRegistry(t))
+	deployment := NewDeployment(reaper, dc, logger, getTestImageRegistry(t))
 
 	assert.Contains(t, deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
 		Name:  "REAPER_HTTP_MANAGEMENT_PORT",
@@ -465,7 +629,7 @@ func TestReadinessProbe(t *testing.T) {
 		InitialDelaySeconds: 123,
 	}
 	logger := testlogr.NewTestLogger(t)
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
+	deployment := NewDeployment(reaper, newTestDatacenter(), logger, getTestImageRegistry(t))
 	expected := &corev1.Probe{
 		ProbeHandler: corev1.ProbeHandler{
 			HTTPGet: &corev1.HTTPGetAction{
@@ -490,7 +654,7 @@ func TestLivenessProbe(t *testing.T) {
 		InitialDelaySeconds: 123,
 	}
 	logger := testlogr.NewTestLogger(t)
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
+	deployment := NewDeployment(reaper, newTestDatacenter(), logger, getTestImageRegistry(t))
 	expected := &corev1.Probe{
 		ProbeHandler: corev1.ProbeHandler{
 			HTTPGet: &corev1.HTTPGetAction{
@@ -509,7 +673,7 @@ func TestImages(t *testing.T) {
 		reaper := newTestReaper()
 		reaper.Spec.ContainerImage = nil
 		logger := testlogr.NewTestLogger(t)
-		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
+		deployment := NewDeployment(reaper, newTestDatacenter(), logger, getTestImageRegistry(t))
 		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:4.0.1", deployment.Spec.Template.Spec.InitContainers[0].Image)
 		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:4.0.1", deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.InitContainers[0].ImagePullPolicy)
@@ -520,7 +684,7 @@ func TestImages(t *testing.T) {
 		reaper := newTestReaper()
 		reaper.Spec.ContainerImage = nil
 		logger := testlogr.NewTestLogger(t)
-		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
+		deployment := NewDeployment(reaper, newTestDatacenter(), logger, getTestImageRegistry(t))
 		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:4.0.1", deployment.Spec.Template.Spec.InitContainers[0].Image)
 		assert.Equal(t, "docker.io/thelastpickle/cassandra-reaper:4.0.1", deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Equal(t, corev1.PullIfNotPresent, deployment.Spec.Template.Spec.InitContainers[0].ImagePullPolicy)
@@ -537,7 +701,7 @@ func TestImages(t *testing.T) {
 		}
 		reaper.Spec.ContainerImage = image
 		logger := testlogr.NewTestLogger(t)
-		deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
+		deployment := NewDeployment(reaper, newTestDatacenter(), logger, getTestImageRegistry(t))
 		assert.Equal(t, "docker.io/my-custom-repo/my-custom-name:latest", deployment.Spec.Template.Spec.InitContainers[0].Image)
 		assert.Equal(t, "docker.io/my-custom-repo/my-custom-name:latest", deployment.Spec.Template.Spec.Containers[0].Image)
 		assert.Contains(t, deployment.Spec.Template.Spec.ImagePullSecrets, corev1.LocalObjectReference{Name: "my-secret"})
@@ -564,7 +728,7 @@ func TestTolerations(t *testing.T) {
 	reaper := newTestReaper()
 	reaper.Spec.Tolerations = tolerations
 	logger := testlogr.NewTestLogger(t)
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
+	deployment := NewDeployment(reaper, newTestDatacenter(), logger, getTestImageRegistry(t))
 	assert.ElementsMatch(t, tolerations, deployment.Spec.Template.Spec.Tolerations)
 }
 
@@ -589,13 +753,13 @@ func TestAffinity(t *testing.T) {
 	reaper := newTestReaper()
 	reaper.Spec.Affinity = affinity
 	logger := testlogr.NewTestLogger(t)
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
+	deployment := NewDeployment(reaper, newTestDatacenter(), logger, getTestImageRegistry(t))
 	assert.EqualValues(t, affinity, deployment.Spec.Template.Spec.Affinity, "affinity does not match")
 }
 
 func TestContainerSecurityContext(t *testing.T) {
 	reaper := newTestReaper()
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, testlogr.NewTestLogger(t), getTestImageRegistry(t))
+	deployment := NewDeployment(reaper, newTestDatacenter(), testlogr.NewTestLogger(t), getTestImageRegistry(t))
 
 	// Test default security context
 	container := deployment.Spec.Template.Spec.Containers[0]
@@ -618,14 +782,14 @@ func TestContainerSecurityContext(t *testing.T) {
 		},
 	}
 	reaper.Spec.SecurityContext = customSecurityContext
-	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, testlogr.NewTestLogger(t), getTestImageRegistry(t))
+	deployment = NewDeployment(reaper, newTestDatacenter(), testlogr.NewTestLogger(t), getTestImageRegistry(t))
 	container = deployment.Spec.Template.Spec.Containers[0]
 	assert.Equal(t, customSecurityContext, container.SecurityContext)
 }
 
 func TestSchemaInitContainerSecurityContext(t *testing.T) {
 	reaper := newTestReaper()
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, testlogr.NewTestLogger(t), getTestImageRegistry(t))
+	deployment := NewDeployment(reaper, newTestDatacenter(), testlogr.NewTestLogger(t), getTestImageRegistry(t))
 
 	// Test default security context
 	initContainer := deployment.Spec.Template.Spec.InitContainers[0]
@@ -648,14 +812,14 @@ func TestSchemaInitContainerSecurityContext(t *testing.T) {
 		},
 	}
 	reaper.Spec.InitContainerSecurityContext = customSecurityContext
-	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, testlogr.NewTestLogger(t), getTestImageRegistry(t))
+	deployment = NewDeployment(reaper, newTestDatacenter(), testlogr.NewTestLogger(t), getTestImageRegistry(t))
 	initContainer = deployment.Spec.Template.Spec.InitContainers[0]
 	assert.Equal(t, customSecurityContext, initContainer.SecurityContext)
 }
 
 func TestPodSecurityContext(t *testing.T) {
 	reaper := newTestReaper()
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, testlogr.NewTestLogger(t), getTestImageRegistry(t))
+	deployment := NewDeployment(reaper, newTestDatacenter(), testlogr.NewTestLogger(t), getTestImageRegistry(t))
 
 	// Test default security context
 	podSpec := deployment.Spec.Template.Spec
@@ -669,7 +833,7 @@ func TestPodSecurityContext(t *testing.T) {
 		FSGroup:      ptr.To[int64](2000),
 	}
 	reaper.Spec.PodSecurityContext = customPodSecurityContext
-	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, testlogr.NewTestLogger(t), getTestImageRegistry(t))
+	deployment = NewDeployment(reaper, newTestDatacenter(), testlogr.NewTestLogger(t), getTestImageRegistry(t))
 	podSpec = deployment.Spec.Template.Spec
 	assert.Equal(t, customPodSecurityContext, podSpec.SecurityContext)
 }
@@ -678,7 +842,7 @@ func TestSkipSchemaMigration(t *testing.T) {
 	reaper := newTestReaper()
 	reaper.Spec.SkipSchemaMigration = true
 	logger := testlogr.NewTestLogger(t)
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
+	deployment := NewDeployment(reaper, newTestDatacenter(), logger, getTestImageRegistry(t))
 	assert.Len(t, deployment.Spec.Template.Spec.InitContainers, 0, "expected pod template to not have any init container")
 }
 
@@ -688,7 +852,7 @@ func TestDeploymentTypes(t *testing.T) {
 	// reaper with cassandra backend becomes a deployment
 	reaper := newTestReaper()
 	reaper.Spec.StorageType = reaperapi.StorageTypeCassandra
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
+	deployment := NewDeployment(reaper, newTestDatacenter(), logger, getTestImageRegistry(t))
 	assert.Len(t, deployment.Spec.Template.Spec.Containers, 1)
 	assert.Len(t, deployment.Spec.Template.Spec.InitContainers, 1)
 	assert.Equal(t, reaperapi.StorageTypeCassandra, deployment.Spec.Template.Spec.Containers[0].Env[0].Value)
@@ -696,7 +860,7 @@ func TestDeploymentTypes(t *testing.T) {
 	// asking for a deployment with memory backend does not work
 	reaper = newTestReaper()
 	reaper.Spec.StorageType = reaperapi.StorageTypeLocal
-	deployment = NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
+	deployment = NewDeployment(reaper, newTestDatacenter(), logger, getTestImageRegistry(t))
 	assert.Nil(t, deployment)
 
 	// reaper with memory backend becomes a stateful set
@@ -747,18 +911,18 @@ func TestMakeDesiredDeploymentType(t *testing.T) {
 	logger := testlogr.NewTestLogger(t)
 
 	reaper.Spec.StorageType = reaperapi.StorageTypeCassandra
-	d, err := MakeDesiredDeploymentType(reaper, fakeDc, nil, nil, logger, getTestImageRegistry(t))
+	d, err := MakeDesiredDeploymentType(reaper, fakeDc, logger, getTestImageRegistry(t))
 	assert.Nil(t, err)
 	assert.IsType(t, &appsv1.Deployment{}, d)
 
 	reaper.Spec.StorageType = reaperapi.StorageTypeLocal
 	reaper.Spec.StorageConfig = newTestStorageConfig()
-	sts, err := MakeDesiredDeploymentType(reaper, fakeDc, nil, nil, logger, getTestImageRegistry(t))
+	sts, err := MakeDesiredDeploymentType(reaper, fakeDc, logger, getTestImageRegistry(t))
 	assert.Nil(t, err)
 	assert.IsType(t, &appsv1.StatefulSet{}, sts)
 
 	reaper.Spec.StorageType = "invalid"
-	d, err = MakeDesiredDeploymentType(reaper, fakeDc, nil, nil, logger, getTestImageRegistry(t))
+	d, err = MakeDesiredDeploymentType(reaper, fakeDc, logger, getTestImageRegistry(t))
 	assert.NotNil(t, err)
 	assert.Nil(t, d)
 }
@@ -767,7 +931,7 @@ func TestDeepCopyActualDeployment(t *testing.T) {
 	reaper := newTestReaper()
 
 	reaper.Spec.StorageType = reaperapi.StorageTypeCassandra
-	deployment, err := MakeDesiredDeploymentType(reaper, newTestDatacenter(), nil, nil, testlogr.NewTestLogger(t), getTestImageRegistry(t))
+	deployment, err := MakeDesiredDeploymentType(reaper, newTestDatacenter(), testlogr.NewTestLogger(t), getTestImageRegistry(t))
 	assert.Nil(t, err)
 	deepCopy, err := DeepCopyActualDeployment(deployment)
 	assert.Nil(t, err)
@@ -787,7 +951,7 @@ func TestEnsureSingleReplica(t *testing.T) {
 
 	// deployment size is not touched on Deployments
 	actualDeployment, _ := MakeActualDeploymentType(reaper)
-	desiredDeployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
+	desiredDeployment := NewDeployment(reaper, newTestDatacenter(), logger, getTestImageRegistry(t))
 	desiredDeployment.Spec.Replicas = func() *int32 { i := int32(2); return &i }()
 	err := EnsureSingleReplica(reaper, actualDeployment, desiredDeployment, logger)
 	assert.Nil(t, err)
@@ -809,7 +973,7 @@ func TestEnsureSingleReplica(t *testing.T) {
 	actualStatefulSet, _ = MakeActualDeploymentType(reaper)
 	err = setDeploymentReplicas(&actualStatefulSet, &twoReplicas)
 	assert.Nil(t, err)
-	desiredStatefulSetObject, _ := MakeDesiredDeploymentType(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
+	desiredStatefulSetObject, _ := MakeDesiredDeploymentType(reaper, newTestDatacenter(), logger, getTestImageRegistry(t))
 	err = setDeploymentReplicas(&desiredStatefulSetObject, &oneReplica)
 	assert.Nil(t, err)
 
@@ -901,7 +1065,7 @@ func newTestStorageConfig() *corev1.PersistentVolumeClaimSpec {
 func TestDefaultResources(t *testing.T) {
 	reaper := newTestReaper()
 	logger := testlogr.NewTestLogger(t)
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
+	deployment := NewDeployment(reaper, newTestDatacenter(), logger, getTestImageRegistry(t))
 
 	// Init container resources
 	assert.Equal(t, resource.MustParse(InitContainerMemRequest), *deployment.Spec.Template.Spec.InitContainers[0].Resources.Requests.Memory(), "expected init container memory request to be set")
@@ -936,7 +1100,7 @@ func TestCustomResources(t *testing.T) {
 		},
 	}
 	logger := testlogr.NewTestLogger(t)
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
+	deployment := NewDeployment(reaper, newTestDatacenter(), logger, getTestImageRegistry(t))
 
 	// Init container resources
 	assert.Equal(t, resource.MustParse("1Gi"), *deployment.Spec.Template.Spec.InitContainers[0].Resources.Requests.Memory(), "expected init container memory request to be set")
@@ -952,7 +1116,7 @@ func TestCustomResources(t *testing.T) {
 func TestLabelsAnnotations(t *testing.T) {
 	reaper := newTestReaper()
 	logger := testlogr.NewTestLogger(t)
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
+	deployment := NewDeployment(reaper, newTestDatacenter(), logger, getTestImageRegistry(t))
 
 	deploymentLabels := map[string]string{
 		k8ssandraapi.NameLabel:      k8ssandraapi.NameLabelValue,
@@ -1225,7 +1389,7 @@ func TestReaperV4ContactPointsFormat(t *testing.T) {
 	dc := newTestDatacenter()
 	logger := testlogr.NewTestLogger(t)
 
-	deployment := NewDeployment(reaper, dc, nil, nil, logger, getTestImageRegistry(t))
+	deployment := NewDeployment(reaper, dc, logger, getTestImageRegistry(t))
 	container := deployment.Spec.Template.Spec.Containers[0]
 
 	// Find the REAPER_CASS_CONTACT_POINTS env var
@@ -1247,7 +1411,7 @@ func TestDefaultReaperContactPointsFormat(t *testing.T) {
 	dc := newTestDatacenter()
 	logger := testlogr.NewTestLogger(t)
 
-	deployment := NewDeployment(reaper, dc, nil, nil, logger, getTestImageRegistry(t))
+	deployment := NewDeployment(reaper, dc, logger, getTestImageRegistry(t))
 	container := deployment.Spec.Template.Spec.Containers[0]
 
 	// Find the REAPER_CASS_CONTACT_POINTS env var
@@ -1304,7 +1468,7 @@ func TestPvcReclaimPolicy(t *testing.T) {
 	// Test that Deployment with Cassandra storage does not have PVC retention policy
 	reaper.Spec.StorageType = reaperapi.StorageTypeCassandra
 	reaper.Spec.StorageConfig = nil
-	deployment := NewDeployment(reaper, newTestDatacenter(), nil, nil, logger, getTestImageRegistry(t))
+	deployment := NewDeployment(reaper, newTestDatacenter(), logger, getTestImageRegistry(t))
 	assert.NotNil(t, deployment, "expected Deployment to be created")
 	// Deployments don't have PersistentVolumeClaimRetentionPolicy field, so we just verify it's a Deployment
 	assert.IsType(t, &appsv1.Deployment{}, deployment)

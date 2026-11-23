@@ -28,7 +28,6 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/config"
-	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/reaper"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -180,23 +179,6 @@ func (r *ReaperReconciler) reconcileDeployment(
 	}
 	logger.Info("Collected Reaper auth variables", "authVars", authVars)
 
-	var keystorePassword *string
-	var truststorePassword *string
-
-	if actualReaper.Spec.ClientEncryptionStores != nil && !actualReaper.Spec.UseExternalSecrets() {
-		if password, err := cassandra.ReadEncryptionStorePassword(ctx, actualReaper.Namespace, r.Client, actualReaper.Spec.ClientEncryptionStores, encryption.StoreNameKeystore); err != nil {
-			return ctrl.Result{}, err
-		} else {
-			keystorePassword = ptr.To(password)
-		}
-
-		if password, err := cassandra.ReadEncryptionStorePassword(ctx, actualReaper.Namespace, r.Client, actualReaper.Spec.ClientEncryptionStores, encryption.StoreNameTruststore); err != nil {
-			return ctrl.Result{}, err
-		} else {
-			truststorePassword = ptr.To(password)
-		}
-	}
-
 	// reconcile Vector configmap
 	// do this only if we're not a control plane reaper. a CP reaper has no vector agent with it
 	if actualReaper.Spec.DatacenterRef.Name != "" {
@@ -214,7 +196,7 @@ func (r *ReaperReconciler) reconcileDeployment(
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	desiredDeployment, err := reaper.MakeDesiredDeploymentType(actualReaper, actualDc, keystorePassword, truststorePassword, logger, r.ImageRegistry, authVars...)
+	desiredDeployment, err := reaper.MakeDesiredDeploymentType(actualReaper, actualDc, logger, r.ImageRegistry, authVars...)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

@@ -13,10 +13,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-// recordingClientFactory captures the address and the TLS secret passed to the factory.
+// recordingClientFactory captures the address and TLS settings passed to the factory.
 type recordingClientFactory struct {
-	address string
-	secret  *corev1.Secret
+	address    string
+	secret     *corev1.Secret
+	serverName string
 }
 
 func (f *recordingClientFactory) NewClient(address string) (medusa.Client, error) {
@@ -24,10 +25,36 @@ func (f *recordingClientFactory) NewClient(address string) (medusa.Client, error
 	return nil, nil
 }
 
-func (f *recordingClientFactory) NewClientWithTLS(address string, secret *corev1.Secret) (medusa.Client, error) {
+func (f *recordingClientFactory) NewClientWithTLS(address string, secret *corev1.Secret, serverName string) (medusa.Client, error) {
 	f.address = address
 	f.secret = secret
+	f.serverName = serverName
 	return nil, nil
+}
+
+func TestNewClientPassesConfiguredTLSServerName(t *testing.T) {
+	cassdc := &cassdcapi.CassandraDatacenter{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "dc1",
+			Namespace: "test",
+			Annotations: map[string]string{
+				medusa.MedusaClientSecretNameAnnotation: "medusa-client",
+				medusa.MedusaServerNameAnnotation:       "medusa-server.test.svc",
+			},
+		},
+	}
+	pod := &corev1.Pod{Status: corev1.PodStatus{PodIP: "192.0.2.10"}}
+	k8sClient := fake.NewClientBuilder().WithObjects(&corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "medusa-client", Namespace: "test"},
+	}).Build()
+	factory := &recordingClientFactory{}
+
+	_, err := newClient(t.Context(), k8sClient, cassdc, pod, factory)
+
+	require.NoError(t, err)
+	require.Equal(t, "192.0.2.10:50051", factory.address)
+	require.Equal(t, "medusa-server.test.svc", factory.serverName)
+	require.Equal(t, "medusa-client", factory.secret.Name)
 }
 
 func TestNewClientAddress(t *testing.T) {

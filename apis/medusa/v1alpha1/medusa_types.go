@@ -242,4 +242,8 @@ type PitrConfig struct {
 type GRPCEncryption struct {
 	ClientSecretName string `json:"clientSecretName"`
 	ServerSecretName string `json:"serverSecretName"`
+
+	// ServerName is the DNS name that Medusa clients expect in the gRPC server certificate.
+	// +kubebuilder:validation:MinLength=1
+	ServerName string `json:"serverName"`
 }

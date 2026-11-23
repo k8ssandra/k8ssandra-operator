@@ -81,6 +81,7 @@ func testMedusaIniFull(t *testing.T) {
 					Encryption: &medusaapi.GRPCEncryption{
 						ServerSecretName: "mgmt-api-server-certs",
 						ClientSecretName: "mgmt-api-client-certs",
+						ServerName:       "medusa.test.svc",
 					},
 				},
 				CassandraUserSecretRef: corev1.LocalObjectReference{
@@ -751,6 +752,7 @@ func TestGenerateMedusaProbe(t *testing.T) {
 	encryption := &medusaapi.GRPCEncryption{
 		ClientSecretName: "medusa-client-cert",
 		ServerSecretName: "medusa-server-cert",
+		ServerName:       "medusa.test.svc",
 	}
 	tlsProbe, err := generateMedusaProbe(nil, 55255, encryption)
 	assert.NoError(t, err)
@@ -760,6 +762,7 @@ func TestGenerateMedusaProbe(t *testing.T) {
 	assert.Contains(t, tlsProbe.Exec.Command, "--tls-ca-cert=/etc/certificates/grpc-server-certs/ca.crt")
 	assert.Contains(t, tlsProbe.Exec.Command, "--tls-client-cert=/etc/certificates/grpc-server-certs/tls.crt")
 	assert.Contains(t, tlsProbe.Exec.Command, "--tls-client-key=/etc/certificates/grpc-server-certs/tls.key")
+	assert.Contains(t, tlsProbe.Exec.Command, "--tls-server-name=medusa.test.svc")
 }
 
 var (

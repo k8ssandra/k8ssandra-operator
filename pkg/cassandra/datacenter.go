@@ -103,10 +103,6 @@ type DatacenterConfig struct {
 	Tolerations               []corev1.Toleration
 	ServerEncryptionStores    *encryption.Stores
 	ClientEncryptionStores    *encryption.Stores
-	ClientKeystorePassword    string
-	ClientTruststorePassword  string
-	ServerKeystorePassword    string
-	ServerTruststorePassword  string
 	CDC                       *cassdcapi.CDCConfiguration
 	DseWorkloads              *cassdcapi.DseWorkloads
 	ManagementApiAuth         *cassdcapi.ManagementApiAuthConfig
