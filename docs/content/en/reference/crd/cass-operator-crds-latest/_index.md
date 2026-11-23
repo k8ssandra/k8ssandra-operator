@@ -24844,6 +24844,15 @@ the default value is 1.<br/>
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>retries</b></td>
+        <td>integer</td>
+        <td>
+          Retries specifies the maximum number of times a failed pod operation can be retried.
+This is only relevant if the RestartPolicy is set to OnFailure. If not set,
+the default value is 1.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>scheduledTime</b></td>
         <td>string</td>
         <td>
@@ -25495,6 +25504,15 @@ If not set or set to 0 defaults to 1.<br/>
         <td>string</td>
         <td>
           RestartPolicy indicates the behavior n case of failure. Default is OnFailure.<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>retries</b></td>
+        <td>integer</td>
+        <td>
+          Retries specifies the maximum number of times a failed pod operation can be retried.
+This is only relevant if the RestartPolicy is set to OnFailure. If not set,
+the default value is 1.<br/>
         </td>
         <td>false</td>
       </tr><tr>
