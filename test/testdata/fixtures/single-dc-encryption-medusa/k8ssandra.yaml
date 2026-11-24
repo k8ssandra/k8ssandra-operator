@@ -36,6 +36,7 @@ spec:
       runAsUser: 999
       runAsNonRoot: true
     serviceProperties:
+      metricsTLS: true
       encryption:
         clientSecretName: medusa-client-cert
         serverSecretName: medusa-server-cert
@@ -43,6 +44,27 @@ spec:
     clusterName: "First Cluster"
     serverVersion: 4.1.8
     readOnlyRootFilesystem: true
+    telemetry:
+      vector:
+        enabled: true
+        scrapeInterval: 10s
+        components:
+          transforms:
+            - name: medusa_only
+              type: filter
+              inputs:
+                - cassandra_metrics
+              config: |
+                condition = '.tags.container == "medusa"'
+          sinks:
+            - name: medusa_metrics_output
+              type: console
+              inputs:
+                - medusa_only
+              config: |
+                target = "stdout"
+                [sinks.medusa_metrics_output.encoding]
+                codec = "json"
     datacenters:
       - metadata:
           name: dc1

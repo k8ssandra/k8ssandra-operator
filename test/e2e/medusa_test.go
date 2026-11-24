@@ -2,7 +2,9 @@ package e2e
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -18,6 +20,7 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	medusapkg "github.com/k8ssandra/k8ssandra-operator/pkg/medusa"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
+	"github.com/k8ssandra/k8ssandra-operator/test/kubectl"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,6 +49,9 @@ func createSingleMedusaJob(t *testing.T, ctx context.Context, namespace string, 
 	checkMedusaContainersExist(t, ctx, dcKey, f)
 	checkPurgeBackupScheduleExists(t, ctx, dcKey, f, kc)
 	checkDatacenterReadOnlyRootFS(t, ctx, dcKey, f, kc)
+	if kc.Spec.Cassandra.Telemetry.IsVectorEnabled() {
+		checkMedusaMetricsInVector(t, f, dcKey)
+	}
 
 	// Disable purges
 	err = f.Get(ctx, kcKey, kc)
@@ -268,6 +274,36 @@ func checkReplicatedSecretMounted(t *testing.T, ctx context.Context, f *framewor
 	medusaContainer := dc.Spec.PodTemplateSpec.Spec.Containers[index]
 	hasMount := f.ContainerHasVolumeMount(medusaContainer, secretName, "/etc/medusa-secrets")
 	assert.True(t, hasMount, "Missing Volume Mount for Medusa bucket key")
+}
+
+// checkMedusaMetricsInVector checks that the Vector agent of the first pod of the datacenter scrapes Medusa's metrics
+// and tags them with the container and the pod. It reads the medusa_metrics_output console sink of the fixture, which
+// prints the metrics of cassandra_metrics that have container=medusa.
+func checkMedusaMetricsInVector(t *testing.T, f *framework.E2eFramework, dcKey framework.ClusterKey) {
+	t.Log("checking that Vector scrapes the Medusa metrics")
+	pod := DcPrefix(t, f, dcKey) + "-default-sts-0"
+	opts := kubectl.Options{Namespace: dcKey.Namespace, Context: dcKey.K8sContext}
+	require.Eventually(t, func() bool {
+		output, err := kubectl.Logs(opts, pod, "-c", "server-system-logger", "--tail=500")
+		if err != nil {
+			return false
+		}
+		for _, line := range strings.Split(output, "\n") {
+			var metric struct {
+				Name string            `json:"name"`
+				Tags map[string]string `json:"tags"`
+			}
+			if json.Unmarshal([]byte(line), &metric) != nil || metric.Tags["container"] != "medusa" {
+				continue
+			}
+			// Without PITR, Medusa exports the process metrics of prometheus_client.
+			if strings.HasPrefix(metric.Name, "process_") && metric.Tags["pod_name"] == pod &&
+				metric.Tags["datacenter"] == dcKey.Name && metric.Tags["cluster"] != "" && metric.Tags["rack"] != "" {
+				return true
+			}
+		}
+		return false
+	}, 3*time.Minute, 10*time.Second, "Medusa metrics tagged with container=medusa and pod_name=%s not found in the Vector output", pod)
 }
 
 func checkMedusaContainersExist(t *testing.T, ctx context.Context, dcKey framework.ClusterKey, f *framework.E2eFramework) {
