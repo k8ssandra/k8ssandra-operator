@@ -127,7 +127,7 @@ cassandra:
             inputs:
               - cassandra_metrics
             config: |
-              condition = '.tags.container != "medusa" || starts_with(.name, "medusa_")'
+              condition = '.tags.container != "medusa" || starts_with(string!(.name), "medusa_")'
         sinks:
           - name: console_output
             type: console
