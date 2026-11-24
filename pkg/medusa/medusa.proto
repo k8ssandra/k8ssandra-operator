@@ -136,6 +136,7 @@ message GetCommitLogArchiveStatusResponse {
 }
 
 message PreparePitrRestoreRequest {
+  // MedusaRestoreJob.spec.targetTimestamp, unchanged: RFC3339 with a zone, or Unix epoch seconds.
   string targetTimestamp = 1;
   // Cassandra DC name of MedusaRestoreJob.spec.cassandraDatacenter.
   // Medusa scopes the base-backup check to this DC.
@@ -145,5 +146,6 @@ message PreparePitrRestoreRequest {
 message PreparePitrRestoreResponse {
   StatusType          status = 1;
   map<string, string> nodeBaseBackups = 2;
-  double              targetTimestamp = 3;
+  // The request's targetTimestamp, unchanged.
+  string              targetTimestamp = 3;
 }

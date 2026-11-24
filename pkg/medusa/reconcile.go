@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"maps"
 	reflect "reflect"
+	"strconv"
 	"text/template"
 
 	"github.com/adutra/goalesce"
+	"github.com/k8ssandra/cass-operator/pkg/httphelper"
 	cassimages "github.com/k8ssandra/cass-operator/pkg/images"
+	"github.com/k8ssandra/cass-operator/pkg/reconciliation"
 	k8ss "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	api "github.com/k8ssandra/k8ssandra-operator/apis/medusa/v1alpha1"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/images"
@@ -19,10 +22,11 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/cassandra"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 )
 
 const (
-	DefaultMedusaPort            = 50051
+	DefaultMedusaPort            = api.DefaultGrpcPort
 	DefaultProbeInitialDelay     = 10
 	DefaultProbeTimeout          = 1
 	DefaultProbePeriod           = 10
@@ -48,6 +52,47 @@ const (
 	// Medusa arms commit log archiving at pod start only, so a change to the hash rolls the pods.
 	// It is absent when spec.medusa.pitr is nil, so clusters without PITR see no pod template change.
 	MedusaPitrHashAnnotation = "k8ssandra.io/medusa-pitr-hash"
+
+	// DefaultPitrSpoolDir mirrors Medusa's [pitr] commitlog_spool_dir default.
+	// A change to that default in Medusa must be mirrored here.
+	DefaultPitrSpoolDir = "/var/lib/cassandra/commitlog_spool_dir"
+
+	// pitrPreStopScript is the preStop hook of the medusa container when pitr is enabled.
+	//
+	// It first waits for the management API port to close, and only then for the spool to be empty.
+	// Cassandra's drain archives the last commit log segment while the port is still open, so checking
+	// the spool first could see it empty before that segment arrives.
+	//
+	// Only a refused connection counts as "cassandra is gone". Any other error means "still up", because
+	// waiting too long is the safe failure.
+	//
+	// Only regular files count in the spool, as in Medusa's archiver, so a stray directory or symlink
+	// cannot hold the hook for the whole grace period.
+	pitrPreStopScript = `import os, socket, sys, time
+port, spool = int(sys.argv[1]), sys.argv[2]
+def cassandra_up():
+    try:
+        socket.create_connection(("127.0.0.1", port), timeout=1).close()
+        return True
+    except ConnectionRefusedError:
+        return False
+    except OSError:
+        return True
+def spool_has_files():
+    try:
+        with os.scandir(spool) as entries:
+            return any(e.is_file(follow_symlinks=False) for e in entries)
+    except (FileNotFoundError, NotADirectoryError):
+        return False
+while cassandra_up():
+    time.sleep(1)
+while spool_has_files():
+    time.sleep(1)
+`
+
+	// defaultPitrArchiveIntervalSeconds is the archive interval assumed for the grace period when
+	// spec.medusa.pitr.archiveIntervalSeconds is unset.
+	defaultPitrArchiveIntervalSeconds = 60
 )
 
 func CreateMedusaIni(kc *k8ss.K8ssandraCluster, dcConfig *cassandra.DatacenterConfig) string {
@@ -132,6 +177,14 @@ func CreateMedusaIni(kc *k8ss.K8ssandraCluster, dcConfig *cassandra.DatacenterCo
     tls_cert = /etc/certificates/grpc-server-certs/tls.crt
     tls_key = /etc/certificates/grpc-server-certs/tls.key
 	{{- end }}
+
+    [monitoring]
+    prometheus_port = {{ .Spec.Medusa.ServiceProperties.MetricsPortOrDefault }}
+    {{- if .Spec.Medusa.ServiceProperties.MetricsTLSEnabled }}
+    prometheus_tls_cert = /etc/certificates/grpc-server-certs/tls.crt
+    prometheus_tls_key = /etc/certificates/grpc-server-certs/tls.key
+    prometheus_ca_cert = /etc/certificates/grpc-server-certs/ca.crt
+    {{- end }}
     {{- if and .Spec.Medusa.Pitr .Spec.Medusa.Pitr.Enabled }}
 
     [pitr]
@@ -245,6 +298,26 @@ func UpdateMedusaInitContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 		dcConfig.PodTemplateSpec.Annotations = annotations
 	}
 
+	if medusaSpec.Pitr != nil && medusaSpec.Pitr.Enabled {
+		// The preStop hook of the medusa container runs against the pod's grace period.
+		// cass-operator's default (reconciliation.DefaultTerminationGracePeriodSeconds) covers the
+		// drain and the exit of the cassandra container. The hook then waits up to one archive
+		// interval for the next archiver tick, and the upload itself needs about one more interval in
+		// the worst case. Hence 120 + 2 × interval. A larger value already on the pod template is
+		// kept, so this never lowers a grace period the user chose. When pitr is nil or disabled the
+		// field is not touched: it stays nil and cass-operator applies its default, so pod templates
+		// without pitr do not change.
+		interval := int64(defaultPitrArchiveIntervalSeconds)
+		if medusaSpec.Pitr.ArchiveIntervalSeconds != nil {
+			interval = int64(*medusaSpec.Pitr.ArchiveIntervalSeconds)
+		}
+		want := reconciliation.DefaultTerminationGracePeriodSeconds + 2*interval
+		current := dcConfig.PodTemplateSpec.Spec.TerminationGracePeriodSeconds
+		if current == nil || *current < want {
+			dcConfig.PodTemplateSpec.Spec.TerminationGracePeriodSeconds = ptr.To(want)
+		}
+	}
+
 	if !found {
 		logger.Info("Couldn't find medusa-restore init container")
 		// medusa-restore init container doesn't exist, we need to add it
@@ -274,6 +347,25 @@ func medusaInitContainerResources(medusaSpec *api.MedusaClusterTemplate) corev1.
 		},
 		Limits: corev1.ResourceList{
 			corev1.ResourceMemory: resource.MustParse(InitContainerMemLimit),
+		},
+	}
+}
+
+// pitrPreStopLifecycle returns the preStop hook of the medusa container, or nil when pitr is nil or disabled.
+func pitrPreStopLifecycle(dcConfig *cassandra.DatacenterConfig, pitr *api.PitrConfig) *corev1.Lifecycle {
+	if pitr == nil || !pitr.Enabled {
+		return nil
+	}
+	port := httphelper.GetMgmtApiPort(dcConfig.PodTemplateSpec.Spec.Containers)
+	spool := pitr.SpoolDir
+	if spool == "" {
+		spool = DefaultPitrSpoolDir
+	}
+	return &corev1.Lifecycle{
+		PreStop: &corev1.LifecycleHandler{
+			Exec: &corev1.ExecAction{
+				Command: []string{"python3", "-c", pitrPreStopScript, strconv.Itoa(port), spool},
+			},
 		},
 	}
 }
@@ -310,6 +402,11 @@ func CreateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 			ContainerPort: int32(grpcPort),
 			Protocol:      "TCP",
 		},
+		{
+			Name:          "metrics",
+			ContainerPort: int32(medusaSpec.ServiceProperties.MetricsPortOrDefault()),
+			Protocol:      "TCP",
+		},
 	}
 
 	readinessProbe, err := generateMedusaProbe(medusaSpec.ReadinessProbe, grpcPort, medusaSpec.ServiceProperties.Encryption)
@@ -323,6 +420,7 @@ func CreateMedusaMainContainer(dcConfig *cassandra.DatacenterConfig, medusaSpec 
 
 	medusaContainer.ReadinessProbe = readinessProbe
 	medusaContainer.LivenessProbe = livenessProbe
+	medusaContainer.Lifecycle = pitrPreStopLifecycle(dcConfig, medusaSpec.Pitr)
 	medusaContainer.VolumeMounts = medusaVolumeMounts(dcConfig, medusaSpec, k8cName)
 	medusaContainer.Resources = medusaMainContainerResources(medusaSpec)
 	return medusaContainer, nil
