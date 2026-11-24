@@ -154,6 +154,10 @@ func medusaTemplate(configObjectReference *corev1.ObjectReference) *medusaapi.Me
 func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
 	require := require.New(t)
 
+	// dc2 overrides its Cassandra datacenter name, so that the purge schedule must reference it by its object name.
+	dc2Template := dcTemplate("dc2", f.DataPlaneContexts[1])
+	dc2Template.DatacenterName = "real-dc2"
+
 	kc := &api.K8ssandraCluster{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
@@ -166,7 +170,7 @@ func createMultiDcClusterWithMedusa(t *testing.T, ctx context.Context, f *framew
 				},
 				Datacenters: []api.CassandraDatacenterTemplate{
 					dcTemplate("dc1", f.DataPlaneContexts[0]),
-					dcTemplate("dc2", f.DataPlaneContexts[1]),
+					dc2Template,
 				},
 			},
 			Medusa: medusaTemplateWithoutConfigRef(),
@@ -734,6 +738,8 @@ func checkPurgeSchedule(t *testing.T, ctx context.Context, namespace string, kc 
 		require.NoError(t, f.Get(ctx, purgeScheduleKey, purgeSchedule))
 		require.Equal(t, purgeSchedule.Spec.OperationType, string(medusaapi.OperationTypePurge))
 		require.Equal(t, purgeSchedule.Spec.CronSchedule, "0 0 * * *")
+		// The MedusaBackupSchedule controller looks the CassandraDatacenter up by its object name.
+		require.Equal(c, dc.Name, purgeSchedule.Spec.BackupSpec.CassandraDatacenter)
 	}, timeout, interval, "CassandraDatacenter should be deleted")
 }
 

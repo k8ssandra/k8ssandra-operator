@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -223,10 +224,12 @@ func TestPurgeScheduler(t *testing.T) {
 		Namespace: purgeSchedule.Namespace,
 	}
 
+	recorder := events.NewFakeRecorder(10)
 	r := &MedusaBackupScheduleReconciler{
-		Client: fakeClient,
-		Scheme: scheme.Scheme,
-		Clock:  fClock,
+		Client:   fakeClient,
+		Scheme:   scheme.Scheme,
+		Clock:    fClock,
+		Recorder: recorder,
 	}
 
 	res, err := r.Reconcile(context.TODO(), reconcile.Request{NamespacedName: nsName})
@@ -269,6 +272,10 @@ func TestPurgeScheduler(t *testing.T) {
 	err = fakeClient.List(context.TODO(), &purgeTasks)
 	require.NoError(err)
 	require.Equal(1, len(purgeTasks.Items))
+
+	// The postponement must be surfaced as an event
+	require.Len(recorder.Events, 1)
+	require.Contains(<-recorder.Events, "ExecutionPostponed")
 
 	// Mark the first one as finished and try again
 	backup.Status.FinishTime = metav1.NewTime(fClock.currentTime)
