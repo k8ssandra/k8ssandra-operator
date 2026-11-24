@@ -48,6 +48,7 @@ var (
 	ErrNoStoragePrefix          = fmt.Errorf("medusa storage prefix must be set when a medusaConfigurationRef is used")
 	ErrNoStorageProvider        = fmt.Errorf("medusa storage provider must be set when no medusaConfigurationRef is used")
 	ErrNoBucketName             = fmt.Errorf("medusa bucket name must be set when no medusaConfigurationRef is used")
+	ErrMedusaMetricsTLS         = fmt.Errorf("medusa serviceProperties.metricsTLS requires serviceProperties.encryption with serverSecretName and clientSecretName")
 	ErrNoReaperStorageConfig    = fmt.Errorf("reaper StorageConfig not set")
 	ErrNoReaperAccessMode       = fmt.Errorf("reaper StorageConfig.AccessModes not set")
 	ErrNoReaperResourceRequests = fmt.Errorf("reaper StorageConfig.Resources.Requests not set")
@@ -304,10 +305,24 @@ func ValidateMedusa(r *K8ssandraCluster) error {
 	if r.Spec.Medusa == nil {
 		return nil
 	}
+	if err := validateMedusaMetrics(r.Spec.Medusa.ServiceProperties); err != nil {
+		return err
+	}
 	if r.Spec.Medusa.MedusaConfigurationRef.Name != "" {
 		return validateMedusaWithConfigRef(r.Spec.Medusa)
 	}
 	return validateMedusaWithoutConfigRef(r.Spec.Medusa)
+}
+
+func validateMedusaMetrics(service medusaapi.Service) error {
+	if service.MetricsTLS && !service.MetricsTLSEnabled() {
+		return ErrMedusaMetricsTLS
+	}
+	port := service.MetricsPortOrDefault()
+	if port == service.GrpcPortOrDefault() {
+		return fmt.Errorf("medusa serviceProperties.metricsPort %d conflicts with the Medusa gRPC port", port)
+	}
+	return nil
 }
 
 // validateMedusaWithConfigRef validates Medusa configuration when a MedusaConfigurationRef is provided.
