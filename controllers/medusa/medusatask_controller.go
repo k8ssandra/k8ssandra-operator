@@ -194,7 +194,7 @@ func taskConcurrency(task *medusav1alpha1.MedusaTask, logger logr.Logger) medusa
 }
 
 // podBatches splits the pods into batches that run one after another. The pods within a batch run at the same time.
-// Racks are ordered as in the CassandraDatacenter spec; pods whose rack isn't in the spec go last, one batch per rack.
+// Racks run in the order of the CassandraDatacenter spec.
 func podBatches(pods []corev1.Pod, cassdc *cassdcapi.CassandraDatacenter, concurrency medusa.TaskConcurrency) [][]corev1.Pod {
 	switch concurrency {
 	case medusa.TaskConcurrencyPod:
@@ -204,25 +204,16 @@ func podBatches(pods []corev1.Pod, cassdc *cassdcapi.CassandraDatacenter, concur
 		}
 		return batches
 	case medusa.TaskConcurrencyRack:
-		byRack := map[string][]corev1.Pod{}
-		var unknownRacks []string
-		for _, pod := range pods {
-			rack := pod.Labels[cassdcapi.RackLabel]
-			if _, found := byRack[rack]; !found {
-				unknownRacks = append(unknownRacks, rack)
-			}
-			byRack[rack] = append(byRack[rack], pod)
-		}
-		batches := make([][]corev1.Pod, 0, len(byRack))
+		var batches [][]corev1.Pod
 		for _, rack := range cassdc.GetRacks() {
 			label := cassdcapi.CleanLabelValue(rack.Name)
-			if rackPods, found := byRack[label]; found {
-				batches = append(batches, rackPods)
-				delete(byRack, label)
+			var rackPods []corev1.Pod
+			for _, pod := range pods {
+				if pod.Labels[cassdcapi.RackLabel] == label {
+					rackPods = append(rackPods, pod)
+				}
 			}
-		}
-		for _, rack := range unknownRacks {
-			if rackPods, found := byRack[rack]; found {
+			if len(rackPods) > 0 {
 				batches = append(batches, rackPods)
 			}
 		}

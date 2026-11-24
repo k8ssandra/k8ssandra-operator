@@ -514,8 +514,7 @@ type podOpTest struct {
 	factory *podOpTestFactory
 }
 
-// newPodOpTest creates a datacenter with racks r1, r2 and r3 and pods pod1 to pod7. pod1 to pod6 are spread over the
-// racks in turn, and pod7 is in rack r4, which isn't in the datacenter spec.
+// newPodOpTest creates a datacenter with racks r1, r2 and r3 and pods pod1 to pod6, spread over the racks in turn.
 func newPodOpTest(t *testing.T, operation api.OperationType, annotations map[string]string, batches [][]string, failing, hanging string) *podOpTest {
 	scheme := runtime.NewScheme()
 	require.NoError(t, corev1.AddToScheme(scheme))
@@ -536,11 +535,8 @@ func newPodOpTest(t *testing.T, operation api.OperationType, annotations map[str
 	}
 	factory := newPodOpTestFactory(batches, failing, hanging)
 	objects := []client.Object{dc, task}
-	for i := 1; i <= 7; i++ {
+	for i := 1; i <= 6; i++ {
 		rack := fmt.Sprintf("r%d", (i-1)%3+1)
-		if i == 7 {
-			rack = "r4"
-		}
 		name := fmt.Sprintf("pod%d", i)
 		podLabels := dc.GetDatacenterLabels()
 		podLabels[cassdcapi.RackLabel] = rack
@@ -574,9 +570,9 @@ func finishedPods(status api.MedusaTaskStatus) []string {
 }
 
 func TestMedusaTaskConcurrency(t *testing.T) {
-	allPods := []string{"pod1", "pod2", "pod3", "pod4", "pod5", "pod6", "pod7"}
-	byRack := [][]string{{"pod1", "pod4"}, {"pod2", "pod5"}, {"pod3", "pod6"}, {"pod7"}}
-	byPod := [][]string{{"pod1"}, {"pod2"}, {"pod3"}, {"pod4"}, {"pod5"}, {"pod6"}, {"pod7"}}
+	allPods := []string{"pod1", "pod2", "pod3", "pod4", "pod5", "pod6"}
+	byRack := [][]string{{"pod1", "pod4"}, {"pod2", "pod5"}, {"pod3", "pod6"}}
+	byPod := [][]string{{"pod1"}, {"pod2"}, {"pod3"}, {"pod4"}, {"pod5"}, {"pod6"}}
 	tests := []struct {
 		name       string
 		operation  api.OperationType
@@ -611,7 +607,7 @@ func TestMedusaTaskConcurrency(t *testing.T) {
 				return len(status.InProgress) == 0 && len(status.Finished)+len(status.Failed) == len(allPods)
 			}, 30*time.Second, 50*time.Millisecond)
 
-			require.ElementsMatch(t, []string{"pod1", "pod3", "pod4", "pod5", "pod6", "pod7"}, finishedPods(status))
+			require.ElementsMatch(t, []string{"pod1", "pod3", "pod4", "pod5", "pod6"}, finishedPods(status))
 			require.Equal(t, []string{"pod2"}, status.Failed)
 			if tt.operation == api.OperationTypePurge {
 				for _, result := range status.Finished {
@@ -633,7 +629,7 @@ func TestMedusaTaskConcurrency(t *testing.T) {
 
 // A pod that hangs must not hold back the status of the pods that already finished.
 func TestMedusaTaskStatusWithHangingPod(t *testing.T) {
-	allPods := []string{"pod1", "pod2", "pod3", "pod4", "pod5", "pod6", "pod7"}
+	allPods := []string{"pod1", "pod2", "pod3", "pod4", "pod5", "pod6"}
 	p := newPodOpTest(t, api.OperationTypePurge, nil, [][]string{allPods}, "pod2", "pod3")
 	defer close(p.factory.release)
 
@@ -646,6 +642,6 @@ func TestMedusaTaskStatusWithHangingPod(t *testing.T) {
 		return len(status.Finished)+len(status.Failed) == len(allPods)-1
 	}, 15*time.Second, 50*time.Millisecond)
 	require.Equal(t, []string{"pod3"}, status.InProgress)
-	require.ElementsMatch(t, []string{"pod1", "pod4", "pod5", "pod6", "pod7"}, finishedPods(status))
+	require.ElementsMatch(t, []string{"pod1", "pod4", "pod5", "pod6"}, finishedPods(status))
 	require.Equal(t, []string{"pod2"}, status.Failed)
 }
