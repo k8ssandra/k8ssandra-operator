@@ -24,6 +24,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [FEATURE] [#1859](https://github.com/k8ssandra/k8ssandra-operator/issues/1859) Enable Medusa's Prometheus metrics endpoint and scrape it with the Vector agent, tagged with `container="medusa"`. New `serviceProperties.metricsPort` and `serviceProperties.metricsTLS` (mutual TLS with the gRPC certificates)
 * [ENHANCEMENT] [#1831](https://github.com/k8ssandra/k8ssandra-operator/issues/1831) Add PITR RPCs to the Medusa client
 * [ENHANCEMENT] [#1834](https://github.com/k8ssandra/k8ssandra-operator/issues/1834) Add `TerminalError`, split `GetHostMap` and add `GetPitrHostMap` for PITR restores.
+* [ENHANCEMENT] [#1883](https://github.com/k8ssandra/k8ssandra-operator/issues/1883) Run Medusa purge and prepare_restore tasks on all Cassandra pods in parallel. Set the `medusa.k8ssandra.io/task-concurrency` annotation to `rack` or `pod` to run on one rack or one pod at a time
 * [BUGFIX] [#1872](https://github.com/k8ssandra/k8ssandra-operator/issues/1872) Don't re-run finished MedusaRestoreJobs, which restarted or started the datacenter on every operator restart. User secrets are now refreshed before the restore is marked finished
 * [BUGFIX] [#1873](https://github.com/k8ssandra/k8ssandra-operator/issues/1873) Reject MedusaRestoreJob spec changes once the restore has started
 * [BUGFIX] [#967](https://github.com/k8ssandra/k8ssandra-operator/issues/967) Fix Medusa gRPC client address formatting for IPv6 pod IPs
