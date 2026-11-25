@@ -92,8 +92,9 @@ func setupMedusaBackupTestEnv(t *testing.T, ctx context.Context) *testutils.Mult
 			Scheme:           scheme.Scheme,
 			ClientFactory:    medusaClientFactory,
 			ImageRegistry:    getTestImageRegistry(),
-			// Long enough for lateBackupName to be found, short enough for missingBackupName to fail quickly.
-			BackupNotFoundGracePeriod: time.Second,
+			// Long enough for lateBackupName to be found, short enough for missingBackupName to fail within the
+			// test timeout. Status.StartTime is stored with second precision, so up to a second of it is lost.
+			BackupNotFoundGracePeriod: 3 * time.Second,
 		}).SetupWithManager(dataPlaneMgr); err != nil {
 			return err
 		}
