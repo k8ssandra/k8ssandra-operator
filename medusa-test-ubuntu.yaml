@@ -1,0 +1,13 @@
+# Blank Ubuntu pod in the Medusa test namespace. It sleeps so you can exec into it.
+# Apply with: kubectl apply -f medusa-test-ubuntu.yaml
+# Open a shell: kubectl exec -it -n k8ssandra-operator ubuntu -- bash
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ubuntu
+  namespace: k8ssandra-operator
+spec:
+  containers:
+    - name: ubuntu
+      image: ubuntu:latest
+      command: ["sleep", "infinity"]

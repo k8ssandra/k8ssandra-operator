@@ -1,0 +1,142 @@
+# Single-node Cassandra 4.1.7 cluster with Medusa enabled (no PITR).
+# Needs k8ssandra-operator and cass-operator running in the k8ssandra-operator namespace.
+# Apply with: kubectl apply -f medusa-test-cluster.yaml
+#
+# Silo is an S3-compatible store (MinIO fork). Medusa uses it as backup storage.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: silo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: silo
+  name: silo
+  namespace: silo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: silo
+  template:
+    metadata:
+      labels:
+        app: silo
+    spec:
+      containers:
+      - name: silo
+        image: docker.io/pgsty/silo:latest
+        command:
+        - /bin/bash
+        - -c
+        args:
+        - silo server /data --console-address :9090
+        env:
+        - name: MINIO_ROOT_USER
+          value: siloadmin
+        - name: MINIO_ROOT_PASSWORD
+          value: siloadmin
+        volumeMounts:
+        - mountPath: /data
+          name: localvolume
+      volumes:
+      - name: localvolume
+        emptyDir:
+          sizeLimit: 500Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: silo-service
+  namespace: silo
+spec:
+  selector:
+    app: silo
+  ports:
+    - protocol: TCP
+      name: api
+      port: 9000
+      targetPort: 9000
+    - protocol: TCP
+      name: admin-console
+      port: 9090
+      targetPort: 9090
+---
+# Creates the bucket and the k8ssandra user in Silo. It retries until Silo is up.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: setup-silo
+  namespace: k8ssandra-operator
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: setup-silo-pod
+          image: pgsty/mc
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              mc alias set k8s-silo http://silo-service.silo.svc.cluster.local:9000 siloadmin siloadmin
+              mc mb k8s-silo/k8ssandra-medusa
+              mc admin user add k8s-silo k8ssandra k8ssandra
+              mc admin policy attach k8s-silo readwrite --user k8ssandra
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: medusa-bucket-key
+  namespace: k8ssandra-operator
+type: Opaque
+stringData:
+  # Note that this currently has to be set to credentials!
+  credentials: |-
+    [default]
+    aws_access_key_id = k8ssandra
+    aws_secret_access_key = k8ssandra
+---
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: test
+  namespace: k8ssandra-operator
+spec:
+  cassandra:
+    clusterName: "Medusa Test Cluster"
+    serverVersion: 4.1.7
+    datacenters:
+      - metadata:
+          name: dc1
+        size: 1
+        storageConfig:
+          cassandraDataVolumeClaimSpec:
+            storageClassName: standard
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 1Gi
+        config:
+          jvmOptions:
+            heapSize: 512Mi
+  medusa:
+    containerImage:
+      registry: docker.io
+      repository: library
+      name: pitr
+      tag: latest
+      pullPolicy: IfNotPresent
+    storageProperties:
+      storageProvider: s3_compatible
+      bucketName: k8ssandra-medusa
+      prefix: test
+      storageSecretRef:
+        name: medusa-bucket-key
+      host: silo-service.silo.svc.cluster.local
+      port: 9000
+      secure: false
+    serviceProperties:
+      grpcPort: 55055
