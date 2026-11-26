@@ -1,0 +1,43 @@
+apiVersion: k8ssandra.io/v1alpha1
+kind: K8ssandraCluster
+metadata:
+  name: test
+  annotations:
+    # The out-of-place target is created in step 8. A single-plane run uses the source context.
+    e2e.k8ssandra.io/pitr-target-context: kind-k8ssandra-1
+spec:
+  medusa:
+    # The first backup must be taken before PITR is enabled in step 1.
+    purgeBackups: false
+    storageProperties:
+      storageProvider: s3_compatible
+      bucketName: k8ssandra-medusa
+      prefix: pitr-e2e
+      storageSecretRef:
+        name: medusa-bucket-key
+      host: silo-service
+      port: 9000
+      secure: false
+  cassandra:
+    serverVersion: 4.1.8
+    datacenters:
+      - metadata:
+          name: dc1
+        k8sContext: kind-k8ssandra-0
+        size: 2
+        racks:
+          - name: rack1
+        storageConfig:
+          cassandraDataVolumeClaimSpec:
+            storageClassName: standard
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 5Gi
+        config:
+          cassandraYaml:
+            # Seal real commitlog segments with a small workload.
+            commitlog_segment_size: 1MiB
+          jvmOptions:
+            heapSize: 512Mi

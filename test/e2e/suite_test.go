@@ -69,6 +69,8 @@ var (
 		medusaReady              pollingConfig
 		medusaBackupDone         pollingConfig
 		medusaRestoreDone        pollingConfig
+		medusaPitrArchive        pollingConfig
+		medusaPitrReplayFailure  pollingConfig
 		datacenterUpdating       pollingConfig
 		cassandraTaskCreated     pollingConfig
 		medusaConfigurationReady pollingConfig
@@ -285,6 +287,18 @@ func TestOperator(t *testing.T) {
 		doCassandraDatacenterCleanup: false,
 		installSilo:                  true,
 	}))
+	t.Run("CreateMedusaPitrRestore", e2eTest(ctx, &e2eTestOpts{
+		testFunc:    createMedusaPitrRestore,
+		fixture:     framework.NewTestFixture("single-dc-medusa-pitr", controlPlane),
+		installSilo: true,
+		isolateSilo: true,
+	}))
+	t.Run("CreateMedusaPitrRecovery", e2eTest(ctx, &e2eTestOpts{
+		testFunc:    createMedusaPitrRecovery,
+		fixture:     framework.NewTestFixture("single-dc-medusa-pitr", controlPlane),
+		installSilo: true,
+		isolateSilo: true,
+	}))
 	t.Run("CreateMultiDcSingleMedusaJob", e2eTest(ctx, &e2eTestOpts{
 		testFunc:                     createMultiDcSingleMedusaJob,
 		fixture:                      framework.NewTestFixture("single-dc-multi-cluster-medusa", controlPlane),
@@ -429,6 +443,9 @@ type e2eTestOpts struct {
 
 	// installSilo is used to specify if the e2e tests will require to install Silo before creating the k8c object.
 	installSilo bool
+
+	// isolateSilo installs Silo in the fixture namespace so the test can disrupt it safely.
+	isolateSilo bool
 }
 
 type e2eTestFunc func(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework)
@@ -487,8 +504,11 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) erro
 		namespaces = append(namespaces, opts.additionalNamespaces...)
 	}
 
-	if opts.installSilo {
-		namespaces = append(namespaces, framework.SiloNamespace)
+	siloNamespace := framework.SiloNamespace
+	if opts.isolateSilo {
+		siloNamespace = opts.sutNamespace
+	} else if opts.installSilo {
+		namespaces = append(namespaces, siloNamespace)
 	}
 
 	for _, namespace := range namespaces {
@@ -518,15 +538,11 @@ func beforeTest(t *testing.T, f *framework.E2eFramework, opts *e2eTestOpts) erro
 	}
 
 	if opts.installSilo {
-		if err := f.CreateNamespace("silo"); err != nil {
-			t.Logf("failed to create namespace %s", "silo")
-			return err
-		}
-		if err := f.InstallSilo(); err != nil {
+		if err := f.InstallSilo(siloNamespace); err != nil {
 			t.Log("failed to install Silo")
 			return err
 		}
-		if err := f.CreateMedusaBucket(framework.SiloNamespace); err != nil {
+		if err := f.CreateMedusaBucket(siloNamespace); err != nil {
 			t.Log("failed to create Medusa bucket")
 			return err
 		}
@@ -687,6 +703,12 @@ func applyPollingDefaults() {
 
 	polling.medusaRestoreDone.timeout = 20 * time.Minute
 	polling.medusaRestoreDone.interval = 15 * time.Second
+
+	polling.medusaPitrArchive.timeout = 2 * time.Minute
+	polling.medusaPitrArchive.interval = time.Second
+
+	polling.medusaPitrReplayFailure.timeout = 5 * time.Minute
+	polling.medusaPitrReplayFailure.interval = 2 * time.Second
 
 	polling.datacenterUpdating.timeout = 3 * time.Minute
 	polling.datacenterUpdating.interval = 1 * time.Second

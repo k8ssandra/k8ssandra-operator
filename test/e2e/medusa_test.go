@@ -81,6 +81,67 @@ func createSingleMedusaJob(t *testing.T, ctx context.Context, namespace string, 
 	}
 }
 
+func createMedusaPitrRestore(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	runMedusaPitrWorkflows(t, ctx, namespace, f, false)
+}
+
+func createMedusaPitrRecovery(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
+	runMedusaPitrWorkflows(t, ctx, namespace, f, true)
+}
+
+func runMedusaPitrWorkflows(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework, recovery bool) {
+	s := newMedusaPitrTest(ctx, namespace, f)
+	defer s.removeStorageClient(t)
+	available := make(map[int]bool)
+	run := func(number int, name string, step func(*testing.T), dependencies ...int) {
+		ran := false
+		passed := t.Run(name, func(t *testing.T) {
+			for _, dependency := range dependencies {
+				if !available[dependency] {
+					t.Skipf("skipped because step %d failed", dependency)
+				}
+			}
+			step(t)
+			ran = !t.Failed()
+		})
+		available[number] = passed && ran
+		// An expected failure is reported as a passing wrapper, but cannot
+		// provide the state that subsequent steps need.
+		if s.expectedFailure == number {
+			available[number] = false
+		}
+	}
+	afterInPlace := func(step func(*testing.T)) func(*testing.T) {
+		return func(t *testing.T) {
+			if s.inPlaceStatus.FinishTime.IsZero() {
+				t.Skip("skipped because step 6 failed")
+			}
+			step(t)
+		}
+	}
+
+	run(1, "01_W1_enable_pitr_after_backup", func(t *testing.T) { s.enable(t, !recovery) })
+	run(2, "02_config_and_pitr_base_backup", s.backupWithPitr, 1)
+	run(3, "03_archiver_uploads_and_lifecycle", s.archive, 2)
+	run(4, "04_record_target_timestamp", s.recordTarget, 3)
+	run(5, "05_insert_and_delete_after_target", s.writeAfterTarget, 4)
+
+	// Recovery has a fresh fixture and only needs the archived window and the base
+	// backup. Keeping it with W5 gives both matrix entries time for teardown.
+	if recovery {
+		run(10, "10_corrupt_segment_and_recover_from_backup", s.corruptSegment, 5)
+		run(13, "W5_disable_pitr", s.disable, 1)
+		return
+	}
+
+	run(6, "06_W2_in_place_restore_and_final_upload", s.restoreInPlace, 5)
+	run(7, "07_in_place_restore_rows", afterInPlace(s.verifyInPlace))
+	run(11, "fault_storage_unreachable", afterInPlace(s.storageUnavailable))
+	run(12, "fault_manual_pod_deletion", afterInPlace(s.deletePodDuringWrites))
+	run(8, "08_W3_out_of_place_with_pitr_unset", s.restoreOutOfPlace, 5)
+	run(9, "09_reject_target_without_pitr_base", s.rejectBeforeBase, 2)
+}
+
 func createMultiMedusaJob(t *testing.T, ctx context.Context, namespace string, f *framework.E2eFramework) {
 	require := require.New(t)
 	require.NoError(f.CreateCassandraEncryptionStoresSecret(namespace), "Failed to create the encryption secrets")

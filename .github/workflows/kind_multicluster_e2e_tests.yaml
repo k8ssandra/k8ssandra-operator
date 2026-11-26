@@ -64,6 +64,8 @@ jobs:
           - CreateMultiReaper
           - ClusterScoped/MultiDcMultiCluster
           - CreateMultiMedusaJob
+          - CreateMedusaPitrRestore
+          - CreateMedusaPitrRecovery
           - MultiDcAuthOnOff
           - MultiDcEncryptionWithReaper
           - StopAndRestartDc
@@ -122,7 +124,12 @@ jobs:
           args="$args -controlPlane '${{ env.CONTROL_PLANE }}'"
           args="$args -dataPlanes '${{ env.DATA_PLANES }}'"
           args="$args -imageTag ${{ needs.build_image.outputs.image_tag }}"
+          if [[ "${{ matrix.e2e_test }}" == CreateMedusaPitr* ]]; then
+            args="$args -medusaImageTag '${PITR_MEDUSA_IMAGE_TAG:-master}'"
+          fi
           make E2E_TEST="$e2e_test" TEST_ARGS="$args" e2e-test
+        env:
+          PITR_MEDUSA_IMAGE_TAG: ${{ vars.PITR_MEDUSA_IMAGE_TAG }}
       - name: Get artefact upload directory
         if: ${{ failure() }}
         run: |
