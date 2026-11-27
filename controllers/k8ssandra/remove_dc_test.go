@@ -14,8 +14,8 @@ import (
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	"github.com/k8ssandra/k8ssandra-operator/test/framework"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -55,7 +55,7 @@ func deleteDcWithUserKeyspacesFails(ctx context.Context, t *testing.T, f *framew
 	}
 	managementApiFactory.SetAdapter(adapter)
 
-	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: f.DataPlaneContexts[1]}
+	dc2Key := dc2ClusterKey(f, kc)
 
 	addDatacenterFinalizer(ctx, t, f, dc2Key)
 
@@ -113,7 +113,7 @@ func deleteDcWithUserKeyspacesSucceeds(ctx context.Context, t *testing.T, f *fra
 	}
 	managementApiFactory.SetAdapter(adapter)
 
-	dc2Key := framework.ClusterKey{NamespacedName: types.NamespacedName{Namespace: kc.Namespace, Name: "dc2"}, K8sContext: f.DataPlaneContexts[1]}
+	dc2Key := dc2ClusterKey(f, kc)
 
 	addDatacenterFinalizer(ctx, t, f, dc2Key)
 
@@ -146,6 +146,79 @@ func deleteDcWithUserKeyspacesSucceeds(ctx context.Context, t *testing.T, f *fra
 	f.AssertObjectDoesNotExist(ctx, t, dc2Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
 
 	assertDatacenterRemovedFromClusterStatus(ctx, t, f, kcKey, dc2Key)
+}
+
+// deleteDcAfterCassandraDatacenterRemoved removes dc2 from the spec while a user keyspace still
+// replicates to it, then deletes the dc2 CassandraDatacenter out of band. The decommission must keep
+// blocking until the keyspace no longer replicates to dc2, and then finish.
+func deleteDcAfterCassandraDatacenterRemoved(ctx context.Context, t *testing.T, f *framework.Framework, kc *api.K8ssandraCluster) {
+	require := require.New(t)
+
+	userKeyspaces := []string{"ks1"}
+	newMgmtApi := func(replicationStr map[string]string) *testutils.FakeManagementApiFacade {
+		m := testutils.NewFakeManagementApiFacade()
+		m.On(testutils.EnsureKeyspaceReplication, mock.Anything, mock.Anything).Return(nil)
+		m.On(testutils.ListKeyspaces, "").Return(userKeyspaces, nil)
+		m.On(testutils.GetSchemaVersions).Return(map[string][]string{"fake": {"test"}}, nil)
+		for _, ks := range userKeyspaces {
+			m.On(testutils.GetKeyspaceReplication, ks).Return(replicationStr, nil)
+		}
+		return m
+	}
+	setMgmtApi := func(m *testutils.FakeManagementApiFacade) {
+		managementApiFactory.SetAdapter(func(context.Context, *cassdcapi.CassandraDatacenter, client.Client, logr.Logger) (cassandra.ManagementApiFacade, error) {
+			return m, nil
+		})
+	}
+	setMgmtApi(newMgmtApi(map[string]string{"class": cassandra.NetworkTopology, "dc1": "3", "dc2": "3"}))
+
+	dc2Key := dc2ClusterKey(f, kc)
+	kcKey := utils.GetKey(kc)
+
+	require.Eventually(func() bool {
+		if err := f.Client.Get(ctx, kcKey, kc); err != nil {
+			return false
+		}
+		t.Log("remove dc2 from k8ssandraCluster spec")
+		kc.Spec.Cassandra.Datacenters = kc.Spec.Cassandra.Datacenters[:1]
+		return f.Client.Update(ctx, kc) == nil
+	}, timeout, interval, "failed to remove dc2 from K8ssandraCluster spec")
+
+	t.Log("verify that dc2 removal is blocked by the user keyspace")
+	require.Eventually(func() bool {
+		if err := f.Client.Get(ctx, kcKey, kc); err != nil {
+			return false
+		}
+		return strings.Contains(kc.Status.Error, "cannot decommission DC dc2: keyspace ks1 still has replicas on it")
+	}, timeout, interval, "expected error on dc2 removal not found")
+
+	t.Log("delete the dc2 CassandraDatacenter out of band")
+	dc := &cassdcapi.CassandraDatacenter{}
+	require.NoError(f.Get(ctx, dc2Key, dc))
+	dc.Finalizers = nil
+	require.NoError(f.Update(ctx, dc2Key, dc))
+	require.NoError(f.Delete(ctx, dc2Key, dc))
+	f.AssertObjectDoesNotExist(ctx, t, dc2Key, &cassdcapi.CassandraDatacenter{}, timeout, interval)
+
+	t.Log("verify that dc2 removal is still blocked once its CassandraDatacenter is gone")
+	require.Eventually(func() bool {
+		if err := f.Client.Get(ctx, kcKey, kc); err != nil {
+			return false
+		}
+		return strings.Contains(kc.Status.Error, "cannot decommission DC dc2: keyspace ks1 still has replicas on DC dc2, which is not part of the cluster")
+	}, timeout, interval, "expected error on dc2 removal without a CassandraDatacenter not found")
+	assertDatacenterInClusterStatus(ctx, t, f, kcKey, dc2Key)
+
+	t.Log("remove the dc2 replicas from the user keyspace")
+	setMgmtApi(newMgmtApi(map[string]string{"class": cassandra.NetworkTopology, "dc1": "3"}))
+
+	assertDatacenterRemovedFromClusterStatus(ctx, t, f, kcKey, dc2Key)
+	require.Eventually(func() bool {
+		if err := f.Client.Get(ctx, kcKey, kc); err != nil {
+			return false
+		}
+		return kc.Status.Error == "None"
+	}, timeout, interval, "unexpected error after dc2 removal")
 }
 
 func assertDecommissionAnnotationAdded(ctx context.Context, t *testing.T, f *framework.Framework, dcKey framework.ClusterKey) {
