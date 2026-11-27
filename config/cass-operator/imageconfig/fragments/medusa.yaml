@@ -3,4 +3,5 @@ images:
     registry: "docker.io"
     repository: "k8ssandra"
     name: "medusa"
-    tag: "master"
+    # Temporary CI image for PR #1904. Revert after Medusa PR #1087 is merged and its image is published.
+    tag: "b8ce7c3-tmp"
