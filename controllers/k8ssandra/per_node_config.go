@@ -80,7 +80,7 @@ func (r *K8ssandraClusterReconciler) reconcileDefaultPerNodeConfiguration(
 		// Update
 		if !k8ssandralabels.IsOwnedByK8ssandraController(actualPerNodeConfig) {
 			dcLogger.Error(errPerNodeConfigNotOwnedByK8ssandraOperator, "Failed to update per-node configuration")
-			return result.Error(err)
+			return result.Error(errPerNodeConfigNotOwnedByK8ssandraOperator)
 		} else if !annotations.CompareHashAnnotations(actualPerNodeConfig, desiredPerNodeConfig) {
 			resourceVersion := actualPerNodeConfig.GetResourceVersion()
 			desiredPerNodeConfig.DeepCopyInto(actualPerNodeConfig)
@@ -95,7 +95,7 @@ func (r *K8ssandraClusterReconciler) reconcileDefaultPerNodeConfiguration(
 		// Delete
 		if !k8ssandralabels.IsOwnedByK8ssandraController(actualPerNodeConfig) {
 			dcLogger.Error(errPerNodeConfigNotOwnedByK8ssandraOperator, "Failed to delete per-node configuration")
-			return result.Error(err)
+			return result.Error(errPerNodeConfigNotOwnedByK8ssandraOperator)
 		} else if err = remoteClient.Delete(ctx, actualPerNodeConfig); err != nil {
 			dcLogger.Error(err, "Failed to delete per-node configuration")
 			return result.Error(err)

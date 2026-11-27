@@ -322,14 +322,61 @@ func testCheckDeletion(t *testing.T, ctx context.Context, f *framework.Framework
 		require.True(c, controllerutil.ContainsFinalizer(dc, k8ssandra.K8ssandraClusterFinalizer), "CassandraDatacenter should have the finalizer")
 	}, timeout, interval, "CassandraDatacenter should be created")
 
+	// dc2 was removed from the spec, but its decommission had not completed: it is only listed in the status. It lives
+	// in another namespace, so it can only be found through its labels.
+	otherNamespace := namespace + "-other"
+	require.NoError(t, f.CreateNamespace(otherNamespace))
+	dc2Key := framework.NewClusterKey(f.DataPlaneContexts[0], otherNamespace, "dc2")
+	dc2 := &cassdcapi.CassandraDatacenter{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: otherNamespace,
+			Name:      "dc2",
+			Labels:    k8ssandralabels.CleanedUpByLabels(client.ObjectKeyFromObject(kc)),
+		},
+		Spec: cassdcapi.CassandraDatacenterSpec{
+			ClusterName:   "test-cluster",
+			ServerType:    "dse",
+			ServerVersion: "6.8.17",
+			Size:          1,
+		},
+	}
+	require.NoError(t, f.Create(ctx, dc2Key, dc2))
+
+	// Hold dc1 until dc2 is listed in the status, so that the K8ssandraCluster is still being deleted then. The status
+	// is not written by the reconciler during deletion, so the entry added below is kept.
+	const holdFinalizer = "test.k8ssandra.io/hold"
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		require.NoError(c, f.Get(ctx, dcKey, dc))
+		controllerutil.AddFinalizer(dc, holdFinalizer)
+		require.NoError(c, f.Update(ctx, dcKey, dc))
+	}, timeout, interval, "failed to add the hold finalizer to dc1")
+
 	// Delete the K8ssandraCluster
 	require.NoError(t, f.Client.Delete(ctx, kc))
+
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		require.NoError(c, f.Client.Get(ctx, client.ObjectKeyFromObject(kc), kc))
+		patch := client.MergeFrom(kc.DeepCopy())
+		kc.Status.Datacenters["dc2"] = k8ssandraapi.K8ssandraStatus{ContextName: f.DataPlaneContexts[0], DecommissionProgress: k8ssandraapi.DecommUpdatingReplication}
+		require.NoError(c, f.Client.Status().Patch(ctx, kc, patch))
+	}, timeout, interval, "failed to add dc2 to the K8ssandraCluster status")
+
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		require.NoError(c, f.Get(ctx, dcKey, dc))
+		controllerutil.RemoveFinalizer(dc, holdFinalizer)
+		require.NoError(c, f.Update(ctx, dcKey, dc))
+	}, timeout, interval, "failed to remove the hold finalizer from dc1")
 
 	// Verify CassandraDatacenter was deleted
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		err := f.Get(ctx, dcKey, dc)
 		require.True(c, errors.IsNotFound(err), "CassandraDatacenter should be deleted")
 	}, timeout, interval, "CassandraDatacenter should be deleted")
+
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		err := f.Get(ctx, dc2Key, &cassdcapi.CassandraDatacenter{})
+		require.True(c, errors.IsNotFound(err), "status-only CassandraDatacenter should be deleted")
+	}, timeout, interval, "status-only CassandraDatacenter should be deleted")
 
 	// Verify K8ssandraCluster was deleted
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
