@@ -48,6 +48,12 @@ const (
 	MedusaClientSecretNameAnnotation = "medusa.k8ssandra.io/grpc-client-secret-name"
 	MedusaGRPCPortAnnotation         = "medusa.k8ssandra.io/grpc-port"
 
+	// MedusaTaskConcurrencyAnnotation sets how many Cassandra pods a purge or prepare_restore MedusaTask runs on at the
+	// same time: TaskConcurrencyAll, TaskConcurrencyRack or TaskConcurrencyPod. It is read from the MedusaTask, copied
+	// from a MedusaBackupSchedule to the purge tasks it creates, and copied from the K8ssandraCluster to the purge
+	// schedules the operator creates.
+	MedusaTaskConcurrencyAnnotation = "medusa.k8ssandra.io/task-concurrency"
+
 	// MedusaPitrHashAnnotation is set on the Cassandra pod template to a hash of spec.medusa.pitr.
 	// Medusa arms commit log archiving at pod start only, so a change to the hash rolls the pods.
 	// It is absent when spec.medusa.pitr is nil, so clusters without PITR see no pod template change.

@@ -24,6 +24,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [FEATURE] [#1859](https://github.com/k8ssandra/k8ssandra-operator/issues/1859) Enable Medusa's Prometheus metrics endpoint and scrape it with the Vector agent, tagged with `container="medusa"`. New `serviceProperties.metricsPort` and `serviceProperties.metricsTLS` (mutual TLS with the gRPC certificates)
 * [ENHANCEMENT] [#1831](https://github.com/k8ssandra/k8ssandra-operator/issues/1831) Add PITR RPCs to the Medusa client
 * [ENHANCEMENT] [#1834](https://github.com/k8ssandra/k8ssandra-operator/issues/1834) Add `TerminalError`, split `GetHostMap` and add `GetPitrHostMap` for PITR restores.
+* [ENHANCEMENT] [#1883](https://github.com/k8ssandra/k8ssandra-operator/issues/1883) Run Medusa purge and prepare_restore tasks on all Cassandra pods in parallel. Set the `medusa.k8ssandra.io/task-concurrency` annotation to `rack` or `pod` to run on one rack or one pod at a time
 * [BUGFIX] [#1872](https://github.com/k8ssandra/k8ssandra-operator/issues/1872) Don't re-run finished MedusaRestoreJobs, which restarted or started the datacenter on every operator restart. User secrets are now refreshed before the restore is marked finished
 * [BUGFIX] [#1873](https://github.com/k8ssandra/k8ssandra-operator/issues/1873) Reject MedusaRestoreJob spec changes once the restore has started
 * [BUGFIX] [#1873](https://github.com/k8ssandra/k8ssandra-operator/issues/1873) Requeue rebuild polling after the default delay instead of 15ns
@@ -38,6 +39,7 @@ When cutting a new release, update the `unreleased` heading to the tag being gen
 * [BUGFIX] [#1873](https://github.com/k8ssandra/k8ssandra-operator/issues/1873) Apply a stop requested during a DC rebuild once the rebuild finishes
 * [BUGFIX] [#1873](https://github.com/k8ssandra/k8ssandra-operator/issues/1873) Never pick the rebuild target DC as its own source when it uses a datacenterName override
 * [BUGFIX] [#1873](https://github.com/k8ssandra/k8ssandra-operator/issues/1873) Allow deleting a K8ssandraTask whose datacenter was removed from the cluster, and run explicit DC lists in listed order
+* [BUGFIX] [#1887](https://github.com/k8ssandra/k8ssandra-operator/issues/1887) Don't fail a MedusaBackupJob pod while Medusa hasn't written its backup to the storage yet. A pod whose backup isn't found stays in progress for 5 minutes after the job started
 * [BUGFIX] [#967](https://github.com/k8ssandra/k8ssandra-operator/issues/967) Fix Medusa gRPC client address formatting for IPv6 pod IPs
 * [DOCS] []() Add PITR orchestration design doc
 * [TESTING] [#1870](https://github.com/k8ssandra/k8ssandra-operator/issues/1870) Raise the host inotify limits before creating kind clusters in CI, as Ubuntu 26.04 runners don't apply them at boot
