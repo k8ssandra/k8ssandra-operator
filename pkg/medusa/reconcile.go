@@ -7,6 +7,7 @@ import (
 	reflect "reflect"
 	"strconv"
 	"text/template"
+	"time"
 
 	"github.com/adutra/goalesce"
 	"github.com/k8ssandra/cass-operator/pkg/httphelper"
@@ -99,7 +100,48 @@ while spool_has_files():
 	// defaultPitrArchiveIntervalSeconds is the archive interval assumed for the grace period when
 	// spec.medusa.pitr.archiveIntervalSeconds is unset.
 	defaultPitrArchiveIntervalSeconds = 60
+
+	// MedusaPurgeTimeoutAnnotation overrides DefaultPurgeTimeout for purge operations. The value is a Go
+	// duration, for example "36h". It is read from the purge MedusaTask. The MedusaBackupSchedule copies it to
+	// the purge tasks it creates, and the K8ssandraCluster copies it to the purge schedules it manages.
+	MedusaPurgeTimeoutAnnotation = "medusa.k8ssandra.io/purge-timeout"
 )
+
+// PurgeTaskAnnotations are the annotations copied from a K8ssandraCluster to the purge MedusaBackupSchedules it
+// manages, and from a purge MedusaBackupSchedule to the MedusaTasks it creates.
+var PurgeTaskAnnotations = []string{MedusaTaskConcurrencyAnnotation, MedusaPurgeTimeoutAnnotation}
+
+// CopyPurgeTaskAnnotations copies the PurgeTaskAnnotations set on src to dst.
+func CopyPurgeTaskAnnotations(src, dst metav1.Object) {
+	for _, key := range PurgeTaskAnnotations {
+		if value, found := src.GetAnnotations()[key]; found {
+			annotations := dst.GetAnnotations()
+			if annotations == nil {
+				annotations = map[string]string{}
+			}
+			annotations[key] = value
+			dst.SetAnnotations(annotations)
+		}
+	}
+}
+
+// PurgeTimeout returns the timeout of a purge operation: the MedusaPurgeTimeoutAnnotation value of obj, or
+// DefaultPurgeTimeout when it is not set. An unparsable or non-positive value returns DefaultPurgeTimeout and
+// an error, so the purge still has a bound.
+func PurgeTimeout(obj metav1.Object) (time.Duration, error) {
+	value, found := obj.GetAnnotations()[MedusaPurgeTimeoutAnnotation]
+	if !found {
+		return DefaultPurgeTimeout, nil
+	}
+	timeout, err := time.ParseDuration(value)
+	if err != nil {
+		return DefaultPurgeTimeout, fmt.Errorf("invalid %s annotation value %q: %w", MedusaPurgeTimeoutAnnotation, value, err)
+	}
+	if timeout <= 0 {
+		return DefaultPurgeTimeout, fmt.Errorf("invalid %s annotation value %q: must be positive", MedusaPurgeTimeoutAnnotation, value)
+	}
+	return timeout, nil
+}
 
 func CreateMedusaIni(kc *k8ss.K8ssandraCluster, dcConfig *cassandra.DatacenterConfig) string {
 	medusaIniTemplate := `
