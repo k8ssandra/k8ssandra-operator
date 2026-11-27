@@ -36,6 +36,8 @@ const (
 	successfulBackupName = "good-backup"
 	failingBackupName    = "bad-backup"
 	missingBackupName    = "missing-backup"
+	lateBackupName       = "good-late-backup"
+	lateBackupNotFound   = 3
 	backupWithNoPods     = "backup-with-no-pods"
 	backupWithNilSummary = "backup-with-nil-summary"
 	dc1PodPrefix         = "192.168.1."
@@ -48,7 +50,8 @@ const (
 
 var (
 	alreadyReportedFailingBackup = false
-	alreadyReportedMissingBackup = false
+	// missingBackupClient is the client of the pod that never finds missingBackupName
+	missingBackupClient *fakeMedusaClient
 )
 
 func testMedusaBackupDatacenter(t *testing.T, ctx context.Context, f *framework.Framework, namespace string) {
@@ -176,9 +179,21 @@ func testMedusaBackupDatacenter(t *testing.T, ctx context.Context, f *framework.
 	backupCreated = createAndVerifyMedusaBackup(dc1Key, dc1, f, ctx, require, t, namespace, failingBackupName)
 	require.False(backupCreated, "the backup object shouldn't have been created")
 
-	// a missing backup is one that never gets to start (on one pod)
+	// a missing backup is one that never gets to start (on one pod). It fails once the grace period is over.
 	backupCreated = createAndVerifyMedusaBackup(dc1Key, dc1, f, ctx, require, t, namespace, missingBackupName)
 	require.False(backupCreated, "the backup object shouldn't have been created")
+	missingJob := &api.MedusaBackupJob{}
+	require.NoError(f.Get(ctx, framework.NewClusterKey(dc1Key.K8sContext, namespace, missingBackupName), missingJob))
+	require.Len(missingJob.Status.Failed, 1, "the pod that never found the backup should have failed")
+	require.Len(missingJob.Status.Finished, int(dc1.Spec.Size)-1)
+
+	// a late backup is not found for the first polls, until Medusa writes its start marker (#1887)
+	backupCreated = createAndVerifyMedusaBackup(dc1Key, dc1, f, ctx, require, t, namespace, lateBackupName)
+	require.True(backupCreated, "the backup object should have been created")
+	lateJob := &api.MedusaBackupJob{}
+	require.NoError(f.Get(ctx, framework.NewClusterKey(dc1Key.K8sContext, namespace, lateBackupName), lateJob))
+	require.Empty(lateJob.Status.Failed, "a backup that is found within the grace period must not fail")
+	require.Len(lateJob.Status.Finished, int(dc1.Spec.Size))
 
 	// in K8OP-294 we found out we can try to make backups on StatefulSets with no pods
 	backupCreated = createAndVerifyMedusaBackup(dc1Key, dc1, f, ctx, require, t, namespace, backupWithNoPods)
@@ -433,6 +448,8 @@ func (f *fakeMedusaClientFactory) GetRequestedBackups(dc string) map[string][]st
 type fakeMedusaClient struct {
 	RequestedBackups []string
 	DcName           string
+	// statusPolls counts the BackupStatus calls per backup name
+	statusPolls map[string]int
 }
 
 func newFakeMedusaClient(dcName string) *fakeMedusaClient {
@@ -441,8 +458,8 @@ func newFakeMedusaClient(dcName string) *fakeMedusaClient {
 	// we need to reset this state between tests
 	// doing it here is great since we make a new fake client for each test anyway
 	alreadyReportedFailingBackup = false
-	alreadyReportedMissingBackup = false
-	return &fakeMedusaClient{RequestedBackups: make([]string, 0), DcName: dcName}
+	missingBackupClient = nil
+	return &fakeMedusaClient{RequestedBackups: make([]string, 0), DcName: dcName, statusPolls: make(map[string]int)}
 }
 
 func (c *fakeMedusaClient) Clear() {
@@ -520,8 +537,15 @@ func (c *fakeMedusaClient) GetBackups(ctx context.Context) ([]*medusa.BackupSumm
 func (c *fakeMedusaClient) BackupStatus(ctx context.Context, name string) (*medusa.BackupStatusResponse, error) {
 	// return different status for differently named backups
 	// but for each not-successful backup, return not-a-success only once
+	c.statusPolls[name]++
 	var status medusa.StatusType
 	if strings.HasPrefix(name, successfulBackupName) {
+		status = medusa.StatusType_SUCCESS
+	} else if strings.HasPrefix(name, lateBackupName) {
+		if c.statusPolls[name] <= lateBackupNotFound {
+			// Medusa hasn't written the backup's start marker yet
+			return nil, fmt.Errorf("rpc error: code = NotFound desc = backup <%s> does not exist", name)
+		}
 		status = medusa.StatusType_SUCCESS
 	} else if strings.HasPrefix(name, failingBackupName) {
 		if !alreadyReportedFailingBackup {
@@ -531,13 +555,14 @@ func (c *fakeMedusaClient) BackupStatus(ctx context.Context, name string) (*medu
 			status = medusa.StatusType_SUCCESS
 		}
 	} else if strings.HasPrefix(name, missingBackupName) {
-		if !alreadyReportedMissingBackup {
-			alreadyReportedMissingBackup = true
+		if missingBackupClient == nil {
+			missingBackupClient = c
+		}
+		if missingBackupClient == c {
 			// reproducing what the gRPC client would send. sadly, it's not a proper NotFound error
 			return nil, fmt.Errorf("rpc error: code = NotFound desc = backup <%s> does not exist", name)
-		} else {
-			status = medusa.StatusType_SUCCESS
 		}
+		status = medusa.StatusType_SUCCESS
 	} else {
 		status = medusa.StatusType_IN_PROGRESS
 	}
@@ -695,6 +720,59 @@ func TestMedusaBackupJobNotRequeuedWhenDone(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, reconcile.Result{}, result)
 			}
+		})
+	}
+}
+
+// A pod whose backup Medusa doesn't know yet stays in progress during the grace period, and fails after it.
+func TestMedusaBackupJobNotFoundGracePeriod(t *testing.T) {
+	tests := []struct {
+		name         string
+		startedAgo   time.Duration
+		wantProgress []string
+		wantFailed   []string
+	}{
+		{name: "within the grace period", startedAgo: time.Minute, wantProgress: []string{"pod1"}},
+		{name: "after the grace period", startedAgo: DefaultBackupNotFoundGracePeriod + time.Minute, wantFailed: []string{"pod1"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := t.Context()
+			scheme := runtime.NewScheme()
+			require.NoError(t, corev1.AddToScheme(scheme))
+			require.NoError(t, cassdcapi.AddToScheme(scheme))
+			require.NoError(t, api.AddToScheme(scheme))
+			dc := &cassdcapi.CassandraDatacenter{ObjectMeta: metav1.ObjectMeta{Name: "dc1", Namespace: "test", UID: "dc1"}}
+			pod := &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{Name: "pod1", Namespace: dc.Namespace, Labels: dc.GetDatacenterLabels()},
+				Status:     corev1.PodStatus{PodIP: getPodIpAddress(0, dc.Name)},
+			}
+			job := &api.MedusaBackupJob{
+				ObjectMeta: metav1.ObjectMeta{Name: missingBackupName, Namespace: dc.Namespace, OwnerReferences: []metav1.OwnerReference{{APIVersion: cassdcapi.GroupVersion.String(), Kind: "CassandraDatacenter", Name: dc.Name, UID: dc.UID}}},
+				Spec:       api.MedusaBackupJobSpec{CassandraDatacenter: dc.Name},
+				Status: api.MedusaBackupJobStatus{
+					StartTime:  metav1.NewTime(time.Now().Add(-tt.startedAgo)),
+					InProgress: []string{pod.Name},
+				},
+			}
+			c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(dc, pod, job).WithStatusSubresource(&api.MedusaBackupJob{}).Build()
+			r := &MedusaBackupJobReconciler{
+				Client:           c,
+				Scheme:           scheme,
+				ReconcilerConfig: &config.ReconcilerConfig{DefaultDelay: time.Second},
+				ClientFactory:    NewMedusaClientFactory(),
+			}
+			req := reconcile.Request{NamespacedName: client.ObjectKeyFromObject(job)}
+
+			result, err := r.Reconcile(ctx, req)
+			require.NoError(t, err)
+			require.Equal(t, reconcile.Result{RequeueAfter: time.Second}, result)
+
+			updated := &api.MedusaBackupJob{}
+			require.NoError(t, c.Get(ctx, req.NamespacedName, updated))
+			require.ElementsMatch(t, tt.wantProgress, updated.Status.InProgress)
+			require.ElementsMatch(t, tt.wantFailed, updated.Status.Failed)
+			require.Empty(t, updated.Status.Finished)
 		})
 	}
 }
