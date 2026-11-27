@@ -81,6 +81,8 @@ jobs:
           - CreateSingleDatacenterClusterMgmtAuth
           - CreateSingleReaper
           - CreateSingleMedusaJob
+          - CreateMedusaPitrRestore
+          - CreateMedusaPitrRecovery
           - CreateMultiDcSingleMedusaJob
           - CreateSingleDseMedusaJob
           - ConfigControllerRestarts

@@ -64,6 +64,8 @@ jobs:
           - CreateMultiReaper
           - ClusterScoped/MultiDcMultiCluster
           - CreateMultiMedusaJob
+          - CreateMedusaPitrRestore
+          - CreateMedusaPitrRecovery
           - MultiDcAuthOnOff
           - MultiDcEncryptionWithReaper
           - StopAndRestartDc

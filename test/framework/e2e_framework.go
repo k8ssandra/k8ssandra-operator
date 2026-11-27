@@ -2,6 +2,7 @@ package framework
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -405,19 +406,24 @@ func (f *E2eFramework) CreateCassandraEncryptionStoresSecret(namespace string) e
 	return nil
 }
 
-func (f *E2eFramework) InstallSilo() error {
+// InstallSilo provisions Silo in an existing namespace on each data plane.
+func (f *E2eFramework) InstallSilo(namespace string) error {
 	path := filepath.Join("..", "testdata", "fixtures", "silo.yaml")
+	manifest, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	manifest = bytes.ReplaceAll(manifest, []byte("\n  namespace: "+SiloNamespace+"\n"), []byte("\n  namespace: "+namespace+"\n"))
 	for _, k8sContext := range f.DataPlaneContexts {
-		options := kubectl.Options{Namespace: SiloNamespace, Context: k8sContext}
-		f.logger.Info("Install Silo", "Namespace", SiloNamespace, "Context", k8sContext)
-		if err := kubectl.Apply(options, path); err != nil {
+		options := kubectl.Options{Namespace: namespace, Context: k8sContext}
+		f.logger.Info("Install Silo", "Namespace", namespace, "Context", k8sContext)
+		if err := kubectl.Apply(options, bytes.NewBuffer(manifest)); err != nil {
 			return err
 		}
 
 		// Wait for the silo rollout to complete
-		opts := kubectl.Options{Namespace: SiloNamespace, Context: k8sContext}
 		err := wait.PollUntilContextTimeout(context.Background(), 5*time.Second, 5*time.Minute, true, func(ctx context.Context) (bool, error) {
-			if err := kubectl.RolloutStatus(ctx, opts, "Deployment", "silo"); err != nil {
+			if err := kubectl.RolloutStatus(ctx, options, "Deployment", "silo"); err != nil {
 				f.logger.Info("Waiting for silo rollout to complete: %s", err)
 				return false, nil
 			}
@@ -433,11 +439,16 @@ func (f *E2eFramework) InstallSilo() error {
 
 func (f *E2eFramework) CreateMedusaBucket(namespace string) error {
 	path := filepath.Join("..", "testdata", "fixtures", "silo-create-bucket.yaml")
+	manifest, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	manifest = bytes.ReplaceAll(manifest, []byte("silo-service."+SiloNamespace+".svc.cluster.local"), []byte("silo-service."+namespace+".svc.cluster.local"))
 
 	for _, k8sContext := range f.DataPlaneContexts {
 		options := kubectl.Options{Namespace: namespace, Context: k8sContext}
 		f.logger.Info("Create Medusa bucket", "Namespace", namespace, "Context", k8sContext)
-		if err := kubectl.Apply(options, path); err != nil {
+		if err := kubectl.Apply(options, bytes.NewBuffer(manifest)); err != nil {
 			return err
 		}
 		// Wait for job to succeed
