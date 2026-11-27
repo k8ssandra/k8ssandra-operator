@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/k8ssandra/k8ssandra-operator/pkg/annotations"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/leancache"
 	promapi "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -56,16 +57,21 @@ func (cfg PrometheusResourcer) UpdateResources(
 			if err := controllerutil.SetControllerReference(owner, desiredSM, client.Scheme()); err != nil {
 				cfg.Logger.Error(err, "could not set controller reference for ServiceMonitor", "owner", owner)
 				return err
-			} else if err = client.Create(ctx, desiredSM); err != nil {
-				if k8serrors.IsAlreadyExists(err) {
-					// the read from the local cache didn't catch that the resource was created already; simply requeue until the cache is up-to-date
-					return nil
-				} else {
-					cfg.Logger.Error(err, "could not create ServiceMonitor resource", "resource", desiredSM, "owner", owner)
-					return err
-				}
+			} else if err = client.Create(ctx, desiredSM); err == nil {
+				return nil
+			} else if !k8serrors.IsAlreadyExists(err) {
+				cfg.Logger.Error(err, "could not create ServiceMonitor resource", "resource", desiredSM, "owner", owner)
+				return err
 			}
-			return nil
+			// Either the cache is behind, or the ServiceMonitor was created by an older version without
+			// the labels the cache selects on. Read it live so the update below adds the labels.
+			if err := leancache.APIReader(client).Get(ctx, types.NamespacedName{Name: desiredSM.Name, Namespace: desiredSM.Namespace}, actualSM); err != nil {
+				if k8serrors.IsNotFound(err) {
+					return nil
+				}
+				cfg.Logger.Error(err, "could not get ServiceMonitor resource")
+				return err
+			}
 		} else {
 			cfg.Logger.Error(err, "could not get ServiceMonitor resource")
 			return err

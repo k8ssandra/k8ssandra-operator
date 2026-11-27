@@ -337,3 +337,18 @@ func testCheckDeletion(t *testing.T, ctx context.Context, f *framework.Framework
 		require.True(c, errors.IsNotFound(err), "K8ssandraCluster should be deleted")
 	}, timeout, interval, "K8ssandraCluster should be deleted")
 }
+
+func TestK8ssandraClusterReconciler_DeleteLegacyConfigMaps(t *testing.T) {
+	kc := &k8ssandraapi.K8ssandraCluster{ObjectMeta: metav1.ObjectMeta{Namespace: "watched", Name: "cluster"}}
+	legacy := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "watched", Name: "legacy",
+		Labels: k8ssandralabels.CleanedUpByLabels(client.ObjectKeyFromObject(kc))}}
+	outside := legacy.DeepCopy()
+	outside.Namespace = "outside"
+	unrelated := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "watched", Name: "unrelated"}}
+	cli := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(legacy, outside, unrelated).Build()
+	r := &K8ssandraClusterReconciler{}
+	require.False(t, r.deleteK8ssandraConfigMaps(t.Context(), kc, k8ssandraapi.CassandraDatacenterTemplate{}, "watched", cli, testlogr.NewTestLogger(t)))
+	require.True(t, errors.IsNotFound(cli.Get(t.Context(), client.ObjectKeyFromObject(legacy), &corev1.ConfigMap{})))
+	require.NoError(t, cli.Get(t.Context(), client.ObjectKeyFromObject(outside), &corev1.ConfigMap{}))
+	require.NoError(t, cli.Get(t.Context(), client.ObjectKeyFromObject(unrelated), &corev1.ConfigMap{}))
+}

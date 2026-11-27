@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/encryption"
+	"github.com/k8ssandra/k8ssandra-operator/pkg/leancache"
 	"github.com/k8ssandra/k8ssandra-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -254,7 +255,7 @@ func ReadEncryptionStorePassword(ctx context.Context, namespace string, remoteCl
 
 	passwordSecretObj := &corev1.Secret{}
 	secretObjKey := types.NamespacedName{Namespace: namespace, Name: secretName}
-	if err := remoteClient.Get(ctx, secretObjKey, passwordSecretObj); err != nil {
+	if err := leancache.Read(ctx, remoteClient, secretObjKey, passwordSecretObj); err != nil {
 		return "", err
 	}
 	password := string(passwordSecretObj.Data[secretKey])
