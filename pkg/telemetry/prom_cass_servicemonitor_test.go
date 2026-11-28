@@ -6,6 +6,7 @@ import (
 	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/require"
 
+	cassdcapi "github.com/k8ssandra/cass-operator/apis/cassandra/v1beta1"
 	k8ssandraapi "github.com/k8ssandra/k8ssandra-operator/apis/k8ssandra/v1alpha1"
 	"github.com/stretchr/testify/assert"
 )
@@ -79,4 +80,27 @@ func Test_NewCassServiceMonitor(t *testing.T) {
 			}
 		})
 	}
+}
+
+// The Cassandra pods carry the Cassandra cluster name, which differs from the
+// K8ssandraCluster name when spec.cassandra.clusterName is set, so the selector
+// must use it or the ServiceMonitor matches no pods.
+func Test_NewCassServiceMonitor_SelectsCassandraClusterName(t *testing.T) {
+	cfg := PrometheusResourcer{
+		MonitoringTargetNS:   "test-namespace",
+		MonitoringTargetName: "test-dc-name",
+		Logger:               testr.New(t),
+		ServiceMonitorName:   "test-servicemonitor",
+		CassClusterName:      "Custom Cluster",
+		CommonLabels:         map[string]string{k8ssandraapi.K8ssandraClusterNameLabel: "test-cluster-name"},
+	}
+	sm, err := cfg.NewCassServiceMonitor(false)
+	require.NoError(t, err)
+	var got []string
+	for _, req := range sm.Spec.Selector.MatchExpressions {
+		if req.Key == cassdcapi.ClusterLabel {
+			got = req.Values
+		}
+	}
+	assert.Equal(t, []string{cassdcapi.CleanLabelValue("Custom Cluster")}, got)
 }
